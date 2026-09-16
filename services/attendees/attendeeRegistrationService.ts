@@ -1,13 +1,7 @@
 import { sha256Hex, randomId } from "@/lib/security/portableCrypto";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
-import { upsertContactFromProfile } from "@/services/attendees/contactsService";
+import { maskEmail, upsertContactFromProfile } from "@/services/attendees/contactsService";
 import type { AttendeeProfile, AttendeeRegistrationInput, AttendeeRegistrationResult } from "@/types/attendeeRegistration";
-
-function maskEmail(email: string) {
-  const [name, domain] = email.split("@");
-  if (!domain) return "hidden";
-  return `${name.slice(0, 2)}***@${domain}`;
-}
 
 function normalizeList(input?: string[]) {
   return Array.from(new Set((input || []).map((item) => item.trim()).filter(Boolean))).slice(0, 12);

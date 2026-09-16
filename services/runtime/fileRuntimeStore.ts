@@ -216,6 +216,14 @@ export class FileRuntimeStore implements RuntimeStore {
     return snapshot.attendeeProfiles.filter((item: AttendeeProfile) => item.eventId === eventId && item.status === "active").sort((a: AttendeeProfile, b: AttendeeProfile) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""))).slice(0, limit);
   }
 
+  async listAttendeeProfilesByEmailHash(emailHash: string) {
+    return this.read().attendeeProfiles.filter((item: AttendeeProfile) => item.emailHash === emailHash);
+  }
+
+  async listAttendeeProfilesWithoutEmail(limit = 5000) {
+    return this.read().attendeeProfiles.filter((item: AttendeeProfile) => !item.email && item.status === "active").slice(0, limit);
+  }
+
   async upsertAttendeeSession(session: AttendeeSession) {
     const snapshot = this.read();
     snapshot.attendeeSessions = snapshot.attendeeSessions.filter((item: AttendeeSession) => !(item.eventId === session.eventId && item.sessionId === session.sessionId));

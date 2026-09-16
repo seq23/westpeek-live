@@ -140,6 +140,10 @@ export interface RuntimeStore {
   getAttendeeProfile(eventId: string, attendeeId: string): Promise<AttendeeProfile | undefined>;
   getAttendeeProfileByEmailHash(eventId: string, emailHash: string): Promise<AttendeeProfile | undefined>;
   listAttendeeProfiles(eventId: string, limit?: number): Promise<AttendeeProfile[]>;
+  /** The same person at ANY event (rows share the email hash) — the heal path for rows registered before the raw email was kept. */
+  listAttendeeProfilesByEmailHash(emailHash: string): Promise<AttendeeProfile[]>;
+  /** Rows registered before 16 Sep 2026: email null, only the hash. The People page lists them grouped by hash. */
+  listAttendeeProfilesWithoutEmail(limit?: number): Promise<AttendeeProfile[]>;
   // Contacts across events (migration 0029), keyed by lowercased email.
   upsertContact(contact: ContactRecord): Promise<ContactRecord>;
   getContact(email: string): Promise<ContactRecord | undefined>;

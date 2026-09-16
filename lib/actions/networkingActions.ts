@@ -7,6 +7,7 @@ import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlR
 import { SPEED_NETWORKING_DEFAULT_MINUTES } from "@/types/speedNetworking";
 import { revalidatePath } from "next/cache";
 import { getCurrentAttendeeIdentity, getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
+import { upsertContactFromProfile } from "@/services/attendees/contactsService";
 import { mergeAttendeeProfile } from "@/services/attendees/attendeeProfileMerge";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 
@@ -23,7 +24,11 @@ export async function joinSpeedNetworkingQueueAction(formData: FormData) {
   // The networking gate: topics and a one-liner sent with the join are saved to the profile first (the one write path).
   if (formData.has("topicsOfInterest") || formData.has("networkingGoals")) {
     const profile = await getCurrentAttendeeProfile(eventId);
-    if (profile) await getRuntimeStore().upsertAttendeeProfile(mergeAttendeeProfile(profile, { topicsOfInterest: clean(formData.get("topicsOfInterest")), networkingGoals: clean(formData.get("networkingGoals")) }));
+    if (profile) {
+      const merged = mergeAttendeeProfile(profile, { topicsOfInterest: clean(formData.get("topicsOfInterest")), networkingGoals: clean(formData.get("networkingGoals")) });
+      await getRuntimeStore().upsertAttendeeProfile(merged);
+      await upsertContactFromProfile(merged);
+    }
   }
   // The real queue: one entry per attendee per event; the matcher pairs on the next read.
   await joinNetworkingQueue(eventId, { attendeeId: identity.attendeeId, displayName: identity.displayName, company: identity.company, title: identity.title });

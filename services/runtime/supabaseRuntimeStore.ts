@@ -385,6 +385,18 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return (data || []).map((row) => mapAttendeeProfile(row as Record<string, unknown>));
   }
 
+  async listAttendeeProfilesByEmailHash(emailHash: string) {
+    const { data, error } = await this.client.from("attendee_profiles").select("*").eq("email_hash", emailHash).limit(500);
+    if (error) fail(`attendee_profiles hash list: ${error.message}`);
+    return (data || []).map((row) => mapAttendeeProfile(row as Record<string, unknown>));
+  }
+
+  async listAttendeeProfilesWithoutEmail(limit = 5000) {
+    const { data, error } = await this.client.from("attendee_profiles").select("*").is("email", null).eq("status", "active").order("created_at", { ascending: true }).limit(limit);
+    if (error) fail(`attendee_profiles no-email list: ${error.message}`);
+    return (data || []).map((row) => mapAttendeeProfile(row as Record<string, unknown>));
+  }
+
   async upsertAttendeeSession(session: AttendeeSession) {
     const { error } = await this.client.from("attendee_sessions").upsert({ session_id: session.sessionId, attendee_id: session.attendeeId, event_id: session.eventId, role: session.role, status: session.status, issued_at: session.issuedAt, expires_at: session.expiresAt, last_seen_at: session.lastSeenAt });
     if (error) fail(`attendee_sessions upsert: ${error.message}`);
