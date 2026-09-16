@@ -35,26 +35,6 @@ Purpose: safe env contract for local, CI, Cloudflare Worker, postdeploy, and pro
 | `EVENT_DEMO_SPEAKER_CODE` | Required production/Cloudflare secret or env value. |
 | `EVENT_DEMO_SPONSOR_CODE` | Required production/Cloudflare secret or env value. |
 | `EVENT_DEMO_VIP_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_LEADERSHIP_RESET_WEBINAR_CLIENT_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_LEADERSHIP_RESET_WEBINAR_CREW_LITE_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_LEADERSHIP_RESET_WEBINAR_SPEAKER_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_LEADERSHIP_RESET_WEBINAR_SPONSOR_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_LEADERSHIP_RESET_WEBINAR_VIP_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PREMIUM_WORKSHOP_INTENSIVE_CLIENT_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PREMIUM_WORKSHOP_INTENSIVE_CREW_LITE_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PREMIUM_WORKSHOP_INTENSIVE_SPEAKER_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PREMIUM_WORKSHOP_INTENSIVE_SPONSOR_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PREMIUM_WORKSHOP_INTENSIVE_VIP_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PROVIDER_INNOVATION_EXPO_CLIENT_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PROVIDER_INNOVATION_EXPO_CREW_LITE_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PROVIDER_INNOVATION_EXPO_SPEAKER_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PROVIDER_INNOVATION_EXPO_SPONSOR_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_PROVIDER_INNOVATION_EXPO_VIP_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_SEED_DEMO_DAY_CLIENT_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_SEED_DEMO_DAY_CREW_LITE_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_SEED_DEMO_DAY_SPEAKER_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_SEED_DEMO_DAY_SPONSOR_CODE` | Required production/Cloudflare secret or env value. |
-| `EVENT_SEED_DEMO_DAY_VIP_CODE` | Required production/Cloudflare secret or env value. |
 | `LIVEKIT_API_KEY` | Required production/Cloudflare secret or env value. |
 | `LIVEKIT_API_SECRET` | Required production/Cloudflare secret or env value. |
 | `LIVEKIT_INGRESS_RTMP_BASE_URL` | Required production/Cloudflare secret or env value. |
@@ -203,7 +183,16 @@ Do not commit `.env.local`.
 | `CLOUDFLARE_STREAM_FALLBACK_ENABLED` | Enables the automated Cloudflare Stream Live fallback proof between StreamYard-compatible LiveKit RTMP and Daily. |
 | `CLOUDFLARE_STREAM_ACCOUNT_ID` / `CLOUDFLARE_ACCOUNT_ID` | Cloudflare account id used for Stream Live Inputs API proof. |
 | `CLOUDFLARE_STREAM_API_TOKEN` / `CLOUDFLARE_API_TOKEN` | Cloudflare API token with Stream Live Inputs create/read/delete permissions. |
+| `CLOUDFLARE_STREAM_FALLBACK_ENABLED` | Fallback 1 armed (`1`). Configured in production 16 Sep 2026. |
+| `CLOUDFLARE_STREAM_FALLBACK_PLAYBACK_URL` | The iframe embed attendees see when the stage moves to Cloudflare Stream. |
+| `CLOUDFLARE_STREAM_FALLBACK_RTMPS_URL` | RTMPS ingest URL the producer pastes into StreamYard → Destinations → Custom RTMP. |
+| `CLOUDFLARE_STREAM_FALLBACK_RTMPS_KEY` | RTMPS stream key for that destination. Secret: masked in the UI until Reveal, never logged. |
+| `CLOUDFLARE_STREAM_LIVE_INPUT_ID` | The Cloudflare Stream live input behind the pair. |
 | `CLOUDFLARE_STREAM_API_BASE_URL` | Must be `https://api.cloudflare.com/client/v4` unless Cloudflare changes the API host. |
 | `TIER4_CLOUDFLARE_STREAM_CONTROLLED_BROADCASTER` | Local/operator Tier 4 approval flag. Must be `1` to push a controlled ffmpeg RTMP media stream into Cloudflare Stream. |
 | `TIER4_CLOUDFLARE_STREAM_SECONDS` | Local/operator Tier 4 duration for the controlled Cloudflare Stream RTMP proof. |
 | `STREAMYARD_ENTERPRISE_API_BASE_URL` / `STREAMYARD_ENTERPRISE_API_TOKEN` | Reserved for future StreamYard Enterprise API automation. Current Tier 4 uses manual/operator evidence plus StreamYard-compatible controlled RTMP proof because normal StreamYard API access is enterprise-only. |
+
+## Workers Free variable cap
+
+A Worker on the Workers Free plan may carry at most **64** variables and secrets. On 16 Sep 2026 we hit the cap; the 20 `EVENT_{LEADERSHIP_RESET_WEBINAR,PREMIUM_WORKSHOP_INTENSIVE,PROVIDER_INNOVATION_EXPO,SEED_DEMO_DAY}_*_CODE` secrets were deleted (no runtime code read them — only manifests and docs; `EVENT_DEMO_*` stay because `lib/env/safeEnv.ts` reads them). `validate:worker-variable-budget` keeps the required-secrets manifest at 60 or fewer entries so there is always headroom under the 64 cap.

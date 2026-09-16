@@ -6,6 +6,7 @@ import { provisionStreamYardLiveKitIngress } from "@/services/video/livekitIngre
 import { applyStageStreamSignal } from "@/services/video/stageStreamStateService";
 import { endShowForEvent } from "@/services/video/showEndService";
 import type { StageStreamSignal } from "@/types/stageStream";
+import { rungReadiness, type LadderSource } from "@/lib/video/fallbackReadiness";
 
 /** Owner, operator, or event-scoped crew whose role may `go_live`. Attendees, anonymous callers, and the other crew roles are refused before any write, with the role reason. */
 async function requireControl(eventId: string, action: CrewAction = "go_live") {
@@ -37,6 +38,19 @@ export async function applyStageStreamOperatorSignal(formData: FormData) {
   const signal = String(formData.get("signal") || "manual_switch_to_daily") as StageStreamSignal;
   const reason = String(formData.get("reason") || "Operator selected action from testing console.");
   await requireControl(eventId);
+  // A manual move down to a rung with nothing behind it is refused at the server too: the disabled
+  // button is the courtesy, this is the guarantee (a black player for the whole room otherwise).
+  const manualMove: Partial<Record<StageStreamSignal, LadderSource>> = {
+    manual_switch_to_cloudflare_stream: "CLOUDFLARE_STREAM",
+    manual_switch_to_daily: "DAILY",
+    manual_switch_to_zoom: "ZOOM",
+    manual_switch_to_google_meet: "GOOGLE_MEET",
+  };
+  const target = manualMove[signal];
+  if (target) {
+    const rung = rungReadiness(target);
+    if (!rung.ready) throw new Error(`Refused: ${rung.reason}`);
+  }
   await applyStageStreamSignal({ eventId, stageId, signal, reason });
   revalidateStageSurfaces(eventId);
 }

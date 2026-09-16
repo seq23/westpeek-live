@@ -1,5 +1,5 @@
 {
-  "rules": "Store env key names only; never raw access codes.",
+  "rules": "Store env key names only; never raw access codes. The four demo seed events share the EVENT_DEMO_* codes since 16 Sep 2026: their own 20 secrets were deleted to stay under the Workers Free 64-variable cap, and nothing read them.",
   "events": {
     "demo": {
       "eventId": "event-summit",
@@ -38,27 +38,27 @@
       "specialGuestCodes": [
         {
           "role": "client",
-          "envKey": "EVENT_LEADERSHIP_RESET_WEBINAR_CLIENT_CODE",
+          "envKey": "EVENT_DEMO_CLIENT_CODE",
           "destinationTemplate": "/client/{clientSlug}/events/{eventId}"
         },
         {
           "role": "speaker",
-          "envKey": "EVENT_LEADERSHIP_RESET_WEBINAR_SPEAKER_CODE",
+          "envKey": "EVENT_DEMO_SPEAKER_CODE",
           "destinationTemplate": "/speaker/events/{eventId}"
         },
         {
           "role": "sponsor",
-          "envKey": "EVENT_LEADERSHIP_RESET_WEBINAR_SPONSOR_CODE",
+          "envKey": "EVENT_DEMO_SPONSOR_CODE",
           "destinationTemplate": "/sponsor/events/{eventId}"
         },
         {
           "role": "crew_lite",
-          "envKey": "EVENT_LEADERSHIP_RESET_WEBINAR_CREW_LITE_CODE",
+          "envKey": "EVENT_DEMO_CREW_LITE_CODE",
           "destinationTemplate": "/crew/events/{eventId}"
         },
         {
           "role": "vip",
-          "envKey": "EVENT_LEADERSHIP_RESET_WEBINAR_VIP_CODE",
+          "envKey": "EVENT_DEMO_VIP_CODE",
           "destinationTemplate": "/venue/{eventId}/lobby"
         }
       ]
@@ -69,27 +69,27 @@
       "specialGuestCodes": [
         {
           "role": "client",
-          "envKey": "EVENT_SEED_DEMO_DAY_CLIENT_CODE",
+          "envKey": "EVENT_DEMO_CLIENT_CODE",
           "destinationTemplate": "/client/{clientSlug}/events/{eventId}"
         },
         {
           "role": "speaker",
-          "envKey": "EVENT_SEED_DEMO_DAY_SPEAKER_CODE",
+          "envKey": "EVENT_DEMO_SPEAKER_CODE",
           "destinationTemplate": "/speaker/events/{eventId}"
         },
         {
           "role": "sponsor",
-          "envKey": "EVENT_SEED_DEMO_DAY_SPONSOR_CODE",
+          "envKey": "EVENT_DEMO_SPONSOR_CODE",
           "destinationTemplate": "/sponsor/events/{eventId}"
         },
         {
           "role": "crew_lite",
-          "envKey": "EVENT_SEED_DEMO_DAY_CREW_LITE_CODE",
+          "envKey": "EVENT_DEMO_CREW_LITE_CODE",
           "destinationTemplate": "/crew/events/{eventId}"
         },
         {
           "role": "vip",
-          "envKey": "EVENT_SEED_DEMO_DAY_VIP_CODE",
+          "envKey": "EVENT_DEMO_VIP_CODE",
           "destinationTemplate": "/venue/{eventId}/lobby"
         }
       ]
@@ -100,27 +100,27 @@
       "specialGuestCodes": [
         {
           "role": "client",
-          "envKey": "EVENT_PROVIDER_INNOVATION_EXPO_CLIENT_CODE",
+          "envKey": "EVENT_DEMO_CLIENT_CODE",
           "destinationTemplate": "/client/{clientSlug}/events/{eventId}"
         },
         {
           "role": "speaker",
-          "envKey": "EVENT_PROVIDER_INNOVATION_EXPO_SPEAKER_CODE",
+          "envKey": "EVENT_DEMO_SPEAKER_CODE",
           "destinationTemplate": "/speaker/events/{eventId}"
         },
         {
           "role": "sponsor",
-          "envKey": "EVENT_PROVIDER_INNOVATION_EXPO_SPONSOR_CODE",
+          "envKey": "EVENT_DEMO_SPONSOR_CODE",
           "destinationTemplate": "/sponsor/events/{eventId}"
         },
         {
           "role": "crew_lite",
-          "envKey": "EVENT_PROVIDER_INNOVATION_EXPO_CREW_LITE_CODE",
+          "envKey": "EVENT_DEMO_CREW_LITE_CODE",
           "destinationTemplate": "/crew/events/{eventId}"
         },
         {
           "role": "vip",
-          "envKey": "EVENT_PROVIDER_INNOVATION_EXPO_VIP_CODE",
+          "envKey": "EVENT_DEMO_VIP_CODE",
           "destinationTemplate": "/venue/{eventId}/lobby"
         }
       ]
@@ -131,27 +131,27 @@
       "specialGuestCodes": [
         {
           "role": "client",
-          "envKey": "EVENT_PREMIUM_WORKSHOP_INTENSIVE_CLIENT_CODE",
+          "envKey": "EVENT_DEMO_CLIENT_CODE",
           "destinationTemplate": "/client/{clientSlug}/events/{eventId}"
         },
         {
           "role": "speaker",
-          "envKey": "EVENT_PREMIUM_WORKSHOP_INTENSIVE_SPEAKER_CODE",
+          "envKey": "EVENT_DEMO_SPEAKER_CODE",
           "destinationTemplate": "/speaker/events/{eventId}"
         },
         {
           "role": "sponsor",
-          "envKey": "EVENT_PREMIUM_WORKSHOP_INTENSIVE_SPONSOR_CODE",
+          "envKey": "EVENT_DEMO_SPONSOR_CODE",
           "destinationTemplate": "/sponsor/events/{eventId}"
         },
         {
           "role": "crew_lite",
-          "envKey": "EVENT_PREMIUM_WORKSHOP_INTENSIVE_CREW_LITE_CODE",
+          "envKey": "EVENT_DEMO_CREW_LITE_CODE",
           "destinationTemplate": "/crew/events/{eventId}"
         },
         {
           "role": "vip",
-          "envKey": "EVENT_PREMIUM_WORKSHOP_INTENSIVE_VIP_CODE",
+          "envKey": "EVENT_DEMO_VIP_CODE",
           "destinationTemplate": "/venue/{eventId}/lobby"
         }
       ]
