@@ -48,7 +48,8 @@ test("mint a host link → the link prefills the gate → the host runs the show
   await expect(card).toContainText("Send this to whoever is running the show. They get the host banner, go-live, end-the-show and every control for this event only.");
   await expect(card.getByTestId("copy-host-link")).toBeVisible();
   const link = (await card.getByTestId("host-link-url").innerText()).trim();
-  expect(link).toMatch(/\/production-access\/crew\?event=[^&]+&role=executive_producer&code=CREW-/);
+  // Readable codes (16 Sep 2026): WPL-CREW-STEM, not CREW-XXXXXX.
+  expect(link).toMatch(/\/production-access\/crew\?event=[^&]+&role=executive_producer&code=WPL-CREW-/);
   await expect(page.getByTestId("current-hosts")).toContainText("handed out by operator");
   // The Access page shows the same panel.
   await gotoAndAssert(page, `/app/events/${eventId}/access`);

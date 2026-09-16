@@ -110,6 +110,8 @@ A table of contents across the top; every section folds and remembers whether yo
 
 **Later** instead of Now creates a draft with a client, date and type; publish it from the event page when it is ready.
 
+**Going live is one button, in one card.** The Go-live card appears on the event's Publish page, on the event's row in the Owner Console (and in **Live now** once it is running), and at the top of the crew deck — the same card in all three. Press **Go live** and the event goes live *and* the stream credentials appear underneath: the RTMP URL, the stream key (masked until **Reveal**), **Copy both for StreamYard**, and the three steps to paste them in. You never have to open a second page to start a show.
+
 ### 3.4 See everyone who has ever registered
 
 ![People across events](images/manual/05-people.jpg)
@@ -206,9 +208,11 @@ Those values render **only** under an owner session — an operator never receiv
 
 ### Going live
 
-1. **Go live** section → generate RTMP credentials (URL + stream key, copy buttons).
-2. Paste into **StreamYard → Custom RTMP** and start broadcasting. Add the **Cloudflare fallback** as a second destination at the same time (§10).
+1. The **Go-live card** is the first thing on the deck. Press **Go live**: the event goes live and the credentials appear in the same card. If the show has been ended before, the card says so — the stream key was released on purpose — and **Get stream credentials** mints a fresh one in a click.
+2. **Copy both for StreamYard**, then in StreamYard **edit** your existing Custom RTMP destination (do not add a second one) and start broadcasting. Add the **Cloudflare fallback** as a second destination at the same time (§11).
 3. The stage flips live within seconds. Confirm on a second device.
+
+**Ending a show releases the stream key.** That is deliberate: a key left behind in somebody's StreamYard must not work on the next show. Restarting is one press of **Get stream credentials** from whichever surface you are on — the Owner Console will do it without opening the deck.
 
 ### During the show
 
@@ -351,9 +355,9 @@ The card refuses to move down if that rung is not configured, rather than sendin
 | T-60m | Crew in the deck. StreamYard open with **both** destinations set |
 | T-30m | Broadcast privately, confirm the stage shows the feed, then stop |
 | T-10m | Stage requests **Closed** until you want hands up. VIP lounge open. Chat unlocked |
-| T-0 | Go live. Confirm from a second device on a different network |
+| T-0 | **Go live** from the card (Publish page, Owner Console row, or crew deck — same card). Confirm from a second device on a different network |
 | During | Moderate. Approve raised hands. Watch the ladder |
-| End | **End the show** from the crew deck. Confirm attendees see the ended state |
+| End | **End the show** from the card. The stream key is released; restarting later needs one press of **Get stream credentials** |
 | After | Replay appears when published. Export contacts from `/app/people` |
 
 ---

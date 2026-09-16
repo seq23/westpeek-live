@@ -120,7 +120,11 @@ export async function provisionStreamYardLiveKitIngress(input: { eventId: string
   const current = await getOrCreateStageStreamState(input.eventId, stageId);
 
   if (!livekit.livekitUrl || !livekit.livekitApiKey || !livekit.livekitApiSecret) {
-    return { ok: false, eventId: input.eventId, stageId, roomName, status: "ERROR_SAFE", message: "LiveKit server credentials are missing. Set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET before generating StreamYard RTMP credentials." };
+    // Record it: an unconfigured deployment used to fail silently and leave the producer looking at
+    // an empty box wondering what they had done wrong (16 Sep 2026).
+    const message = "LiveKit server credentials are missing. Set LIVEKIT_URL, LIVEKIT_API_KEY, and LIVEKIT_API_SECRET before generating StreamYard RTMP credentials.";
+    await getRuntimeStore().setStageStreamState(stageStreamKey(input.eventId, stageId), { ...current, lastProvisionError: message, updatedAt: new Date().toISOString() }).catch(() => undefined);
+    return { ok: false, eventId: input.eventId, stageId, roomName, status: "ERROR_SAFE", message };
   }
 
   try {

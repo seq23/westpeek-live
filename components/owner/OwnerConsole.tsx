@@ -9,6 +9,7 @@ import { GuestPreviewList } from "@/components/guests/GuestPreviewLinks";
 import { ContactsAcrossEvents } from "@/components/people/ContactsAcrossEvents";
 import { AccessCodesVault } from "@/components/owner/AccessCodesVault";
 import { EventArchiveControl } from "@/components/owner/EventArchiveControl";
+import { GoLiveCard } from "@/components/stage/GoLiveCard";
 import { VipRow } from "@/components/owner/VipRow";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { displayCode, guestGatePath } from "@/lib/access/accessCodes";
@@ -96,7 +97,19 @@ async function LiveNowRow({ event }: { event: RuntimeEventRecord }) {
         <SafeSection label="Stage requests" compact render={() => StageRequestsToggle({ eventId: event.id, compact: true })} />
         <SafeSection label="End of show" compact render={() => EndShowControl({ eventId: event.id, compact: true })} />
       </div>
+      {/* The credentials the producer needs, without opening the crew deck. */}
+      <div className="mt-3"><SafeSection label="Go live" compact render={() => GoLiveCard({ eventId: event.id, compact: true, returnTo: "/app/owner" })} /></div>
     </li>
+  );
+}
+
+function GoLiveRowControl({ event }: { event: RuntimeEventRecord }) {
+  if (event.status === "archived") return null;
+  return (
+    <details className="w-full" data-testid={`console-go-live-${event.id}`}>
+      <summary className="cursor-pointer rounded-full border border-brand-black px-3 py-1 text-xs font-black hover:border-brand-orange hover:text-brand-orange">{event.status === "live" ? "Stream credentials" : "Go live"}</summary>
+      <div className="mt-2"><SafeSection label="Go live" compact render={() => GoLiveCard({ eventId: event.id, compact: true, returnTo: "/app/owner" })} /></div>
+    </details>
   );
 }
 
@@ -190,7 +203,7 @@ export async function OwnerConsole() {
         {[["Live", live], ["Upcoming", upcoming], ["Drafts", drafts], ["Ended", ended], ["Archived", archived]].map(([label, list]) => (
           <details key={String(label)} className="mb-2 rounded-2xl bg-brand-ash p-3" open={String(label) !== "Archived" && (list as RuntimeEventRecord[]).length > 0} data-testid={`console-events-${String(label).toLowerCase()}`}>
             <summary className="cursor-pointer text-sm font-black">{String(label)} · {(list as RuntimeEventRecord[]).length}</summary>
-            {(list as RuntimeEventRecord[]).length ? <ul className="mt-2 space-y-2">{(list as RuntimeEventRecord[]).map((event) => <EventRow key={event.id} event={event}><CopyButton value={`${base}${hostLinkPath(event)}`} label="Copy host link" className="!px-3 !py-1 !text-xs" /><EventArchiveControl eventId={event.id} eventName={event.name} archived={event.status === "archived"} /></EventRow>)}</ul> : <p className="mt-2 text-xs text-brand-muted">None.</p>}
+            {(list as RuntimeEventRecord[]).length ? <ul className="mt-2 space-y-2">{(list as RuntimeEventRecord[]).map((event) => <EventRow key={event.id} event={event}><GoLiveRowControl event={event} /><CopyButton value={`${base}${hostLinkPath(event)}`} label="Copy host link" className="!px-3 !py-1 !text-xs" /><EventArchiveControl eventId={event.id} eventName={event.name} archived={event.status === "archived"} /></EventRow>)}</ul> : <p className="mt-2 text-xs text-brand-muted">None.</p>}
           </details>
         ))}
       </ConsoleSection>

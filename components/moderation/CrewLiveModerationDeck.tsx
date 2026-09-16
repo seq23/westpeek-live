@@ -2,6 +2,7 @@ import { AttendeeLiveRoster } from "@/components/moderation/AttendeeLiveRoster";
 import { ChatModerationQueue } from "@/components/moderation/ChatModerationQueue";
 import { EndShowControl } from "@/components/moderation/EndShowControl";
 import { StreamYardIngressPanel } from "@/components/testing/StreamYardIngressPanel";
+import { GoLiveCard } from "@/components/stage/GoLiveCard";
 import { LiveRoomControlForms } from "@/components/moderation/LiveRoomControlForms";
 import { SpeakerRosterPanel } from "@/components/moderation/SpeakerRosterPanel";
 import { getCrewViewer } from "@/lib/auth/crewViewer";
@@ -27,6 +28,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, in
       <SafeSection label="Stage requests" render={() => StageRequestsToggle({ eventId, viewer })} />
       {includeStreamConsole ? (
         <section className="space-y-3" data-testid="crew-go-live">
+          <SafeSection label="Go live" render={() => GoLiveCard({ eventId, viewer, compact: true, returnTo: `/crew/events/${eventId}` })} />
           <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Go live</p>
             <h2 className="mt-2 text-2xl font-black tracking-tight">Make the stage live, and move it if the feed fails</h2>
