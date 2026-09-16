@@ -8,10 +8,24 @@ import { getAttendeeLiveControlState } from "@/services/venue/attendeeLivePermis
  * the Owner Console. Open = anyone can raise a hand, the crew approves who gets on. Closed =
  * attendees see "the crew has closed stage requests for now". Camera and mic requests move
  * together; approval stays required; the granular checkboxes remain in the room-controls fold.
+ *
+ * `variant="bar"` is the same switch sized for the Event Command Bar — one pill that reads the
+ * state and flips it. Same service, same action, same permission: a second implementation would
+ * have drifted from this one within a show.
  */
-export async function StageRequestsToggle({ eventId, viewer: givenViewer, compact = false }: { eventId: string; viewer?: CrewViewer; compact?: boolean }) {
+export async function StageRequestsToggle({ eventId, viewer: givenViewer, compact = false, variant = "card" }: { eventId: string; viewer?: CrewViewer; compact?: boolean; variant?: "card" | "bar" }) {
   const [control, viewer] = await Promise.all([getAttendeeLiveControlState(eventId, "main_stage", "main-stage"), givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId)]);
   const open = control.globalCameraEnabled || control.globalMicrophoneEnabled;
+  if (variant === "bar") {
+    return (
+      <GatedForm viewer={viewer} action="manage_stage_access" formAction={setStageRequestsOpenAction} testId="stage-requests-toggle">
+        <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="open" value={open ? "false" : "true"} />
+        <button className="flex items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-black text-white hover:bg-white/20 disabled:cursor-not-allowed disabled:opacity-40" data-testid="stage-requests-switch" title={open ? "Open: anyone can raise a hand, you approve who gets on. Press to close." : "Closed: attendees see “the crew has closed stage requests for now”. Press to open."}>
+          Stage requests <span className={`rounded-full px-2 py-0.5 text-[11px] uppercase tracking-wide ${open ? "bg-emerald-400 text-emerald-950" : "bg-slate-500 text-white"}`} data-testid="stage-requests-state">{open ? "Open" : "Closed"}</span>
+        </button>
+      </GatedForm>
+    );
+  }
   return (
     <div className={`rounded-2xl border ${open ? "border-emerald-200 bg-emerald-50" : "border-slate-200 bg-slate-50"} ${compact ? "p-3" : "p-4"}`} data-testid="stage-requests-toggle" data-open={open ? "true" : "false"}>
       <div className="flex flex-wrap items-center justify-between gap-3">

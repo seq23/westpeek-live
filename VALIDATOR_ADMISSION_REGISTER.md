@@ -268,3 +268,4 @@ This validator is admitted because it prevents the prior class of failure where 
 - Added best-effort LiveKit participant removal during revocation.
 - Added hostile review artifact: `HOSTILE_CODE_REVIEW_TIER4_ATTENDEE_LIVE_CONSUMPTION_2026-06-12.md`.
 
+- Added `validate:event-command-bar`: the Event Command Bar is owner/operator only, mounted on all five event-scoped areas, every primary owner action reachable from more than one surface, and no health signal green without a probe behind it.
