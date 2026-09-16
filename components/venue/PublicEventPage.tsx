@@ -108,16 +108,19 @@ export function EventRegistration({ slug }: { slug: string }) {
         <p className="mt-2 text-slate-600">Registration creates your event-scoped attendee identity, attendee session, and optional agenda intent before routing you into the venue.</p>
         <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Attendee registration does not grant speaker, sponsor, client, crew, operator, admin, VIP, restricted-session, or camera/mic publishing access.</p>
         <div className="mt-6 space-y-4">
+          <p className="text-xs text-slate-500">Fields marked <span className="font-black text-brand-orange">*</span> are required. Everything else is optional.</p>
           {[
-            ["name", "Name", "text", true],
-            ["email", "Email", "email", true],
-            ["company", "Company / affiliation", "text", true],
-            ["title", "Title / role", "text", true],
-            ["personalWebsite", "Personal website", "url", false],
-          ].map(([field, label, type, required]) => (
+            ["name", "Name", "text", true, "Ada Lovelace"],
+            ["email", "Email", "email", true, "you@company.com"],
+            ["company", "Company / affiliation", "text", true, "Analytical Engines"],
+            ["title", "Title / role", "text", true, "Founder"],
+            // Plain text, not type="url": a browser refuses "mysite.com" without "https://" and says
+            // so in its own words; the server adds the scheme if it is missing (owner, 16 Sep 2026).
+            ["personalWebsite", "Personal website (optional)", "text", false, "mysite.com — https:// not needed"],
+          ].map(([field, label, type, required, placeholder]) => (
             <div key={String(field)}>
-              <label htmlFor={String(field)} className="text-sm font-medium text-slate-700">{label}</label>
-              <input id={String(field)} name={String(field)} required={Boolean(required)} type={String(type)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
+              <label htmlFor={String(field)} className="text-sm font-medium text-slate-700">{label}{required ? <span className="ml-1 font-black text-brand-orange" aria-hidden="true">*</span> : null}</label>
+              <input id={String(field)} name={String(field)} required={Boolean(required)} aria-required={Boolean(required)} type={String(type)} placeholder={String(placeholder)} inputMode={field === "personalWebsite" ? "url" : undefined} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
             </div>
           ))}
           <div>

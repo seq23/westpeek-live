@@ -31,7 +31,7 @@ export async function registerOrUpdateAttendee(input: AttendeeRegistrationInput)
     emailMasked: maskEmail(input.email.trim().toLowerCase()),
     company: input.company.trim(),
     title: input.title.trim(),
-    personalWebsite: input.personalWebsite?.trim() || undefined,
+    personalWebsite: normalizeWebsite(input.personalWebsite),
     socialLinks: normalizeList(input.socialLinks),
     reasonForAttending: input.reasonForAttending?.trim() || undefined,
     interestingFact: input.interestingFact?.trim() || undefined,
@@ -45,4 +45,12 @@ export async function registerOrUpdateAttendee(input: AttendeeRegistrationInput)
   };
   await store.upsertAttendeeProfile(profile);
   return { profile, duplicateBehavior: existing ? "updated_existing_email" : "created" };
+}
+
+/** "mysite.com" is a website; nobody should have to type the scheme. Empty stays empty. */
+export function normalizeWebsite(value?: string | null): string | undefined {
+  const trimmed = (value ?? "").trim();
+  if (!trimmed) return undefined;
+  if (/^https?:\/\//i.test(trimmed)) return trimmed;
+  return `https://${trimmed.replace(/^\/+/, "")}`;
 }
