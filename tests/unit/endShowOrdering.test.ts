@@ -27,7 +27,7 @@ import { endTheShow } from "@/lib/actions/stageStreamActions";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 
-const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Sequoia Taylor / owner", role: "owner" };
+const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 const ORIGINAL_ENV = { ...process.env };
 let counter = 0;
 

@@ -287,3 +287,16 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Purpose: the Assets page rendered seed fixtures and had no upload control at all. Now a file goes from the browser straight to Supabase Storage (private bucket `event-assets`, created on first use) through a short-lived signed URL — the Worker never carries the bytes and the browser never sees a service key — and lands as an `event_assets` row (migration 0031) with who sent it, a review state and a visibility. A speaker's or sponsor's upload from their own portal arrives `in_review`; approval plus "show the client" is what puts a file on the client's side; downloads are signed, expire in ten minutes and are access-checked; removal is archiving. Storage that is not configured says so in words and offers the paste-a-link path.
 - The companion rule: no page under `/app` may render compiled seed fixtures as the owner's real data. The pages still doing so are listed in `KNOWN_SEED_PAGES`, which may only shrink — a new offender fails, and an entry that stops offending must be deleted.
 - Proof behind it: `tests/unit/eventAssets.test.ts`, `tests/e2e/event-assets.spec.ts`.
+
+## Owner access never claims a person — 2026-09-16
+
+- Validator: `npm run validate:no-person-name-as-actor`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: the owner master password is shared, so the app cannot know who holds it. The workspace chip said "Sequoia Taylor / owner" and `services/video/showEndService.ts` stamped that name into the record of who ended a show. The actor label is now exactly `Owner`; the only identity claim allowed is which master key was used (`ownerKey`, shown in the Owner Console as "key 1"/"key 2"). The agency settings member list is exempt: it is data the owner typed.
+- Proof behind it: `tests/unit/workspaceNavAndSpine.test.ts`, `tests/e2e/owner-real-events-journey.spec.ts`.
+
+## The vault shows the gate passwords — 2026-09-16
+
+- Validator: `npm run validate:access-codes-vault-contract` (rewritten)
+- Purpose: behind the owner gate the vault shows the real `OWNER_MASTER_ACCESS_PASSWORD`, `OPERATOR_LAUNCHPAD_PASSWORD` and `CREW_ACCESS_PASSWORD` (masked until Reveal, Copy, rotation command); `OWNER_MASTER_ACCESS_PASSWORD_2` stays set/not-set and its value never reaches the page; nothing outside the owner-gated vault renders any of them; `/app/owner` is `no-store`; Reveal/Copy audit rows name the key, never the value.
+- Proof behind it: `tests/e2e/access-codes-vault.spec.ts`.

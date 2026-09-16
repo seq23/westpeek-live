@@ -60,7 +60,7 @@ for (const page of ["app/venue/[eventId]/lobby/page.tsx", "app/events/[slug]/pag
 // 4. One create page, owner-cookie identity, no cookie draft, no duplicate create form.
 requireTokens("app/app/events/new/page.tsx", ['name="when"', 'value="now"', 'value="later"', "createEventAction", "RuntimeSchemaStop"]);
 requireTokens("lib/actions/eventWorkspaceActions.ts", ["requireWorkspaceActor", "createEventRecord", "archiveEventRecord", "restoreEventRecord", "setEventStatus"]);
-requireTokens("lib/auth/workspaceActor.ts", ['kind: "owner"', "Sequoia Taylor / owner", "getCurrentUser"]);
+requireTokens("lib/auth/workspaceActor.ts", ['kind: "owner"', 'OWNER_ACTOR_LABEL = "Owner"', "getCurrentUser"]);
 for (const gone of ["services/events/eventDraftStore.ts", "components/persistence/EventPersistencePanel.tsx"]) {
   examined += 1;
   if (fs.existsSync(gone)) failures.push(`${gone} must stay deleted; there is one create path`);

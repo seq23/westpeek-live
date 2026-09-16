@@ -17,7 +17,7 @@ import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
  * page now; the fixtures are counted separately, shown only on request, and archived (never
  * deleted) on demand — and a row from a real event is never touched by that archive.
  */
-const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Sequoia Taylor / owner", role: "owner" };
+const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 
 describe("test rows are not the owner's network", () => {
   let tempDir: string;
@@ -65,7 +65,7 @@ describe("test rows are not the owner's network", () => {
   });
 
   it("archiving the test rows leaves the three real people and their attendee rows untouched", async () => {
-    const result = await archiveTestPeople("Sequoia Taylor / owner");
+    const result = await archiveTestPeople("Owner");
     expect(result.archivedContacts).toBe(5);
     expect(result.archivedProfiles).toBeGreaterThanOrEqual(5);
     const after = await peopleDirectory();

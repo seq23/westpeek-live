@@ -27,7 +27,7 @@ import { mintHostLinkAction, revokeHostLinksAction } from "@/lib/actions/hostAct
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 import type { V4CrewRole } from "@/types/v4";
 
-const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Sequoia Taylor / owner", role: "owner" };
+const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 const issuedAt = Date.now();
 const expiresAt = issuedAt + 60_000;
 const crew = (role: V4CrewRole, eventId: string, codeVersion?: number): V5AccessCookiePayload => ({ kind: "crew", role, eventId, codeVersion, issuedAt, expiresAt });

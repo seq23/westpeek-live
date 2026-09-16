@@ -12,7 +12,7 @@ import { getEventConfig, getEventConfigPackage } from "@/services/events/eventCo
 import { getEvent, getRuntimeData, getSessionsForEvent } from "@/lib/runtime/getRuntimeData";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 
-const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Sequoia Taylor / owner", role: "owner" };
+const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 
 describe("runtime-first event repository", () => {
   let tempDir: string;
@@ -46,7 +46,7 @@ describe("runtime-first event repository", () => {
     expect(event.accessCodes.speaker).toMatch(/^SPK-/);
     expect(event.accessCodes.client).toMatch(/^CLT-/);
     expect(event.sessions).toHaveLength(1);
-    expect(event.createdByLabel).toBe("Sequoia Taylor / owner");
+    expect(event.createdByLabel).toBe("Owner");
     expect(event.clientName).toBe("West Peek");
 
     const stored = await findEventRecord(event.joinCode);

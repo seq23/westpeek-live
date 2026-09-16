@@ -1,12 +1,13 @@
 import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
-import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
+import { OWNER_ACTOR_LABEL, type WorkspaceActor } from "@/lib/auth/workspaceActor";
 import { findEventRecord, setEventStatus } from "@/services/events/eventRepository";
 import { applyStageStreamSignal } from "@/services/video/stageStreamStateService";
 
 export type EndShowOutcome = { stage: "ENDED"; eventStatus: "ended" | "seed_unchanged" | "already_ended" };
 
 function actorFor(role: "owner" | "operator" | "crew"): WorkspaceActor {
-  if (role === "owner") return { kind: "owner", id: "owner", label: "Sequoia Taylor / owner", role: "owner" };
+  // Never a person: owner access is a shared key, so the record says "Owner" (16 Sep 2026).
+  if (role === "owner") return { kind: "owner", id: "owner", label: OWNER_ACTOR_LABEL, role: "owner" };
   return { kind: "operator", id: "operator", label: role === "crew" ? "Crew" : "Operator", role };
 }
 
