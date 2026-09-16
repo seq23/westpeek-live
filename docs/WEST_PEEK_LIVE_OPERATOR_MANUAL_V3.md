@@ -11,6 +11,8 @@ Status: ACTIVE. Supersedes `docs/archive/superseded/docs__West_Peek_Live_Day1_Co
 | Video | LiveKit Cloud, project `westpeek-live` (**Ship**, $50/mo) |
 | Backup video | Cloudflare Stream Live, input `westpeek-fallback` (pay-as-you-go) |
 | Email | Resend |
+| Storage | Supabase Storage, private bucket `event-assets` |
+| Read this inside the app | `westpeek.live/manual` (owner + operator) |
 | Last revised | 16 September 2026 |
 
 > **No access codes appear in this document.** Every code lives behind the owner gate in the app. See §5.
@@ -23,16 +25,17 @@ Status: ACTIVE. Supersedes `docs/archive/superseded/docs__West_Peek_Live_Day1_Co
 2. [The five doors](#2-the-five-doors)
 3. [If you are the OWNER — step by step](#3-if-you-are-the-owner--step-by-step)
 4. [If you are an OPERATOR (West Peek internal) — step by step](#4-if-you-are-an-operator-west-peek-internal--step-by-step)
-5. [Where the access codes live](#5-where-the-access-codes-live)
+5. [Access codes — how they are made, where they live, how to change them](#5-access-codes--how-they-are-made-where-they-live-how-to-change-them)
 6. [If you are CREW — step by step](#6-if-you-are-crew--step-by-step)
 7. [If you are a SPECIAL GUEST — speaker, sponsor, VIP, client](#7-if-you-are-a-special-guest--speaker-sponsor-vip-client)
 8. [If you are an ATTENDEE](#8-if-you-are-an-attendee)
-9. [Clients who want us to run their event](#9-clients-who-want-us-to-run-their-event)
-10. [The fallback ladder — what to do when the feed dies](#10-the-fallback-ladder--what-to-do-when-the-feed-dies)
-11. [Show-day runbook](#11-show-day-runbook)
-12. [Capacity, cost, and where the ceiling is](#12-capacity-cost-and-where-the-ceiling-is)
-13. [Troubleshooting](#13-troubleshooting)
-14. [Rules that do not bend](#14-rules-that-do-not-bend)
+9. [Files and assets](#9-files-and-assets)
+10. [Clients who want us to run their event](#10-clients-who-want-us-to-run-their-event)
+11. [The fallback ladder — what to do when the feed dies](#11-the-fallback-ladder--what-to-do-when-the-feed-dies)
+12. [Show-day runbook](#12-show-day-runbook)
+13. [Capacity, cost, and where the ceiling is](#13-capacity-cost-and-where-the-ceiling-is)
+14. [Troubleshooting](#14-troubleshooting)
+15. [Rules that do not bend](#15-rules-that-do-not-bend)
 
 ---
 
@@ -93,6 +96,7 @@ A table of contents across the top; every section folds and remembers whether yo
 | **Guests** | Speakers, sponsors, VIPs, clients — open their real pages **as them**, role codes with copy links, preview a guest |
 | **Networking** | Queue size, matches in progress, open or closed |
 | **Replays** | Per ended event: whether a replay is ready |
+| **Access codes** | Every event's six codes and the global gate passwords (§5) |
 | **Settings** | Global configuration |
 
 ### 3.3 Start a Room right now
@@ -135,17 +139,58 @@ An operator is West Peek staff running the control room. Same building as the ow
 
 ---
 
-## 5. Where the access codes live
+## 5. Access codes — how they are made, where they live, how to change them
 
-Codes are deliberately **not written into any document**. Old manuals printed them in a table; that is exactly what this version replaces.
+### The shape
 
-- **Owner Console → Crews / Guests** shows every code per event — crew, speaker, sponsor, VIP, client — each masked, with **Reveal**, **Copy** and **Rotate**.
-- Rotating a code **invalidates the old code and every link built from it**.
-- The global crew and operator passwords are Cloudflare secrets. The console shows **SET / NOT SET** and never the value.
+Every code for an event is built from the same stem: **the first six letters or digits of the event name**, uppercased.
 
-**Code convention:** every code is **UPPERCASE** — `WPL-VXCKX6` (join), `CREW-93H7SD`, `SPK-WYGJMY`, `VIP-XXXXXX`. Matching is case-insensitive and tolerates a missing prefix, so a guest typing `vxckx6` still gets in.
+| Who | Code | Opens |
+| --- | --- | --- |
+| Attendees | `WPL-45MINU` | The venue, via `/join` |
+| Crew | `WPL-CREW-45MINU` | `/crew/events/…` — moderation, go-live, end the show |
+| Speaker | `WPL-SPEAKER-45MINU` | `/speaker/events/…` — green room, cue cards, stage |
+| Sponsor | `WPL-SPONSOR-45MINU` | `/sponsor/events/…` — booth, leads |
+| Client | `WPL-CLIENT-45MINU` | `/client/…` — approvals, reports, scoped to their own slug |
+| VIP | `WPL-VIP-45MINU` | The venue plus the VIP badge and lounge |
 
----
+Codes are **UPPERCASE**, matched **case-insensitively**, and the join code is accepted with or without the `WPL-` prefix — `45minu` gets in.
+
+**Why the roles are separate credentials:** the code *is* the role. A sponsor holding the client's code would be reading the paying client's approvals and reports. Each one opens a different area and nothing else.
+
+**Collisions:** two events whose names begin the same way — "Sequoia's first Room" and "Sequoia's second Room" both give `SEQUOI` — get a disambiguated stem (`SEQUOI2`), applied across all six roles for that event.
+
+**Renaming an event does not change its codes.** Links already sent keep working. If you want the codes to follow the new name, press **Regenerate codes from the new name** — deliberately, knowing the old ones die.
+
+Because codes are derived from the event name they are guessable by design. The protection is at the door, not in the string: **code entry is rate-limited at every gate**, and failed attempts on privileged codes are logged and visible in the Owner Console.
+
+### Custom codes
+
+Any code can be set by hand instead.
+
+1. Owner Console → **Access codes**, or the event's **Access** page.
+2. Type your own: **4–24 characters, letters, digits and hyphens, unique across events.**
+3. Save. The old code **stops working immediately**, and the notice says exactly what that killed — crew sessions and crew links, or guests sent back to the gate, or old join links.
+4. **Regenerate** puts a code back to the automatic `WPL-…` form.
+
+A hand-set code **wins over the generated one** and survives a rename. Who can do this: owner, operator, and producers holding `manage_access_codes`; anyone else sees the row read-only with the reason.
+
+### Where to find them
+
+**Owner Console → Access codes** is the one place. Every event — upcoming, ended and archived — with all six codes masked until **Reveal**, plus **Copy**, **Copy all codes for this event**, **Rotate**, and a search that takes either an event name or a code someone has handed you and tells you which event it belongs to.
+
+The four **global** gate passwords sit in the same place:
+
+| Key | In the vault |
+| --- | --- |
+| `OWNER_MASTER_ACCESS_PASSWORD` | Value shown — masked, Reveal, Copy |
+| `OPERATOR_LAUNCHPAD_PASSWORD` | Value shown |
+| `CREW_ACCESS_PASSWORD` | Value shown |
+| `OWNER_MASTER_ACCESS_PASSWORD_2` | Marked **set**; the spare key's value is held separately and not shown |
+
+Those values render **only** under an owner session — an operator never receives them — and every Reveal or Copy writes an audit row naming the key, never the value.
+
+**No access code or password appears anywhere in this manual**, and a validator fails the build if one is ever added.
 
 ## 6. If you are CREW — step by step
 
@@ -189,7 +234,7 @@ All four enter at `westpeek.live/production-access/special-guest` with the role 
 
 ![Speaker green room](images/manual/06-green-room.jpg)
 
-1. Enter with the speaker code (`SPK-…`).
+1. Enter with the speaker code (`WPL-SPEAKER-…`).
 2. **Tech check** — camera, mic, connection. It scores you and records the time.
 3. **Cue cards** — your talking points, and the producer's notes to speakers when they leave them.
 4. **Green room / backstage** — crew and speakers see and hear each other here. Wait; the crew brings you to the stage at your moment. The page updates by itself.
@@ -201,7 +246,16 @@ Booth page, lead capture, ready room, and a post-event report.
 
 ### VIP
 
-The VIP badge and the **VIP lounge**, which is open by default. Three ways in: a VIP code at the gate, a **"Have a VIP code?"** card in the lobby after you have already registered, or the crew marking you VIP from the roster.
+The VIP badge and the **VIP lounge**, which is open by default.
+
+**Nobody is a VIP without the VIP code.** There are two ways to hold it:
+
+- **Enter it yourself** — at the special-guest gate, or on the **"Have a VIP code?"** card in the lobby if you have already registered as an attendee.
+- **An official issues it** — owner or crew press **Make VIP**, which grants that person the event's VIP code and records who granted it, when, and which version of the code.
+
+A per-event **VIP email list** pre-authorises people: a matching email at registration is admitted as VIP under the current code, recorded the same way.
+
+**Rotating the VIP code revokes every VIP admitted under the old one**, including the ones crew granted. The roster shows, for each VIP, how they got in and which version of the code they hold.
 
 ### Client
 
@@ -223,7 +277,24 @@ A read-only overview: approvals, assets, reports, run of show, timeline. Clients
 
 ---
 
-## 9. Clients who want us to run their event
+## 9. Files and assets
+
+Every file for an event lives in one place: **the event's Assets page**, with a cross-event view at `/app/assets` grouped by event.
+
+**Uploading.** Drag a file in, or choose one. It goes straight from the browser to storage through a short-lived signed URL — the file never passes through our server. If storage is ever unreachable the page says so plainly and offers **paste a link** instead, which is also how a Drive or Dropbox file gets in.
+
+**Speakers and sponsors upload from their own portals** — the green room and the booth. Their files arrive marked **in review**, and they can only see their own.
+
+**Crew review**, per file: **Approve · Ask for changes · Show the client · Make internal · Archive**.
+
+- **Show the client** is what puts a file in the client's portal. Clients see approved, client-facing files only.
+- **Archive, never delete.** There is no delete path in the product, and the build fails if one is ever added.
+
+**Downloads are signed and expire after ten minutes**, and are refused to anyone without owner, operator or crew access to that event.
+
+---
+
+## 10. Clients who want us to run their event
 
 ![Plan an event](images/manual/08-request-event.jpg)
 
@@ -250,7 +321,7 @@ These pages are editable by West Peek from the workspace, so an instruction fix 
 
 ---
 
-## 10. The fallback ladder — what to do when the feed dies
+## 11. The fallback ladder — what to do when the feed dies
 
 | Rung | Attendees see | Keeps the StreamYard feed? | Configured |
 | --- | --- | --- | --- |
@@ -272,7 +343,7 @@ The card refuses to move down if that rung is not configured, rather than sendin
 
 ---
 
-## 11. Show-day runbook
+## 12. Show-day runbook
 
 | When | Do |
 | --- | --- |
@@ -287,7 +358,7 @@ The card refuses to move down if that rung is not configured, rather than sendin
 
 ---
 
-## 12. Capacity, cost, and where the ceiling is
+## 13. Capacity, cost, and where the ceiling is
 
 | Service | Plan | Included | First cliff |
 | --- | --- | --- | --- |
@@ -300,7 +371,7 @@ A 90-minute Room with 200 people costs roughly **nothing extra** on these plans.
 
 ---
 
-## 13. Troubleshooting
+## 14. Troubleshooting
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -311,10 +382,13 @@ A 90-minute Room with 200 people costs roughly **nothing extra** on these plans.
 | Timestamps look wrong | — | Every time renders in the **viewer's** time zone. If it looks off, it is the data, not the display |
 | Venue still says "Event ended" after going live again | — | Fixed: taking an ended event live resets its stage |
 | Someone sees the stage who should not | — | Everyone is permitted to watch by default; that is intended. Only stage *access* is approved |
+| A gate asks for a password you already entered | Your session expired — owner sessions last 12 hours | Re-enter at `/production-access/owner` |
+| A page behaves as if you are not signed in, right after a deploy | Stale bundle in an open tab | The app should prompt and reload itself; if it does not, hard refresh (⌘⇧R) |
+| A privileged code stopped working | Someone rotated it, or set a custom one | Owner Console → Access codes shows the current one |
 
 ---
 
-## 14. Rules that do not bend
+## 15. Rules that do not bend
 
 - Events are **archived, never deleted**.
 - Nothing is ever emailed to an attendee automatically without a crew click.
@@ -323,3 +397,7 @@ A 90-minute Room with 200 people costs roughly **nothing extra** on these plans.
 - A rotated code kills every link built from the old one.
 - Test rows (`example.com`, `example.invalid`, Playwright fixtures) are hidden from real people lists.
 - Client instructions are **editable pages**, never frozen attachments.
+- Files are **archived, never deleted** — there is no delete path in the product.
+- Nobody is a **VIP** without the VIP code; rotating it revokes everyone admitted under the old one.
+- The owner chip says **"Owner"**, never a person's name — the master password is shared, so the app cannot know which of you it is.
+- This manual is updated **in the same pull request** as any change it describes.
