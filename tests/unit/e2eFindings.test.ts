@@ -158,3 +158,19 @@ describe("speed networking tables are the runtime ones, and a failing card never
     }
   });
 });
+
+describe("registration: required fields are marked and a website needs no scheme", () => {
+  it("normalizes a bare domain to https and leaves a full URL alone", async () => {
+    const { normalizeWebsite } = await import("@/services/attendees/attendeeRegistrationService");
+    expect(normalizeWebsite("mysite.com")).toBe("https://mysite.com");
+    expect(normalizeWebsite("  www.example.org/about ")).toBe("https://www.example.org/about");
+    expect(normalizeWebsite("http://legacy.example")).toBe("http://legacy.example");
+    expect(normalizeWebsite("")).toBeUndefined();
+  });
+  it("the form marks required fields and does not use type=url", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../components/venue/PublicEventPage.tsx", import.meta.url), "utf8");
+    expect(src).toMatch(/Fields marked .* are required/);
+    expect(src).not.toMatch(/"personalWebsite", "Personal website", "url"/);
+  });
+});
