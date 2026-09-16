@@ -23,7 +23,6 @@ const ALLOWED = new Set([
 const KNOWN_SEED_PAGES = new Set([
   "app/app/contractors/page.tsx",            // Contractors + Vendors rebuild
   "app/app/vendors/page.tsx",                // Contractors + Vendors rebuild
-  "app/app/templates/page.tsx",              // Templates rebuild
   "app/app/events/[eventId]/vendors/page.tsx",
   "app/app/events/[eventId]/analytics/page.tsx",
   "app/app/events/[eventId]/report/page.tsx",

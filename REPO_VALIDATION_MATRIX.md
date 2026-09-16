@@ -341,3 +341,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: it used to take two pages — set the status on `/app/events/{id}/publish`, then hunt for the RTMP credentials on `/crew/events/{id}` under a heading called "Backend showrunner fallback console". One `GoLiveCard` now renders on the Publish page, the Owner Console (event row and Live now) and the crew deck: status → **Go live** (flips the event AND provisions credentials, reusing an existing key) → RTMP URL and masked stream key with **Copy**, **Copy both for StreamYard** and the paste steps → the fallback rung → **End the show**. "Generate / Refresh Primary RTMP" is gone: it is **Get stream credentials** when there is none and **New stream key** (with a confirm) when replacing one. Ending a show still releases the key on purpose, and the empty state says so instead of looking broken. A failed or unconfigured provision is named on the card — `livekitIngressService` now records the missing-credentials case instead of returning silently.
 - Proof behind it: `tests/unit/goLiveOneClick.test.ts`, `tests/e2e/one-click-go-live.spec.ts`. Manual §3.3, §6 and §12 updated in the same PR.
+
+## Templates are wired — 2026-09-16
+
+- Validator: `npm run validate:event-templates-real`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: templates were three compiled fixtures rendered as read-only cards, and `/app/events/new` never offered one. A template is now a row in the runtime store (migration 0033, `runtime_event_templates`) carrying only what the create form reads — format, type, duration, sessions, registration questions. **Use this template** opens New event prefilled and the event it creates gets that duration and that agenda (`sessionsFromTemplate`, laid end to end from the start time); **Save an event as a template** captures a real event's shape; a nameless template is refused in words; and `/app/templates` is off the `KNOWN_SEED_PAGES` shrink-only list.
+- Proof behind it: `tests/unit/eventTemplates.test.ts`, `tests/e2e/event-templates.spec.ts`.

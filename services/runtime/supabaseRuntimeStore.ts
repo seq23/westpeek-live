@@ -13,6 +13,7 @@ import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/ty
 import type { ContactRecord, RegistrationQuestion } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
 import type { EmailSendLog } from "@/types/emailProduction";
+import type { EventTemplateRecord } from "@/types/eventTemplates";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 
@@ -55,6 +56,22 @@ function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord
 
 function mapAttendeeProfile(row: Record<string, unknown>): AttendeeProfile {
   return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), email: row.email ? String(row.email) : undefined, extraAnswers: (row.extra_answers && typeof row.extra_answers === "object" ? (row.extra_answers as Record<string, string>) : {}), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingOptIn: Boolean(row.networking_opt_in), hiddenFromDirectory: Boolean(row.hidden_from_directory), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+}
+
+function mapEventTemplate(row: Record<string, unknown>): EventTemplateRecord {
+  return {
+    id: String(row.id),
+    name: String(row.name || ""),
+    description: String(row.description || ""),
+    format: (row.format as EventTemplateRecord["format"]) || "stage",
+    eventType: String(row.event_type || "webinar"),
+    durationMinutes: Number(row.duration_minutes || 60),
+    sessions: Array.isArray(row.sessions) ? (row.sessions as EventTemplateRecord["sessions"]) : [],
+    registrationQuestions: Array.isArray(row.registration_questions) ? (row.registration_questions as string[]) : [],
+    createdByLabel: String(row.created_by_label || ""),
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
 }
 
 function mapEmailSendLog(row: Record<string, unknown>): EmailSendLog & { sentBy?: string } {
@@ -713,6 +730,33 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     const { data, error } = await this.client.from("runtime_email_sends").select("*").order("queued_at", { ascending: false }).limit(limit);
     if (error) failOrSchemaMissing("runtime_email_sends", error);
     return ((data || []) as Record<string, unknown>[]).map(mapEmailSendLog);
+  }
+
+  async upsertEventTemplate(template: EventTemplateRecord) {
+    const { error } = await this.client.from("runtime_event_templates").upsert({
+      id: template.id, name: template.name, description: template.description, format: template.format, event_type: template.eventType,
+      duration_minutes: template.durationMinutes, sessions: template.sessions, registration_questions: template.registrationQuestions,
+      created_by_label: template.createdByLabel, created_at: template.createdAt, updated_at: template.updatedAt,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("runtime_event_templates", error);
+    return template;
+  }
+
+  async getEventTemplate(id: string) {
+    const { data, error } = await this.client.from("runtime_event_templates").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("runtime_event_templates", error);
+    return data ? mapEventTemplate(data as Record<string, unknown>) : undefined;
+  }
+
+  async listEventTemplates() {
+    const { data, error } = await this.client.from("runtime_event_templates").select("*").order("updated_at", { ascending: false }).limit(200);
+    if (error) failOrSchemaMissing("runtime_event_templates", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEventTemplate);
+  }
+
+  async deleteEventTemplate(id: string) {
+    const { error } = await this.client.from("runtime_event_templates").delete().eq("id", id);
+    if (error) failOrSchemaMissing("runtime_event_templates", error);
   }
 
   async probeContactsArchiveColumn() {
