@@ -21,10 +21,7 @@ const ALLOWED = new Set([
  * (so the list cannot quietly outlive the defect). Assets was the first one taken off it.
  */
 const KNOWN_SEED_PAGES = new Set([
-  "app/app/contractors/page.tsx",            // Contractors + Vendors rebuild
-  "app/app/vendors/page.tsx",                // Contractors + Vendors rebuild
   "app/app/templates/page.tsx",              // Templates rebuild
-  "app/app/events/[eventId]/vendors/page.tsx",
   "app/app/events/[eventId]/analytics/page.tsx",
   "app/app/events/[eventId]/report/page.tsx",
   "app/app/events/[eventId]/approval-queue/page.tsx",

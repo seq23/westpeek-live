@@ -9,6 +9,7 @@ import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } fr
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { SupplierEventLink, SupplierRecord } from "@/types/suppliers";
 import type { EmailSendLog } from "@/types/emailProduction";
 import type { ContactRecord } from "@/types/attendeeRegistration";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
@@ -90,6 +91,8 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     speedNetworkingEntries: Array.isArray(parsed.speedNetworkingEntries) ? parsed.speedNetworkingEntries : [],
     speedNetworkingMatches: Array.isArray(parsed.speedNetworkingMatches) ? parsed.speedNetworkingMatches : [],
     contacts: Array.isArray(parsed.contacts) ? parsed.contacts : [],
+    suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers : [],
+    supplierEventLinks: Array.isArray(parsed.supplierEventLinks) ? parsed.supplierEventLinks : [],
     runtimeEvents: Array.isArray(parsed.runtimeEvents) ? parsed.runtimeEvents : [],
     runtimeClients: Array.isArray(parsed.runtimeClients) ? parsed.runtimeClients : [],
     agencySettings: Array.isArray(parsed.agencySettings) ? parsed.agencySettings : [],
@@ -460,6 +463,41 @@ export class FileRuntimeStore implements RuntimeStore {
     return (this.read().eventAssets || [])
       .filter((item: EventAssetRecord) => includeArchived || !item.archivedAt)
       .sort((a: EventAssetRecord, b: EventAssetRecord) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async upsertSupplier(supplier: SupplierRecord) {
+    const snapshot = this.read();
+    snapshot.suppliers = [...(snapshot.suppliers || []).filter((item: SupplierRecord) => item.id !== supplier.id), supplier];
+    this.write(snapshot);
+    return supplier;
+  }
+
+  async getSupplier(id: string) {
+    return (this.read().suppliers || []).find((item: SupplierRecord) => item.id === id);
+  }
+
+  async listSuppliers(includeArchived = false) {
+    return (this.read().suppliers || [])
+      .filter((item: SupplierRecord) => includeArchived || !item.archivedAt)
+      .sort((a: SupplierRecord, b: SupplierRecord) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async upsertSupplierEventLink(link: SupplierEventLink) {
+    const snapshot = this.read();
+    // The same supplier on the same event is ONE attachment, matching the unique index in 0033.
+    snapshot.supplierEventLinks = [...(snapshot.supplierEventLinks || []).filter((item: SupplierEventLink) => !(item.supplierId === link.supplierId && item.eventId === link.eventId)), link];
+    this.write(snapshot);
+    return link;
+  }
+
+  async deleteSupplierEventLink(supplierId: string, eventId: string) {
+    const snapshot = this.read();
+    snapshot.supplierEventLinks = (snapshot.supplierEventLinks || []).filter((item: SupplierEventLink) => !(item.supplierId === supplierId && item.eventId === eventId));
+    this.write(snapshot);
+  }
+
+  async listSupplierEventLinks() {
+    return (this.read().supplierEventLinks || []).slice().sort((a: SupplierEventLink, b: SupplierEventLink) => b.createdAt.localeCompare(a.createdAt));
   }
 
   async appendEmailSendLog(log: EmailSendLog & { sentBy?: string }) {
