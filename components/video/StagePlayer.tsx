@@ -1,6 +1,6 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
-import { Room } from "livekit-client";
+import { Room, RoomEvent } from "livekit-client";
 import { AttendeeStageControls } from "@/components/video/AttendeeStageControls";
 import type { PublicStageStreamState } from "@/types/stageStream";
 import { CloudflareStreamFallbackStagePlayer } from "@/components/video/CloudflareStreamFallbackStagePlayer";
@@ -40,18 +40,36 @@ export function StagePlayer({ initialState, eventId, stageId = "main-stage", vie
   const publishGrant = viewerRole === "attendee" && profileId && stageStatus ? { canPublishAudio: stageStatus.canPublishAudio, canPublishVideo: stageStatus.canPublishVideo, status: stageStatus.status, reason: stageStatus.reason } : undefined;
   // The attendee's LiveKit Room lives here, above the player variants, so the on-stage control bar
   // (and anything it has turned on) survives the pre-stream card and provider switches.
+  // One Room for every viewer, approved to speak or not, so the sound control has something to
+  // call startAudio() on: on a phone the browser will not start audio without a user gesture, and
+  // without that call the first tap of the sound button did nothing (the owner, 16 Sep 2026).
   const [attendeeRoom, setAttendeeRoom] = useState<Room | undefined>();
-  const attendeeCanPublish = Boolean(publishGrant);
   useEffect(() => {
-    if (!attendeeCanPublish) return;
     const instance = new Room();
     setAttendeeRoom(instance);
     return () => { void instance.disconnect(); };
-  }, [attendeeCanPublish]);
+  }, []);
+  // The browser's own verdict on whether audio may play, not our preference.
+  const [audioBlocked, setAudioBlocked] = useState(false);
+  useEffect(() => {
+    if (!attendeeRoom) return;
+    const sync = () => setAudioBlocked(!attendeeRoom.canPlaybackAudio);
+    sync();
+    attendeeRoom.on(RoomEvent.AudioPlaybackStatusChanged, sync);
+    return () => { attendeeRoom.off(RoomEvent.AudioPlaybackStatusChanged, sync); };
+  }, [attendeeRoom]);
   const [isPending, startTransition] = useTransition();
   const backendViewer = isBackendViewer(viewerRole);
   const defaultMuted = backendViewer;
   const { preferences, setMuted, setVolume, rememberSource } = useStagePlayerPreferences(defaultMuted);
+  // One tap, sound. The tap IS the gesture the browser is waiting for, so it unmutes and starts
+  // playback in the same handler; the label says what pressing it will do, never what state we are in.
+  const soundOff = preferences.muted || audioBlocked;
+  async function toggleSound() {
+    if (!soundOff) { setMuted(true); return; }
+    setMuted(false);
+    try { await attendeeRoom?.startAudio(); } catch { /* no room yet (a fallback provider): unmuting is the whole fix */ }
+  }
   useEffect(() => { rememberSource(state.activeStreamSource); }, [state.activeStreamSource, rememberSource]);
   useEffect(() => {
     let cancelled = false;
@@ -98,8 +116,8 @@ export function StagePlayer({ initialState, eventId, stageId = "main-stage", vie
       <div className="flex items-center justify-between gap-3 rounded-b-3xl border-t border-white/10 bg-slate-950 px-4 py-3 text-xs text-slate-300">
         <span>{backendViewer ? `Source: ${state.activeStreamSource} · Status: ${state.streamStatus}` : state.activeStreamSource === "GOOGLE_MEET" ? "Final backup room active" : "Live stage connected"}</span>
         <div className="flex items-center gap-2">
-          <button type="button" onClick={() => setMuted(!preferences.muted)} className="rounded-full border border-white/15 px-3 py-1 font-bold">{preferences.muted ? "Muted" : "Sound on"}</button>
-          <input aria-label="Stage player volume" type="range" min="0" max="1" step="0.05" value={preferences.volume} onChange={(e) => setVolume(Number(e.target.value))} className="w-24" />
+          <button type="button" onClick={toggleSound} className="min-h-11 rounded-full border border-white/15 px-4 font-black" data-testid="stage-sound-toggle" data-sound-state={soundOff ? "off" : "on"}>{soundOff ? "Tap for sound" : "Sound on · tap to mute"}</button>
+          <input aria-label="Stage player volume" type="range" min="0" max="1" step="0.05" value={preferences.volume} onChange={(e) => setVolume(Number(e.target.value))} className="hidden w-24 sm:block" />
         </div>
       </div>
       <p className="sr-only">Attendee-facing player hides provider changes until final external-room continuity is required.</p>

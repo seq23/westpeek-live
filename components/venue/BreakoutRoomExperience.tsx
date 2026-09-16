@@ -8,7 +8,7 @@ import { SafeSection } from "@/components/system/SafeSection";
 export async function BreakoutRoomExperience({ model, roomId = "general-breakout" }: { model: VirtualVenueModel; roomId?: string }) {
   const [control, identity] = await Promise.all([getAttendeeLiveControlState(model.eventId, "breakout", roomId), getCurrentAttendeeIdentity(model.eventId).catch(() => undefined)]);
   return (
-    <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
+    <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
       <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Breakout room</p>
         <h1 className="mt-2 text-3xl font-black">Live breakout room</h1>

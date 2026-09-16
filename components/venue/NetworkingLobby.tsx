@@ -5,7 +5,7 @@ import { SafeSection } from "@/components/system/SafeSection";
 
 export function NetworkingLobby({ model }: { model: VirtualVenueModel }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[1fr_0.8fr]">
+    <div className="grid items-start gap-6 lg:grid-cols-[1fr_0.8fr]">
       <AnalyticsBeacon eventId={model.eventId} kind="networking_joined" />
       <section className="rounded-3xl bg-white p-6 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Networking</p>

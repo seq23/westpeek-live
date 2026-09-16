@@ -4,10 +4,18 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
 import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
 import type { VideoParticipantRole } from "@/types/video";
 
-export async function authorizeVideoTokenRequest(input: { role: VideoParticipantRole; eventId: string }) {
+/**
+ * WATCHING IS OPEN. Everyone holding the link may watch and read chat; only taking part — posting,
+ * networking, going on stage — needs a registration (the settled rule, 16 Sep 2026). A viewer with
+ * no attendee session used to get a 403 here, so an unregistered person who followed a join link
+ * sat on "Stage is getting ready" through the whole show. Callers that can serve a watch-only
+ * token pass allowAnonymousViewer and then get `identity: undefined`; every other caller still
+ * requires the session, and the ROUTE decides what an anonymous viewer is allowed to join.
+ */
+export async function authorizeVideoTokenRequest(input: { role: VideoParticipantRole; eventId: string; allowAnonymousViewer?: boolean }) {
   if (input.role === "attendee") {
     const identity = await getCurrentAttendeeIdentity(input.eventId).catch(() => undefined);
-    if (!identity) return { ok: false as const, error: "Registered attendee session required for attendee video token." };
+    if (!identity && !input.allowAnonymousViewer) return { ok: false as const, error: "Registered attendee session required for attendee video token." };
     return { ok: true as const, identity };
   }
   if (input.role === "observer") return { ok: true as const };

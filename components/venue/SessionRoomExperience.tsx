@@ -3,7 +3,7 @@ import { LiveKitVideoSurface } from "./LiveKitVideoSurface";
 
 export function SessionRoomExperience({ model, session }: { model: VirtualVenueModel; session: VirtualVenueSession }) {
   return (
-    <div className="grid gap-6 lg:grid-cols-[1.4fr_0.8fr]">
+    <div className="grid items-start gap-6 lg:grid-cols-[1.4fr_0.8fr]">
       <section className="rounded-3xl bg-white p-5 shadow-sm">
         <LiveKitVideoSurface label={session.title} />
         <h2 className="mt-5 text-2xl font-semibold">{session.title}</h2>
