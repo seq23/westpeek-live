@@ -1,7 +1,7 @@
 import { NextResponse } from "next/server";
 import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
-import { getMyNetworkingState, joinNetworkingQueue, leaveNetworkingQueue, nextNetworkingMatch } from "@/services/speed-networking/speedNetworkingService";
+import { getMyNetworkingState, joinNetworkingQueue, leaveNetworkingQueue, nextNetworkingMatch, startNetworkingMatchNow } from "@/services/speed-networking/speedNetworkingService";
 import { recordAnalyticsEvent } from "@/services/analytics/analyticsEventService";
 
 export const dynamic = "force-dynamic";
@@ -21,7 +21,7 @@ export async function GET(request: Request) {
   return NextResponse.json({ ok: true, registered: Boolean(identity), attendeeId: identity?.attendeeId || null, ...state }, { headers: { "cache-control": "no-store" } });
 }
 
-/** join | leave | next | end, for the caller's own entry only. */
+/** join | start | leave | next | end, for the caller's own entry only. */
 export async function POST(request: Request) {
   const body = (await request.json().catch(() => ({}))) as { eventId?: string; action?: string };
   const eventId = String(body.eventId || "");
@@ -33,6 +33,8 @@ export async function POST(request: Request) {
   if (action === "join") {
     await joinNetworkingQueue(eventId, { attendeeId: identity.attendeeId, displayName: identity.displayName, company: identity.company, title: identity.title });
     await recordAnalyticsEvent({ eventId, kind: "networking_joined", subjectId: identity.attendeeId, metadata: { attendeeId: identity.attendeeId, attendeeName: identity.displayName, attendeeCompany: identity.company, queueState: "waiting", source: "networking_page" } }).catch(() => undefined);
+  } else if (action === "start") {
+    await startNetworkingMatchNow(eventId, identity.attendeeId);
   } else if (action === "next") {
     await nextNetworkingMatch(eventId, identity.attendeeId);
   } else if (action === "leave" || action === "end") {

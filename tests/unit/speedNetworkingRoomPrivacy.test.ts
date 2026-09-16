@@ -29,7 +29,7 @@ vi.mock("@/services/video/livekitRoomAdmin", async (importOriginal) => ({ ...(aw
 import { FileRuntimeStore } from "@/services/runtime/fileRuntimeStore";
 import { setRuntimeStoreForTests, getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { resetOverlayForTests } from "@/services/events/runtimeEventOverlay";
-import { closeNetworkingForEndedEvent, endMatch, getMyNetworkingState, getNetworkingSettings, joinNetworkingQueue, tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
+import { closeNetworkingForEndedEvent, endMatch, getMyNetworkingState, getNetworkingSettings, joinNetworkingQueue, startNetworkingMatchNow, tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
 import { getVenueActivity, navMarkerFor } from "@/services/venue/venueActivityService";
 import { SPEED_NETWORKING_ROOM_CAPACITY, decideSpeedNetworkingRoomAdmission, prepareSpeedNetworkingRoomForJoin, speedNetworkingRoomIdentities } from "@/services/speed-networking/speedNetworkingRoomGuard";
 import { createLiveKitAccessToken } from "@/services/video/livekitToken";
@@ -174,7 +174,9 @@ describe("speed networking room privacy", () => {
     it("deletes the LiveKit room when the match ends, so the next match starts empty", async () => {
       await joinNetworkingQueue(EVENT, A);
       await joinNetworkingQueue(EVENT, B);
-      const mine = await getMyNetworkingState(EVENT, A.attendeeId);
+      // The match opens after the setup beat; "Start now" skips the rest of it.
+      expect((await getMyNetworkingState(EVENT, A.attendeeId)).status).toBe("setup");
+      const mine = await startNetworkingMatchNow(EVENT, A.attendeeId);
       expect(mine.status).toBe("matched");
       const roomName = mine.match!.roomName;
       await endMatch(EVENT, mine.match!.id, "next");
@@ -241,7 +243,8 @@ describe("an ended event closes networking", () => {
     await joinNetworkingQueue(ENDED, A);
     await joinNetworkingQueue(ENDED, B);
     await joinNetworkingQueue(ENDED, C);
-    const matched = await getMyNetworkingState(ENDED, A.attendeeId);
+    await getMyNetworkingState(ENDED, A.attendeeId);
+    const matched = await startNetworkingMatchNow(ENDED, A.attendeeId);
     expect(matched.status).toBe("matched");
     const roomName = matched.match!.roomName;
 

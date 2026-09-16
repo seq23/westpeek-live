@@ -1,5 +1,6 @@
 import { selectNextSpeedNetworkingPair } from "@/services/speed-networking/speedNetworkingEngine";
 import type { SpeedNetworkingEntry, SpeedNetworkingPairHistory } from "@/types/speedNetworkingEngine";
+import { SPEED_NETWORKING_CYCLE } from "@/types/speedNetworking";
 
 /**
  * Tiered matching (16 Sep 2026). Longest-waiting-first is the right answer for a small room and
@@ -44,6 +45,9 @@ export const SPEED_NETWORKING_MATCHING_CONFIG = {
   },
   /** Never two people from the same organisation — they can talk at their own desks. */
   blockSameCompany: true,
+  /** The rotation and its setup beat. Defined in types/speedNetworking.ts; surfaced here so the
+   *  thresholds, the weights and the cycle are one object to read and one place to tune. */
+  cycle: SPEED_NETWORKING_CYCLE,
 } as const;
 
 /**
@@ -85,6 +89,14 @@ export interface SpeedNetworkingCandidate {
   joinedAt: string;
   /** Left over from the last round, or told "you are next": they lead the queue this round. */
   priority?: boolean;
+  /**
+   * How many rounds this person has been the odd one out. One round of priority is not enough on
+   * its own: whoever is paired goes to the back of the queue, so with an odd number the newest
+   * person oscillates between sitting out and being matched and ends up sitting out far more than
+   * anyone else (measured: 3 of 7 rounds with 7 waiting). Sit-outs lead the queue until the count
+   * is level again, which is what actually spreads them.
+   */
+  timesSatOut?: number;
 }
 
 export function selectSpeedNetworkingTier(waitingCount: number): SpeedNetworkingTier {
@@ -147,6 +159,9 @@ export interface SpeedNetworkingRoundPlan {
 }
 
 function queueOrder(a: SpeedNetworkingCandidate, b: SpeedNetworkingCandidate) {
+  // Most sat out first, then whoever was told "you are next", then longest waiting.
+  const satOut = (b.timesSatOut || 0) - (a.timesSatOut || 0);
+  if (satOut !== 0) return satOut;
   if (Boolean(a.priority) !== Boolean(b.priority)) return a.priority ? -1 : 1;
   return a.joinedAt.localeCompare(b.joinedAt);
 }
@@ -221,9 +236,12 @@ export function planSpeedNetworkingRound(input: {
       attendeeId: candidate.attendeeId,
       displayName: candidate.displayName,
       status: "waiting",
-      // The engine orders purely by queue time, so "you are next" is expressed the only way it
-      // understands: whoever was left over last round sorts ahead of everyone, in their own order.
-      joinedQueueAt: candidate.priority ? `0000-${candidate.joinedAt}` : candidate.joinedAt,
+      // The engine orders purely by queue time, so the sit-out debt and "you are next" are
+      // expressed the only way it understands: a prefix that sorts ahead of any real timestamp
+      // (it starts with "0", an ISO year does not), most-sat-out first.
+      joinedQueueAt: candidate.timesSatOut || candidate.priority
+        ? `0${String(999 - Math.min(999, candidate.timesSatOut || 0)).padStart(3, "0")}${candidate.priority ? "0" : "1"}-${candidate.joinedAt}`
+        : candidate.joinedAt,
     }));
     const remaining = new Map(entries.map((entry) => [entry.attendeeId!, entry]));
     // A pair both of whom asked to meet someone again is taken back out of the history the engine reads.

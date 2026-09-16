@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { recordAnalyticsEvent } from "@/services/analytics/analyticsEventService";
-import { allowRepeatNetworkingMatch, joinNetworkingQueue, leaveNetworkingQueue, nextNetworkingMatch, setNetworkingSettings } from "@/services/speed-networking/speedNetworkingService";
+import { allowRepeatNetworkingMatch, joinNetworkingQueue, leaveNetworkingQueue, nextNetworkingMatch, setNetworkingSettings, startNetworkingMatchNow } from "@/services/speed-networking/speedNetworkingService";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { SPEED_NETWORKING_DEFAULT_MINUTES } from "@/types/speedNetworking";
 import { revalidatePath } from "next/cache";
@@ -93,4 +93,14 @@ export async function allowRepeatSpeedNetworkingMatchAction(formData: FormData) 
   if (!identity) redirect(`/events/${eventId}/register?reason=networking`);
   await allowRepeatNetworkingMatch(eventId, identity.attendeeId);
   redirect(`/venue/${eventId}/networking?state=waiting&repeat=1`);
+}
+
+/** "Start now": skip the rest of the setup beat. It never adds another gap and never shortens the match. */
+export async function startSpeedNetworkingMatchNowAction(formData: FormData) {
+  const eventId = clean(formData.get("eventId"));
+  if (!eventId) return;
+  const identity = await getCurrentAttendeeIdentity(eventId);
+  if (!identity) redirect(`/events/${eventId}/register?reason=networking`);
+  await startNetworkingMatchNow(eventId, identity.attendeeId);
+  redirect(`/venue/${eventId}/networking?state=matched&started=1`);
 }

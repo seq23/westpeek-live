@@ -97,6 +97,61 @@ round is deterministic given the queue, the history and the random source.
 round. Somebody who has met — or cannot be paired with — everyone else waiting is told so, and
 offered *"Meet someone again"*; a repeat only happens when **both** people have asked for it.
 
+## The 4-minute cycle, and the beat between matches
+
+The owner: *"after the 4 min is over the next person in the queue comes on to speak to you. it should
+continually keep u in a 4 min cycle of talking to new people with a small lag between to set up."*
+
+The rotation already worked — a match past `expiresAt` is ended on the next read, both people go
+back in the queue, and the matcher pairs the next round. Three things were missing.
+
+**1. There was no beat.** Expire, requeue and re-pair all happened on the same tick, so one
+stranger's face cut straight to the next. A match is now **decided immediately but opens
+`setupGapSeconds` later** (9s, in `SPEED_NETWORKING_CYCLE`, surfaced as
+`SPEED_NETWORKING_MATCHING_CONFIG.cycle`). During the beat the attendee sees who they just finished
+with, **who is next with their company and title**, a live **camera preview** (`getUserMedia`, no
+LiveKit room — the beat is a mirror, not a meeting), and the countdown.
+
+The beat is a real server-side state, not a screen: **`tokenAllowedForRoom` refuses until the
+bell**, released `tokenLeadSeconds` (2s) early so the connection is up on time. **"Start now"**
+skips the remainder — it never shortens the match and never adds a second gap. No migration was
+needed: the match keeps `status = "active"` and the phase is derived from `startsAt`, so the
+`check (status in ('active','ended','expired'))` constraint is untouched.
+
+**2. Nothing advanced the cycle but a client read — measured and tightened.** Every read of
+`/api/networking/mine` runs the matcher, so the poll *is* the clock. It was a flat 5s. It is now
+**adaptive: 1s during the beat and inside the last 15s of a match, 5s otherwise**, plus an
+immediate refresh on `visibilitychange` because browsers throttle a backgrounded tab's timers to
+roughly once a minute whatever we ask for.
+
+**Worst case between a match expiring and the next appearing: ~1 second** for a visible tab (one
+transition-cadence poll), and immediate on returning to a backgrounded one. It does **not** depend
+on the other person's device: either attendee's own poll runs the matcher for the whole event.
+
+*Why not the combined `/api/venue/tick`?* It is **owner and operator only** and answers an attendee
+`403`, so it cannot carry an attendee's cycle at all.
+
+**3. Requeue fairness was genuinely broken.** `endMatch` sends both people to the back of the queue,
+which is the right rotation — but with an odd number the person at the back sat out, got priority,
+was paired, went to the back, and sat out again. **Measured: with 7 waiting, one person sat out 3
+rounds out of 7.** One round of priority does not pay a sit-out.
+
+Fixed by tracking a **sit-out debt** (`satOutCounts` in the round state, `timesSatOut` in the
+planner): the most-sat-out lead the queue until the count is level, and the debt is cleared the
+moment they are matched. Measured after the fix:
+
+| Waiting | Rounds | Who sat out | Matches each |
+| --- | --- | --- | --- |
+| 3 | 3 | each person exactly once | 2, 2, 2 |
+| 5 | 5 | each person exactly once | 4, 4, 4, 4, 4 |
+| 7 | 7 | never the same person twice running | 6, 6, 6, 5, 6, 5, 6 |
+
+**The countdown is honest.** It was a client interval decrementing by one a second, which drifts
+whenever a tab is throttled or a phone sleeps. It now turns the server's `secondsLeft` into a
+wall-clock deadline **on the device** the moment it arrives and reads the clock from then on — so a
+phone that wakes up shows the true remaining time. The deadline is taken from `secondsLeft` rather
+than from `expiresAt` deliberately: that imports the round trip, not the gap between two clocks.
+
 ## An ended event has no queue
 
 `/venue/<event>/stage` on an **ENDED** event showed the body text "Event ended. Replay access is
@@ -120,4 +175,5 @@ symptom; the queue really was still open underneath, and a late arrival could st
 
 - `npm run validate:speed-networking-room-privacy` — the contract above, including that the gate
   runs before every role branch.
-- `tests/unit/speedNetworkingRoomPrivacy.test.ts`, `tests/unit/speedNetworkingTiers.test.ts`.
+- `tests/unit/speedNetworkingRoomPrivacy.test.ts`, `tests/unit/speedNetworkingTiers.test.ts`,
+  `tests/unit/speedNetworkingReal.test.ts` (the cycle, the beat and the rotation).
