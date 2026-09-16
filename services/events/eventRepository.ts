@@ -151,7 +151,10 @@ export async function findEventRecord(codeOrSlugOrId: string | undefined): Promi
   const key = codeOrSlugOrId?.trim().toLowerCase();
   if (!key) return undefined;
   try {
+    const exact = await getRuntimeStore().getRuntimeEvent(key);
+    if (exact) return exact;
     for (const candidate of joinCodeCandidates(key)) {
+      if (candidate === key) continue;
       const runtime = await getRuntimeStore().getRuntimeEvent(candidate);
       if (runtime) return runtime;
     }
