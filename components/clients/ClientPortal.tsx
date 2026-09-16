@@ -1,6 +1,7 @@
 import { getClientBySlug, getEvent, getRuntimeData } from "@/lib/runtime/getRuntimeData";
 import { ApprovalQueue } from "@/components/approvals/ApprovalQueue";
-import { AssetLibrary } from "@/components/assets/AssetLibrary";
+import { SafeSection } from "@/components/system/SafeSection";
+import { EventAssetLibrary } from "@/components/assets/EventAssetLibrary";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatEventDate } from "@/lib/utils/format";
@@ -46,7 +47,7 @@ export async function ClientPortalDashboard({ clientSlug, eventId, surface }: { 
         {selectedEvent ? (
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
             <ApprovalQueue eventId={selectedEvent.id} clientFacing />
-            <AssetLibrary eventId={selectedEvent.id} clientFacing />
+            <SafeSection label="Files for the client" render={() => EventAssetLibrary({ eventId: selectedEvent.id, clientFacing: true })} />
           </div>
         ) : null}
       </div>

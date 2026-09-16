@@ -11,6 +11,7 @@ import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClien
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { ContactRecord, RegistrationQuestion } from "@/types/attendeeRegistration";
+import type { EventAssetRecord } from "@/types/eventAssets";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 
@@ -53,6 +54,28 @@ function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord
 
 function mapAttendeeProfile(row: Record<string, unknown>): AttendeeProfile {
   return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), email: row.email ? String(row.email) : undefined, extraAnswers: (row.extra_answers && typeof row.extra_answers === "object" ? (row.extra_answers as Record<string, string>) : {}), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingOptIn: Boolean(row.networking_opt_in), hiddenFromDirectory: Boolean(row.hidden_from_directory), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+}
+
+function mapEventAsset(row: Record<string, unknown>): EventAssetRecord {
+  return {
+    id: String(row.id),
+    eventId: String(row.event_id || ""),
+    fileName: String(row.file_name || ""),
+    mimeType: String(row.mime_type || ""),
+    sizeBytes: Number(row.size_bytes || 0),
+    storagePath: row.storage_path ? String(row.storage_path) : undefined,
+    externalUrl: row.external_url ? String(row.external_url) : undefined,
+    uploadedByKind: (row.uploaded_by_kind as EventAssetRecord["uploadedByKind"]) || "operator",
+    uploadedByLabel: String(row.uploaded_by_label || ""),
+    visibility: (row.visibility as EventAssetRecord["visibility"]) || "internal",
+    status: (row.status as EventAssetRecord["status"]) || "uploaded",
+    note: row.note ? String(row.note) : undefined,
+    reviewedBy: row.reviewed_by ? String(row.reviewed_by) : undefined,
+    reviewedAt: row.reviewed_at ? String(row.reviewed_at) : undefined,
+    archivedAt: row.archived_at ? String(row.archived_at) : undefined,
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
 }
 
 function mapAttendeeSession(row: Record<string, unknown>): AttendeeSession {
@@ -609,6 +632,40 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     const { data, error } = await this.client.from("contacts").select("*").order("last_seen_at", { ascending: false }).limit(5000);
     if (error) failOrSchemaMissing("contacts", error);
     return ((data || []) as Record<string, unknown>[]).map(mapContact);
+  }
+
+  async upsertEventAsset(asset: EventAssetRecord) {
+    const { error } = await this.client.from("event_assets").upsert({
+      id: asset.id, event_id: asset.eventId, file_name: asset.fileName, mime_type: asset.mimeType, size_bytes: asset.sizeBytes,
+      storage_path: asset.storagePath ?? null, external_url: asset.externalUrl ?? null, uploaded_by_kind: asset.uploadedByKind,
+      uploaded_by_label: asset.uploadedByLabel, visibility: asset.visibility, status: asset.status, note: asset.note ?? null,
+      reviewed_by: asset.reviewedBy ?? null, reviewed_at: asset.reviewedAt ?? null, archived_at: asset.archivedAt ?? null,
+      created_at: asset.createdAt, updated_at: asset.updatedAt,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("event_assets", error);
+    return asset;
+  }
+
+  async getEventAsset(id: string) {
+    const { data, error } = await this.client.from("event_assets").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("event_assets", error);
+    return data ? mapEventAsset(data as Record<string, unknown>) : undefined;
+  }
+
+  async listEventAssets(eventId: string, includeArchived = false) {
+    let query = this.client.from("event_assets").select("*").eq("event_id", eventId);
+    if (!includeArchived) query = query.is("archived_at", null);
+    const { data, error } = await query.order("created_at", { ascending: false }).limit(500);
+    if (error) failOrSchemaMissing("event_assets", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEventAsset);
+  }
+
+  async listAllEventAssets(includeArchived = false) {
+    let query = this.client.from("event_assets").select("*");
+    if (!includeArchived) query = query.is("archived_at", null);
+    const { data, error } = await query.order("created_at", { ascending: false }).limit(2000);
+    if (error) failOrSchemaMissing("event_assets", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEventAsset);
   }
 
   async probeContactsArchiveColumn() {

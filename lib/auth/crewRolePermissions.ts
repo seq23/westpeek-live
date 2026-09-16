@@ -18,6 +18,7 @@ export type CrewAction =
   | "advance_run_of_show"
   | "manage_host"
   | "manage_access_codes"
+  | "manage_assets"
   | "delay_segment"
   | "log_incident"
   | "view_support"
@@ -38,12 +39,12 @@ const VIEW: readonly CrewAction[] = ["view_event", "view_run_of_show"];
 
 export const crewActionPermissions: Record<V4CrewRole, readonly CrewAction[]> = {
   crew: [...VIEW],
-  executive_producer: [...VIEW, "go_live", "manage_host", "manage_access_codes", "moderate_chat", "manage_stage_access", "manage_cue_cards", "advance_run_of_show", "delay_segment", "log_incident", "view_support", "edit_draft_setup", "mark_ready_for_review", "publish_event", "deploy_event", "archive_event", "view_audit", "moderate_session", "switch_video_fallback", "clear_video_fallback", "run_video_health_check"],
-  producer: [...VIEW, "go_live", "manage_access_codes", "moderate_chat", "manage_stage_access", "manage_cue_cards", "advance_run_of_show", "log_incident", "publish_event", "view_audit"],
+  executive_producer: [...VIEW, "go_live", "manage_host", "manage_access_codes", "manage_assets", "moderate_chat", "manage_stage_access", "manage_cue_cards", "advance_run_of_show", "delay_segment", "log_incident", "view_support", "edit_draft_setup", "mark_ready_for_review", "publish_event", "deploy_event", "archive_event", "view_audit", "moderate_session", "switch_video_fallback", "clear_video_fallback", "run_video_health_check"],
+  producer: [...VIEW, "go_live", "manage_access_codes", "manage_assets", "moderate_chat", "manage_stage_access", "manage_cue_cards", "advance_run_of_show", "log_incident", "publish_event", "view_audit"],
   technical_director: [...VIEW, "go_live", "switch_video_fallback", "clear_video_fallback", "run_video_health_check"],
   show_caller: [...VIEW, "moderate_chat", "manage_stage_access", "manage_cue_cards", "advance_run_of_show", "delay_segment", "log_incident"],
   moderator: [...VIEW, "moderate_chat", "manage_stage_access", "moderate_session", "log_incident"],
-  va: [...VIEW, "edit_draft_setup", "mark_ready_for_review"],
+  va: [...VIEW, "edit_draft_setup", "mark_ready_for_review", "manage_assets"],
   support: [...VIEW, "view_support", "log_incident"],
 };
 
@@ -75,6 +76,7 @@ const actionPhrases: Partial<Record<CrewAction, string>> = {
   go_live: "move the stream or end the show",
   manage_host: "mint or revoke a host link",
   manage_access_codes: "change an access code",
+  manage_assets: "approve, hide, or archive a file in the asset library",
   moderate_chat: "moderate chat",
   manage_stage_access: "change who is on the stage",
   manage_cue_cards: "edit cue cards or producer notes",

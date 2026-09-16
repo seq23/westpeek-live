@@ -1,4 +1,6 @@
 import { SponsorPortalLive } from "@/components/sponsors/SponsorPortalLive";
+import { GuestAssetUpload } from "@/components/assets/GuestAssetUpload";
+import { SafeSection } from "@/components/system/SafeSection";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
 import { resolveViewAs } from "@/lib/auth/viewAs";
@@ -11,5 +13,10 @@ export default async function SponsorBoothPage({ params, searchParams }: { param
   await ensureRuntimeEvent(eventId);
   const viewAs = await resolveViewAs(eventId, query?.viewAs, "sponsor");
   const sponsor = viewAs?.guest || await getCurrentGuestIdentity(eventId, "sponsor");
-  return <SponsorPortalLive eventId={eventId} surface="booth" sponsor={sponsor} saved={query?.saved === "1"} error={query?.error} viewAs={viewAs} />;
+  return (
+    <div className="space-y-4">
+      <SponsorPortalLive eventId={eventId} surface="booth" sponsor={sponsor} saved={query?.saved === "1"} error={query?.error} viewAs={viewAs} />
+      {sponsor ? <SafeSection label="Your files" render={() => GuestAssetUpload({ eventId, role: "sponsor", name: sponsor.name, readOnly: Boolean(viewAs) })} /> : null}
+    </div>
+  );
 }
