@@ -173,6 +173,23 @@
       }
     },
     {
+      "id": "app-owner",
+      "path": "/app/owner",
+      "persona": "owner",
+      "required_states": [
+        "empty",
+        "populated",
+        "error"
+      ],
+      "status": "UNPROVEN",
+      "evidence": [],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/app/owner"
+      },
+      "role": "owner"
+    },
+    {
       "id": "app-contractors",
       "path": "/app/contractors",
       "persona": "operator",

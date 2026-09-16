@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { randomId } from "@/lib/security/portableCrypto";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
-import { applyAttendeeLiveDecision, getAttendeeLiveCapability, recordAttendeeStageRequest, setAttendeeLiveCapability, setAttendeeLiveControlState } from "@/services/venue/attendeeLivePermissionService";
+import { applyAttendeeLiveDecision, getAttendeeLiveCapability, getAttendeeLiveControlState, recordAttendeeStageRequest, setAttendeeLiveCapability, setAttendeeLiveControlState } from "@/services/venue/attendeeLivePermissionService";
 import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { removeLiveKitParticipantFromMainStage } from "@/services/video/livekitParticipantAdmin";
@@ -107,4 +107,20 @@ export async function setAttendeeLiveApproval(formData: FormData) {
   const livekitParticipantRemoval = revoked && roomKind === "main_stage" ? await removeLiveKitParticipantFromMainStage({ eventId, stageId: roomId, attendeeId }).catch(() => ({ status: "failed" as const })) : undefined;
   await recordAttendeeLiveDecision({ eventId, roomId, actorRole: auth.actorRole, action: revoked ? "revoked live access for" : "permitted live access for", attendeeId, reason: revoked ? `${String(formData.get("revokedReason") || "Crew revoked live-event access.")} LiveKit removal: ${livekitParticipantRemoval?.status || "not_needed"}` : undefined });
   revalidateLiveSurfaces(eventId);
+}
+
+/**
+ * One obvious switch: "Stage requests: Open / Closed". Sets camera and microphone requests together;
+ * crew approval stays required (requestRequired untouched). The granular checkboxes stay in the fold.
+ */
+export async function setStageRequestsOpenAction(formData: FormData) {
+  const eventId = String(formData.get("eventId") || "");
+  const open = String(formData.get("open") || "") === "true";
+  if (!eventId) return;
+  const auth = await requireControl(eventId);
+  const current = await getAttendeeLiveControlState(eventId, "main_stage", "main-stage");
+  await setAttendeeLiveControlState({ ...current, globalCameraEnabled: open, globalMicrophoneEnabled: open, updatedAt: new Date().toISOString() });
+  await recordAttendeeLiveDecision({ eventId, roomId: "main-stage", actorRole: auth.actorRole, action: open ? "opened stage requests" : "closed stage requests" });
+  revalidateLiveSurfaces(eventId);
+  revalidatePath("/app/owner");
 }

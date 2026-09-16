@@ -169,6 +169,8 @@ test.describe("owner real events", () => {
 
     await loginOwner(page);
     await expect(page.getByTestId("workspace-actor")).toContainText("Sequoia Taylor / owner");
+    // The owner gate lands on the Owner Console; the dashboard is one click away.
+    await gotoAndAssert(page, "/app");
     await expect(page.getByTestId("persistence-mode")).toContainText(/tables ready/i);
     await expect(page.locator("body")).not.toContainText(/Mock fallback|S\.L\. Taylor|Nova Founder Summit/);
 

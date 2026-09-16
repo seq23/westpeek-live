@@ -12,7 +12,7 @@ import { canOwnerAccessPath } from "@/lib/auth/v5RouteAuthorization";
 async function enterOwner(formData: FormData) {
   "use server";
   const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/app");
+  const next = String(formData.get("next") ?? "/app/owner");
   const env = getEnv();
 
   // Either owner master password (OWNER_MASTER_ACCESS_PASSWORD or the optional _2) is a full owner.
@@ -33,7 +33,7 @@ async function enterOwner(formData: FormData) {
 
   (await cookies()).set(ownerCookieName, cookie, getV5CookieOptions(60 * 60 * 12));
 
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/app";
+  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/app/owner";
   await logAccessAttempt({ status: "access_granted", accessKind: "owner", role: "owner", reason: `owner_master:${ownerKey}`, route: safeNext });
   redirect(safeNext);
 }
@@ -46,7 +46,7 @@ export default async function OwnerAccessPage({ searchParams }: { searchParams?:
       const env = getEnv();
       const { ownerCookieName } = getV5AccessCookieNames(env);
       const owner = await readV5AccessCookie((await cookies()).get(ownerCookieName)?.value, getV5AccessCookieSecret(env));
-      const next = resolvedSearchParams?.next && resolvedSearchParams.next.startsWith("/") && !resolvedSearchParams.next.startsWith("//") ? resolvedSearchParams.next : "/app";
+      const next = resolvedSearchParams?.next && resolvedSearchParams.next.startsWith("/") && !resolvedSearchParams.next.startsWith("//") ? resolvedSearchParams.next : "/app/owner";
       if (owner?.kind === "owner" && canOwnerAccessPath(next, owner)) redirect(next);
     } catch {
       // Fall through to the form when access config is missing.
@@ -64,7 +64,7 @@ export default async function OwnerAccessPage({ searchParams }: { searchParams?:
             Operator, crew, speaker, sponsor, client, and VIP access do not grant this authority.
           </p>
           <form action={enterOwner} className="mt-6 space-y-5">
-            <input type="hidden" name="next" value={resolvedSearchParams?.next || "/app"} />
+            <input type="hidden" name="next" value={resolvedSearchParams?.next || "/app/owner"} />
             <div>
               <label htmlFor="owner-password" className="text-sm font-black">Owner master password <span className="text-brand-orange">*</span></label>
               <input id="owner-password" name="password" required type="password" className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />

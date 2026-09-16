@@ -9,6 +9,7 @@ import { SafeSection } from "@/components/system/SafeSection";
 
 import { HostPanel } from "@/components/events/HostPanel";
 import { NetworkingCrewCard } from "@/components/moderation/NetworkingCrewCard";
+import { StageRequestsToggle } from "@/components/moderation/StageRequestsToggle";
 
 /**
  * Where the crew is: the pending requests + roster, the chat moderation queue, and the room-wide
@@ -22,6 +23,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, in
   const viewer = await getCrewViewer(eventId);
   return (
     <div className="space-y-6" data-testid="crew-live-moderation-deck" data-viewer-kind={viewer.kind} data-viewer-role={viewer.role || viewer.kind}>
+      <SafeSection label="Stage requests" render={() => StageRequestsToggle({ eventId, viewer })} />
       {includeStreamConsole ? (
         <section className="space-y-3" data-testid="crew-go-live">
           <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
