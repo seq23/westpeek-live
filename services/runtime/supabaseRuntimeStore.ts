@@ -169,6 +169,7 @@ function rowToAgencySettings(row: Record<string, unknown>): AgencySettingsRecord
 }
 
 export class SupabaseRuntimeStore implements RuntimeStore {
+  readonly kind = "supabase" as const;
   private readonly client: SupabaseClient;
 
   constructor(client = createSupabaseAdminClient()) {

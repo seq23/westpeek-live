@@ -113,7 +113,11 @@ export interface V6RuntimeSnapshot {
   agencySettings: AgencySettingsRecord[];
 }
 
+export type RuntimeStoreKind = "supabase" | "file";
+
 export interface RuntimeStore {
+  /** Explicit, because class names are minified in the Worker bundle and cannot identify the store. */
+  readonly kind: RuntimeStoreKind;
   appendAuditLog(log: AuditLog): Promise<AuditLog>;
   appendAccessAttempt(event: V5AccessAttemptRuntimeEvent): Promise<V5AccessAttemptRuntimeEvent>;
   appendAnalyticsEvent(event: V4AnalyticsEvent): Promise<V4AnalyticsEvent>;

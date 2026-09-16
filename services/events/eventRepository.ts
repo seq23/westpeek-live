@@ -127,7 +127,7 @@ export interface RuntimeSchemaStatus {
 }
 
 function storeKind(): "supabase" | "file" {
-  return getRuntimeStore().constructor.name === "SupabaseRuntimeStore" ? "supabase" : "file";
+  return getRuntimeStore().kind;
 }
 
 export async function findEventRecord(codeOrSlugOrId: string | undefined): Promise<RuntimeEventRecord | undefined> {
