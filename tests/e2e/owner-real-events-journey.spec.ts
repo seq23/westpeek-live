@@ -58,7 +58,7 @@ test.describe("owner real events", () => {
       await expect(joiner.page.locator("body")).toContainText(/Event found/i);
       await expect(joiner.page.locator("body")).toContainText(name);
       await joiner.page.getByRole("link", { name: /Continue/i }).click();
-      await expect(joiner.page).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby/);
+      await expect(joiner.page).toHaveURL(/\/venue\/[a-z0-9-]+\/stage/); // a live Room lands on the stage
       await expect(joiner.page.locator("body")).toContainText(name);
       // Attendees never see the host panel.
       await expect(joiner.page.getByTestId("host-join-code-banner")).toHaveCount(0);

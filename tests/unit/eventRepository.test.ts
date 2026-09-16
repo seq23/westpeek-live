@@ -72,7 +72,7 @@ describe("runtime-first event repository", () => {
     await setEventStatus(event.id, "live", owner);
     const live = await resolveEventJoinCode(event.joinCode);
     expect(live.ok).toBe(true);
-    expect(live.destination).toBe(`/venue/${event.id}/lobby`);
+    expect(live.destination).toBe(`/venue/${event.id}/stage`); // live means the stage, not a lobby one click short of it
   });
 
   it("archives (hidden by default) and restores to the pre-archive status", async () => {

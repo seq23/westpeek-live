@@ -38,8 +38,11 @@ export function resolveHydratedEventJoinCode(rawCode: string | undefined): V4Joi
     return { ok: false, eventId: event.id, eventSlug: event.slug, eventName: event.name, publicState, reason: "archived", message: "This event is archived and no longer publicly available." };
   }
 
+  // LIVE MEANS THE STAGE. A join link sent mid-show (Scooter's workshop, 16 Sep 2026) landed
+  // people in the lobby, where the stream is one more click away that a newcomer does not know to
+  // make. When the event is live the join lands on the stage; the lobby is one tap back.
   const destination = publicState === "live"
-    ? (attendee?.defaultDestination || `/venue/${event.id}/lobby`)
+    ? `/venue/${event.id}/stage`
     : publicState === "ended"
       ? `/venue/${event.id}/replay`
       : `/events/${event.slug}`;
