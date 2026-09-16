@@ -195,14 +195,24 @@ test("sponsor booth reaches the Expo; VIP sees the badge and the lounge the crew
   const vip = await guestPage(browser, "vip", eventId);
   await gotoAndAssert(vip.page, `/venue/${eventId}/lobby`);
   await expect(vip.page.getByTestId("vip-badge")).toBeVisible();
-  await expect(vip.page.getByTestId("vip-lounge")).toHaveCount(0);
+  // The lounge is open by default for every runtime event; the VIP sees it before any crew click.
+  await expect(vip.page.getByTestId("vip-lobby-panel")).toHaveAttribute("data-vip-room-open", "true");
+  await expect(vip.page.getByTestId("vip-lounge")).toBeVisible();
   await vip.page.getByTestId("guest-name").fill("Val VIP");
   await vip.page.getByTestId("guest-identity-submit").click();
   await expect(vip.page.getByTestId("vip-lobby-panel")).toContainText("Welcome, Val VIP");
+  await expect(vip.page.getByTestId("vip-lounge")).toContainText("Val VIP");
+  // The crew can close it (the control reads "Close the VIP lounge" while open) and open it again.
   const crewContext = await browser.newContext();
   const crew = await crewContext.newPage();
   await grantCrewAccess(crew, "producer", eventId);
   await gotoAndAssert(crew, `/crew/events/${eventId}`);
+  await expect(crew.getByTestId("vip-room-control")).toHaveAttribute("data-open", "true");
+  await expect(crew.getByTestId("vip-room-toggle")).toHaveText("Close the VIP lounge");
+  await crew.getByTestId("vip-room-toggle").click();
+  await expect(crew.getByTestId("vip-room-control")).toHaveAttribute("data-open", "false");
+  await gotoAndAssert(vip.page, `/venue/${eventId}/lobby`);
+  await expect(vip.page.getByTestId("vip-lounge")).toHaveCount(0);
   await crew.getByTestId("vip-room-toggle").click();
   await expect(crew.getByTestId("vip-room-control")).toHaveAttribute("data-open", "true");
   await gotoAndAssert(vip.page, `/venue/${eventId}/lobby`);

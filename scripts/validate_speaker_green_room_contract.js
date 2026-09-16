@@ -83,6 +83,10 @@ requireTokens("components/sponsors/SponsorPortalLive.tsx", ["sponsor-booth-edito
 requireTokens("services/guests/runtimeBooths.ts", ["export async function withRuntimeBooths"]);
 requireTokens("app/venue/[eventId]/expo/page.tsx", ["withRuntimeBooths("]);
 requireTokens("components/venue/VipLobbyPanel.tsx", ["vip-badge", "vip-lounge", "getVipRoom("]);
+// The VIP lounge is open by default for every runtime event (owner, 16 Sep 2026); a stored crew decision is respected.
+requireTokens("services/guests/guestStateService.ts", ["export const VIP_ROOM_DEFAULT: VipRoomState = { open: true"]);
+requireTokens("tests/unit/speakerGreenRoom.test.ts", ["is open for an event with no stored decision"]);
+requireTokens("tests/e2e/speaker-green-room.spec.ts", ["Close the VIP lounge"]);
 requireTokens("app/venue/[eventId]/lobby/page.tsx", ['guest?.role === "vip"']);
 requireTokens("components/clients/ClientPortal.tsx", ['runtime.source !== "seed") return <ClientRuntimeOverview']);
 requireTokens("components/speakers/SpeakerMaterialIntakePanel.tsx", ["listSpeakerCueDecks(", "speaker-pending-cue-decks"]);
