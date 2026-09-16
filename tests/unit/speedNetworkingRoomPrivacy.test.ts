@@ -29,7 +29,8 @@ vi.mock("@/services/video/livekitRoomAdmin", async (importOriginal) => ({ ...(aw
 import { FileRuntimeStore } from "@/services/runtime/fileRuntimeStore";
 import { setRuntimeStoreForTests, getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { resetOverlayForTests } from "@/services/events/runtimeEventOverlay";
-import { endMatch, getMyNetworkingState, joinNetworkingQueue, tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
+import { closeNetworkingForEndedEvent, endMatch, getMyNetworkingState, getNetworkingSettings, joinNetworkingQueue, tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
+import { getVenueActivity, navMarkerFor } from "@/services/venue/venueActivityService";
 import { SPEED_NETWORKING_ROOM_CAPACITY, decideSpeedNetworkingRoomAdmission, prepareSpeedNetworkingRoomForJoin, speedNetworkingRoomIdentities } from "@/services/speed-networking/speedNetworkingRoomGuard";
 import { createLiveKitAccessToken } from "@/services/video/livekitToken";
 import { normalizeParticipantState } from "@/services/video/livekitRoomAdmin";
@@ -183,5 +184,98 @@ describe("speed networking room privacy", () => {
       expect(tokenAllowedForRoom(stored, roomName, A.attendeeId)).toBe(false);
       expect(decideSpeedNetworkingRoomAdmission({ match: stored, roomName, attendeeId: A.attendeeId, role: "attendee" }).ok).toBe(false);
     });
+  });
+});
+
+/**
+ * An event that is over has no queue and no live markers. The owner found `/venue/.../stage` on an
+ * ENDED event whose page body said the event had ended while the nav still read "Stage LIVE" and
+ * "Networking OPEN" (16 Sep 2026) — and the queue really was still open underneath, which is the
+ * actual bug; the marker was only how it showed.
+ */
+describe("an ended event closes networking", () => {
+  let tempDir: string;
+  const ENDED = "ended-event";
+
+  async function seedEvent(status: string) {
+    await getRuntimeStore().upsertRuntimeEvent({
+      id: ENDED, slug: ENDED, name: "Finished workshop", format: "virtual", eventType: "webinar",
+      status: status as never, clientName: "West Peek", clientSlug: "west-peek",
+      startAt: new Date(Date.now() - 7_200_000).toISOString(), endAt: new Date(Date.now() - 3_600_000).toISOString(),
+      timezone: "UTC", joinCode: ENDED, accessCodes: {} as never, registrationEnabled: true,
+      branding: {} as never, sessions: [], source: "runtime" as never,
+      createdBy: "test", createdByLabel: "Test", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString(),
+    } as never);
+  }
+
+  beforeEach(() => {
+    for (const fn of Object.values(admin)) fn.mockClear();
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wpl-net-ended-"));
+    process.env.AGENCY_EVENT_OS_RUNTIME_STORE = "file";
+    setRuntimeStoreForTests(new FileRuntimeStore(path.join(tempDir, "runtime.json")));
+    resetOverlayForTests();
+  });
+  afterEach(() => { setRuntimeStoreForTests(undefined); resetOverlayForTests(); fs.rmSync(tempDir, { recursive: true, force: true }); });
+
+  it("reports networking closed and refuses new joins once the event has ended", async () => {
+    await seedEvent("live");
+    await joinNetworkingQueue(ENDED, A);
+    expect((await getNetworkingSettings(ENDED)).open).toBe(true);
+
+    await seedEvent("ended");
+    const settings = await getNetworkingSettings(ENDED);
+    expect(settings).toMatchObject({ open: false, updatedBy: "event_ended" });
+    expect(await joinNetworkingQueue(ENDED, B)).toBeUndefined();
+    expect((await getMyNetworkingState(ENDED, B.attendeeId)).status).toBe("closed");
+  });
+
+  it("closes the queue the same way for replay_available and archived", async () => {
+    for (const status of ["replay_available", "archived"]) {
+      await seedEvent(status);
+      expect((await getNetworkingSettings(ENDED)).open, status).toBe(false);
+    }
+  });
+
+  it("ending the show empties the queue, ends the matches and deletes their rooms", async () => {
+    await seedEvent("live");
+    await joinNetworkingQueue(ENDED, A);
+    await joinNetworkingQueue(ENDED, B);
+    await joinNetworkingQueue(ENDED, C);
+    const matched = await getMyNetworkingState(ENDED, A.attendeeId);
+    expect(matched.status).toBe("matched");
+    const roomName = matched.match!.roomName;
+
+    const result = await closeNetworkingForEndedEvent(ENDED);
+    expect(result).toMatchObject({ cleared: 3, matchesEnded: 1 });
+    expect(admin.deleteLiveKitRoom).toHaveBeenCalledWith(roomName);
+
+    const entries = await getRuntimeStore().listSpeedNetworkingEntries(ENDED);
+    expect(entries.every((entry) => entry.status === "done")).toBe(true);
+    // Nothing is left for a nav marker to advertise, and nobody can rejoin.
+    const after = await getMyNetworkingState(ENDED, A.attendeeId);
+    expect(after).toMatchObject({ status: "closed", queueSize: 0, matchesInProgress: 0, open: false });
+    expect(await joinNetworkingQueue(ENDED, A)).toBeUndefined();
+  });
+
+  it("drops every live-implying nav marker for an event that is over, and keeps the ones that survive it", async () => {
+    await seedEvent("ended");
+    const model = {
+      eventId: ENDED,
+      eventName: "Finished workshop",
+      nav: [], upNext: [], sessions: [], helpTopics: [],
+      liveNow: [{ id: "s1", title: "Opening keynote", status: "live" }],
+      breakouts: [{ id: "b1", status: "open" }],
+      booths: [{ id: "x1" }],
+      people: [{ id: "p1" }],
+      replays: [{ id: "r1", status: "available" }],
+    } as never;
+    const activity = await getVenueActivity(model);
+    expect(activity).toMatchObject({ stageLive: false, liveSessionTitle: undefined, networkingOpen: false, networkingQueueSize: 0, breakoutsOpen: 0, boothCount: 0 });
+    expect(navMarkerFor("stage", activity)).toBeUndefined();
+    expect(navMarkerFor("networking", activity)).toBeUndefined();
+    expect(navMarkerFor("breakouts", activity)).toBeUndefined();
+    // Replays and the people who came are what a finished event still has.
+    expect(navMarkerFor("replay", activity)).toMatchObject({ label: "1" });
+    expect(navMarkerFor("people", activity)).toMatchObject({ label: "1" });
   });
 });

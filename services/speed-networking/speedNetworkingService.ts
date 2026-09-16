@@ -2,6 +2,7 @@ import { randomId } from "@/lib/security/portableCrypto";
 import { planSpeedNetworkingRound, selectSpeedNetworkingTier, type SpeedNetworkingCandidate, type SpeedNetworkingTier } from "@/services/speed-networking/speedNetworkingTiers";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { deleteLiveKitRoom } from "@/services/video/livekitRoomAdmin";
+import { findEventRecord } from "@/services/events/eventRepository";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
 import type { SpeedNetworkingPairHistory } from "@/types/speedNetworkingEngine";
 import { SPEED_NETWORKING_DEFAULT_MINUTES, speedNetworkingRoomName, type SpeedNetworkingMatchRecord, type SpeedNetworkingQueueEntry, type SpeedNetworkingSettings } from "@/types/speedNetworking";
@@ -17,10 +18,22 @@ function now() { return new Date().toISOString(); }
 
 const DEFAULT_SETTINGS: Omit<SpeedNetworkingSettings, "updatedBy" | "updatedAt"> = { open: true, matchMinutes: SPEED_NETWORKING_DEFAULT_MINUTES };
 
+/**
+ * A finished event has no queue. The crew's open/closed switch is the normal control, but the
+ * event's own status overrules it: an event that has ended, moved to replay, or been archived is
+ * closed for networking whatever the stored setting says (16 Sep 2026 — an ended event still
+ * advertised "Networking OPEN" in the venue nav and would still take queue joins).
+ */
+export function networkingClosedByEventStatus(status: string | undefined) {
+  return status === "ended" || status === "replay_available" || status === "archived";
+}
+
 export async function getNetworkingSettings(eventId: string): Promise<SpeedNetworkingSettings> {
   const record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "networking_settings")).catch(() => undefined);
   const state = record?.state as Partial<SpeedNetworkingSettings> | undefined;
-  return { open: state?.open ?? DEFAULT_SETTINGS.open, matchMinutes: clampMinutes(state?.matchMinutes), updatedBy: state?.updatedBy || "default", updatedAt: state?.updatedAt || "" };
+  const event = await findEventRecord(eventId).catch(() => undefined);
+  const eventIsOver = networkingClosedByEventStatus(event?.status);
+  return { open: eventIsOver ? false : state?.open ?? DEFAULT_SETTINGS.open, matchMinutes: clampMinutes(state?.matchMinutes), updatedBy: eventIsOver ? "event_ended" : state?.updatedBy || "default", updatedAt: state?.updatedAt || "" };
 }
 
 export function clampMinutes(value: unknown) {
@@ -81,6 +94,9 @@ export async function allowRepeatNetworkingMatch(eventId: string, attendeeId: st
 
 export async function joinNetworkingQueue(eventId: string, attendee: { attendeeId: string; displayName: string; company?: string; title?: string }) {
   const store = getRuntimeStore();
+  // Closed is closed: an ended event, or a crew that has switched networking off, takes no joins.
+  const settings = await getNetworkingSettings(eventId);
+  if (!settings.open) return undefined;
   const existing = await store.getSpeedNetworkingEntry(eventId, attendee.attendeeId);
   if (existing?.status === "matched" || existing?.status === "waiting") return existing;
   const entry: SpeedNetworkingQueueEntry = {
@@ -305,4 +321,31 @@ export async function crewNetworkingSummary(eventId: string) {
   const entries = await store.listSpeedNetworkingEntries(eventId);
   const matches = await store.listSpeedNetworkingMatches(eventId);
   return { settings, tier: roundState.lastTier, nextUpAttendeeIds: roundState.priorityAttendeeIds, metEveryoneAttendeeIds: roundState.metEveryoneAttendeeIds, queueSize: entries.filter((entry) => entry.status === "waiting").length, matchesInProgress: matches.filter((match) => match.status === "active").length, matchesTotal: matches.length, waiting: entries.filter((entry) => entry.status === "waiting"), active: matches.filter((match) => match.status === "active").map((match) => ({ ...match, a: entries.find((entry) => entry.attendeeId === match.attendeeAId)?.displayName || match.attendeeAId, b: entries.find((entry) => entry.attendeeId === match.attendeeBId)?.displayName || match.attendeeBId })) };
+}
+
+/**
+ * The show is over: close networking and empty the queue. Every active match is ended (which
+ * deletes its LiveKit room), everyone waiting or matched is marked done, and the crew's switch is
+ * left off — so the venue nav has no "OPEN" to render and a late arrival cannot join a queue that
+ * nobody is watching. Idempotent; safe to call on an event that was already closed.
+ */
+export async function closeNetworkingForEndedEvent(eventId: string, closedBy = "show_ended") {
+  const store = getRuntimeStore();
+  // Everyone in the queue is read before anything is ended, so the count is people taken out of the
+  // queue rather than whatever survived ending the matches.
+  const inQueue = (await store.listSpeedNetworkingEntries(eventId).catch(() => [])).filter((entry) => entry.status === "waiting" || entry.status === "matched");
+  const matches = await store.listSpeedNetworkingMatches(eventId).catch(() => []);
+  const matchesEnded = matches.filter((match) => match.status === "active").length;
+  for (const match of matches) {
+    if (match.status === "active") await endMatch(eventId, match.id, "event_ended", { requeue: false });
+  }
+  for (const stale of inQueue) {
+    const entry = (await store.getSpeedNetworkingEntry(eventId, stale.attendeeId)) || stale;
+    if (entry.status === "done" || entry.status === "left") continue;
+    await store.upsertSpeedNetworkingEntry({ ...entry, status: "done", matchId: undefined, updatedAt: now() });
+  }
+  const cleared = inQueue.length;
+  await setNetworkingSettings(eventId, { open: false, matchMinutes: (await getNetworkingSettings(eventId)).matchMinutes }, closedBy);
+  await setNetworkingRoundState(eventId, { priorityAttendeeIds: [], metEveryoneAttendeeIds: [], repeatOptInAttendeeIds: [], lastTier: "fifo", lastRoundAt: now() });
+  return { cleared, matchesEnded };
 }

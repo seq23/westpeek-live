@@ -134,13 +134,37 @@ check("lib/actions/networkingActions.ts", ["export async function allowRepeatSpe
 check("components/venue/SpeedNetworkingQueuePanel.tsx", ["allowRepeatSpeedNetworkingMatchAction", "repeatAction="]);
 check("components/venue/SpeedNetworkingLive.tsx", ["networking-next-up", "networking-met-everyone", "networking-allow-repeat"]);
 
-// 8. The proofs exist and actually assert the behaviour, not its shape.
+// 8. An ended event has no queue and no live markers. The queue closing server-side is the real
+//    rule; the nav marker is only how it shows, so both are asserted.
+check("services/speed-networking/speedNetworkingService.ts", [
+  "export function networkingClosedByEventStatus",
+  'status === "ended" || status === "replay_available" || status === "archived"',
+  "open: eventIsOver ? false :",
+  "if (!settings.open) return undefined;",
+  "export async function closeNetworkingForEndedEvent",
+]);
+check("services/video/showEndService.ts", ["closeNetworkingForEndedEvent(input.eventId)"]);
+const showEnd = read("services/video/showEndService.ts");
+if (showEnd && showEnd.indexOf("closeNetworkingForEndedEvent(input.eventId)") > showEnd.indexOf('if (!event || event.source === "seed")')) {
+  failures.push("services/video/showEndService.ts: networking must close before the seed-event early return, or a seed event's queue outlives its show.");
+}
+check("services/venue/venueActivityService.ts", [
+  "networkingClosedByEventStatus(event?.status)",
+  "stageLive: !eventIsOver &&",
+  "networkingOpen: Boolean(settings?.open) && !eventIsOver",
+  "breakoutsOpen: eventIsOver ? 0 :",
+]);
+
+// 9. The proofs exist and actually assert the behaviour, not its shape.
 check("tests/unit/speedNetworkingRoomPrivacy.test.ts", [
   "refuses every role that is not a registered attendee",
   "refuses a third attendee, another pair's room, and a match that is over",
   "caps the LiveKit room at two and removes everyone who does not belong",
   "deletes the LiveKit room when the match ends",
   "gives two attendees with the same display name different identities",
+  "reports networking closed and refuses new joins once the event has ended",
+  "ending the show empties the queue, ends the matches and deletes their rooms",
+  "drops every live-implying nav marker for an event that is over",
 ]);
 check("tests/unit/speedNetworkingTiers.test.ts", [
   "picks longest-waiting FIFO under twelve, weighted random through fifty, scored above that",
@@ -153,7 +177,7 @@ check("tests/unit/speedNetworkingTiers.test.ts", [
 check("docs/manual-notes/speed-networking-fix.md", ["max_participants", "ListParticipants", "privacy"]);
 
 // Rule 0: a validator that examined nothing has not validated anything.
-if (examined < 10) failures.push(`validate_speed_networking_room_privacy_contract examined only ${examined} files; it must read every file it governs.`);
+if (examined < 14) failures.push(`validate_speed_networking_room_privacy_contract examined only ${examined} files; it must read every file it governs.`);
 
 if (failures.length) {
   console.error("validate_speed_networking_room_privacy_contract: FAIL");
