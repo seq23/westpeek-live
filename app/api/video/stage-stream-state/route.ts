@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { requireOperatorAccessForRequest } from "@/lib/auth/operatorRequestGuard";
 import { getOperatorStageStreamState, getPublicStageStreamState } from "@/services/video/stageStreamStateService";
 import { reconcileIngressWithLiveKit } from "@/services/video/livekitIngressService";
+import { CURRENT_BUILD_ID } from "@/lib/runtime/buildVersion";
 
 export async function GET(request: Request) {
   const url = new URL(request.url);
@@ -15,8 +16,9 @@ export async function GET(request: Request) {
     const operator = await requireOperatorAccessForRequest();
     if (!operator.ok) return NextResponse.json({ ok: false, error: operator.error }, { status: 401 });
     const state = await getOperatorStageStreamState(eventId, stageId);
-    return NextResponse.json({ ok: true, state });
+    return NextResponse.json({ ok: true, state, buildId: CURRENT_BUILD_ID });
   }
   const state = await getPublicStageStreamState(eventId, stageId);
-  return NextResponse.json({ ok: true, state });
+  // buildId: the page compares it with the build it loaded with and reloads itself when a new version is live.
+  return NextResponse.json({ ok: true, state, buildId: CURRENT_BUILD_ID });
 }

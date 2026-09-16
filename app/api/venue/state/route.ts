@@ -5,6 +5,7 @@ import { findEventRecord } from "@/services/events/eventRepository";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 import { venueGateFor } from "@/services/venue/venueStateGate";
 import { getPublicStageStreamState } from "@/services/video/stageStreamStateService";
+import { CURRENT_BUILD_ID } from "@/lib/runtime/buildVersion";
 
 export const dynamic = "force-dynamic";
 
@@ -27,5 +28,5 @@ export async function GET(request: Request) {
   ]);
   const stageEnded = stage?.streamStatus === "ENDED";
   const gate = venueGateFor({ status: event?.status, stageEnded, isHost: Boolean(actor) || viewer.isHost, surface });
-  return NextResponse.json({ ok: true, eventId, status: event?.status || null, stageStatus: stage?.streamStatus || null, gate }, { headers: { "cache-control": "no-store" } });
+  return NextResponse.json({ ok: true, eventId, status: event?.status || null, stageStatus: stage?.streamStatus || null, gate, buildId: CURRENT_BUILD_ID }, { headers: { "cache-control": "no-store" } });
 }

@@ -192,10 +192,14 @@
   ],
   "internalRuntimeEnv": [
     "AGENCY_EVENT_OS_NEXT_BUILD_ONLY",
+    "CF_PAGES_COMMIT_SHA",
     "CI",
+    "GITHUB_SHA",
     "NEXT_PHASE",
+    "NEXT_PUBLIC_BUILD_ID",
     "NODE_ENV",
     "PATH",
+    "WORKERS_CI_COMMIT_SHA",
     "npm_lifecycle_event"
   ],
   "optionalDevEnv": [

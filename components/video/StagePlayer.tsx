@@ -12,6 +12,7 @@ import { StageSwitchingOverlay } from "@/components/video/StageSwitchingOverlay"
 import { ZoomEmbeddedRoom } from "@/components/video/ZoomEmbeddedRoom";
 import { useStagePlayerPreferences } from "@/components/video/useStagePlayerPreferences";
 import { useAttendeeStageStatus, type AttendeeStageStatusSnapshot } from "@/components/video/useAttendeeStageStatus";
+import { notifyServerBuildId } from "@/components/system/BuildVersionWatchdog";
 
 interface StagePlayerProps {
   initialState: PublicStageStreamState;
@@ -58,7 +59,7 @@ export function StagePlayer({ initialState, eventId, stageId = "main-stage", vie
       try {
         const response = await fetch(`/api/video/stage-stream-state?eventId=${encodeURIComponent(eventId)}&stageId=${encodeURIComponent(stageId)}${backendViewer ? "&view=operator" : ""}`);
         const json = await response.json();
-        if (!cancelled && json.ok) setState(json.state);
+        if (!cancelled && json.ok) { setState(json.state); notifyServerBuildId(json.buildId); }
       } catch {}
     }
     hydrate();

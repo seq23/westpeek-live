@@ -4,6 +4,7 @@ import { VenueHeader } from "./VenueHeader";
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { VenueStateNotice } from "@/components/venue/VenueStateNotice";
 import { VenueStatePoller } from "@/components/venue/VenueStatePoller";
+import { BuildVersionWatchdog } from "@/components/system/BuildVersionWatchdog";
 import { getCrewViewer } from "@/lib/auth/crewViewer";
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { findEventRecord } from "@/services/events/eventRepository";
@@ -39,6 +40,7 @@ export async function VenuePageShell({
     <main className="min-h-screen bg-brand-ash px-4 py-4 text-brand-black sm:px-6 lg:px-8" data-venue-gate={gate}>
       <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6">
         <VenueHeader model={model} />
+        <BuildVersionWatchdog />
         {gate === "open" ? children : <VenueStateNotice model={model} gate={gate} isHost={isHost} />}
         <VenueStatePoller eventId={model.eventId} gate={gate} surface={surface} />
       </div>

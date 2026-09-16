@@ -1,6 +1,7 @@
 "use client";
 import { useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
+import { notifyServerBuildId } from "@/components/system/BuildVersionWatchdog";
 
 /**
  * Keeps a venue page honest about the event's state without a manual refresh: polls the venue
@@ -17,6 +18,7 @@ export function VenueStatePoller({ eventId, gate, surface, intervalMs = 10_000 }
       try {
         const response = await fetch(`/api/venue/state?eventId=${encodeURIComponent(eventId)}&surface=${surface}`, { cache: "no-store" });
         const json = await response.json();
+        if (!cancelled && json.ok) notifyServerBuildId(json.buildId);
         if (!cancelled && json.ok && json.gate !== rendered.current) {
           rendered.current = json.gate;
           router.refresh();

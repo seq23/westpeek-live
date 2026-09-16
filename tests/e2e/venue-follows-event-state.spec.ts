@@ -118,3 +118,37 @@ test("a draft Room is not open for an attendee but previews for the host; Publis
   await expect(attendee.getByTestId("stage-player")).toBeVisible();
   await attendeeContext.close();
 });
+
+test("build-version watchdog: a changed build id on the poll reloads the page, but never mid-typing", async ({ page, browser }) => {
+  test.setTimeout(120_000);
+  const eventId = await createEvent(page, `Watchdog ${Date.now()}`, "now");
+  const attendeeContext = await browser.newContext();
+  const attendee = await attendeeContext.newPage();
+  await asRegisteredAttendee(attendee, eventId);
+  await gotoAndAssert(attendee, `/venue/${eventId}/stage`);
+  const loaded = await attendee.getByTestId("build-version-watchdog").getAttribute("data-loaded-build");
+  expect(loaded).toBeTruthy();
+
+  // Mid-typing: the poll says a new build is live; the banner shows, the page waits.
+  await attendee.getByTestId("attendee-identity-chat-form").locator('input[name="message"]').fill("half a thought");
+  let stubbed = 0;
+  await attendee.route("**/api/venue/state**", async (route) => {
+    const response = await route.fetch();
+    const json = await response.json();
+    stubbed += 1;
+    await route.fulfill({ response, json: { ...json, buildId: `${loaded}-next` } });
+  });
+  await expect(attendee.getByTestId("build-version-banner")).toContainText("A new version is live — reloading once you send or clear your message", { timeout: 20_000 });
+  await attendee.waitForTimeout(3_000);
+  await expect(attendee.getByTestId("build-version-banner")).toBeVisible();
+  expect(stubbed).toBeGreaterThan(0);
+
+  // Clearing the input lets the reload happen; the reloaded page (unstubbed after reload) starts clean.
+  await attendee.unroute("**/api/venue/state**");
+  const reloaded = attendee.waitForEvent("load", { timeout: 15_000 });
+  await attendee.getByTestId("attendee-identity-chat-form").locator('input[name="message"]').fill("");
+  await reloaded;
+  await expect(attendee.getByTestId("build-version-watchdog")).toBeVisible();
+  await expect(attendee.getByTestId("build-version-banner")).toHaveCount(0);
+  await attendeeContext.close();
+});
