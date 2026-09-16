@@ -9,6 +9,8 @@ import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
  */
 export async function canonicalEventIdOrRedirect(param: string, areaRoot: (eventId: string) => string): Promise<string> {
   const record = await ensureRuntimeEvent(param);
-  if (record && record.id !== param) redirect(areaRoot(record.id));
+  // Seed aliases (demo ↔ event-summit) are understood everywhere; redirecting them to the area
+  // root sent /venue/demo/stage to /venue/event-summit, which had no page (404, found 16 Sep 2026).
+  if (record && record.id !== param && record.source !== "seed") redirect(areaRoot(record.id));
   return record?.id ?? param;
 }

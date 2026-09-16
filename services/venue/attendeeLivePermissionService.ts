@@ -9,13 +9,20 @@ export function attendeeLiveControlKey(eventId: string, roomKind: AttendeeLiveRo
   return `${eventId}:${roomKind}:${roomId}`;
 }
 
+/**
+ * Room defaults. The main stage allows attendee camera/mic REQUESTS from the start, with crew
+ * approval required before anything publishes (`requestRequired`; `canAttendeePublishLive` insists
+ * on `approvedForStage`). Until 16 Sep 2026 the main stage defaulted camera/mic to off, so a Room
+ * created via New event → Now told every attendee "Camera/mic joining is currently disabled by crew"
+ * and offered no way to ask.
+ */
 export function defaultLiveControlState(eventId: string, roomKind: AttendeeLiveRoomKind, roomId: string): AttendeeLiveControlState {
   return {
     eventId,
     roomKind,
     roomId,
-    globalCameraEnabled: roomKind !== "main_stage",
-    globalMicrophoneEnabled: roomKind !== "main_stage",
+    globalCameraEnabled: true,
+    globalMicrophoneEnabled: true,
     globalScreenShareEnabled: false,
     requestRequired: roomKind === "main_stage",
     attendeeJoinRequiresApproval: false,

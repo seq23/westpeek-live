@@ -12,6 +12,9 @@ import { createInitialRoomFallbackState, getRoomFallbackState } from "@/services
 import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
 import { MyAgendaPanel } from "@/components/venue/MyAgendaPanel";
 import { EditAttendeeProfilePanel } from "@/components/venue/EditAttendeeProfilePanel";
+import { FirstVisitCoachStrip } from "@/components/venue/FirstVisitCoachStrip";
+import { requestAttendeeStageAccess } from "@/lib/actions/attendeeLiveActions";
+import { attendeeStageStatus } from "@/services/venue/attendeeStageStatus";
 
 export async function MainStageExperience({ model }: { model: VirtualVenueModel }) {
   const fallbackState = await getRoomFallbackState(model.eventId, "main_stage").catch(() => createInitialRoomFallbackState(model.eventId, "main_stage"));
@@ -20,20 +23,22 @@ export async function MainStageExperience({ model }: { model: VirtualVenueModel 
   const identity = await getCurrentAttendeeIdentity(model.eventId).catch(() => undefined);
   const attendeeLiveCapability = identity?.attendeeId ? await getAttendeeLiveCapability(model.eventId, "main_stage", "main-stage", identity.attendeeId).catch(() => undefined) : undefined;
   const liveSession = model.liveNow[0] || model.sessions[0];
+  const stageStatus = { ...attendeeStageStatus({ control: attendeeLiveControl, capability: attendeeLiveCapability, registered: Boolean(identity?.attendeeId) }), attendeeId: identity?.attendeeId || null };
   return (
     <div className="space-y-6">
       <AnalyticsBeacon eventId={model.eventId} kind="attendee_joined_session" subjectId={liveSession?.id || "main_stage"} />
       <FallbackActiveBanner state={fallbackState} />
+      <FirstVisitCoachStrip eventId={model.eventId} surface="stage" title="First time here?" lines={["Chat: the panel beside the player — post once you have registered.", "Want to speak? Tap Request to join the stage under the player; the crew sees it on their roster.", "When they approve you, Turn on camera and Turn on microphone appear under the player. Nothing goes live until you tap."]} />
       <div className="grid gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
         <section className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-400">Main stage</p>
           <h1 className="mt-2 text-3xl font-black">{liveSession?.title || "Main stage is standing by"}</h1>
           <p className="mt-3 max-w-3xl text-slate-300">Production is monitoring the live stream and backup paths. You can stay on this page if the show refreshes or switches behind the scenes.</p>
           <div className="mt-6">
-            <StagePlayer initialState={stageStreamState} eventId={model.eventId} stageId="main-stage" viewerRole="attendee" displayName={identity?.displayName || "Registered attendee"} profileId={identity?.attendeeId} />
+            <StagePlayer initialState={stageStreamState} eventId={model.eventId} stageId="main-stage" viewerRole="attendee" displayName={identity?.displayName || "Registered attendee"} profileId={identity?.attendeeId} initialStageStatus={stageStatus} />
           </div>
           <div className="mt-5">
-            <AttendeeStageJoinControls eventId={model.eventId} roomId="main-stage" control={attendeeLiveControl} capability={attendeeLiveCapability} attendeeId={identity?.attendeeId} />
+            <AttendeeStageJoinControls eventId={model.eventId} roomId="main-stage" attendeeId={identity?.attendeeId} initial={stageStatus} requestAction={requestAttendeeStageAccess} />
           </div>
         </section>
         <MainStageLiveChat model={model} />

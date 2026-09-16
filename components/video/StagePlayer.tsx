@@ -1,5 +1,7 @@
 "use client";
 import { useEffect, useState, useTransition } from "react";
+import { Room } from "livekit-client";
+import { AttendeeStageControls } from "@/components/video/AttendeeStageControls";
 import type { PublicStageStreamState } from "@/types/stageStream";
 import { CloudflareStreamFallbackStagePlayer } from "@/components/video/CloudflareStreamFallbackStagePlayer";
 import { DailyFallbackStagePlayer } from "@/components/video/DailyFallbackStagePlayer";
@@ -9,6 +11,7 @@ import { StagePreStreamCard } from "@/components/video/StagePreStreamCard";
 import { StageSwitchingOverlay } from "@/components/video/StageSwitchingOverlay";
 import { ZoomEmbeddedRoom } from "@/components/video/ZoomEmbeddedRoom";
 import { useStagePlayerPreferences } from "@/components/video/useStagePlayerPreferences";
+import { useAttendeeStageStatus, type AttendeeStageStatusSnapshot } from "@/components/video/useAttendeeStageStatus";
 
 interface StagePlayerProps {
   initialState: PublicStageStreamState;
@@ -17,6 +20,8 @@ interface StagePlayerProps {
   viewerRole?: "attendee" | "producer" | "operator" | "crew" | "admin";
   displayName?: string;
   profileId?: string;
+  /** The registered attendee's own stage status as rendered on the server; the player polls it from there. */
+  initialStageStatus?: AttendeeStageStatusSnapshot;
 }
 
 function isBackendViewer(role: StagePlayerProps["viewerRole"]) {
@@ -28,8 +33,20 @@ function attendeeOverlayMessage(state: PublicStageStreamState) {
   return "Refreshing the live stream. Please stay on this page...";
 }
 
-export function StagePlayer({ initialState, eventId, stageId = "main-stage", viewerRole = "attendee", displayName = "Attendee" }: StagePlayerProps) {
+export function StagePlayer({ initialState, eventId, stageId = "main-stage", viewerRole = "attendee", displayName = "Attendee", profileId, initialStageStatus }: StagePlayerProps) {
   const [state, setState] = useState(initialState);
+  const stageStatus = useAttendeeStageStatus(eventId, stageId, initialStageStatus, viewerRole === "attendee" && Boolean(profileId));
+  const publishGrant = viewerRole === "attendee" && profileId && stageStatus ? { canPublishAudio: stageStatus.canPublishAudio, canPublishVideo: stageStatus.canPublishVideo, status: stageStatus.status, reason: stageStatus.reason } : undefined;
+  // The attendee's LiveKit Room lives here, above the player variants, so the on-stage control bar
+  // (and anything it has turned on) survives the pre-stream card and provider switches.
+  const [attendeeRoom, setAttendeeRoom] = useState<Room | undefined>();
+  const attendeeCanPublish = Boolean(publishGrant);
+  useEffect(() => {
+    if (!attendeeCanPublish) return;
+    const instance = new Room();
+    setAttendeeRoom(instance);
+    return () => { void instance.disconnect(); };
+  }, [attendeeCanPublish]);
   const [isPending, startTransition] = useTransition();
   const backendViewer = isBackendViewer(viewerRole);
   const defaultMuted = backendViewer;
@@ -70,12 +87,13 @@ export function StagePlayer({ initialState, eventId, stageId = "main-stage", vie
     : state.activeStreamSource === "DAILY" ? <DailyFallbackStagePlayer eventId={eventId} roomId={stageId} displayName={displayName} muted={preferences.muted} volume={preferences.volume} />
     : state.activeStreamSource === "ZOOM" ? <ZoomEmbeddedRoom config={{ providerMode: "zoom_embedded", roomKind: "stage", roomLabel: "West Peek Live! Backup Room", displayName, zoomMeetingNumber: state.zoomMeetingNumber, attendeeSafeStatus: "opening" }} eventId={eventId} userName={displayName} />
     : state.activeStreamSource === "GOOGLE_MEET" ? <GoogleMeetFallbackStagePlayer fallbackUrl={state.googleMeetFallbackUrl} />
-    : <LiveKitIngressStagePlayer eventId={eventId} roomId={stageId} displayName={displayName} muted={preferences.muted} volume={preferences.volume} onIngressDropAfterLive={(reason) => requestServerFallback("attendee_livekit_disconnect_after_started", reason)} />;
+    : <LiveKitIngressStagePlayer eventId={eventId} roomId={stageId} displayName={displayName} muted={preferences.muted} volume={preferences.volume} publishGrant={publishGrant} room={attendeeRoom} onIngressDropAfterLive={(reason) => requestServerFallback("attendee_livekit_disconnect_after_started", reason)} />;
 
   return (
     <div className="relative rounded-3xl bg-slate-950" data-testid="stage-player" data-active-stream-source={state.activeStreamSource} data-stream-status={state.streamStatus}>
       {switching ? <StageSwitchingOverlay message={backendViewer ? `${state.activeStreamSource.replaceAll("_", " ")} transition in progress...` : attendeeOverlayMessage(state)} /> : null}
       {player}
+      {publishGrant ? <div className="px-3 pt-3"><AttendeeStageControls room={attendeeRoom} grant={publishGrant} /></div> : null}
       <div className="flex items-center justify-between gap-3 rounded-b-3xl border-t border-white/10 bg-slate-950 px-4 py-3 text-xs text-slate-300">
         <span>{backendViewer ? `Source: ${state.activeStreamSource} · Status: ${state.streamStatus}` : state.activeStreamSource === "GOOGLE_MEET" ? "Final backup room active" : "Live stage connected"}</span>
         <div className="flex items-center gap-2">

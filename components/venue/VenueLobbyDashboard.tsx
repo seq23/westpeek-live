@@ -7,6 +7,7 @@ import { FallbackActiveBanner } from "@/components/venue/FallbackActiveBanner";
 import { MobileExperienceWarning } from "@/components/venue/MobileExperienceWarning";
 import { SupportEscalationPanel } from "@/components/venue/SupportEscalationPanel";
 import { UnsupportedBrowserWarning } from "@/components/venue/UnsupportedBrowserWarning";
+import { FirstVisitCoachStrip } from "@/components/venue/FirstVisitCoachStrip";
 import { SessionCard } from "./SessionCard";
 import { BreakoutRoomCard } from "./BreakoutRoomCard";
 import { SponsorBoothCard } from "./SponsorBoothCard";
@@ -22,6 +23,7 @@ export async function VenueLobbyDashboard({ model }: { model: VirtualVenueModel 
       <FallbackActiveBanner state={fallbackState} />
       <UnsupportedBrowserWarning />
       <MobileExperienceWarning />
+      <FirstVisitCoachStrip eventId={model.eventId} surface="lobby" title="You're in" lines={["Stage = watch and speak · Chat = talk to everyone · Register once to do either."]} />
 
       <section className="rounded-3xl bg-white p-6 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Lobby</p>
