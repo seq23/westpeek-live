@@ -320,3 +320,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 
 - Every access gate (owner, operator, crew, special guest) renders `components/access/GateExit.tsx`: "Back to where you were" (from a safe `?next=`), the Owner Console, all the doors, and the front page. A gate is reached by redirect, so the browser's back button lands on the page that redirected and bounces straight back — the owner was trapped there on 16 Sep 2026.
 - The build watchdog now also asks on focus, page-show and visibility change (not only every 30 s), so a tab left open across a deploy reloads when it is next looked at instead of serving the old bundle; the banner gets a beat to be read before the reload.
+
+## VIP is code-bound — 2026-09-16
+
+- Validator: `npm run validate:vip-is-code-bound`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: the owner's rule — "someone cannot be VIP unless they have a code or someone official makes them one, and Make VIP should require a code". There are three ways in and they are the same underneath: the person types the event's VIP code (special-guest gate, or the lobby's "Have a VIP code?" card once registered), the crew issues it ("Make VIP" records who issued it and hands the crew the code to send), or their address was on the event's VIP invite list and registration issues it. One writer creates every grant and stamps the event's **current VIP code version** onto it, so rotating the VIP code revokes everyone admitted under the old one — crew grants included — and re-entering the new code restores it. "Remove VIP" revokes. The crew roster and the Owner Console show, per VIP, how they became one and which version they hold.
+- Proof behind it: `tests/unit/vipCodeBound.test.ts`.

@@ -4,6 +4,8 @@ import { decideAttendeeLiveAccess } from "@/lib/actions/attendeeLiveActions";
 import { silenceLiveChatAttendee } from "@/lib/actions/liveChatActions";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
+import { VipRowControl } from "@/components/moderation/VipRowControl";
+import { listVipStanding, vipCodeFor } from "@/services/guests/vipGrantService";
 import { getAttendeeRoster, liveStatusLabel, ROSTER_LIMIT, type AttendeeRosterRow } from "@/services/venue/attendeeRosterService";
 import type { AttendeeLiveDecision, AttendeeLiveRoomKind } from "@/types/attendeeLive";
 
@@ -55,6 +57,9 @@ function RowActions({ eventId, roomKind, roomId, row, viewer, joinRequiresApprov
 export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roomId = "main-stage", search = "", searchAction, viewer: givenViewer }: { eventId: string; roomKind?: AttendeeLiveRoomKind; roomId?: string; search?: string; searchAction: string; viewer?: CrewViewer }) {
   const [roster, viewer, control] = await Promise.all([getAttendeeRoster({ eventId, roomKind, roomId, search }), givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId), getAttendeeLiveControlState(eventId, roomKind, roomId).catch(() => undefined)]);
   const joinRequiresApproval = Boolean(control?.attendeeJoinRequiresApproval);
+  // VIP is code-bound: the roster shows who holds the code, how, and hands the crew the code to send.
+  const [vipStanding, vipCode] = await Promise.all([listVipStanding(eventId).catch(() => []), vipCodeFor(eventId).catch(() => undefined)]);
+  const vipByAttendee = new Map(vipStanding.map((grant) => [grant.attendeeId, grant]));
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="attendee-live-roster">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Attendee roster · {roomKind === "main_stage" ? "main stage" : `${roomKind} ${roomId}`}</p>
@@ -93,7 +98,7 @@ export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roo
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-left text-sm" data-testid="roster-table">
           <thead className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-            <tr><th className="py-2 pr-3">Attendee</th><th className="py-2 pr-3">Registered</th><th className="py-2 pr-3">Live status</th><th className="py-2 pr-3">Chat</th><th className="py-2">Decide</th></tr>
+            <tr><th className="py-2 pr-3">Attendee</th><th className="py-2 pr-3">Registered</th><th className="py-2 pr-3">Live status</th><th className="py-2 pr-3">Chat</th><th className="py-2 pr-3">Decide</th><th className="py-2">VIP</th></tr>
           </thead>
           <tbody>
             {roster.rows.length ? roster.rows.map((row) => (
@@ -103,8 +108,9 @@ export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roo
                 <td className="py-3 pr-3"><StatusPill row={row} />{row.capability?.revokedReason && row.liveStatus === "revoked" ? <p className="mt-1 text-xs text-slate-500">{row.capability.revokedReason}</p> : null}</td>
                 <td className="py-3 pr-3 text-xs text-slate-600">{row.silenced ? <span className="font-black text-rose-800">Silenced</span> : "Open"}<p>Last: {when(row.lastChatAt)}</p></td>
                 <td className="py-3"><RowActions eventId={eventId} roomKind={roomKind} roomId={roomId} row={row} viewer={viewer} joinRequiresApproval={joinRequiresApproval} /></td>
+                <td className="py-3"><VipRowControl eventId={eventId} attendeeId={row.attendeeId} name={row.name} email={row.emailMasked} standing={vipByAttendee.get(row.attendeeId)} vipCode={vipCode} viewer={viewer} /></td>
               </tr>
-            )) : <tr><td colSpan={5} className="py-4 text-sm text-slate-500">{search ? `No registered attendee matches "${search}".` : "No registered attendees yet. Rows appear as people register with the join code."}</td></tr>}
+            )) : <tr><td colSpan={6} className="py-4 text-sm text-slate-500">{search ? `No registered attendee matches "${search}".` : "No registered attendees yet. Rows appear as people register with the join code."}</td></tr>}
           </tbody>
         </table>
       </div>

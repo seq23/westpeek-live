@@ -9,6 +9,7 @@ import { GuestPreviewList } from "@/components/guests/GuestPreviewLinks";
 import { ContactsAcrossEvents } from "@/components/people/ContactsAcrossEvents";
 import { AccessCodesVault } from "@/components/owner/AccessCodesVault";
 import { EventArchiveControl } from "@/components/owner/EventArchiveControl";
+import { VipRow } from "@/components/owner/VipRow";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { displayCode, guestGatePath } from "@/lib/access/accessCodes";
 import { CURRENT_BUILD_ID } from "@/lib/runtime/buildVersion";
@@ -41,6 +42,7 @@ const SECTIONS = [
   { id: "operators", label: "Operators" },
   { id: "guests", label: "Guests" },
   { id: "networking", label: "Networking" },
+  { id: "vips", label: "VIPs" },
   { id: "access-codes", label: "Access codes" },
   { id: "replays", label: "Replays" },
   { id: "settings", label: "Settings" },
@@ -166,7 +168,7 @@ export async function OwnerConsole() {
   const newestLive = live[0] || active[0];
   const stage = newestLive ? await getOperatorStageStreamState(newestLive.id, "main-stage").catch(() => undefined) : undefined;
   const replays = ended.map((event) => ({ event, count: buildVirtualVenueModel(event.id).replays.length }));
-  const toc = SECTIONS.map((section) => ({ ...section, count: section.id === "live-now" ? live.length : section.id === "events" ? events.length : section.id === "crews" ? active.length : section.id === "operators" ? operatorSessions : section.id === "guests" ? active.length : section.id === "networking" ? active.length : section.id === "replays" ? ended.length : section.id === "access-codes" ? events.length : undefined }));
+  const toc = SECTIONS.map((section) => ({ ...section, count: section.id === "live-now" ? live.length : section.id === "events" ? events.length : section.id === "crews" ? active.length : section.id === "operators" ? operatorSessions : section.id === "guests" ? active.length : section.id === "networking" ? active.length : section.id === "replays" ? ended.length : section.id === "access-codes" ? events.length : section.id === "vips" ? active.length : undefined }));
 
   return (
     <div className="space-y-4" data-testid="owner-console">
@@ -213,6 +215,10 @@ export async function OwnerConsole() {
 
       <ConsoleSection id="networking" title="Networking" count={active.length} blurb="Per event: queue size, matches in progress, open or closed.">
         {active.length ? <ul className="space-y-2">{active.map((event) => <SafeSection key={event.id} label={event.name} compact render={() => NetworkingRow({ event })} />)}</ul> : <p className="text-sm text-brand-muted">No events yet.</p>}
+      </ConsoleSection>
+
+      <ConsoleSection id="vips" title="VIPs" count={active.length} blurb="Who holds each event's VIP code, how they got it, and the invite list that hands it out at registration. Rotating a VIP code takes every grant with it.">
+        {active.length ? <ul className="space-y-3">{active.map((event) => <SafeSection key={event.id} label={event.name} render={() => VipRow({ event })} />)}</ul> : <p className="text-sm text-brand-muted">No events yet.</p>}
       </ConsoleSection>
 
       <ConsoleSection id="access-codes" title="Access codes" count={events.length} blurb="Every code for every event, in one place: masked until you reveal, copy for a producer, rotate when the show is over. Codes live here, not in a document.">

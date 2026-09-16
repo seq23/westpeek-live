@@ -1,6 +1,7 @@
 import { sha256Hex, randomId } from "@/lib/security/portableCrypto";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { maskEmail, upsertContactFromProfile } from "@/services/attendees/contactsService";
+import { admitInvitedVip } from "@/services/guests/vipGrantService";
 import type { AttendeeProfile, AttendeeRegistrationInput, AttendeeRegistrationResult } from "@/types/attendeeRegistration";
 
 function normalizeList(input?: string[]) {
@@ -41,6 +42,9 @@ export async function registerOrUpdateAttendee(input: AttendeeRegistrationInput)
     updatedAt: now,
   };
   await store.upsertAttendeeProfile(profile);
+  // The VIP invite list is a pre-authorisation of the VIP CODE, never a bypass: an invited address
+  // is issued the code under the version in force today, and a rotation takes it away again.
+  await admitInvitedVip(input.eventId, { attendeeId: profile.attendeeId, name: profile.name, email: profile.email }).catch(() => undefined);
   // One person across events: the contact row keyed by email grows its events list instead of duplicating.
   await upsertContactFromProfile(profile);
   return { profile, duplicateBehavior: existing ? "updated_existing_email" : "created" };

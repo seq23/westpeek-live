@@ -10,11 +10,12 @@ import { SafeSection } from "@/components/system/SafeSection";
  * What a VIP code holder sees on the lobby: the badge, their name (given once), and the VIP
  * lounge when the crew has opened it. Anyone without the VIP cookie never sees this panel.
  */
-export async function VipLobbyPanel({ eventId, error, viewAs }: { eventId: string; error?: string; viewAs?: ViewAsContext }) {
+export async function VipLobbyPanel({ eventId, error, viewAs, grantedName }: { eventId: string; error?: string; viewAs?: ViewAsContext; grantedName?: string }) {
   const [ownVip, room, vips] = await Promise.all([viewAs ? Promise.resolve(undefined) : getCurrentGuestIdentity(eventId, "vip"), getVipRoom(eventId), listGuestProfiles(eventId, "vip").catch(() => [])]);
-  const vip = viewAs?.guest || ownVip;
+  // Someone admitted with the VIP code as a registered attendee holds it just as a gate VIP does.
+  const vip: { guestId: string; name: string } | undefined = viewAs?.guest || ownVip || (grantedName ? { guestId: "vip-grant", name: grantedName } : undefined);
   // The VIP code was changed since this cookie was minted: the lounge is closed to it; the badge says why.
-  const stale = !viewAs && await guestAccessStale(eventId);
+  const stale = !viewAs && !grantedName && await guestAccessStale(eventId);
   if (stale) return <section className="rounded-3xl bg-brand-black p-5 text-white" data-testid="vip-lobby-panel" data-vip-stale="true"><p className="text-lg font-black">Your VIP code was changed by the production team.</p><p className="mt-1 text-sm text-white/70">Ask them for the new link, then enter again at the <a href="/production-access/special-guest?error=rotated" className="underline">special-guest gate</a>.</p></section>;
   return (
     <div className="space-y-4" data-testid="vip-lobby-panel" data-vip-room-open={room.open ? "true" : "false"} data-view-as={viewAs?.guest.guestId}>
