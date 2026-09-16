@@ -1,0 +1,9 @@
+# Supabase GitHub integration anchor for westpeek.live.
+#
+# The Supabase GitHub app is connected to this repository (it reports a
+# "Supabase Preview" check on every commit). With this file present it treats
+# `supabase/migrations/` as the migration source for the production branch
+# (`main`). The SQL here mirrors db/migrations/0024_runtime_events.sql, which
+# stays the human-readable source of truth; the numbered db/migrations history
+# before 0024 was applied by hand and is deliberately not mirrored.
+project_id = "lqxzpwtvolojashknseb"

@@ -38,8 +38,12 @@ const requiredErrorMarkers = [
   "Internal Server Error",
   "Application error",
   "500: Internal Server Error",
-  "digest",
 ];
+
+// A real Next.js error page carries `digest: "<numeric hash>"`. Since Next 15.5 every RSC payload also
+// carries `"digest":"$undefined"` for streamed metadata, so a bare "digest" substring is a false positive
+// on every page. Match the same shape the e2e helper (tests/e2e/helpers/assertNoAppError.ts) matches.
+const serverErrorDigestPattern = /digest["']?\s*[:=]\s*["']?[0-9]{6,}/i;
 
 const hardFailStatuses = new Set([500, 502, 503, 504]);
 
@@ -97,7 +101,7 @@ function extractInternalLinks(html) {
 }
 
 function hasGenericServerError(body) {
-  return requiredErrorMarkers.some((marker) => body.includes(marker));
+  return requiredErrorMarkers.some((marker) => body.includes(marker)) || serverErrorDigestPattern.test(body);
 }
 
 function isProtectedPath(pathname) {

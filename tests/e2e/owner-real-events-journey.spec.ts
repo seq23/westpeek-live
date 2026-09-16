@@ -158,4 +158,55 @@ test.describe("owner real events", () => {
     await expect(page.locator("body")).toContainText(/Nova Founder Summit/i);
     await expect(page.getByTestId("host-join-code-banner")).toHaveCount(0);
   });
+
+  test("(e) the workspace reads real rows: dashboard, clients, settings, and the runtime health endpoint", async ({ page, request }) => {
+    const health = await request.get("/api/runtime/health");
+    expect(health.status()).toBe(200);
+    const body = await health.json();
+    expect(body.seedEvents).toBe(5);
+    expect(body.runtimeEvents.ready).toBe(true);
+    expect(JSON.stringify(body)).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY|wpl-[a-z0-9]{6}|CREW-/);
+
+    await loginOwner(page);
+    await expect(page.getByTestId("workspace-actor")).toContainText("Sequoia Taylor / owner");
+    await expect(page.getByTestId("persistence-mode")).toContainText(/tables ready/i);
+    await expect(page.locator("body")).not.toContainText(/Mock fallback|S\.L\. Taylor|Nova Founder Summit/);
+
+    await gotoAndAssert(page, "/app/clients");
+    const clientName = `Playwright Client ${Date.now()}`;
+    await page.getByLabel(/^Client name/i).fill(clientName);
+    await page.getByLabel(/^Industry/i).fill("QA");
+    await page.getByTestId("create-client-submit").click();
+    await expect(page).toHaveURL(/\/app\/clients\?client=/);
+    await expect(page.getByTestId("client-created-notice")).toBeVisible();
+    await expect(page.locator("body")).toContainText(clientName);
+    await expect(page.locator("body")).not.toContainText(/Nova Capital Partners|Acme Health|Lumen/);
+
+    await page.getByRole("link", { name: clientName }).click();
+    await expect(page.locator("body")).toContainText(clientName);
+    await page.getByRole("link", { name: /New event for/i }).click();
+    await expect(page).toHaveURL(/\/app\/events\/new\?when=later&clientId=/);
+    const eventName = `Playwright Client Event ${Date.now()}`;
+    await page.getByLabel(/^Event name/i).fill(eventName);
+    await page.getByTestId("create-event-submit").click();
+    await expect(page).toHaveURL(/\/app\/events\/[a-z0-9-]+\?created=1/);
+    await expect(page.getByTestId("runtime-event-header")).toContainText(clientName);
+
+    await gotoAndAssert(page, "/app");
+    await expect(page.getByTestId("dashboard-events")).toContainText(eventName);
+
+    await gotoAndAssert(page, "/app/settings");
+    const agencyName = `West Peek ${Date.now() % 1000}`;
+    await page.getByTestId("settings-agency-name").fill(agencyName);
+    await page.getByLabel(/Member 2 name/i).fill("Playwright Producer");
+    await page.getByLabel(/Member 2 email/i).fill("producer@example.com");
+    await page.getByLabel(/Member 2 role/i).fill("producer");
+    await page.getByTestId("settings-save").click();
+    await expect(page).toHaveURL(/\/app\/settings\?saved=1/);
+    await expect(page.getByTestId("settings-saved")).toContainText(/Sequoia Taylor \/ owner/);
+    await expect(page.getByTestId("settings-agency-name")).toHaveValue(agencyName);
+    await expect(page.getByLabel(/Member 2 name/i)).toHaveValue("Playwright Producer");
+    await gotoAndAssert(page, "/app");
+    await expect(page.locator("body")).toContainText(agencyName);
+  });
 });
