@@ -236,3 +236,17 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: `/app/people` must read hash-only attendee rows (registered before 16 Sep 2026, email null) as well as `contacts` — grouped by hash across events (`groupHashOnlyProfiles`), masked email + "not captured", counted, exported with a blank email column; the one heal-on-match contact write (`upsertContactFromProfile`, run by registration, profile save, and the networking gate) backfills the email onto every hash sibling and builds one contact from the union of their events with the earliest `first_seen`; `listAttendeeProfilesByEmailHash` / `listAttendeeProfilesWithoutEmail` implemented by both stores.
 - Proof behind it: `tests/unit/hashOnlyPeopleHeal.test.ts`, `tests/e2e/people-hash-only-heal.spec.ts`.
+
+## Cloudflare Stream fallback contract — 2026-09-16
+
+- Validator: `npm run validate:cloudflare-stream-fallback-contract`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: Fallback 1 is real in production, so the crew deck's Go-live section carries a self-contained card for the producer — RTMPS URL and stream key (masked until Reveal, never logged) with click-to-copy, the five numbered StreamYard steps, "Test the fallback player"; every ladder rung shows readiness read from the environment (`lib/video/fallbackReadiness.ts`) and a "Move down" to an unconfigured rung is disabled with the reason AND refused by `applyStageStreamOperatorSignal`; the five Cloudflare Stream secrets are declared in every manifest, `.env*.example` and `ENVIRONMENT_VARIABLES.md`.
+- Proof behind it: `tests/unit/fallbackReadiness.test.ts`.
+
+## Worker variable budget — 2026-09-16
+
+- Validator: `npm run validate:worker-variable-budget`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: Workers Free caps a Worker at **64** variables and secrets. On 16 Sep 2026 we were at 64 and could not add the Cloudflare Stream fallback secrets until the 20 unread `EVENT_{LEADERSHIP_RESET_WEBINAR,PREMIUM_WORKSHOP_INTENSIVE,PROVIDER_INNOVATION_EXPO,SEED_DEMO_DAY}_*_CODE` secrets were deleted. Every secret manifest now stays at 60 or fewer names, free of duplicates, never re-adds the deleted 20 (`EVENT_DEMO_*` stay: `lib/env/safeEnv.ts` reads them), and declares the five Cloudflare Stream fallback secrets.
+- Proof behind it: the manifests themselves; live name parity remains `scripts/audit_cloudflare_secret_parity.js`.

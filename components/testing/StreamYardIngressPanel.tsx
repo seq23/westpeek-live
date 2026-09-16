@@ -9,6 +9,8 @@ import { SafeSection } from "@/components/system/SafeSection";
 import { livekitWebhookUrl } from "@/lib/runtime/appBaseUrl";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
+import { CloudflareFallbackCard } from "@/components/testing/CloudflareFallbackCard";
+import { CLOUDFLARE_FALLBACK_STEPS, cloudflareFallbackCredentials, ladderReadiness, rungReadiness, type LadderSource } from "@/lib/video/fallbackReadiness";
 
 function StatusBadge({ status }: { status: string }) {
   const tone = status.includes("LIVE") || status === "READY_FOR_STREAMYARD" ? "bg-emerald-50 text-emerald-800" : status.includes("SWITCHING") ? "bg-amber-50 text-amber-800" : status.includes("ENDED") ? "bg-slate-100 text-slate-700" : "bg-slate-100 text-slate-700";
@@ -26,33 +28,34 @@ function CopyField({ label, value, sensitive = false }: { label: string; value?:
   );
 }
 
-function SignalButton({ eventId, signal, label, reason, tone = "neutral", viewer }: { eventId: string; signal: StageStreamSignal; label: string; reason: string; tone?: "neutral" | "danger" | "restore"; viewer: CrewViewer }) {
+function SignalButton({ eventId, signal, label, reason, tone = "neutral", viewer, unready }: { eventId: string; signal: StageStreamSignal; label: string; reason: string; tone?: "neutral" | "danger" | "restore"; viewer: CrewViewer; unready?: string }) {
   const className = `disabled:cursor-not-allowed disabled:opacity-40 ${tone === "danger" ? "rounded-full border border-red-300 px-4 py-2 text-sm font-black text-red-800" : tone === "restore" ? "rounded-full border border-emerald-300 px-4 py-2 text-sm font-black text-emerald-800" : "rounded-full border border-slate-300 px-4 py-2 text-sm font-black"}`;
+  // A rung with nothing behind it refuses the move: clicking it on show day would send the whole
+  // room to a black player. The role gate still applies; this disables on top of it and says why.
   return (
-    <GatedForm viewer={viewer} action="go_live" formAction={applyStageStreamOperatorSignal}>
-      <input type="hidden" name="eventId" value={eventId} />
-      <input type="hidden" name="signal" value={signal} />
-      <input type="hidden" name="reason" value={reason} />
-      <button className={className} data-testid={`stage-signal-${signal}`}>{label}</button>
-    </GatedForm>
+    <span className="inline-flex flex-col gap-1">
+      <GatedForm viewer={viewer} action="go_live" formAction={applyStageStreamOperatorSignal}>
+        <input type="hidden" name="eventId" value={eventId} />
+        <input type="hidden" name="signal" value={signal} />
+        <input type="hidden" name="reason" value={reason} />
+        <button className={className} disabled={Boolean(unready)} data-testid={`stage-signal-${signal}`} data-refused={unready ? "unconfigured" : undefined}>{label}</button>
+      </GatedForm>
+      {unready ? <span className="max-w-xs text-xs font-semibold text-amber-800" data-testid={`stage-signal-${signal}-refused`}>{unready}</span> : null}
+    </span>
   );
 }
 
 function ProviderLadderCard({ activeSource }: { activeSource: string }) {
-  const rungs = [
-    ["LIVEKIT_INGRESS", "Primary", "StreamYard-compatible RTMP → LiveKit"],
-    ["CLOUDFLARE_STREAM", "Fallback 1", "LiveKit + Cloudflare Stream Live"],
-    ["DAILY", "Fallback 2", "Daily embedded room"],
-    ["ZOOM", "Fallback 3", "Zoom embedded/manual escalation"],
-    ["GOOGLE_MEET", "Final", "Google Meet continuity room"],
-  ];
+  const rungs = ladderReadiness();
   return (
-    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4">
+    <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="provider-ladder-card">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">Show-day ladder</p>
       <ol className="mt-3 space-y-2 text-sm">
-        {rungs.map(([key, label, description]) => (
-          <li key={key} className={`rounded-xl border p-3 ${activeSource === key ? "border-brand-orange bg-white text-slate-950" : "border-slate-200 bg-white/70 text-slate-600"}`}>
-            <span className="font-black">{label}:</span> {description}
+        {rungs.map((rung) => (
+          <li key={rung.source} className={`rounded-xl border p-3 ${activeSource === rung.source ? "border-brand-orange bg-white text-slate-950" : "border-slate-200 bg-white/70 text-slate-600"}`} data-testid={`ladder-rung-${rung.source}`} data-ready={rung.ready ? "true" : "false"}>
+            <span className="font-black">{rung.rung}:</span> {rung.label}
+            <span className={`ml-2 rounded-full px-2 py-0.5 text-[10px] font-black uppercase tracking-wide ${rung.ready ? "bg-emerald-50 text-emerald-800" : "bg-amber-50 text-amber-900"}`}>{rung.ready ? "Ready" : "Not configured"}</span>
+            {rung.ready ? null : <span className="mt-1 block text-xs text-amber-800">{rung.reason}</span>}
           </li>
         ))}
       </ol>
@@ -70,6 +73,8 @@ export async function StreamYardIngressPanel({ eventId = "event-summit", viewer:
   // Filtered at the store, newest first. Reading the whole snapshot and filtering here showed
   // "No stage stream events recorded yet" for a runtime event whose state had already recorded
   // generate_credentials and two webhooks (16 Sep 2026): the unfiltered read is row-capped.
+  const readiness = ladderReadiness();
+  const unreadyReason = (source: LadderSource) => { const rung = readiness.find((item) => item.source === source); return rung && !rung.ready ? `Refused: ${rung.reason}` : undefined; };
   const events = await getRuntimeStore().listStageStreamEvents(eventId, "main-stage", 8).catch(() => []);
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="streamyard-ingress-panel"><span className="sr-only">Click to Copy RTMP URL Click to Copy Stream Key LiveKit Cloudflare Stream Daily Zoom Google Meet move back up ladder owner showrunner crew logs keep StreamYard running Switch attendees to Daily</span>
@@ -97,6 +102,7 @@ export async function StreamYardIngressPanel({ eventId = "event-summit", viewer:
         <code className="mt-2 block break-all rounded-xl bg-white p-3 text-xs text-slate-900" data-testid="livekit-webhook-url">{webhookUrl}</code>
         <CopyToClipboardButton value={webhookUrl} label="Webhook URL" />
       </div>
+      <CloudflareFallbackCard {...cloudflareFallbackCredentials()} reason={rungReadiness("CLOUDFLARE_STREAM").reason} steps={[...CLOUDFLARE_FALLBACK_STEPS]} />
       {includeEndShow ? <div className="mt-4"><SafeSection label="End of show" compact render={() => EndShowControl({ eventId, compact: true, viewer })} /></div> : null}
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <ProviderLadderCard activeSource={state.activeStreamSource} />
@@ -110,10 +116,10 @@ export async function StreamYardIngressPanel({ eventId = "event-summit", viewer:
       <DeniedNote viewer={viewer} action="go_live" className="mt-5" />
       <div className="mt-5 flex flex-wrap gap-3">
         <GatedForm viewer={viewer} action="go_live" formAction={generateStreamYardCredentials}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="stageId" value="main-stage" /><button className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid="generate-rtmp-credentials">Generate / Refresh Primary RTMP</button></GatedForm>
-        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_cloudflare_stream" label="Move down: Cloudflare Stream" reason="Operator/showrunner moved fallback ladder to Cloudflare Stream." />
-        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_daily" label="Move down: Daily" reason="Operator/showrunner moved fallback ladder to Daily." />
-        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_zoom" label="Move down: Zoom" reason="Operator/showrunner moved fallback ladder to Zoom." />
-        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_google_meet" label="Move down: Google Meet" reason="Operator/showrunner moved fallback ladder to Google Meet." tone="danger" />
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_cloudflare_stream" label="Move down: Cloudflare Stream" reason="Operator/showrunner moved fallback ladder to Cloudflare Stream." unready={unreadyReason("CLOUDFLARE_STREAM")} />
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_daily" label="Move down: Daily" reason="Operator/showrunner moved fallback ladder to Daily." unready={unreadyReason("DAILY")} />
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_zoom" label="Move down: Zoom" reason="Operator/showrunner moved fallback ladder to Zoom." unready={unreadyReason("ZOOM")} />
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_google_meet" label="Move down: Google Meet" reason="Operator/showrunner moved fallback ladder to Google Meet." tone="danger" unready={unreadyReason("GOOGLE_MEET")} />
         <SignalButton viewer={viewer} eventId={eventId} signal="operator_rollback_to_livekit" label="Move back up: LiveKit/StreamYard" reason="Operator/showrunner confirmed primary path recovered." tone="restore" />
         <SignalButton viewer={viewer} eventId={eventId} signal="operator_rollback_to_cloudflare_stream" label="Move back up: Cloudflare" reason="Operator/showrunner confirmed Cloudflare Stream recovered." tone="restore" />
         <SignalButton viewer={viewer} eventId={eventId} signal="operator_rollback_to_daily" label="Move back up: Daily" reason="Operator/showrunner confirmed Daily recovered." tone="restore" />
