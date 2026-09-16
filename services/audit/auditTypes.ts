@@ -63,6 +63,10 @@ export type AuditAction =
   | "chat_attendee_unsilenced"
   | "chat_room_locked"
   | "chat_room_unlocked"
+  // Rate control: slow mode on / off for a room, and Clear chat (which archives, never deletes).
+  | "chat_slow_mode_on"
+  | "chat_slow_mode_off"
+  | "chat_room_cleared"
   // Host links: the executive_producer crew role handed out (or revoked, rotating the crew code) for one event.
   | "host_link_minted"
   | "host_link_revoked"

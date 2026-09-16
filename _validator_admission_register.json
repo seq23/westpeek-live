@@ -4299,6 +4299,27 @@
       "simplificationDisposition": "KEEP"
     },
     {
+      "script": "validate:chat-at-scale",
+      "command": "node scripts/validate_chat_at_scale_contract.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Chat at scale: 0033 migration mirror parity plus the archive columns and the rate table; both runtime stores implement the delta read, the archive write and the per-person rate row; slow mode and the always-on flood guard are enforced on the service write path, with the exemption read from the cookies and never from a form field; Clear chat archives and has no delete path; the delta endpoint and the cursor-polling client exist; the crew controls are cookie-guarded; chat still renders through SafeSection; unit and Playwright proofs exist.",
+      "whatItDoesNotProve": "Does not prove the 0033 migration has been applied to the live Supabase project; that is read from /api/runtime/health (live_chat_post_rates probe) by the post-deploy smoke. Does not measure real poll cost under load.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Static file reads only; sub-second.",
+      "maintenanceCost": "Review on each live chat change.",
+      "removalConditions": "Retire only if live chat itself is retired.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
+    },
+    {
       "script": "validate:live-chat-moderation-contract",
       "command": "node scripts/validate_live_chat_moderation_contract.js",
       "status": "ACTIVE",

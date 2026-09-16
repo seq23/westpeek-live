@@ -1,7 +1,7 @@
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState, V4VideoProvider } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
@@ -114,6 +114,7 @@ export interface V6RuntimeSnapshot {
   stageStreamEvents: StageStreamEvent[];
   liveChatMessages: LiveChatMessage[];
   liveChatModerationStates: LiveChatModerationState[];
+  liveChatRateStates: LiveChatRateState[];
   attendeeLiveCapabilities: AttendeeLiveCapability[];
   attendeeLiveControlStates: AttendeeLiveControlState[];
   specialGuestProfiles: SpecialGuestProfile[];
@@ -197,6 +198,16 @@ export interface RuntimeStore {
   /** Newest first, every room of the event, hidden included: the crew moderation queue. */
   listRecentLiveChatMessages(eventId: string, limit: number): Promise<LiveChatMessage[]>;
   updateLiveChatMessageModeration(input: { id: string; eventId: string; moderationStatus: LiveChatMessage["moderationStatus"]; moderatedBy: string; moderatedAt: string }): Promise<LiveChatMessage | undefined>;
+  /**
+   * Delta poll: every row of the room created OR moderated OR archived since `since`, hidden and
+   * archived included, so the caller can turn a hide or a clear into a removal for open pages.
+   */
+  listLiveChatMessagesSince(eventId: string, roomKind: string, roomId: string, since: string): Promise<LiveChatMessage[]>;
+  /** Crew "Clear chat": archive every visible row of the room. Returns how many were archived. */
+  archiveLiveChatRoomMessages(input: { eventId: string; roomKind: string; roomId: string; archivedAt: string; archivedBy: string }): Promise<number>;
+  /** Per-person chat flood-guard row, keyed event:attendee. */
+  getLiveChatRateState(key: string): Promise<LiveChatRateState | undefined>;
+  setLiveChatRateState(state: LiveChatRateState): Promise<LiveChatRateState>;
   setLiveChatModerationState(state: LiveChatModerationState): Promise<LiveChatModerationState>;
   getLiveChatModerationState(key: string): Promise<LiveChatModerationState | undefined>;
   listLiveChatModerationStates(eventId: string): Promise<LiveChatModerationState[]>;
@@ -262,6 +273,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     stageStreamStates: [],
     stageStreamEvents: [],
     liveChatMessages: [],
+    liveChatRateStates: [],
     liveChatModerationStates: [],
     attendeeLiveCapabilities: [],
     attendeeLiveControlStates: [],

@@ -105,6 +105,7 @@ export const SPEED_NETWORKING_MIGRATION_FILE = "db/migrations/0027_speed_network
 export const ATTENDEE_VISIBILITY_MIGRATION_FILE = "db/migrations/0029_attendee_profile_visibility.sql";
 export const PLAN_AN_EVENT_MIGRATION_FILE = "db/migrations/0036_plan_an_event_pipeline.sql";
 export const SUPPLIERS_MIGRATION_FILE = "db/migrations/0033_contractors_and_vendors.sql";
+export const LIVE_CHAT_SCALE_MIGRATION_FILE = "db/migrations/0033_live_chat_scale_controls.sql";
 
 /** Which SQL file creates each runtime table the health probe checks. */
 export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
@@ -123,4 +124,6 @@ export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
   "request_event_intake.state": PLAN_AN_EVENT_MIGRATION_FILE,
   suppliers: SUPPLIERS_MIGRATION_FILE,
   supplier_event_links: SUPPLIERS_MIGRATION_FILE,
+  live_chat_post_rates: LIVE_CHAT_SCALE_MIGRATION_FILE,
+  "live_chat_messages.archived_at": LIVE_CHAT_SCALE_MIGRATION_FILE,
 };

@@ -1,7 +1,7 @@
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
@@ -326,7 +326,42 @@ export class FileRuntimeStore implements RuntimeStore {
 
   async listLiveChatMessages(eventId: string, roomKind: string, roomId: string, options?: { includeHidden?: boolean }) {
     const snapshot = this.read();
-    return snapshot.liveChatMessages.filter((message: LiveChatMessage) => message.eventId === eventId && message.roomKind === roomKind && message.roomId === roomId && (options?.includeHidden || message.moderationStatus !== "hidden"));
+    // Archived rows (Clear chat) leave every view, crew included; hidden rows only leave the attendee view.
+    return snapshot.liveChatMessages.filter((message: LiveChatMessage) => message.eventId === eventId && message.roomKind === roomKind && message.roomId === roomId && !message.archivedAt && (options?.includeHidden || message.moderationStatus !== "hidden"));
+  }
+
+  async listLiveChatMessagesSince(eventId: string, roomKind: string, roomId: string, since: string) {
+    const sinceMs = Date.parse(since);
+    const changedAt = (message: LiveChatMessage) => Math.max(Date.parse(message.createdAt) || 0, Date.parse(message.moderatedAt || "") || 0, Date.parse(message.archivedAt || "") || 0);
+    return this.read().liveChatMessages
+      .filter((message: LiveChatMessage) => message.eventId === eventId && message.roomKind === roomKind && message.roomId === roomId)
+      .filter((message: LiveChatMessage) => !Number.isFinite(sinceMs) || changedAt(message) > sinceMs)
+      .sort((a: LiveChatMessage, b: LiveChatMessage) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async archiveLiveChatRoomMessages(input: { eventId: string; roomKind: string; roomId: string; archivedAt: string; archivedBy: string }) {
+    const snapshot = this.read();
+    let archived = 0;
+    for (const message of snapshot.liveChatMessages as LiveChatMessage[]) {
+      if (message.eventId !== input.eventId || message.roomKind !== input.roomKind || message.roomId !== input.roomId || message.archivedAt) continue;
+      message.archivedAt = input.archivedAt;
+      message.archivedBy = input.archivedBy;
+      archived += 1;
+    }
+    if (archived) this.write(snapshot);
+    return archived;
+  }
+
+  async getLiveChatRateState(key: string) {
+    return (this.read().liveChatRateStates || []).find((item: LiveChatRateState) => item.key === key);
+  }
+
+  async setLiveChatRateState(state: LiveChatRateState) {
+    const snapshot = this.read();
+    snapshot.liveChatRateStates = (snapshot.liveChatRateStates || []).filter((item: LiveChatRateState) => item.key !== state.key);
+    snapshot.liveChatRateStates.push(state);
+    this.write(snapshot);
+    return state;
   }
 
   async listRecentLiveChatMessages(eventId: string, limit: number) {
@@ -334,7 +369,7 @@ export class FileRuntimeStore implements RuntimeStore {
     // Newest first; same-millisecond posts keep insertion order (later insert = newer).
     return snapshot.liveChatMessages
       .map((message: LiveChatMessage, index: number) => ({ message, index }))
-      .filter(({ message }) => message.eventId === eventId)
+      .filter(({ message }) => message.eventId === eventId && !message.archivedAt)
       .sort((a, b) => b.message.createdAt.localeCompare(a.message.createdAt) || b.index - a.index)
       .slice(0, Math.max(1, limit))
       .map(({ message }) => message);

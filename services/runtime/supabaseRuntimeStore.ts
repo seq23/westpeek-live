@@ -3,7 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
@@ -32,6 +32,8 @@ function mapLiveChatMessage(row: Record<string, unknown>): LiveChatMessage {
     moderationStatus: (row.moderation_status as LiveChatMessage["moderationStatus"]) || "visible",
     moderatedBy: row.moderated_by ? String(row.moderated_by) : undefined,
     moderatedAt: row.moderated_at ? String(row.moderated_at) : undefined,
+    archivedAt: row.archived_at ? String(row.archived_at) : undefined,
+    archivedBy: row.archived_by ? String(row.archived_by) : undefined,
     createdAt: String(row.created_at || ""),
   };
 }
@@ -649,16 +651,61 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async listLiveChatMessages(eventId: string, roomKind: string, roomId: string, options?: { includeHidden?: boolean }) {
-    let query = this.client.from("live_chat_messages").select("*").eq("event_id", eventId).eq("room_kind", roomKind).eq("room_id", roomId);
+    // Archived rows (Clear chat) leave every view, crew included; hidden rows only leave the attendee view.
+    let query = this.client.from("live_chat_messages").select("*").eq("event_id", eventId).eq("room_kind", roomKind).eq("room_id", roomId).is("archived_at", null);
     if (!options?.includeHidden) query = query.neq("moderation_status", "hidden");
     const { data, error } = await query.order("created_at", { ascending: true });
-    if (error) fail(`live_chat_messages read: ${error.message}`);
+    if (error) failOrSchemaMissing("live_chat_messages.archived_at", error);
     return ((data || []) as Record<string, unknown>[]).map(mapLiveChatMessage);
   }
 
+  /**
+   * The delta the open pages poll for. One request, three change clocks: a new message
+   * (created_at), a crew hide or restore (moderated_at), a Clear chat (archived_at). PostgREST
+   * has no OR across ranges without `or()`, so the three are expressed as one or-filter.
+   */
+  async listLiveChatMessagesSince(eventId: string, roomKind: string, roomId: string, since: string) {
+    const { data, error } = await this.client
+      .from("live_chat_messages")
+      .select("*")
+      .eq("event_id", eventId)
+      .eq("room_kind", roomKind)
+      .eq("room_id", roomId)
+      .or(`created_at.gt.${since},moderated_at.gt.${since},archived_at.gt.${since}`)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    if (error) failOrSchemaMissing("live_chat_messages.archived_at", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapLiveChatMessage);
+  }
+
+  async archiveLiveChatRoomMessages(input: { eventId: string; roomKind: string; roomId: string; archivedAt: string; archivedBy: string }) {
+    const { data, error } = await this.client
+      .from("live_chat_messages")
+      .update({ archived_at: input.archivedAt, archived_by: input.archivedBy })
+      .eq("event_id", input.eventId)
+      .eq("room_kind", input.roomKind)
+      .eq("room_id", input.roomId)
+      .is("archived_at", null)
+      .select("id");
+    if (error) failOrSchemaMissing("live_chat_messages.archived_at", error);
+    return ((data || []) as Record<string, unknown>[]).length;
+  }
+
+  async getLiveChatRateState(key: string) {
+    const { data, error } = await this.client.from("live_chat_post_rates").select("state").eq("key", key).maybeSingle();
+    if (error) failOrSchemaMissing("live_chat_post_rates", error);
+    return data?.state as LiveChatRateState | undefined;
+  }
+
+  async setLiveChatRateState(state: LiveChatRateState) {
+    const { error } = await this.client.from("live_chat_post_rates").upsert({ key: state.key, event_id: state.eventId, attendee_id: state.attendeeId, state, updated_at: state.updatedAt }, { onConflict: "key" });
+    if (error) failOrSchemaMissing("live_chat_post_rates", error);
+    return state;
+  }
+
   async listRecentLiveChatMessages(eventId: string, limit: number) {
-    const { data, error } = await this.client.from("live_chat_messages").select("*").eq("event_id", eventId).order("created_at", { ascending: false }).limit(Math.max(1, limit));
-    if (error) fail(`live_chat_messages recent read: ${error.message}`);
+    const { data, error } = await this.client.from("live_chat_messages").select("*").eq("event_id", eventId).is("archived_at", null).order("created_at", { ascending: false }).limit(Math.max(1, limit));
+    if (error) failOrSchemaMissing("live_chat_messages.archived_at", error);
     return ((data || []) as Record<string, unknown>[]).map(mapLiveChatMessage);
   }
 
