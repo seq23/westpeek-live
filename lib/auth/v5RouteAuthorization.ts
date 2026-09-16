@@ -63,6 +63,7 @@ const operatorExactPaths = new Set([
   "/app/requests",
   "/app/assets",
   "/app/email",
+  "/app/templates",
   "/manual",
   "/app/owner",
   // Plans & capacity: the operator reads the month against the plans, same as the owner.

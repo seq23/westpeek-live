@@ -13,6 +13,7 @@ import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/ty
 import type { EventAssetRecord } from "@/types/eventAssets";
 import type { SupplierEventLink, SupplierRecord } from "@/types/suppliers";
 import type { EmailSendLog } from "@/types/emailProduction";
+import type { EventTemplateRecord } from "@/types/eventTemplates";
 import type { ContactRecord } from "@/types/attendeeRegistration";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
@@ -558,6 +559,27 @@ export class FileRuntimeStore implements RuntimeStore {
       .slice()
       .sort((a: EmailSendLog, b: EmailSendLog) => b.queuedAt.localeCompare(a.queuedAt))
       .slice(0, limit);
+  }
+
+  async upsertEventTemplate(template: EventTemplateRecord) {
+    const snapshot = this.read();
+    snapshot.eventTemplates = [...(snapshot.eventTemplates || []).filter((item: EventTemplateRecord) => item.id !== template.id), template];
+    this.write(snapshot);
+    return template;
+  }
+
+  async getEventTemplate(id: string) {
+    return (this.read().eventTemplates || []).find((item: EventTemplateRecord) => item.id === id);
+  }
+
+  async listEventTemplates() {
+    return (this.read().eventTemplates || []).slice().sort((a: EventTemplateRecord, b: EventTemplateRecord) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async deleteEventTemplate(id: string) {
+    const snapshot = this.read();
+    snapshot.eventTemplates = (snapshot.eventTemplates || []).filter((item: EventTemplateRecord) => item.id !== id);
+    this.write(snapshot);
   }
 
   async probeContactsArchiveColumn() {

@@ -7,6 +7,7 @@ import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistratio
 import type { EventAssetRecord } from "@/types/eventAssets";
 import type { SupplierEventLink, SupplierRecord } from "@/types/suppliers";
 import type { EmailSendLog } from "@/types/emailProduction";
+import type { EventTemplateRecord } from "@/types/eventTemplates";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventRequestRecord } from "@/types/eventRequest";
@@ -126,6 +127,7 @@ export interface V6RuntimeSnapshot {
   suppliers: SupplierRecord[];
   supplierEventLinks: SupplierEventLink[];
   emailSendLogs: EmailSendLog[];
+  eventTemplates: EventTemplateRecord[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
@@ -179,6 +181,11 @@ export interface RuntimeStore {
   appendEmailSendLog(log: EmailSendLog & { sentBy?: string }): Promise<EmailSendLog>;
   listEmailSendLogs(eventId: string, limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
   listAllEmailSendLogs(limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
+  // Event templates (migration 0033): a starting point for an event, saved from a real one.
+  upsertEventTemplate(template: EventTemplateRecord): Promise<EventTemplateRecord>;
+  getEventTemplate(id: string): Promise<EventTemplateRecord | undefined>;
+  listEventTemplates(): Promise<EventTemplateRecord[]>;
+  deleteEventTemplate(id: string): Promise<void>;
   upsertAttendeeSession(session: AttendeeSession): Promise<AttendeeSession>;
   getAttendeeSession(eventId: string, sessionId: string): Promise<AttendeeSession | undefined>;
   upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent): Promise<AttendeeAgendaIntent>;
@@ -286,6 +293,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     suppliers: [],
     supplierEventLinks: [],
     emailSendLogs: [],
+    eventTemplates: [],
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],

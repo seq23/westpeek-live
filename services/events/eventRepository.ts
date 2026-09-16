@@ -152,6 +152,9 @@ export interface CreateEventInput {
   source?: "runtime" | "request";
   /** The "Tell us more" questions; undefined keeps the default four. */
   registrationQuestions?: RegistrationQuestion[];
+  /** From a template: how long the event runs and the sessions it opens with. */
+  durationMinutes?: number;
+  templateSessions?: Array<{ title: string; minutes: number }>;
 }
 
 export interface EventListOptions {
@@ -264,6 +267,16 @@ export function zonedLocalToIso(local: string, timeZone: string): string {
   return new Date(utc).toISOString();
 }
 
+/** A template's agenda becomes the event's sessions, laid end to end from the start time. */
+function sessionsFromTemplate(eventId: string, startAt: string, sessions: Array<{ title: string; minutes: number }>): RuntimeEventSession[] {
+  let cursor = new Date(startAt).getTime();
+  return sessions.slice(0, 20).map((session, index) => {
+    const start = new Date(cursor).toISOString();
+    cursor += Math.max(5, session.minutes) * 60_000;
+    return { id: `${eventId}-session-${index + 1}`, title: session.title, room: index === 0 ? "Main Stage" : session.title, startAt: start, endAt: new Date(cursor).toISOString() };
+  });
+}
+
 function defaultSessions(eventId: string, name: string, format: RuntimeEventFormat, startAt: string, endAt: string): RuntimeEventSession[] {
   return [{ id: `${eventId}-main-stage`, title: format === "room" ? `${name} room` : "Main stage", room: format === "room" ? "Room" : "Main Stage", startAt, endAt }];
 }
@@ -273,7 +286,8 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
   if (!name) throw new Error("Event name is required.");
   const now = new Date();
   const startAt = input.when === "now" || !input.startAt ? now.toISOString() : zonedLocalToIso(input.startAt, input.timezone || "America/Chicago");
-  const endAt = new Date(new Date(startAt).getTime() + 1000 * 60 * 60 * 2).toISOString();
+  const durationMinutes = Math.max(15, Math.min(480, Number(input.durationMinutes) || 120));
+  const endAt = new Date(new Date(startAt).getTime() + 1000 * 60 * durationMinutes).toISOString();
   const format: RuntimeEventFormat = input.format === "room" ? "room" : "stage";
   const slug = await uniqueSlug(slugify(name));
   const client = await resolveClientForEvent(input, actor);
@@ -295,7 +309,7 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
     registrationEnabled: false,
     registrationQuestions: input.registrationQuestions,
     branding: { logo: "west-peek-live", hero: name, theme: "west-peek-live" },
-    sessions: defaultSessions(slug, name, format, startAt, endAt),
+    sessions: input.templateSessions?.length ? sessionsFromTemplate(slug, startAt, input.templateSessions) : defaultSessions(slug, name, format, startAt, endAt),
     source: input.source || "runtime",
     createdBy: actor.id,
     createdByLabel: actor.label,
