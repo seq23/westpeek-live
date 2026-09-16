@@ -32,8 +32,10 @@ if (/included: 0\b/.test(plans)) throw new Error("An unconfirmed allowance is wr
 if (!/return used \/ included/.test(plans)) throw new Error("fractionUsed must divide real numbers only.");
 
 // 2. Reading: real where the API answers, unknown-with-a-reason where it does not.
+// The twirp base URL must be the normalized https:// form, never the raw wss:// value LIVEKIT_URL
+// holds — validate_livekit_twirp_url_contract.js owns that rule; this only checks the calls exist.
 const service = check("services/capacity/capacityReadingService.ts", [
-  "/twirp/livekit.", "RoomService/ListRooms", "Ingress/ListIngress", "roomList: true",
+  "/twirp/livekit.", "normalizeLiveKitApiBaseUrl", "RoomService/ListRooms", "Ingress/ListIngress", "roomList: true",
   "export async function readCapacityPosition", "export async function readLiveKitLiveSnapshot",
   "unknownReason", "pingRuntimeStore",
 ]);

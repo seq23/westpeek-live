@@ -62,6 +62,11 @@ function createLiveKitReadToken(input: { apiKey: string; apiSecret: string }) {
   return `${header}.${payload}.${signature}`;
 }
 
+/**
+ * LIVEKIT_URL is a wss:// address; the twirp API is served over https:// at the same host. fetch()
+ * cannot load a wss:// URL, so normalizeLiveKitApiBaseUrl (shared with the ingress provisioner)
+ * rewrites wss:// -> https:// before every call. Never build the URL from the raw value.
+ */
 async function capacityTwirp<T>(input: { livekitUrl: string; token: string; method: string; body: unknown }): Promise<T> {
   const response = await fetch(`${normalizeLiveKitApiBaseUrl(input.livekitUrl)}/twirp/livekit.${input.method}`, {
     method: "POST",
