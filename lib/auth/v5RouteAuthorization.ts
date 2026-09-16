@@ -1,6 +1,7 @@
 import type { V5AccessCookiePayload } from "@/lib/auth/productionAccess";
 import type { V4CrewRole, V4SpecialGuestRole } from "@/types/v4";
 import { crewActionPermissions, type CrewAction } from "@/lib/auth/crewRolePermissions";
+import { canViewAsGuest, isViewAsPath } from "@/lib/auth/viewAsGuard";
 
 export { crewActionPermissions };
 
@@ -137,6 +138,18 @@ export function canSpecialGuestAccessPath(pathname: string, payload?: V5AccessCo
   if (!pathEventId || !eventIdsMatch(pathEventId, payload.eventId)) return false;
   if (payload.role === "client" && payload.clientSlug) return clientSlugFromPath(pathname) === payload.clientSlug;
   return true;
+}
+
+/**
+ * A guest page opened with `?viewAs=<guestId>` by an operator cookie or a producer / executive
+ * producer crew cookie for that event (an owner cookie already opens every guest path). The page
+ * itself resolves the guest and renders the banner; this only lets the request through.
+ */
+export function canViewAsAccessPath(pathname: string, viewAs: string | null | undefined, payloads: { owner?: V5AccessCookiePayload; operator?: V5AccessCookiePayload; crew?: V5AccessCookiePayload }) {
+  if (!viewAs || !isViewAsPath(pathname)) return false;
+  const pathEventId = eventIdFromPath(pathname);
+  if (!pathEventId) return false;
+  return canViewAsGuest(payloads, pathEventId).ok;
 }
 
 export function canPerformCrewAction(payload: V5AccessCookiePayload | undefined, action: string, eventId?: string) {

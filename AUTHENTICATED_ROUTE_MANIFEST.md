@@ -82,6 +82,7 @@ Machine-readable authority: `config/deployed-route-manifest.json`.
 | `production-access-launchpad` | `/production-access/launchpad` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `production-access-operator` | `/production-access/operator` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `production-access-owner` | `/production-access/owner` | role-specific | authorized-event-role | standard | desktop + mobile | none |
+| `production-access-special-guest-preview` | `/production-access/special-guest/preview` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `production-access` | `/production-access` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `production-access-setup-error` | `/production-access/setup-error` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `production-access-special-guest` | `/production-access/special-guest` | role-specific | authorized-event-role | standard | desktop + mobile | none |

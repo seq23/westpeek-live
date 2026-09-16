@@ -2,6 +2,8 @@ import { approveSpeakerCueDeckAction, bringSpeakerToStageAction, pushLiveCueActi
 import { listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
+import { GuestPreviewLinkRow } from "@/components/guests/GuestPreviewLinks";
+import { viewerCan } from "@/lib/auth/crewViewer";
 import { getProducerNotes, getVipRoom, listSpeakerCueDecks, listSpeakerStageStates, listSpeakerTechChecks } from "@/services/guests/guestStateService";
 import type { CueDeckVersion } from "@/types/specialGuest";
 
@@ -34,6 +36,8 @@ export async function SpeakerRosterPanel({ eventId, viewer: givenViewer }: { eve
   const techOf = new Map(techChecks.map((item) => [item.guestId, item.state]));
   const deckOf = new Map(decks.map((item) => [item.guestId, item.state]));
   const onStage = speakers.filter((speaker) => stageOf.get(speaker.guestId)?.status === "on_stage").length;
+  // "Open their green room / teleprompter": owner, operator, producer, executive producer only (the view-as guard).
+  const canPreview = viewer.allowed === "all" || viewer.role === "producer" || viewer.role === "executive_producer";
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="speaker-roster">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Speakers</p>
@@ -57,6 +61,7 @@ export async function SpeakerRosterPanel({ eventId, viewer: givenViewer }: { eve
                   <p className="mt-1 text-xs text-slate-600">Tech check: <strong data-testid={`speaker-tech-${speaker.guestId}`}>{tech ? `${tech.status.replaceAll("_", " ")} · ${tech.score}/100` : "not recorded"}</strong> · Cue cards: <strong>{deck?.approved ? `v${deck.approved.versionNumber} live` : "none"}{deck?.pending ? ` · v${deck.pending.versionNumber} pending` : ""}</strong> · <code className="text-[11px] text-slate-400">{speaker.guestId}</code></p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
+                  {canPreview ? <GuestPreviewLinkRow eventId={eventId} guest={speaker} compact /> : null}
                   <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-700" data-testid={`speaker-stage-${speaker.guestId}`}>{status.replaceAll("_", " ")}{status !== "backstage" && stage ? ` · by ${stage.updatedBy}` : ""}</span>
                   {status === "backstage" ? (
                     <GatedForm viewer={viewer} action="manage_stage_access" formAction={bringSpeakerToStageAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><button className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid={`bring-to-stage-${speaker.guestId}`}>Bring to stage</button></GatedForm>
@@ -109,6 +114,7 @@ export async function SpeakerRosterPanel({ eventId, viewer: givenViewer }: { eve
         <div className="rounded-2xl bg-slate-50 p-4" data-testid="vip-room-control" data-open={vipRoom.open ? "true" : "false"}>
           <p className="text-sm font-black text-slate-950">VIP lounge</p>
           <p className="text-xs text-slate-600">{vipRoom.open ? `Open · VIPs see it in the lobby · by ${vipRoom.updatedBy}` : "Closed · VIPs see only their badge"} · {vips.length} VIP{vips.length === 1 ? "" : "s"} named</p>
+          {canPreview && vips.length ? <ul className="mt-2 space-y-1" data-testid="vip-preview-rows">{vips.map((vip) => <li key={vip.guestId} className="flex flex-wrap items-center justify-between gap-2 text-xs"><span className="font-bold text-slate-800">{vip.name}{vip.company ? ` · ${vip.company}` : ""}</span><GuestPreviewLinkRow eventId={eventId} guest={vip} compact /></li>)}</ul> : null}
           <GatedForm viewer={viewer} action="manage_stage_access" formAction={setVipRoomAction} className="mt-2"><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="open" value={vipRoom.open ? "false" : "true"} /><button className={`rounded-full px-4 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-40 ${vipRoom.open ? "border border-rose-300 text-rose-800" : "bg-slate-950 text-white"}`} data-testid="vip-room-toggle">{vipRoom.open ? "Close the VIP lounge" : "Open the VIP lounge"}</button></GatedForm>
         </div>
       </div>

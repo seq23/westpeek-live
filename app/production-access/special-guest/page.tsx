@@ -19,9 +19,8 @@ async function enterGuest(formData: FormData) {
   if (missingAccessEnv().includes("V5_ACCESS_COOKIE_SECRET")) redirect("/production-access/setup-error");
   const eventCode = String(formData.get("eventCode") ?? "");
   const roleCode = String(formData.get("roleCode") ?? "");
-  const next = String(formData.get("next") ?? "/app");
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/app";
-  await grantOwnerOverrideIfMatched({ password: roleCode, route: "/production-access/special-guest", next: safeNext });
+  // The owner master password here lands on "Preview a guest" for the typed event code, not the workspace.
+  await grantOwnerOverrideIfMatched({ password: roleCode, route: "/production-access/special-guest", next: `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode)}` });
   const access = await resolveSpecialGuestAccess(eventCode, roleCode);
   if (!access.ok || !access.destination || !access.eventId || !access.role) {
     await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: access.eventId, role: String(access.role || "unknown"), reason: access.reason, route: "/production-access/special-guest" });

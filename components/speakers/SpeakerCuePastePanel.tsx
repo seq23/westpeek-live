@@ -6,7 +6,7 @@ import type { SpeakerCueDeckState, SpecialGuestProfile } from "@/types/specialGu
  * PENDING version until the crew approves it. Paste only: this deployment has no file store wired
  * for runtime events, so .txt / .md / .pdf uploads are not offered (paste the text instead).
  */
-export function SpeakerCuePastePanel({ eventId, speaker, deck, submitted }: { eventId: string; speaker?: SpecialGuestProfile; deck: SpeakerCueDeckState; submitted?: boolean }) {
+export function SpeakerCuePastePanel({ eventId, speaker, deck, submitted, readOnly = false }: { eventId: string; speaker?: SpecialGuestProfile; deck: SpeakerCueDeckState; submitted?: boolean; readOnly?: boolean }) {
   return (
     <div className="space-y-4">
       <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="speaker-material-submission-panel">
@@ -14,7 +14,8 @@ export function SpeakerCuePastePanel({ eventId, speaker, deck, submitted }: { ev
         <h2 className="mt-2 text-2xl font-semibold text-slate-950">Paste your own cue cards, talking points, or notes for the producer</h2>
         <p className="mt-2 text-sm leading-6 text-slate-600">Nothing you paste goes live on its own: it lands as a pending version the producer approves with one click. Paste text only — file upload is not wired for this event, so paste the contents of your .txt / .md / .pdf instead.</p>
         {submitted ? <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-900" data-testid="speaker-cue-submitted">Sent to the producer for approval.</p> : null}
-        <form action={submitSpeakerCueDeckAction} className="mt-5 grid gap-3" data-testid="speaker-material-submission-form">
+        <form action={readOnly ? undefined : submitSpeakerCueDeckAction} className="mt-5 grid gap-3" data-testid="speaker-material-submission-form" data-read-only={readOnly ? "true" : "false"}>
+          <fieldset disabled={readOnly} className="contents" title={readOnly ? "Disabled while viewing as this speaker." : undefined}>
           <input type="hidden" name="eventId" value={eventId} />
           {!speaker ? <label className="grid gap-1 text-sm font-semibold text-slate-700">Name for the producer<input name="speakerName" className="rounded-xl border border-slate-300 px-3 py-2" placeholder="So the producer knows whose notes these are" /></label> : <input type="hidden" name="speakerName" value={speaker.name} />}
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
@@ -31,7 +32,8 @@ export function SpeakerCuePastePanel({ eventId, speaker, deck, submitted }: { ev
           <label className="grid gap-1 text-sm font-semibold text-slate-700">Talking points (one per line)<textarea name="talkingPoints" className="min-h-20 rounded-xl border border-slate-300 px-3 py-2" placeholder={"Founder pain first\nInvite Q&A"} /></label>
           <label className="grid gap-1 text-sm font-semibold text-slate-700">Script (optional)<textarea name="script" className="min-h-28 rounded-xl border border-slate-300 px-3 py-2" placeholder="Paste the full text if you read from one." /></label>
           <label className="grid gap-1 text-sm font-semibold text-slate-700">Link to deck or document<input name="materialUrl" className="rounded-xl border border-slate-300 px-3 py-2" placeholder="https://drive.google.com/..." /></label>
-          <button type="submit" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white">Queue for producer review</button>
+          <button type="submit" className="rounded-xl bg-slate-950 px-4 py-3 text-sm font-semibold text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid="speaker-cue-submit">Queue for producer review</button>
+          </fieldset>
         </form>
       </section>
       <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="speaker-material-review-queue">

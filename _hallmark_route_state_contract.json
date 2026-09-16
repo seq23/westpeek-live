@@ -1217,6 +1217,29 @@
       "evidence": []
     },
     {
+      "id": "production-access-special-guest-preview",
+      "path": "/production-access/special-guest/preview",
+      "persona": "owner",
+      "required_states": [
+        "empty",
+        "populated",
+        "loading",
+        "error",
+        "success",
+        "disabled",
+        "pending"
+      ],
+      "status": "UNPROVEN",
+      "evidence": [],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/production-access/special-guest/preview"
+      },
+      "fixtureRequirements": [
+        "event"
+      ]
+    },
+    {
       "id": "production-access",
       "path": "/production-access",
       "persona": "operator",
