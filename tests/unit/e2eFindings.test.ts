@@ -72,3 +72,18 @@ describe("a guest inside the venue can find registration", () => {
     expect(src).toMatch(/resolveHydratedEventJoinCode\(runtime\?\.joinCode \?\? code\)/);
   });
 });
+
+describe("event areas land on the canonical event id", () => {
+  it("every event area has a layout that redirects a join code to the id", async () => {
+    const { readFileSync } = await import("node:fs");
+    for (const area of ["crew/events", "app/events", "venue", "speaker/events", "admin/testing"]) {
+      const src = readFileSync(new URL(`../../app/${area}/[eventId]/layout.tsx`, import.meta.url), "utf8");
+      expect(src, area).toMatch(/canonicalEventIdOrRedirect/);
+    }
+  });
+  it("the crew deck carries the go-live console", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../components/moderation/CrewLiveModerationDeck.tsx", import.meta.url), "utf8");
+    expect(src).toMatch(/<StreamYardIngressPanel eventId=\{eventId\} \/>/);
+  });
+});

@@ -24,7 +24,7 @@ export function resolveHydratedEventJoinCode(rawCode: string | undefined): V4Joi
   if (!code) return { ok: false, reason: "missing_code", message: "Enter the event code from your invitation." };
 
   const indexRecord = findEventIndexRecord(code);
-  if (!indexRecord) return { ok: false, reason: "invalid_code", message: "We could not find an event for that code. Check the code and try again." };
+  if (!indexRecord) return { ok: false, reason: "invalid_code", message: "We could not find an event for that code. Codes look like wpl-xxxxxx — the prefix and hyphen are optional, but every character of the six after it counts. Check it against the invitation and try again." };
 
   const event = getEventConfig(indexRecord.slug);
   const attendee = getAttendeeConfig(indexRecord.slug);
