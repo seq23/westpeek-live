@@ -12,7 +12,7 @@ export default function HomePage() {
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">West Peek Live</p>
         <h1 className="mt-5"><WestPeekLiveWordmark size="lg" /></h1>
         <p className="mt-6 max-w-2xl text-lg leading-8 text-brand-muted">
-          A virtual event production operating system for agencies and production teams running branded online events, combining attendee venues, production command centers, guest portals, run-of-show control, video fallback, access gates, and post-event reporting.
+          West Peek&rsquo;s own live Rooms and the branded events it produces for clients, run from one place — then the same operating system for agencies and production teams: attendee venues, production command centers, guest portals, run-of-show control, video fallback, access gates, and post-event reporting.
         </p>
         <div className="mt-8 flex flex-col gap-3 sm:flex-row">
           <Link href="/join" className="rounded-full bg-brand-black px-5 py-3 text-center text-sm font-bold text-white hover:bg-brand-charcoal">Join an Event</Link>

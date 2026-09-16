@@ -5,7 +5,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatEventDate } from "@/lib/utils/format";
 
-export function ClientPortalDashboard({ clientSlug, eventId }: { clientSlug: string; eventId?: string }) {
+export function ClientPortalDashboard({ clientSlug, eventId, surface }: { clientSlug: string; eventId?: string; surface?: "reports" }) {
   const data = getRuntimeData();
   const client = getClientBySlug(clientSlug);
   const events = data.events.filter((event) => event.clientId === client.id);
@@ -31,6 +31,12 @@ export function ClientPortalDashboard({ clientSlug, eventId }: { clientSlug: str
             ))}
           </div>
         </SectionCard>
+
+        {selectedEvent && surface === "reports" ? (
+          <SectionCard title="Reports" eyebrow="Client reports">
+            <p className="text-sm text-slate-600">Post-event reports for {selectedEvent.name} are published here once the production team delivers them. {selectedEvent.status === "ended" || selectedEvent.status === "replay_available" ? "The event has ended; the report is being prepared." : "The event has not ended yet, so there is no report to show."}</p>
+          </SectionCard>
+        ) : null}
 
         {selectedEvent ? (
           <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">

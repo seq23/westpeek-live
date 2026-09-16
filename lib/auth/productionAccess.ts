@@ -15,7 +15,7 @@ interface V5AccessCookieBase {
 export type V5AccessCookiePayload =
   | (V5AccessCookieBase & { kind: "crew"; eventId?: string; role?: V4CrewRole })
   | (V5AccessCookieBase & { kind: "operator"; eventId?: string; role?: V4CrewRole })
-  | (V5AccessCookieBase & { kind: "owner"; role?: "owner" })
+  | (V5AccessCookieBase & { kind: "owner"; role?: "owner"; ownerKey?: "primary" | "secondary" })
   | (V5AccessCookieBase & { kind: "special_guest"; eventId: string; role: V4SpecialGuestRole; clientSlug?: string });
 
 export type V4AccessCookiePayload = V5AccessCookiePayload;

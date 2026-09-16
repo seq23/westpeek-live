@@ -34,6 +34,10 @@ const createAuditLog = vi.fn<(input: { action: string }) => Promise<unknown>>(as
 vi.mock("@/services/events/requestEventStore", () => ({
   appendRequestEventRecord: (record: unknown) => appendRequestEventRecord(record),
 }));
+vi.mock("@/services/events/eventRepository", () => ({
+  createEventRecord: vi.fn(async () => ({ id: "acme-health-webinar-request" })),
+}));
+
 vi.mock("@/services/email/emailService", () => ({
   sendEmail: (message: unknown) => sendEmail(message),
 }));

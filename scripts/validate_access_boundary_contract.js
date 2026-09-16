@@ -21,7 +21,14 @@ const crewResolver = read("services/access/eventAccessResolver.ts");
 const crewUsesPassword = crew.includes("getCrewAccessPassword") || (crew.includes("resolveCrewAccess") && crewResolver.includes("getCrewAccessPassword") && crewResolver.includes("accessCodes.crew"));
 if (!crewUsesPassword || crew.includes('redirect("/production-access/launchpad")')) fail("crew gate must use crew password (global or per-event crew code) and must not redirect directly to launchpad");
 if (!operator.includes("getOperatorLaunchpadPassword") || !operator.includes('kind: "operator"')) fail("operator gate must use operator password and set operator cookie");
-if (!owner.includes("getOwnerMasterPassword") || !owner.includes('kind: "owner"')) fail("owner gate must use owner password and set owner cookie");
+// Both owner master passwords (OWNER_MASTER_ACCESS_PASSWORD and the optional _2) are matched through matchOwnerMasterPassword.
+if (!owner.includes("matchOwnerMasterPassword") || !owner.includes('kind: "owner"') || !owner.includes("ownerKey")) fail("owner gate must match either owner master password, set the owner cookie, and record which key was used");
+if (!envTs.includes("OWNER_MASTER_ACCESS_PASSWORD_2") || !envTs.includes("export function matchOwnerMasterPassword")) fail("env must define the optional OWNER_MASTER_ACCESS_PASSWORD_2 and matchOwnerMasterPassword");
+if (!envTs.includes('"OWNER_MASTER_ACCESS_PASSWORD_2", env.OWNER_MASTER_ACCESS_PASSWORD_2')) fail("assertSeparatedProductionPasswords must include the second owner password when set");
+for (const [name, file] of [["owner override", "lib/auth/ownerAccessOverride.ts"], ["gate response", "lib/auth/accessGateResponse.ts"], ["owner api route", "app/api/production-access/owner/route.ts"]]) {
+  const text = read(file);
+  if (!text.includes("matchOwnerMasterPassword") || text.includes("getOwnerMasterPassword(")) fail(`${name} must honour both owner master passwords via matchOwnerMasterPassword`);
+}
 if (!launchpad.includes('operatorPayload?.kind === "operator"')) fail("launchpad must accept operator cookie");
 if (!launchpad.includes('ownerPayload?.kind === "owner"')) fail("launchpad must accept owner master cookie as universal authority");
 if (launchpad.includes('payload.kind === "crew"') || launchpad.includes('crewPayload?.kind === "crew"')) fail("launchpad must not accept crew cookie");

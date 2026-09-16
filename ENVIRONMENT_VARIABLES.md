@@ -66,6 +66,7 @@ Purpose: safe env contract for local, CI, Cloudflare Worker, postdeploy, and pro
 | `NEXT_PUBLIC_SUPABASE_URL` | Required production/Cloudflare secret or env value. |
 | `OPERATOR_LAUNCHPAD_PASSWORD` | Required production/Cloudflare secret or env value. |
 | `OWNER_MASTER_ACCESS_PASSWORD` | Required production/Cloudflare secret or env value. |
+| `OWNER_MASTER_ACCESS_PASSWORD_2` | Optional second owner master password (≥12 chars, must differ from every other production password). Honoured everywhere the first is: /production-access/owner and the owner override on the operator, crew, and special-guest gates. The owner cookie records `ownerKey: "primary" \| "secondary"` so the access audit can tell them apart; both are full owners. Set with `npx wrangler secret put OWNER_MASTER_ACCESS_PASSWORD_2`; absent means only the first works. |
 | `RESEND_API_KEY` | Required production/Cloudflare secret or env value. |
 | `SELF_SERVE_EVENT_CREATION_ENABLED` | Required production/Cloudflare secret or env value. |
 | `STAGE_STREAM_DEFAULT_SOURCE` | Required production/Cloudflare secret or env value. |

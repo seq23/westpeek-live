@@ -10,6 +10,8 @@ import { assertSeparatedProductionPasswords, getEnv, getOperatorLaunchpadPasswor
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { grantOwnerOverrideIfMatched } from "@/lib/auth/ownerAccessOverride";
+import { readV5AccessCookie } from "@/lib/auth/productionAccess";
+import { canOperatorAccessPath, canOwnerAccessPath } from "@/lib/auth/v5RouteAuthorization";
 
 async function enterOperator(formData: FormData) {
   "use server";
@@ -31,10 +33,37 @@ async function enterOperator(formData: FormData) {
   redirect(safeNext);
 }
 
+/**
+ * An owner or operator who already holds a valid cookie is not asked for the
+ * password again: the launchpad's "Create Event" link used to bounce the owner
+ * through this gate a second time. Only a destination the cookie can open is
+ * honoured; anything else falls through to the form.
+ */
+async function alreadyAuthorisedDestination(next: string | undefined) {
+  const safeNext = next && next.startsWith("/") && !next.startsWith("//") ? next : "/production-access/launchpad";
+  try {
+    const env = getEnv();
+    const { operatorCookieName, ownerCookieName } = getV5AccessCookieNames(env);
+    const secret = getV5AccessCookieSecret(env);
+    const cookieStore = await cookies();
+    const owner = await readV5AccessCookie(cookieStore.get(ownerCookieName)?.value, secret);
+    if (owner?.kind === "owner" && canOwnerAccessPath(safeNext, owner)) return safeNext;
+    const operator = await readV5AccessCookie(cookieStore.get(operatorCookieName)?.value, secret);
+    if (operator?.kind === "operator" && canOperatorAccessPath(safeNext, operator)) return safeNext;
+  } catch {
+    // Missing access config renders the setup error below instead.
+  }
+  return undefined;
+}
+
 export default async function OperatorAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const missing = missingAccessEnv();
   if (missing.length) return <BrandedSetupError title="Operator access is not configured yet." message="The launchpad uses a separate high-trust operator password so crew access never unlocks admin diagnostics by accident." missingVariables={missing} defaultValues={accessDefaultLines()} />;
+  if (!resolvedSearchParams?.error) {
+    const destination = await alreadyAuthorisedDestination(resolvedSearchParams?.next);
+    if (destination) redirect(destination);
+  }
   return (
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">

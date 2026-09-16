@@ -91,6 +91,7 @@ function writeSnapshotFile(filePath: string, snapshot: V6RuntimeSnapshot) {
 }
 
 export class FileRuntimeStore implements RuntimeStore {
+  readonly kind = "file" as const;
   private readonly filePath: string;
 
   constructor(filePath = process.env.AGENCY_EVENT_OS_RUNTIME_STORE_PATH || defaultRuntimePath()) {

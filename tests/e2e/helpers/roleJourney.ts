@@ -110,21 +110,30 @@ function masterOperatorPassword() {
     || requiredDay1Default("OPERATOR_LAUNCHPAD_PASSWORD");
 }
 
+/** The operator gate skips itself when a valid owner/operator cookie can already open `next`; only fill the form when it is shown. */
+async function operatorGateIsShown(page: Page) {
+  return /\/production-access\/operator/.test(page.url());
+}
+
 export async function loginAsOperator(page: Page, nextPath?: string) {
   const target = nextPath ? `/production-access/operator?next=${encodeURIComponent(nextPath)}` : "/production-access/operator";
   await gotoAndAssert(page, target);
-  await page.getByLabel(/operator launchpad password/i).fill(process.env.E2E_OPERATOR_PASSWORD || process.env.OPERATOR_LAUNCHPAD_PASSWORD || requiredDay1Default("OPERATOR_LAUNCHPAD_PASSWORD"));
-  await page.getByRole("button", { name: /enter operator launchpad/i }).click();
-  await page.waitForLoadState("networkidle").catch(() => undefined);
+  if (await operatorGateIsShown(page)) {
+    await page.getByLabel(/operator launchpad password/i).fill(process.env.E2E_OPERATOR_PASSWORD || process.env.OPERATOR_LAUNCHPAD_PASSWORD || requiredDay1Default("OPERATOR_LAUNCHPAD_PASSWORD"));
+    await page.getByRole("button", { name: /enter operator launchpad/i }).click();
+    await page.waitForLoadState("networkidle").catch(() => undefined);
+  }
   if (nextPath) await gotoAndAssert(page, nextPath);
 }
 
 export async function loginAsMasterOperator(page: Page, nextPath?: string) {
   const target = nextPath ? `/production-access/operator?next=${encodeURIComponent(nextPath)}` : "/production-access/operator";
   await gotoAndAssert(page, target);
-  await page.getByLabel(/operator launchpad password/i).fill(masterOperatorPassword());
-  await page.getByRole("button", { name: /enter operator launchpad/i }).click();
-  await page.waitForLoadState("networkidle").catch(() => undefined);
+  if (await operatorGateIsShown(page)) {
+    await page.getByLabel(/operator launchpad password/i).fill(masterOperatorPassword());
+    await page.getByRole("button", { name: /enter operator launchpad/i }).click();
+    await page.waitForLoadState("networkidle").catch(() => undefined);
+  }
   if (nextPath) await gotoAndAssert(page, nextPath);
 }
 

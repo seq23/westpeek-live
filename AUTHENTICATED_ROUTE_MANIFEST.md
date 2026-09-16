@@ -61,6 +61,7 @@ Machine-readable authority: `config/deployed-route-manifest.json`.
 | `client-clientslug-events-eventid` | `/client/[clientSlug]/events/[eventId]` | role-specific | authorized-event-role | critical | desktop + mobile | exact-run |
 | `client-clientslug-events-eventid-run-of-show` | `/client/[clientSlug]/events/[eventId]/run-of-show` | role-specific | authorized-event-role | critical | desktop + mobile | exact-run |
 | `client-clientslug-events-eventid-timeline` | `/client/[clientSlug]/events/[eventId]/timeline` | role-specific | authorized-event-role | critical | desktop + mobile | exact-run |
+| `client-clientslug-events-eventid-reports` | `/client/[clientSlug]/events/[eventId]/reports` | role-specific | authorized-event-role | critical | desktop + mobile | exact-run |
 | `client-clientslug` | `/client/[clientSlug]` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `crew-events-eventid-call-sheet` | `/crew/events/[eventId]/call-sheet` | role-specific | authorized-event-role | critical | desktop + mobile | exact-run |
 | `crew-events-eventid` | `/crew/events/[eventId]` | role-specific | authorized-event-role | critical | desktop + mobile | exact-run |
