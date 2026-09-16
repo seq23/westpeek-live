@@ -69,7 +69,7 @@ Reasoning: Text ids matching the existing `event_id text` runtime tables keep th
 
 Tradeoffs: The overlay is process-local; a page that renders an event must hydrate it (`ensureRuntimeEvent`) first. Two event vocabularies coexist (compiled seed packages and runtime rows) until the seeds are retired.
 
-Risks Accepted: The migration must be applied to the live Supabase project by a human with SQL-editor access; until then the workspace shows a named stop (`RuntimeSchemaStop`) instead of failing silently, and seed events keep resolving.
+Risks Accepted: Migrations reach the live Supabase project through the Supabase GitHub integration connected to this repository: the SQL under `supabase/migrations/` (a byte-identical mirror of `db/migrations/0024_runtime_events.sql`, guarded by `validate:runtime-events-contract`) is applied on merge to `main`. Verified 2026-09-16: `/api/runtime/health` on the deployed Worker reported `store: "supabase"` and no missing tables immediately after the merge. If a future migration is not applied, the workspace shows a named stop (`RuntimeSchemaStop`) naming the SQL file instead of failing silently, the post-deploy smoke fails on `/api/runtime/health`, and seed events keep resolving.
 
 Validation Impact: `tests/unit/eventRepository.test.ts`, `tests/e2e/owner-real-events-journey.spec.ts`; `validate_v7_frontdoor_labels.js` now asserts real persistence and refuses the draft store; `validate_access_boundary_contract.js` follows the crew password into the resolver that also honours per-event crew codes.
 

@@ -6,4 +6,8 @@
 # (`main`). The SQL here mirrors db/migrations/0024_runtime_events.sql, which
 # stays the human-readable source of truth; the numbered db/migrations history
 # before 0024 was applied by hand and is deliberately not mirrored.
+#
+# Verified 2026-09-16: merging the 0024 mirror to main created the tables in
+# the live project (see /api/runtime/health). New migrations: add the SQL to
+# db/migrations/, mirror it here with a timestamp name, and keep both identical.
 project_id = "lqxzpwtvolojashknseb"
