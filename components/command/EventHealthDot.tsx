@@ -4,6 +4,8 @@ import { useCallback, useEffect, useState } from "react";
 import { LocalTime } from "@/components/shared/LocalTime";
 import { CURRENT_BUILD_ID } from "@/lib/runtime/buildVersion";
 import { HEALTH_DOT_CLASS, HEALTH_LEVEL_WORD, healthSummary, worstLevel, type HealthLevel, type HealthLogEntry, type HealthSignal } from "@/lib/venue/eventHealth";
+import { COMMAND_CHIP_MUTED } from "@/components/command/commandChrome";
+import { COMMAND_PANEL } from "@/components/command/commandChrome";
 
 /**
  * One dot on the bar, the worst state of its signals, expanding into the panel (plan §2.3).
@@ -45,12 +47,12 @@ export function EventHealthDot({ eventId, stageId = "main-stage", goLiveHref, cr
 
   return (
     <details className="relative" data-testid="command-bar-health" data-health-level={level}>
-      <summary className="flex cursor-pointer list-none items-center gap-2 rounded-full bg-white/10 px-3 py-1.5 text-sm font-black text-white hover:bg-white/20">
+      <summary className={`flex cursor-pointer list-none items-center gap-1.5 ${COMMAND_CHIP_MUTED}`}>
         <span className={`inline-block h-2.5 w-2.5 rounded-full ${HEALTH_DOT_CLASS[level]}`} data-testid="command-bar-health-dot" aria-hidden />
-        <span>{HEALTH_LEVEL_WORD[level]}</span>
+        <span className="hidden sm:inline">{HEALTH_LEVEL_WORD[level]}</span>
         <span className="sr-only">Event health: {HEALTH_LEVEL_WORD[level]}. {signals.length ? healthSummary(signals) : "Not measured yet."}</span>
       </summary>
-      <div className="absolute right-0 z-40 mt-2 max-h-[32rem] w-[26rem] max-w-[90vw] overflow-auto rounded-2xl border border-brand-line bg-white p-3 shadow-xl">
+      <div className={`${COMMAND_PANEL} p-3 xl:right-0 xl:max-h-[32rem] xl:w-[26rem] xl:max-w-[90vw]`}>
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-muted">Health</p>
         <p className="mt-1 text-sm font-bold text-brand-black" data-testid="command-bar-health-summary">{signals.length ? healthSummary(signals) : "Nothing measured yet — the first tick has not landed."}</p>
         {failedAt ? <p className="mt-2 rounded-xl bg-amber-50 p-2 text-xs font-bold text-amber-900" data-testid="command-bar-health-tick-failed">The last health tick failed (<LocalTime iso={failedAt} />). These readings are the last good ones.</p> : null}

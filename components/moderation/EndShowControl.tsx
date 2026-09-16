@@ -3,6 +3,7 @@ import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getOperatorStageStreamState } from "@/services/video/stageStreamStateService";
+import { COMMAND_CHIP, COMMAND_CHIP_STATIC } from "@/components/command/commandChrome";
 
 /**
  * The primary "End the show" control. Press it BEFORE stopping the feed: the stage is marked
@@ -22,11 +23,11 @@ export async function EndShowControl({ eventId, stageId = "main-stage", compact 
   const ended = state.operatorMarkedShowEnded || state.streamStatus === "ENDED";
   const eventEnded = event?.status === "ended" || event?.status === "replay_available" || event?.status === "archived";
   if (variant === "bar") {
-    if (ended) return <span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-black text-white" data-testid="end-show-control" data-show-ended="true" data-event-ended={eventEnded ? "true" : "false"}>Show ended</span>;
+    if (ended) return <span className={COMMAND_CHIP_STATIC} data-testid="end-show-control" data-show-ended="true" data-event-ended={eventEnded ? "true" : "false"}>Show ended</span>;
     return (
       <GatedForm viewer={viewer} action="go_live" formAction={endTheShow} testId="end-show-control">
         <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="stageId" value={stageId} />
-        <button className="rounded-full bg-rose-600 px-4 py-1.5 text-sm font-black text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-40" data-testid="end-show-button" title="Press BEFORE you stop the feed: the stage is marked intentionally ended, so a stopped feed is not read as a dropped one.">End show</button>
+        <button className={`${COMMAND_CHIP} bg-rose-600 text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-40`} data-testid="end-show-button" title="Press BEFORE you stop the feed: the stage is marked intentionally ended, so a stopped feed is not read as a dropped one.">End show</button>
       </GatedForm>
     );
   }

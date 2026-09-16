@@ -2,6 +2,8 @@ import Link from "next/link";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { displayCode, type AccessCodeField } from "@/lib/access/accessCodes";
 import { findEventRecord } from "@/services/events/eventRepository";
+import { COMMAND_CHIP_MUTED } from "@/components/command/commandChrome";
+import { COMMAND_PANEL } from "@/components/command/commandChrome";
 
 const ROWS: Array<{ key: AccessCodeField; label: string }> = [
   { key: "join", label: "Attendee join" },
@@ -32,10 +34,10 @@ export async function CommandBarCodes({ eventId }: { eventId: string }) {
   const codeFor = (key: AccessCodeField) => (key === "join" ? event.joinCode : event.accessCodes[key]);
   return (
     <details className="relative" data-testid="command-bar-codes">
-      <summary className="flex cursor-pointer list-none items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-sm font-black text-white hover:bg-white/20">
+      <summary className={`flex cursor-pointer list-none items-center gap-1 ${COMMAND_CHIP_MUTED}`}>
         Codes <span aria-hidden>▾</span>
       </summary>
-      <div className="absolute right-0 z-40 mt-2 w-80 rounded-2xl border border-brand-line bg-white p-3 shadow-xl">
+      <div className={`${COMMAND_PANEL} p-3 xl:right-0 xl:w-80`}>
         <ul className="space-y-1">
           {ROWS.map((row) => (
             <li key={row.key} className="flex items-center justify-between gap-2 rounded-xl px-2 py-1.5 hover:bg-brand-ash" data-testid={`command-bar-code-${row.key}`}>
