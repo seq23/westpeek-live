@@ -23,6 +23,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, in
   const viewer = await getCrewViewer(eventId);
   return (
     <div className="space-y-6" data-testid="crew-live-moderation-deck" data-viewer-kind={viewer.kind} data-viewer-role={viewer.role || viewer.kind}>
+      <div className="flex justify-end"><a href="/manual" className="rounded-full border border-brand-line px-3 py-1 text-xs font-black text-brand-muted hover:border-brand-orange hover:text-brand-orange" data-testid="crew-manual-link">Manual</a></div>
       <SafeSection label="Stage requests" render={() => StageRequestsToggle({ eventId, viewer })} />
       {includeStreamConsole ? (
         <section className="space-y-3" data-testid="crew-go-live">

@@ -1,4 +1,5 @@
 import { LegalFooter } from "@/components/legal/LegalFooter";
+import { GateExit } from "@/components/access/GateExit";
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
@@ -108,6 +109,7 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
         {resolvedSearchParams?.error === "launchpad_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter the crew password first. The Operator Launchpad requires the separate operator password.</p> : null}
         {resolvedSearchParams?.error === "operator_packet_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter operator access first. The Operator Packet contains internal launchpad instructions and stays behind the operator gate.</p> : null}
         {resolvedSearchParams?.error === "invalid_event" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That event code is not valid for crew routing. Leave it blank to enter the demo crew workspace.</p> : null}
+        <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>
       <LegalFooter variant="compact" />

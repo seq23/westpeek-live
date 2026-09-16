@@ -29,10 +29,13 @@ const demoSection = s.slice(s.indexOf('id="demo"'));
 const demoHeader = demoSection.slice(0, demoSection.indexOf('>'));
 if (demoHeader.includes('defaultOpen')) throw new Error('Demo & training must be collapsed by default');
 
-// Diagnostics: two cards, not nine doors to the same page.
+// Diagnostics: a short list, not nine doors to the same page. Two tools plus the manual.
 const diagnostics = s.slice(s.indexOf('id="diagnostics"'), s.indexOf('id="demo"'));
 const diagnosticCards = (diagnostics.match(/<LaunchpadCard/g) || []).length;
-if (diagnosticCards !== 2) throw new Error(`Diagnostics must be exactly 2 cards (found ${diagnosticCards})`);
+if (diagnosticCards > 3) throw new Error(`Diagnostics must stay short — at most the testing console, runtime health and the manual (found ${diagnosticCards})`);
+if (!diagnostics.includes('href="/manual"')) throw new Error("Diagnostics must carry the manual link.");
+const diagnosticHrefs = [...diagnostics.matchAll(/href=\{?["`]([^"`]+)["`]/g)].map((match) => match[1]);
+if (new Set(diagnosticHrefs).size !== diagnosticHrefs.length) throw new Error("Two diagnostics cards point at the same page");
 
 // No two cards share an href: a duplicate is a second door to the same room.
 const cardHrefs = [...s.matchAll(/<LaunchpadCard[^>]*href=\{?["`]([^"`]+)["`]/g)].map((match) => match[1]);

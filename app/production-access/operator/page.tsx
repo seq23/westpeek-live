@@ -1,4 +1,5 @@
 import { LegalFooter } from "@/components/legal/LegalFooter";
+import { GateExit } from "@/components/access/GateExit";
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
@@ -82,6 +83,7 @@ export default async function OperatorAccessPage({ searchParams }: { searchParam
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Enter Operator Launchpad</button>
         </form>
         {resolvedSearchParams?.error === "invalid" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That operator password did not match. Use the operator launchpad password, not the crew password.</p> : null}
+        <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>
       <LegalFooter variant="compact" />

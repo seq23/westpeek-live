@@ -27,10 +27,13 @@ export function BuildVersionWatchdog() {
   }, []);
   useEffect(() => {
     if (!pending) return;
+    // A beat before the reload so the line above is actually seen, then every two seconds until
+    // whatever is being typed is sent or cleared.
     const attempt = () => { if (!typingInProgress(document)) window.location.reload(); };
-    attempt();
+    const first = window.setTimeout(attempt, 1_200);
+    void first;
     const interval = window.setInterval(attempt, 2_000);
-    return () => window.clearInterval(interval);
+    return () => { window.clearTimeout(first); window.clearInterval(interval); };
   }, [pending]);
   if (!pending) return <span className="sr-only" data-testid="build-version-watchdog" data-loaded-build={CURRENT_BUILD_ID} />;
   return (

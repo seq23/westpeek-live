@@ -55,6 +55,7 @@ export async function AccessCodesVault() {
   const spareSet = Boolean(value(SPARE_GATE[0]));
   return (
     <div className="space-y-4">
+      <p className="text-xs text-brand-muted" data-testid="vault-manual-link">Codes live here, not in any document. The how-to lives in the <a href="/manual#5-access-codes--how-they-are-made-where-they-live-how-to-change-them" className="font-black underline">manual</a>.</p>
       <GlobalGatesPanel gates={gates} spare={{ key: SPARE_GATE[0], label: SPARE_GATE[1], blurb: SPARE_GATE[2], set: spareSet }} />
       {rows.length ? <AccessCodesVaultTable events={rows} /> : <p className="text-sm text-brand-muted" data-testid="vault-empty">No events yet — codes appear the moment you create one.</p>}
     </div>

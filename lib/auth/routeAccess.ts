@@ -9,6 +9,8 @@ export interface RouteAccessRequirement {
 export const protectedRouteRequirements: RouteAccessRequirement[] = [
   { prefix: "/app", label: "Agency app", capability: CAPABILITIES.AGENCY_VIEW_DASHBOARD },
   { prefix: "/admin", label: "Testing console", capability: CAPABILITIES.AGENCY_VIEW_DASHBOARD },
+  // The manual: owner and operator read it inside the app; it carries no codes by design.
+  { prefix: "/manual", label: "Operator manual", capability: CAPABILITIES.AGENCY_VIEW_DASHBOARD },
   { prefix: "/billing", label: "Billing", capability: CAPABILITIES.AGENCY_VIEW_DASHBOARD },
   { prefix: "/client", label: "Client portal", capability: CAPABILITIES.CLIENT_VIEW_PORTAL },
   { prefix: "/crew", label: "Crew portal", capability: CAPABILITIES.CONTRACTOR_VIEW_OWN_ASSIGNMENTS },

@@ -61,6 +61,7 @@ const operatorExactPaths = new Set([
   "/app/events/new",
   "/app/people",
   "/app/assets",
+  "/manual",
   "/app/owner",
   "/admin/testing",
   "/admin/testing/demo",
@@ -128,6 +129,7 @@ export function canOwnerAccessPath(pathname: string, payload?: V5AccessCookiePay
     cleanPath.startsWith("/speaker") ||
     cleanPath.startsWith("/sponsor") ||
     cleanPath.startsWith("/venue") ||
+    cleanPath === "/manual" ||
     cleanPath === "/operator-packet" ||
     cleanPath === "/production-access/launchpad"
   );
@@ -168,7 +170,7 @@ export function assertCanPerformCrewAction(payload: V5AccessCookiePayload | unde
 
 export function specialGuestEntryPathFor(pathname: string) {
   if (pathname === "/billing" || pathname.startsWith("/billing/") || pathname === "/app/settings") return "/production-access/owner";
-  if (pathname.startsWith("/app") || pathname.startsWith("/admin")) return "/production-access/operator";
+  if (pathname.startsWith("/app") || pathname.startsWith("/admin") || pathname === "/manual") return "/production-access/operator";
   if (pathname.startsWith("/crew")) return "/production-access/crew";
   return "/production-access/special-guest";
 }
