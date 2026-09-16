@@ -9,6 +9,7 @@ import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
+import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 
@@ -31,6 +32,14 @@ function mapLiveChatMessage(row: Record<string, unknown>): LiveChatMessage {
 
 function mapSpecialGuestProfile(row: Record<string, unknown>): SpecialGuestProfile {
   return { guestId: String(row.guest_id), eventId: String(row.event_id), role: row.role as SpecialGuestRole, name: String(row.name || ""), company: String(row.company || ""), title: String(row.title || ""), createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+}
+
+function mapSpeedNetworkingEntry(row: Record<string, unknown>): SpeedNetworkingQueueEntry {
+  return { id: String(row.id), eventId: String(row.event_id), attendeeId: String(row.attendee_id), displayName: String(row.display_name || ""), company: String(row.company || ""), title: String(row.title || ""), status: row.status as SpeedNetworkingQueueEntry["status"], joinedAt: String(row.joined_at || ""), matchedAt: row.matched_at ? String(row.matched_at) : undefined, matchId: row.match_id ? String(row.match_id) : undefined, matchesCompleted: Number(row.matches_completed || 0), updatedAt: String(row.updated_at || "") };
+}
+
+function mapSpeedNetworkingMatch(row: Record<string, unknown>): SpeedNetworkingMatchRecord {
+  return { id: String(row.id), eventId: String(row.event_id), attendeeAId: String(row.attendee_a_id), attendeeBId: String(row.attendee_b_id), normalizedPairKey: String(row.normalized_pair_key), roomName: String(row.room_name), status: row.status as SpeedNetworkingMatchRecord["status"], startsAt: String(row.starts_at || ""), expiresAt: String(row.expires_at || ""), endedAt: row.ended_at ? String(row.ended_at) : undefined, endedReason: row.ended_reason ? String(row.ended_reason) : undefined };
 }
 
 function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord {
@@ -565,6 +574,42 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return ((data || []) as Record<string, unknown>[]).map(mapEventGuestState);
   }
 
+  async upsertSpeedNetworkingEntry(entry: SpeedNetworkingQueueEntry) {
+    const { error } = await this.client.from("speed_networking_entries").upsert({ id: entry.id, event_id: entry.eventId, attendee_id: entry.attendeeId, display_name: entry.displayName, company: entry.company, title: entry.title, status: entry.status, joined_at: entry.joinedAt, matched_at: entry.matchedAt ?? null, match_id: entry.matchId ?? null, matches_completed: entry.matchesCompleted, updated_at: entry.updatedAt }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("speed_networking_entries", error);
+    return entry;
+  }
+
+  async getSpeedNetworkingEntry(eventId: string, attendeeId: string) {
+    const { data, error } = await this.client.from("speed_networking_entries").select("*").eq("event_id", eventId).eq("attendee_id", attendeeId).maybeSingle();
+    if (error) failOrSchemaMissing("speed_networking_entries", error);
+    return data ? mapSpeedNetworkingEntry(data as Record<string, unknown>) : undefined;
+  }
+
+  async listSpeedNetworkingEntries(eventId: string) {
+    const { data, error } = await this.client.from("speed_networking_entries").select("*").eq("event_id", eventId).order("joined_at", { ascending: true });
+    if (error) failOrSchemaMissing("speed_networking_entries", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapSpeedNetworkingEntry);
+  }
+
+  async upsertSpeedNetworkingMatch(match: SpeedNetworkingMatchRecord) {
+    const { error } = await this.client.from("speed_networking_matches").upsert({ id: match.id, event_id: match.eventId, attendee_a_id: match.attendeeAId, attendee_b_id: match.attendeeBId, normalized_pair_key: match.normalizedPairKey, room_name: match.roomName, status: match.status, starts_at: match.startsAt, expires_at: match.expiresAt, ended_at: match.endedAt ?? null, ended_reason: match.endedReason ?? null }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("speed_networking_matches", error);
+    return match;
+  }
+
+  async getSpeedNetworkingMatch(eventId: string, matchId: string) {
+    const { data, error } = await this.client.from("speed_networking_matches").select("*").eq("event_id", eventId).eq("id", matchId).maybeSingle();
+    if (error) failOrSchemaMissing("speed_networking_matches", error);
+    return data ? mapSpeedNetworkingMatch(data as Record<string, unknown>) : undefined;
+  }
+
+  async listSpeedNetworkingMatches(eventId: string) {
+    const { data, error } = await this.client.from("speed_networking_matches").select("*").eq("event_id", eventId).order("starts_at", { ascending: false });
+    if (error) failOrSchemaMissing("speed_networking_matches", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapSpeedNetworkingMatch);
+  }
+
   async upsertRuntimeEvent(event: RuntimeEventRecord) {
     const { error } = await this.client.from("runtime_events").upsert(runtimeEventToRow(event), { onConflict: "id" });
     if (error) failOrSchemaMissing("runtime_events", error);
@@ -625,7 +670,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
 
   async readSnapshot(): Promise<V6RuntimeSnapshot> {
     const snapshot = emptyRuntimeSnapshot();
-    const [auditLogs, accessAttempts, analyticsEvents, fallbackEvents, fallbackStates, incidentEvents, supportRequests, emailEvents, registrations, attendeeProfiles, attendeeSessions, attendeeAgendaIntents, sponsorLeadOptIns, attendeePermissions, runOfShowEvents, stageStreamStates, stageStreamEvents, liveChatMessages, attendeeLiveCapabilities, attendeeLiveControlStates, liveChatModerationStates, specialGuestProfiles, eventGuestStates] = await Promise.all([
+    const [auditLogs, accessAttempts, analyticsEvents, fallbackEvents, fallbackStates, incidentEvents, supportRequests, emailEvents, registrations, attendeeProfiles, attendeeSessions, attendeeAgendaIntents, sponsorLeadOptIns, attendeePermissions, runOfShowEvents, stageStreamStates, stageStreamEvents, liveChatMessages, attendeeLiveCapabilities, attendeeLiveControlStates, liveChatModerationStates, specialGuestProfiles, eventGuestStates, speedNetworkingEntries, speedNetworkingMatches] = await Promise.all([
       selectAll<Record<string, unknown>>(this.client, "audit_logs"),
       selectAll<Record<string, unknown>>(this.client, "v5_access_attempt_events"),
       selectAll<Record<string, unknown>>(this.client, "v5_analytics_events"),
@@ -651,6 +696,8 @@ export class SupabaseRuntimeStore implements RuntimeStore {
       selectAll<Record<string, unknown>>(this.client, "live_chat_moderation_states", "*", "updated_at").catch(tolerateMissingTable),
       selectAll<Record<string, unknown>>(this.client, "special_guest_profiles", "*", "created_at").catch(tolerateMissingTable),
       selectAll<Record<string, unknown>>(this.client, "event_guest_states", "*", "updated_at").catch(tolerateMissingTable),
+      selectAll<Record<string, unknown>>(this.client, "speed_networking_entries", "*", "updated_at").catch(tolerateMissingTable),
+      selectAll<Record<string, unknown>>(this.client, "speed_networking_matches", "*", "starts_at").catch(tolerateMissingTable),
     ]);
 
     snapshot.auditLogs = auditLogs.map((row) => ({
@@ -759,6 +806,8 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     snapshot.liveChatModerationStates = liveChatModerationStates.map((row) => row.state as LiveChatModerationState).filter(Boolean);
     snapshot.specialGuestProfiles = specialGuestProfiles.map(mapSpecialGuestProfile);
     snapshot.eventGuestStates = eventGuestStates.map(mapEventGuestState);
+    snapshot.speedNetworkingEntries = speedNetworkingEntries.map(mapSpeedNetworkingEntry);
+    snapshot.speedNetworkingMatches = speedNetworkingMatches.map(mapSpeedNetworkingMatch);
     snapshot.attendeeLiveCapabilities = attendeeLiveCapabilities.map((row) => row.capability as AttendeeLiveCapability).filter(Boolean);
     snapshot.attendeeLiveControlStates = attendeeLiveControlStates.map((row) => row.state as AttendeeLiveControlState).filter(Boolean);
     return snapshot;

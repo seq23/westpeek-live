@@ -7,6 +7,7 @@ import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
+import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 
 export interface V5AccessAttemptRuntimeEvent {
   id: string;
@@ -112,6 +113,8 @@ export interface V6RuntimeSnapshot {
   attendeeLiveControlStates: AttendeeLiveControlState[];
   specialGuestProfiles: SpecialGuestProfile[];
   eventGuestStates: EventGuestStateRecord[];
+  speedNetworkingEntries: SpeedNetworkingQueueEntry[];
+  speedNetworkingMatches: SpeedNetworkingMatchRecord[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
@@ -171,6 +174,14 @@ export interface RuntimeStore {
   setEventGuestState(record: EventGuestStateRecord): Promise<EventGuestStateRecord>;
   getEventGuestState(key: string): Promise<EventGuestStateRecord | undefined>;
   listEventGuestStates(eventId: string, kind?: string): Promise<EventGuestStateRecord[]>;
+  // Speed networking (migration 0027): the queue and the 1:1 matches.
+  upsertSpeedNetworkingEntry(entry: SpeedNetworkingQueueEntry): Promise<SpeedNetworkingQueueEntry>;
+  getSpeedNetworkingEntry(eventId: string, attendeeId: string): Promise<SpeedNetworkingQueueEntry | undefined>;
+  listSpeedNetworkingEntries(eventId: string): Promise<SpeedNetworkingQueueEntry[]>;
+  upsertSpeedNetworkingMatch(match: SpeedNetworkingMatchRecord): Promise<SpeedNetworkingMatchRecord>;
+  getSpeedNetworkingMatch(eventId: string, matchId: string): Promise<SpeedNetworkingMatchRecord | undefined>;
+  /** Every match of the event (newest first): the active ones and the pair history behind no-repeat. */
+  listSpeedNetworkingMatches(eventId: string): Promise<SpeedNetworkingMatchRecord[]>;
   readSnapshot(): Promise<V6RuntimeSnapshot>;
   // Runtime-created events, clients, and agency settings (migration 0024).
   upsertRuntimeEvent(event: RuntimeEventRecord): Promise<RuntimeEventRecord>;
@@ -207,6 +218,8 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     attendeeLiveControlStates: [],
     specialGuestProfiles: [],
     eventGuestStates: [],
+    speedNetworkingEntries: [],
+    speedNetworkingMatches: [],
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],

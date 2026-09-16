@@ -7,6 +7,7 @@ import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
+import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 declare const require: undefined | ((moduleName: string) => unknown);
@@ -57,7 +58,15 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
   const fs = getNodeFs();
   if (!fs) return cloneSnapshot(memorySnapshot);
   if (!fs.existsSync(filePath)) return emptyRuntimeSnapshot();
-  const parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as Partial<V6RuntimeSnapshot>;
+  // Local file store only. A read that lands between another dev-server process's write and rename
+  // can see a torn file; re-read a few times before giving up (three attendee pages polling
+  // networking every 5s surfaced this once, 16 Sep 2026). Production uses Supabase.
+  let parsed: Partial<V6RuntimeSnapshot> | undefined;
+  let lastError: unknown;
+  for (let attempt = 0; attempt < 5 && !parsed; attempt += 1) {
+    try { parsed = JSON.parse(fs.readFileSync(filePath, "utf8")) as Partial<V6RuntimeSnapshot>; } catch (error) { lastError = error; }
+  }
+  if (!parsed) throw lastError instanceof Error ? lastError : new Error("Runtime snapshot file could not be read.");
   return {
     ...emptyRuntimeSnapshot(),
     ...parsed,
@@ -75,6 +84,8 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     attendeeLiveControlStates: Array.isArray(parsed.attendeeLiveControlStates) ? parsed.attendeeLiveControlStates : [],
     specialGuestProfiles: Array.isArray(parsed.specialGuestProfiles) ? parsed.specialGuestProfiles : [],
     eventGuestStates: Array.isArray(parsed.eventGuestStates) ? parsed.eventGuestStates : [],
+    speedNetworkingEntries: Array.isArray(parsed.speedNetworkingEntries) ? parsed.speedNetworkingEntries : [],
+    speedNetworkingMatches: Array.isArray(parsed.speedNetworkingMatches) ? parsed.speedNetworkingMatches : [],
     runtimeEvents: Array.isArray(parsed.runtimeEvents) ? parsed.runtimeEvents : [],
     runtimeClients: Array.isArray(parsed.runtimeClients) ? parsed.runtimeClients : [],
     agencySettings: Array.isArray(parsed.agencySettings) ? parsed.agencySettings : [],
@@ -397,6 +408,38 @@ export class FileRuntimeStore implements RuntimeStore {
 
   async listEventGuestStates(eventId: string, kind?: string) {
     return this.read().eventGuestStates.filter((item: EventGuestStateRecord) => item.eventId === eventId && (!kind || item.kind === kind));
+  }
+
+  async upsertSpeedNetworkingEntry(entry: SpeedNetworkingQueueEntry) {
+    const snapshot = this.read();
+    snapshot.speedNetworkingEntries = snapshot.speedNetworkingEntries.filter((item) => !(item.eventId === entry.eventId && item.attendeeId === entry.attendeeId));
+    snapshot.speedNetworkingEntries.push(entry);
+    this.write(snapshot);
+    return entry;
+  }
+
+  async getSpeedNetworkingEntry(eventId: string, attendeeId: string) {
+    return this.read().speedNetworkingEntries.find((item) => item.eventId === eventId && item.attendeeId === attendeeId);
+  }
+
+  async listSpeedNetworkingEntries(eventId: string) {
+    return this.read().speedNetworkingEntries.filter((item) => item.eventId === eventId).sort((a, b) => a.joinedAt.localeCompare(b.joinedAt));
+  }
+
+  async upsertSpeedNetworkingMatch(match: SpeedNetworkingMatchRecord) {
+    const snapshot = this.read();
+    snapshot.speedNetworkingMatches = snapshot.speedNetworkingMatches.filter((item) => item.id !== match.id);
+    snapshot.speedNetworkingMatches.push(match);
+    this.write(snapshot);
+    return match;
+  }
+
+  async getSpeedNetworkingMatch(eventId: string, matchId: string) {
+    return this.read().speedNetworkingMatches.find((item) => item.eventId === eventId && item.id === matchId);
+  }
+
+  async listSpeedNetworkingMatches(eventId: string) {
+    return this.read().speedNetworkingMatches.filter((item) => item.eventId === eventId).sort((a, b) => b.startsAt.localeCompare(a.startsAt));
   }
 
   async upsertRuntimeEvent(event: RuntimeEventRecord) {
