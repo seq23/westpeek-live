@@ -35,7 +35,7 @@ export function EventOverview({ eventId }: { eventId: string }) {
             <p className="text-sm font-medium text-slate-500">{client.name}</p>
             <h1 className="mt-2 text-3xl font-semibold">{event.name}</h1>
             <p className="mt-2 max-w-3xl text-slate-600">{event.description}</p>
-            <p className="mt-2 text-sm text-slate-500">{titleize(event.eventType)} · {formatEventDate(event.startAt)} · {event.timezone}</p>
+            <p className="mt-2 text-sm text-slate-500">{titleize(event.eventType)} · {formatEventDate(event.startAt, event.timezone)} · {event.timezone}</p>
           </div>
           <StatusBadge status={event.status} />
         </div>

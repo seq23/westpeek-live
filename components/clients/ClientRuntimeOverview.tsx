@@ -32,7 +32,7 @@ export async function ClientRuntimeOverview({ event, clientSlug }: { event: Runt
             <div>
               <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Your event</p>
               <h2 className="mt-1 text-2xl font-black text-slate-950">{event.name}</h2>
-              <p className="mt-1 text-sm text-slate-600">{formatEventDate(event.startAt)} · {event.timezone} · {event.format}</p>
+              <p className="mt-1 text-sm text-slate-600">{formatEventDate(event.startAt, event.timezone)} · {event.timezone} · {event.format}</p>
             </div>
             <StatusBadge status={event.status} tone={event.status === "live" ? "good" : "neutral"} />
           </div>
@@ -48,7 +48,7 @@ export async function ClientRuntimeOverview({ event, clientSlug }: { event: Runt
         </section>
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" data-testid="client-run-of-show">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Run of show</p>
-          {segments.length ? <ol className="mt-3 space-y-2">{segments.map((segment) => <li key={segment.id} className="rounded-2xl bg-slate-50 p-3 text-sm"><span className="font-black">{formatEventDate(segment.startAt)}</span> · {segment.publicTitle} · {segment.room}</li>)}</ol> : <p className="mt-3 text-sm text-slate-600">The production team has not published a run of show yet.</p>}
+          {segments.length ? <ol className="mt-3 space-y-2">{segments.map((segment) => <li key={segment.id} className="rounded-2xl bg-slate-50 p-3 text-sm"><span className="font-black">{formatEventDate(segment.startAt, event.timezone)}</span> · {segment.publicTitle} · {segment.room}</li>)}</ol> : <p className="mt-3 text-sm text-slate-600">The production team has not published a run of show yet.</p>}
         </section>
         <section className="grid gap-4 md:grid-cols-2">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Approvals and assets</p><p className="mt-2 text-sm text-slate-600">Nothing is waiting for your approval. Items appear here when the production team sends them.</p></div>

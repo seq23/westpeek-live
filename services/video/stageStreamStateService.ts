@@ -272,7 +272,10 @@ export async function applyStageStreamSignal(input: { eventId: string; stageId?:
   const store = getRuntimeStore();
   const key = stageStreamKey(next.eventId, next.stageId);
   await store.setStageStreamState(key, next);
-  await store.appendStageStreamEvent(eventFor(next, input.signal, previousSource, reason || next.fallbackRecommendation || input.signal)).catch(() => undefined);
+  await store.appendStageStreamEvent(eventFor(next, input.signal, previousSource, reason || next.fallbackRecommendation || input.signal)).catch((error) => {
+    // The state write above is the source of truth; a lost log line is reported, not fatal.
+    console.warn(`[stage-stream] event log append failed for ${key}: ${error instanceof Error ? error.message : String(error)}`);
+  });
   return next;
 }
 

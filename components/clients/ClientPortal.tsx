@@ -30,7 +30,7 @@ export async function ClientPortalDashboard({ clientSlug, eventId, surface }: { 
             {events.map((event) => (
               <a key={event.id} href={`/client/${client.slug}/events/${event.id}`} className="rounded-2xl border border-slate-200 p-4 hover:bg-slate-50">
                 <p className="font-semibold">{event.name}</p>
-                <p className="text-sm text-slate-500">{formatEventDate(event.startAt)}</p>
+                <p className="text-sm text-slate-500">{formatEventDate(event.startAt, event.timezone)}</p>
                 <div className="mt-3"><StatusBadge status={event.status} /></div>
               </a>
             ))}

@@ -1,13 +1,28 @@
-export function formatEventDate(value: string): string {
+/**
+ * "Sep 23, 11:00 AM" is what a producer read on the event command page on 16 Sep 2026 for a show
+ * that starts at 6:00 AM Chicago — the server formatted the instant in its own UTC clock and never
+ * said so. A time is shown in the event's own zone when the caller knows it; when no zone is known
+ * the zone abbreviation is appended ("11:00 AM UTC") so a bare time is never secretly UTC.
+ */
+export function formatEventDate(value: string, timeZone?: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const zone = timeZone?.trim() || undefined;
   try {
     return new Intl.DateTimeFormat("en", {
       month: "short",
       day: "numeric",
       hour: "numeric",
       minute: "2-digit",
-    }).format(new Date(value));
+      ...(zone ? { timeZone: zone } : { timeZoneName: "short" }),
+    }).format(date);
   } catch {
-    return value;
+    // An unknown IANA name: still say which clock the reader is looking at.
+    try {
+      return new Intl.DateTimeFormat("en", { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(date);
+    } catch {
+      return value;
+    }
   }
 }
 

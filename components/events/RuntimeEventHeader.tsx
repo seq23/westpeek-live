@@ -2,6 +2,7 @@ import Link from "next/link";
 import { EventJoinCodePanel } from "@/components/events/EventJoinCodePanel";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { archiveEventAction, publishEventAction, restoreEventAction } from "@/lib/actions/eventWorkspaceActions";
+import { formatEventDate } from "@/lib/utils/format";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
 /**
@@ -22,6 +23,7 @@ export function RuntimeEventHeader({ event, justCreated, error, returnTo }: { ev
             <StatusBadge status={event.status} tone={event.status === "live" ? "good" : archived ? "bad" : "neutral"} />
           </div>
           <p className="mt-1 text-sm text-brand-muted">{event.clientName} · {event.format === "room" ? "Room" : "Stage"} · created by {event.createdByLabel}</p>
+          <p className="mt-1 text-sm text-brand-muted" data-testid="runtime-event-start">Starts {formatEventDate(event.startAt, event.timezone)} · {event.timezone}</p>
         </div>
         <div className="flex flex-wrap gap-2">
           {!archived && event.status === "draft" ? (

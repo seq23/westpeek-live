@@ -442,6 +442,17 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return insertRecord(this.client, "stage_stream_events", { id: event.id, event_id: event.eventId, stage_id: event.stageId, signal: event.signal, state_event: event, created_at: event.createdAt }, event);
   }
 
+  /**
+   * Filtered at the database. The console used to read the whole table through readSnapshot(),
+   * which PostgREST caps at its max-rows default (1000) oldest-first — a runtime event created after
+   * the seed demos had filled the table never made the page. 16 Sep 2026.
+   */
+  async listStageStreamEvents(eventId: string, stageId: string, limit: number) {
+    const { data, error } = await this.client.from("stage_stream_events").select("state_event").eq("event_id", eventId).eq("stage_id", stageId).order("created_at", { ascending: false }).limit(Math.max(1, limit));
+    if (error) fail(`stage_stream_events read: ${error.message}`);
+    return ((data || []) as Record<string, unknown>[]).map((row) => row.state_event as StageStreamEvent).filter(Boolean);
+  }
+
   appendLiveChatMessage(message: LiveChatMessage) {
     return insertRecord(this.client, "live_chat_messages", { id: message.id, event_id: message.eventId, room_kind: message.roomKind, room_id: message.roomId, attendee_id: message.attendeeId, display_name: message.displayName, company: message.company, message: message.message, moderation_status: message.moderationStatus, created_at: message.createdAt }, message);
   }

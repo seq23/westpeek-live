@@ -36,12 +36,12 @@ export async function GET(request: Request) {
   const attendeeId = url.searchParams.get("attendeeId") || "";
   const auth = await requireLiveEventControlAccessForRequest(eventId);
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 401 });
-  const [control, capability, snapshot] = await Promise.all([
+  const [control, capability, stageLog] = await Promise.all([
     getAttendeeLiveControlState(eventId, roomKind, roomId),
     attendeeId ? getAttendeeLiveCapability(eventId, roomKind, roomId, attendeeId).catch(() => undefined) : Promise.resolve(undefined),
-    getRuntimeStore().readSnapshot().catch(() => undefined),
+    getRuntimeStore().listStageStreamEvents(eventId, roomId, 200).catch(() => []),
   ]);
-  const logs = (snapshot?.stageStreamEvents || []).filter((event) => event.eventId === eventId && event.stageId === roomId && event.signal === "attendee_access_decision" && (!attendeeId || event.message.includes(attendeeId))).slice(-20);
+  const logs = stageLog.filter((event) => event.signal === "attendee_access_decision" && (!attendeeId || event.message.includes(attendeeId))).slice(0, 20).reverse();
   return NextResponse.json({ ok: true, control, capability, logs });
 }
 

@@ -6,6 +6,7 @@ import { ManageEventTabs } from "@/components/events/ManageEventTabs";
 import { EventJoinCodePanel } from "@/components/events/EventJoinCodePanel";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EndShowControl } from "@/components/moderation/EndShowControl";
+import { formatEventDate } from "@/lib/utils/format";
 
 const transitions: Array<{ status: "registration_open" | "pre_event" | "live" | "ended" | "draft"; label: string; help: string; primary?: boolean }> = [
   { status: "registration_open", label: "Publish", help: "Opens the join code and the public event page.", primary: true },
@@ -33,6 +34,7 @@ export function EventPublishPanel({ eventId, updated, error }: { eventId: string
           <h1 className="text-3xl font-black text-slate-950">Publish {event.name}</h1>
           <StatusBadge status={currentStatus} tone={currentStatus === "live" ? "good" : "neutral"} />
         </div>
+        <p className="mt-2 text-sm text-slate-600" data-testid="publish-event-start">Starts {formatEventDate(event.startAt, event.timezone)} · {event.timezone}</p>
         {runtime ? (
           <>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">Status changes save to the event row immediately — no PR, no redeploy. Publish opens the join code; Go live sends attendees straight into the lobby.</p>

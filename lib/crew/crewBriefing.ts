@@ -74,3 +74,34 @@ export const crewRunOfShow = [
 export function normalizeCrewEventId(eventId: string) {
   return eventId === "demo" ? "event-summit" : eventId;
 }
+
+export const CREW_CALL_LEAD_MINUTES = 60;
+
+export type CrewCallTimes = { callTime: string; showStart: string; source: "runtime" | "seed" };
+
+function crewClock(iso: string, timeZone: string) {
+  const date = new Date(iso);
+  if (Number.isNaN(date.getTime())) return iso;
+  const options: Intl.DateTimeFormatOptions = { month: "short", day: "numeric", hour: "numeric", minute: "2-digit", timeZoneName: "short" };
+  try {
+    return new Intl.DateTimeFormat("en", { ...options, timeZone }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat("en", options).format(date);
+  }
+}
+
+/**
+ * "Call time: 9:00 AM local event time · Show start: 10:00 AM local event time" is what the crew
+ * read on 16 Sep 2026 for a real event starting at 6:00 AM Chicago — the demo summit's words on a
+ * runtime event's briefing. A runtime event derives both from its own start, in its own zone:
+ * call time is the start minus one hour (the T-60 "Crew call" cue), show start is the start.
+ * The seed text is kept for the compiled demo events only.
+ */
+export function crewCallTimesFor(event: { startAt?: string; timezone?: string; source?: string } | undefined): CrewCallTimes {
+  if (!event || event.source === "seed" || !event.startAt) return { callTime: crewBriefing.callTime, showStart: crewBriefing.showStart, source: "seed" };
+  const start = new Date(event.startAt);
+  if (Number.isNaN(start.getTime())) return { callTime: crewBriefing.callTime, showStart: crewBriefing.showStart, source: "seed" };
+  const zone = event.timezone?.trim() || "UTC";
+  const call = new Date(start.getTime() - CREW_CALL_LEAD_MINUTES * 60_000);
+  return { callTime: crewClock(call.toISOString(), zone), showStart: crewClock(start.toISOString(), zone), source: "runtime" };
+}
