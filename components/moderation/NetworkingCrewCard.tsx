@@ -8,7 +8,22 @@ import { crewNetworkingSummary } from "@/services/speed-networking/speedNetworki
  * minutes-per-match setting, and Open / close networking. Every read runs the matcher.
  */
 export async function NetworkingCrewCard({ eventId, viewer: givenViewer }: { eventId: string; viewer?: CrewViewer }) {
-  const [summary, viewer] = await Promise.all([crewNetworkingSummary(eventId), givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId)]);
+  // One card's store failure must never take the crew page down with it: during Scooter's live
+  // workshop (16 Sep 2026) a schema mismatch in this query 500'd the whole crew console.
+  let summary: Awaited<ReturnType<typeof crewNetworkingSummary>>;
+  const viewer = givenViewer ?? (await getCrewViewer(eventId));
+  try {
+    summary = await crewNetworkingSummary(eventId);
+  } catch (error) {
+    console.warn("networking crew card unavailable", error instanceof Error ? error.message : String(error));
+    return (
+      <section className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-900" data-testid="networking-crew-card" data-open="unavailable">
+        <p className="text-xs font-black uppercase tracking-[0.25em]">Networking</p>
+        <h2 className="mt-2 text-xl font-black">Networking is unavailable right now</h2>
+        <p className="mt-2 text-sm">The rest of the console works. The store behind the queue refused a read; it has been logged.</p>
+      </section>
+    );
+  }
   const { settings } = summary;
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="networking-crew-card" data-open={settings.open ? "true" : "false"} data-queue-size={summary.queueSize} data-matches-in-progress={summary.matchesInProgress} data-match-minutes={settings.matchMinutes}>
