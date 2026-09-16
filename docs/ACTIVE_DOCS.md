@@ -24,6 +24,7 @@ Purpose: single operator entrypoint that prevents doc sprawl. If a document is n
 - `docs/DEPLOYMENT_ENV_CHECKLIST.md`
 - `docs/DEPLOYMENT_PARITY_CHECKLIST.md`
 - `docs/E2E_OUTCOME_TESTING_STANDARD.md`
+- `docs/LIVEKIT_WEBHOOKS.md`
 - `docs/MOBILE_TABLET_QA_WEST_PEEK_LIVE.md`
 - `docs/PERSONA_ROUTE_OUTCOME_MAP.md`
 - `docs/POST_DEPLOYMENT_SMOKE_TEST.md`

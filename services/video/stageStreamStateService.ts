@@ -1,5 +1,6 @@
 import { randomId, base64UrlEncode } from "@/lib/security/portableCrypto";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
+import { findEventRecord } from "@/services/events/eventRepository";
 import type { StageStreamEvent, StageStreamSignal, StageStreamState } from "@/types/stageStream";
 import { toOperatorStageStreamState, toPublicStageStreamState } from "@/types/stageStream";
 
@@ -247,10 +248,23 @@ export function evaluateStageFallbackDecision(previous: StageStreamState, signal
   return state;
 }
 
+/**
+ * A feed that stops after the show is over is not a dropped feed. Two things say "over":
+ * the operator's explicit "End the show" (operatorMarkedShowEnded on the stage state) and the
+ * event itself being `ended` (the publish page, or End the show having set it). Either one, in
+ * either order, turns ingress_ended into ENDED instead of a Daily failover.
+ */
+export async function eventIsEnded(eventId: string) {
+  const event = await findEventRecord(eventId).catch(() => undefined);
+  return event?.status === "ended" || event?.status === "replay_available" || event?.status === "archived";
+}
+
 export async function applyStageStreamSignal(input: { eventId: string; stageId?: string; signal: StageStreamSignal; reason?: string; webhookEvent?: string }) {
-  const current = await getOrCreateStageStreamState(input.eventId, input.stageId || "main-stage");
+  const stored = await getOrCreateStageStreamState(input.eventId, input.stageId || "main-stage");
+  const current = input.signal === "ingress_ended" && !stored.operatorMarkedShowEnded && (await eventIsEnded(input.eventId)) ? { ...stored, operatorMarkedShowEnded: true } : stored;
   const previousSource = current.activeStreamSource;
-  const next = evaluateStageFallbackDecision(current, input.signal, input.reason);
+  const reason = current !== stored ? `${input.reason || "Ingress ended."} The event is already ended, so this is the end of the show, not a dropped feed.` : input.reason;
+  const next = evaluateStageFallbackDecision(current, input.signal, reason);
   if (input.webhookEvent) {
     next.lastWebhookEvent = input.webhookEvent;
     next.lastWebhookAt = now();
@@ -258,8 +272,22 @@ export async function applyStageStreamSignal(input: { eventId: string; stageId?:
   const store = getRuntimeStore();
   const key = stageStreamKey(next.eventId, next.stageId);
   await store.setStageStreamState(key, next);
-  await store.appendStageStreamEvent(eventFor(next, input.signal, previousSource, input.reason || next.fallbackRecommendation || input.signal)).catch(() => undefined);
+  await store.appendStageStreamEvent(eventFor(next, input.signal, previousSource, reason || next.fallbackRecommendation || input.signal)).catch(() => undefined);
   return next;
+}
+
+/**
+ * Record that a poll of LiveKit answered, so the operator can see which path is carrying the
+ * state when no webhook has ever arrived. Written at most once a minute per stage.
+ */
+export async function recordStagePollHeartbeat(eventId: string, stageId = "main-stage") {
+  const store = getRuntimeStore();
+  const key = stageStreamKey(eventId, stageId);
+  const current = await store.getStageStreamState(key).catch(() => undefined);
+  if (!current) return;
+  const last = current.lastHealthCheckAt ? new Date(current.lastHealthCheckAt).getTime() : 0;
+  if (Date.now() - last < 60_000) return;
+  await store.setStageStreamState(key, { ...current, lastHealthCheckAt: now() }).catch(() => undefined);
 }
 
 export function createStreamKey(eventId: string, stageId: string) {

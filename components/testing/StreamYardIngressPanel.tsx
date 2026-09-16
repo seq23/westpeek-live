@@ -3,6 +3,8 @@ import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { getOperatorStageStreamState } from "@/services/video/stageStreamStateService";
 import type { StageStreamSignal } from "@/types/stageStream";
 import { CopyToClipboardButton } from "@/components/testing/CopyToClipboardButton";
+import { EndShowControl } from "@/components/moderation/EndShowControl";
+import { livekitWebhookUrl } from "@/lib/runtime/appBaseUrl";
 
 function StatusBadge({ status }: { status: string }) {
   const tone = status.includes("LIVE") || status === "READY_FOR_STREAMYARD" ? "bg-emerald-50 text-emerald-800" : status.includes("SWITCHING") ? "bg-amber-50 text-amber-800" : status.includes("ENDED") ? "bg-slate-100 text-slate-700" : "bg-slate-100 text-slate-700";
@@ -57,6 +59,8 @@ function ProviderLadderCard({ activeSource }: { activeSource: string }) {
 
 export async function StreamYardIngressPanel({ eventId = "event-summit" }: { eventId?: string }) {
   const state = await getOperatorStageStreamState(eventId, "main-stage");
+  const webhookUrl = await livekitWebhookUrl();
+  const pollingOnly = !state.lastWebhookEvent && Boolean(state.lastHealthCheckAt);
   const runtime = await getRuntimeStore().readSnapshot().catch(() => undefined);
   const events = (runtime?.stageStreamEvents || []).filter((event) => event.eventId === eventId).slice(-8).reverse();
   return (
@@ -77,8 +81,15 @@ export async function StreamYardIngressPanel({ eventId = "event-summit" }: { eve
         <div className="rounded-2xl bg-slate-50 p-4"><strong>Active source</strong><p>{state.activeStreamSource.replaceAll("_", " ")}</p></div>
         <div className="rounded-2xl bg-slate-50 p-4"><strong>Failure plane</strong><p>{state.failurePlane.replaceAll("_", " ")}</p></div>
         <div className="rounded-2xl bg-slate-50 p-4"><strong>Ingress ID</strong><p>{state.livekitIngressId || "Pending"}</p></div>
-        <div className="rounded-2xl bg-slate-50 p-4"><strong>Last webhook</strong><p>{state.lastWebhookEvent || "None yet"}</p></div>
+        <div className="rounded-2xl bg-slate-50 p-4" data-testid="last-webhook-card" data-path={state.lastWebhookEvent ? "webhook" : pollingOnly ? "polling" : "none"}><strong>Last webhook</strong><p>{state.lastWebhookEvent ? `${state.lastWebhookEvent}${state.lastWebhookAt ? ` · ${new Date(state.lastWebhookAt).toLocaleTimeString()}` : ""}` : pollingOnly ? "None yet — polling is carrying the state (every ~10s)" : "None yet"}</p>{pollingOnly && state.lastHealthCheckAt ? <p className="text-xs text-slate-500">Last poll of LiveKit: {new Date(state.lastHealthCheckAt).toLocaleTimeString()}</p> : null}</div>
       </div>
+      <div className="mt-4 rounded-2xl border border-sky-200 bg-sky-50 p-4 text-sm text-sky-950" data-testid="livekit-webhook-help">
+        <p className="font-black">LiveKit webhook registration</p>
+        <p className="mt-1">LiveKit Cloud → your project → Settings → Webhooks → Add endpoint → paste this URL. The app verifies each call with the <code>LIVEKIT_API_SECRET</code>-signed bearer token LiveKit sends, and also accepts an HMAC header signed with <code>LIVEKIT_WEBHOOK_SECRET</code>. Until it is registered, the polled reconcile (every ~10s from the stage player) carries the state, as it did through the 12-minute feed on 15 Sep 2026.</p>
+        <code className="mt-2 block break-all rounded-xl bg-white p-3 text-xs text-slate-900" data-testid="livekit-webhook-url">{webhookUrl}</code>
+        <CopyToClipboardButton value={webhookUrl} label="Webhook URL" />
+      </div>
+      <div className="mt-4"><EndShowControl eventId={eventId} compact /></div>
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <ProviderLadderCard activeSource={state.activeStreamSource} />
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

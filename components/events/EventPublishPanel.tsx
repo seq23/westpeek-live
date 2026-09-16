@@ -5,6 +5,7 @@ import { publishEventAction } from "@/lib/actions/eventWorkspaceActions";
 import { ManageEventTabs } from "@/components/events/ManageEventTabs";
 import { EventJoinCodePanel } from "@/components/events/EventJoinCodePanel";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { EndShowControl } from "@/components/moderation/EndShowControl";
 
 const transitions: Array<{ status: "registration_open" | "pre_event" | "live" | "ended" | "draft"; label: string; help: string; primary?: boolean }> = [
   { status: "registration_open", label: "Publish", help: "Opens the join code and the public event page.", primary: true },
@@ -25,6 +26,7 @@ export function EventPublishPanel({ eventId, updated, error }: { eventId: string
   return (
     <div className="space-y-6">
       <ManageEventTabs eventId={eventId} />
+      {currentStatus === "live" ? <EndShowControl eventId={eventId} /> : null}
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-orange">Publishing</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">

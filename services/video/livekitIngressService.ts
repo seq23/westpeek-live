@@ -1,6 +1,6 @@
 import { createHmac } from "crypto";
 import { getLiveKitEnv } from "@/lib/env";
-import { applyStageStreamSignal, getOrCreateStageStreamState, stageStreamKey } from "@/services/video/stageStreamStateService";
+import { applyStageStreamSignal, getOrCreateStageStreamState, recordStagePollHeartbeat, stageStreamKey } from "@/services/video/stageStreamStateService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { normalizeLiveKitRoomName } from "@/services/video/livekitRoomNaming";
 
@@ -184,6 +184,7 @@ export async function reconcileIngressWithLiveKit(eventId: string, stageId = "ma
     // LiveKit unreachable: say nothing rather than guess. The webhook path and the next poll remain.
     return { checked: false, publishing: null, applied: null };
   }
+  await recordStagePollHeartbeat(eventId, stageId);
   if (!info) return { checked: true, publishing: null, applied: null };
   const status = String(info.state?.status ?? "");
   const publishing = PUBLISHING_STATES.has(status) ? true : STOPPED_STATES.has(status) ? false : null;

@@ -38,6 +38,7 @@ Purpose: every Markdown document is classified so active documentation stays int
 | `docs/COMPONENT_MAP.md` | ARCHIVED | Moved to docs/archive/superseded/docs__COMPONENT_MAP.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
 | `docs/CUMULATIVE_EXECUTION_PLAN_PHASE12_16.md` | ARCHIVED | Moved to docs/archive/superseded/docs__CUMULATIVE_EXECUTION_PLAN_PHASE12_16.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
 | `docs/DAILY_AUTOMATIC_FALLBACK.md` | ACTIVE_VALIDATOR_REFERENCED | Current active operator/proof/runbook surface or validator-referenced source. | None |
+| `docs/LIVEKIT_WEBHOOKS.md` | ACTIVE_VALIDATOR_REFERENCED | Current active operator/proof/runbook surface or validator-referenced source. | None |
 | `docs/DATABASE_MIGRATION_PLAN.md` | ARCHIVED | Moved to docs/archive/superseded/docs__DATABASE_MIGRATION_PLAN.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
 | `docs/DATABASE_SCHEMA.md` | ARCHIVED | Moved to docs/archive/superseded/docs__DATABASE_SCHEMA.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
 | `docs/DEPLOYMENT_ENV_CHECKLIST.md` | ACTIVE_VALIDATOR_REFERENCED | Current active operator/proof/runbook surface or validator-referenced source. | None |
