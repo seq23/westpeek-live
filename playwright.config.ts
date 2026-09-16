@@ -45,6 +45,10 @@ const chromiumArgs = [
   "--allow-insecure-localhost",
   "--disable-web-security",
   "--disable-features=BlockInsecurePrivateNetworkRequests,PrivateNetworkAccessSendPreflights",
+  // A fake camera and microphone, granted without a prompt: the attendee on-stage controls are
+  // proven on a phone-width project by capturing a real (synthetic) local track.
+  "--use-fake-device-for-media-stream",
+  "--use-fake-ui-for-media-stream",
 ];
 
 if (executablePath && !headed) {

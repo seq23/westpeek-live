@@ -1,23 +1,54 @@
-import { requestAttendeeStageAccess } from "@/lib/actions/attendeeLiveActions";
-import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
-import { evaluateAttendeeLiveAccess } from "@/services/venue/attendeeLivePermissionService";
+"use client";
+import { useAttendeeStageStatus, type AttendeeStageStatusSnapshot } from "@/components/video/useAttendeeStageStatus";
+import type { AttendeeStageStatusKind } from "@/services/venue/attendeeStageStatus";
 
-export function AttendeeStageJoinControls({ eventId, roomId, control, capability, attendeeId }: { eventId: string; roomId: string; control: AttendeeLiveControlState; capability?: AttendeeLiveCapability; attendeeId?: string }) {
-  if (!attendeeId) return <div className="rounded-2xl bg-slate-100 p-4 text-sm font-bold text-slate-700" data-testid="stage-join-registration-required"><a href={`/events/${eventId}/register`} className="text-brand-orange underline">Register</a> to request crew-controlled approval for camera and microphone access. Guest registration does not publish by default, and crew may revoke or restore access at any time.</div>;
-  const access = evaluateAttendeeLiveAccess({ control, capability, roomKind: "main_stage" });
-  if (!access.canJoin) return <div className="rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-900" data-testid="attendee-live-access-revoked">{access.reason}</div>;
-  if (capability?.approvedForStage) return <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-900" data-testid="attendee-stage-approved">The crew approved you for the stage: your camera and microphone can go live from the player above. crew can revoke or restore access at any time.</div>;
-  if (capability?.requestStatus === "requested") return <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900" data-testid="attendee-stage-request-pending">Your request to join the stage is with the crew. Keep watching; this page updates when they decide.</div>;
-  if (capability?.canJoinLiveStream) return <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-900" data-testid="attendee-live-access-permitted">You are permitted to join this live event. crew can revoke or restore access if needed.</div>;
-  if (control.emergencyPublishingDisabled) return <div className="rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-900">Crew disabled attendee publishing during live operations.</div>;
-  if (!control.globalCameraEnabled && !control.globalMicrophoneEnabled) return <div className="rounded-2xl bg-slate-100 p-4 text-sm font-bold text-slate-700">Camera/mic joining is currently disabled by crew.</div>;
-  const declined = capability?.requestStatus === "declined";
+/**
+ * The state line under the stage player, in plain words, with the one button that goes with it:
+ *   "Want to speak? Request to join the stage" → "Requested — waiting for the crew" →
+ *   "Approved — turn on your camera or mic below" → (on stage, from the control bar) →
+ *   "Removed by the crew". When the crew has closed requests it says so; it never goes silent.
+ * Polls the attendee's own status (~5s) so the line changes without a reload; the request itself
+ * is the same server action as before (records `requested`, grants nothing).
+ */
+const TEST_IDS: Record<AttendeeStageStatusKind, string> = {
+  unregistered: "stage-join-registration-required",
+  waiting_to_watch: "attendee-live-access-waiting",
+  removed: "attendee-live-access-revoked",
+  approved: "attendee-stage-approved",
+  requested: "attendee-stage-request-pending",
+  declined: "attendee-stage-request-declined",
+  requests_closed: "attendee-stage-requests-closed",
+  permitted: "attendee-live-access-permitted",
+  can_request: "attendee-stage-can-request",
+};
+
+const TONES: Record<AttendeeStageStatusKind, string> = {
+  unregistered: "border-slate-200 bg-slate-100 text-slate-800",
+  waiting_to_watch: "border-amber-200 bg-amber-50 text-amber-900",
+  removed: "border-rose-200 bg-rose-50 text-rose-900",
+  approved: "border-emerald-300 bg-emerald-50 text-emerald-900",
+  requested: "border-amber-200 bg-amber-50 text-amber-900",
+  declined: "border-slate-200 bg-slate-100 text-slate-800",
+  requests_closed: "border-slate-200 bg-slate-100 text-slate-800",
+  permitted: "border-emerald-200 bg-emerald-50 text-emerald-900",
+  can_request: "border-brand-orange/30 bg-brand-orangeSoft text-slate-950",
+};
+
+export function AttendeeStageJoinControls({ eventId, roomId, attendeeId, initial, requestAction }: { eventId: string; roomId: string; attendeeId?: string; initial: AttendeeStageStatusSnapshot; requestAction: (formData: FormData) => void | Promise<void> }) {
+  const status = useAttendeeStageStatus(eventId, roomId, initial, Boolean(attendeeId)) || initial;
+  const testId = TEST_IDS[status.status];
   return (
-    <form action={requestAttendeeStageAccess} className="rounded-2xl border border-brand-orange/30 bg-brand-orangeSoft p-4" data-testid="attendee-stage-request-form">
-      <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="roomKind" value="main_stage" /><input type="hidden" name="roomId" value={roomId} /><input type="hidden" name="attendeeId" value={attendeeId} />
-      {declined ? <p className="mb-2 rounded-xl bg-white/70 p-3 text-xs font-bold text-slate-700" data-testid="attendee-stage-request-declined">The crew declined your last request. You can ask again if the moment changes.</p> : null}
-      <p className="text-sm font-black text-slate-950">Want to join the stage?</p><p className="mt-1 text-xs text-slate-600">Main stage camera access is crew-controlled and request-based by default. Watching remains inside the branded event experience unless crew revokes access.</p>
-      <button className="mt-3 rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white">Request to Join Stage</button>
-    </form>
+    <div className={`rounded-2xl border p-4 ${TONES[status.status]}`} data-testid={testId} data-stage-status={status.status}>
+      <p className="text-base font-black" data-testid="attendee-stage-status-headline">{status.headline}</p>
+      <p className="mt-1 text-sm">{status.detail}</p>
+      {status.status === "approved" ? <p className="mt-1 text-xs">The crew can revoke or restore access at any time.</p> : null}
+      {status.primary === "register" ? <a href={`/events/${eventId}/register`} className="mt-3 inline-block min-h-12 rounded-full bg-brand-orange px-6 py-3 text-base font-black text-white" data-testid="stage-register-cta">Register</a> : null}
+      {status.primary === "request" && attendeeId ? (
+        <form action={requestAction} className="mt-3" data-testid="attendee-stage-request-form">
+          <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="roomKind" value="main_stage" /><input type="hidden" name="roomId" value={roomId} /><input type="hidden" name="attendeeId" value={attendeeId} />
+          <button className="min-h-12 w-full rounded-full bg-slate-950 px-6 py-3 text-base font-black text-white sm:w-auto" data-testid="attendee-stage-request-button">Request to Join Stage</button>
+        </form>
+      ) : null}
+    </div>
   );
 }

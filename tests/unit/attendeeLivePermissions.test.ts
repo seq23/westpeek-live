@@ -2,11 +2,12 @@ import { describe, expect, it } from "vitest";
 import { defaultLiveControlState } from "@/services/venue/attendeeLivePermissionService";
 
 describe("attendee live permission defaults", () => {
-  it("keeps main stage attendee publishing off/request-based by default", () => {
+  it("main stage allows attendee camera/mic requests by default, with crew approval required before publishing", () => {
     const state = defaultLiveControlState("event-summit", "main_stage", "main-stage");
-    expect(state.globalCameraEnabled).toBe(false);
-    expect(state.globalMicrophoneEnabled).toBe(false);
+    expect(state.globalCameraEnabled).toBe(true);
+    expect(state.globalMicrophoneEnabled).toBe(true);
     expect(state.requestRequired).toBe(true);
+    expect(state.emergencyPublishingDisabled).toBe(false);
   });
 
   it("allows breakout camera and microphone by room policy while screen share stays off", () => {
