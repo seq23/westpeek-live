@@ -61,7 +61,7 @@ export async function LiveRoomChat({ eventId, roomKind, roomId, title, descripti
           </form>
         )
       ) : (
-        <div className="border-t border-slate-100 p-4 text-sm text-slate-600" data-testid="chat-registration-required">Register for this event to chat with your real attendee identity.</div>
+        <div className="border-t border-slate-100 p-4 text-sm text-slate-600" data-testid="chat-registration-required"><a href={`/events/${eventId}/register`} className="font-bold text-brand-orange underline">Register for this event</a> to chat with your real attendee identity — it takes 30 seconds and brings you straight back here.</div>
       )}
     </aside>
   );

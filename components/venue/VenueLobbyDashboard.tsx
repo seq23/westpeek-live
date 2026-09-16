@@ -1,3 +1,4 @@
+import { getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
 import type { VirtualVenueModel } from "@/types/virtualVenue";
 import { buildVenueLobbySections } from "@/services/venue";
 import { createInitialRoomFallbackState, getRoomFallbackState } from "@/services/video/roomFallbackService";
@@ -12,6 +13,7 @@ import { SponsorBoothCard } from "./SponsorBoothCard";
 
 export async function VenueLobbyDashboard({ model }: { model: VirtualVenueModel }) {
   const sections = buildVenueLobbySections(model);
+  const profile = await getCurrentAttendeeProfile(model.eventId).catch(() => undefined);
   const fallbackState = await getRoomFallbackState(model.eventId, "main_stage").catch(() => createInitialRoomFallbackState(model.eventId, "main_stage"));
 
   return (
@@ -27,6 +29,7 @@ export async function VenueLobbyDashboard({ model }: { model: VirtualVenueModel 
         <p className="mt-2 max-w-3xl text-slate-600">Start at the main stage, browse sessions, join breakouts, visit sponsors, or enter networking. Fallback and support states are visible before you get stuck.</p>
         <div className="mt-5 flex flex-wrap gap-3">
           <a href={sections.heroCta} className="rounded-xl bg-slate-950 px-5 py-3 text-sm font-semibold text-white">Join live session</a>
+          {profile ? null : <a href={`/events/${model.eventId}/register`} className="rounded-xl bg-brand-orange px-5 py-3 text-sm font-semibold text-white" data-testid="lobby-register-cta">Register to chat and raise your hand</a>}
           <a href={`/venue/${model.eventId}/networking`} className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold">Start networking</a>
           <a href={`/venue/${model.eventId}/help`} className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold">Get help</a>
         </div>

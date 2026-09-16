@@ -3,7 +3,7 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import { evaluateAttendeeLiveAccess } from "@/services/venue/attendeeLivePermissionService";
 
 export function AttendeeStageJoinControls({ eventId, roomId, control, capability, attendeeId }: { eventId: string; roomId: string; control: AttendeeLiveControlState; capability?: AttendeeLiveCapability; attendeeId?: string }) {
-  if (!attendeeId) return <div className="rounded-2xl bg-slate-100 p-4 text-sm font-bold text-slate-700" data-testid="stage-join-registration-required">Register to request crew-controlled approval for camera and microphone access. Guest registration does not publish by default, and crew may revoke or restore access at any time.</div>;
+  if (!attendeeId) return <div className="rounded-2xl bg-slate-100 p-4 text-sm font-bold text-slate-700" data-testid="stage-join-registration-required"><a href={`/events/${eventId}/register`} className="text-brand-orange underline">Register</a> to request crew-controlled approval for camera and microphone access. Guest registration does not publish by default, and crew may revoke or restore access at any time.</div>;
   const access = evaluateAttendeeLiveAccess({ control, capability, roomKind: "main_stage" });
   if (!access.canJoin) return <div className="rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-900" data-testid="attendee-live-access-revoked">{access.reason}</div>;
   if (capability?.approvedForStage) return <div className="rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-900" data-testid="attendee-stage-approved">The crew approved you for the stage: your camera and microphone can go live from the player above. crew can revoke or restore access at any time.</div>;

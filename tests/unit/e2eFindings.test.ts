@@ -57,3 +57,18 @@ describe("a join code typed on a phone still finds the Room", () => {
     expect(joinCodeCandidates("sequoia-s-first-room")[0]).toBe("sequoia-s-first-room");
   });
 });
+
+describe("a guest inside the venue can find registration", () => {
+  it("every 'register' notice in the venue links to the event's registration form", async () => {
+    const { readFileSync } = await import("node:fs");
+    for (const file of ["VenueLobbyDashboard", "LiveRoomChat", "AttendeeStageJoinControls", "MyAgendaPanel"]) {
+      const src = readFileSync(new URL(`../../components/venue/${file}.tsx`, import.meta.url), "utf8");
+      expect(src, file).toMatch(/href=\{`\/events\/\$\{[a-zA-Z.]+\}\/register`\}/);
+    }
+  });
+  it("a typed code resolves through the record's real join code", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../services/events/eventStateResolver.ts", import.meta.url), "utf8");
+    expect(src).toMatch(/resolveHydratedEventJoinCode\(runtime\?\.joinCode \?\? code\)/);
+  });
+});
