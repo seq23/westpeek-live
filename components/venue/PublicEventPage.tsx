@@ -9,7 +9,7 @@ import { EventNotOpenState } from "@/components/venue/EventNotOpenState";
 import { RegistrationClosedState } from "@/components/venue/RegistrationClosedState";
 import { RegistrationRequiredState } from "@/components/venue/RegistrationRequiredState";
 import { ReturningAttendeeForm } from "@/components/venue/ReturningAttendeeForm";
-import { attendeeSessionDaysFor, registeredForWords } from "@/services/attendees/attendeeSessionPolicy";
+import { DEFAULT_ATTENDEE_SESSION_DAYS, attendeeSessionDaysFor, registeredForWords } from "@/services/attendees/attendeeSessionPolicy";
 import { getEventConfigPackage } from "@/services/events/eventConfigRepository";
 import { mapEventStatusToPublicState } from "@/services/events/eventStateResolver";
 
@@ -104,7 +104,14 @@ export async function EventRegistration({ slug, prefillEmail = "", waitSeconds }
     );
   }
 
-  const sessionDays = await attendeeSessionDaysFor(config.event.id);
+  // Fail soft: the lifetime is a sentence, the form is the product. A store hiccup reading the
+  // event's own setting falls back to the platform default rather than taking registration down.
+  let sessionDays = DEFAULT_ATTENDEE_SESSION_DAYS;
+  try {
+    sessionDays = await attendeeSessionDaysFor(config.event.id);
+  } catch {
+    sessionDays = DEFAULT_ATTENDEE_SESSION_DAYS;
+  }
 
   return (
     <main className="min-h-screen bg-slate-50 p-6">
