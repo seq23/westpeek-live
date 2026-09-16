@@ -111,7 +111,7 @@ describe("live chat moderation", () => {
     expect((await getLiveChatModerationQueue(EVENT)).lockedRooms.map((r) => r.roomId)).toEqual(["main-stage"]);
 
     await lockLiveChatRoom(form({ eventId: EVENT, roomKind: "main_stage", roomId: "main-stage", locked: "false" }));
-    expect(await getLiveChatRoomModeration(EVENT, "main_stage", "main-stage")).toEqual({ locked: false });
+    expect(await getLiveChatRoomModeration(EVENT, "main_stage", "main-stage")).toMatchObject({ locked: false, slowModeSeconds: 0 });
     expect((await post(sam, "open again")).ok).toBe(true);
   });
 
@@ -134,7 +134,7 @@ describe("live chat moderation", () => {
     await expect(lockLiveChatRoom(form({ eventId: EVENT, roomKind: "main_stage", roomId: "main-stage", locked: "true" }))).rejects.toThrow(/crew access required/);
     expect((await listLiveRoomChatMessages(EVENT, "main_stage", "main-stage", "attendee")).map((m) => m.message)).toEqual(["keep me"]);
     expect(await getLiveChatAttendeeModeration(EVENT, "main_stage", "main-stage", kai.attendeeId)).toEqual({ silenced: false });
-    expect(await getLiveChatRoomModeration(EVENT, "main_stage", "main-stage")).toEqual({ locked: false });
+    expect(await getLiveChatRoomModeration(EVENT, "main_stage", "main-stage")).toMatchObject({ locked: false, slowModeSeconds: 0 });
   });
 
   it("the queue is newest first, bounded, and spans every room of the event only", async () => {

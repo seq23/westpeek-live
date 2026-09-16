@@ -65,7 +65,9 @@ requireTokens("lib/actions/liveChatActions.ts", ["requireLiveEventControlAccessF
 forbidTokens("lib/actions/liveChatActions.ts", ["appendLiveRoomChatMessage("]);
 
 // 5. Attendee chat renders the notices; the queue is on every crew surface.
-requireTokens("components/venue/LiveRoomChat.tsx", ["chat-silenced-notice", "chat-locked-notice", "chat-hidden-tag", "LIVE_CHAT_SILENCED_MESSAGE", "LIVE_CHAT_LOCKED_MESSAGE", 'viewer = crewAuth.ok ? "crew" : "attendee"']);
+// The message list moved into the delta-polling client component; the notices stay on the server shell.
+requireTokens("components/venue/LiveRoomChatStream.tsx", ["chat-hidden-tag"]);
+requireTokens("components/venue/LiveRoomChat.tsx", ["chat-silenced-notice", "chat-locked-notice", "LIVE_CHAT_SILENCED_MESSAGE", "LIVE_CHAT_LOCKED_MESSAGE", 'viewer = crewAuth.ok ? "crew" : "attendee"']);
 requireTokens("components/moderation/ChatModerationQueue.tsx", ["chat-moderation-queue", "moderateLiveChatMessage", "silenceLiveChatAttendee", "lockLiveChatRoom", "Hidden by"]);
 requireTokens("components/testing/TestingConsole.tsx", ["=> ChatModerationQueue({ eventId"]);
 requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["=> ChatModerationQueue({ eventId", "=> AttendeeLiveRoster({ eventId"]);
