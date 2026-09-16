@@ -70,8 +70,10 @@ export async function upsertContactFromProfile(profile: AttendeeProfile) {
   return saved ? { ...saved, healedRows: healed.length } : undefined;
 }
 
-export async function listContacts() {
-  return getRuntimeStore().listContacts();
+/** Archived rows (our own test fixtures the owner archived) are left out; nothing is ever deleted. */
+export async function listContacts(includeArchived = false) {
+  const contacts = await getRuntimeStore().listContacts();
+  return includeArchived ? contacts : contacts.filter((contact) => !contact.archivedAt);
 }
 
 /** One person the People page shows from hash-only rows (registered before the raw email was kept). */

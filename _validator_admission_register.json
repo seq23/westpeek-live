@@ -4570,6 +4570,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:people-real-rows-first",
+      "command": "node scripts/validate_people_real_rows_first.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Our own fixtures are never shown to the owner as her network: /app/people, its headline count, the CSV export and the Owner Console people fold default to real people; test rows (reserved test domains, seed and automation events \u2014 computed, never a hard-coded name list) are counted apart behind a remembered Show test rows toggle and archived, never deleted, by an owner-only action that leaves real-event rows untouched.",
+      "whatItDoesNotProve": "Static contract; the split and the archive are proven by tests/unit/peopleTestRows.test.ts and tests/e2e/people-test-rows.spec.ts.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only with the People page.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

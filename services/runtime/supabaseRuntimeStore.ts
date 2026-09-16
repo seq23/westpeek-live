@@ -44,7 +44,7 @@ function mapSpeedNetworkingMatch(row: Record<string, unknown>): SpeedNetworkingM
 }
 
 function mapContact(row: Record<string, unknown>): ContactRecord {
-  return { email: String(row.email), name: String(row.name || ""), company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, hiddenFromDirectory: Boolean(row.hidden_from_directory), eventsAttended: Array.isArray(row.events_attended) ? row.events_attended.map(String) : [], firstSeenAt: String(row.first_seen_at || ""), lastSeenAt: String(row.last_seen_at || ""), updatedAt: String(row.updated_at || "") };
+  return { email: String(row.email), name: String(row.name || ""), company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, hiddenFromDirectory: Boolean(row.hidden_from_directory), eventsAttended: Array.isArray(row.events_attended) ? row.events_attended.map(String) : [], archivedAt: row.archived_at ? String(row.archived_at) : undefined, firstSeenAt: String(row.first_seen_at || ""), lastSeenAt: String(row.last_seen_at || ""), updatedAt: String(row.updated_at || "") };
 }
 
 function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord {
@@ -594,7 +594,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async upsertContact(contact: ContactRecord) {
-    const { error } = await this.client.from("contacts").upsert({ email: contact.email, name: contact.name, company: contact.company, title: contact.title, personal_website: contact.personalWebsite ?? null, social_links: contact.socialLinks, topics_of_interest: contact.topicsOfInterest, networking_goals: contact.networkingGoals ?? null, hidden_from_directory: contact.hiddenFromDirectory, events_attended: contact.eventsAttended, first_seen_at: contact.firstSeenAt, last_seen_at: contact.lastSeenAt, updated_at: contact.updatedAt }, { onConflict: "email" });
+    const { error } = await this.client.from("contacts").upsert({ email: contact.email, name: contact.name, company: contact.company, title: contact.title, personal_website: contact.personalWebsite ?? null, social_links: contact.socialLinks, topics_of_interest: contact.topicsOfInterest, networking_goals: contact.networkingGoals ?? null, hidden_from_directory: contact.hiddenFromDirectory, events_attended: contact.eventsAttended, archived_at: contact.archivedAt ?? null, first_seen_at: contact.firstSeenAt, last_seen_at: contact.lastSeenAt, updated_at: contact.updatedAt }, { onConflict: "email" });
     if (error) failOrSchemaMissing("contacts", error);
     return contact;
   }

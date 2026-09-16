@@ -250,3 +250,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: Workers Free caps a Worker at **64** variables and secrets. On 16 Sep 2026 we were at 64 and could not add the Cloudflare Stream fallback secrets until the 20 unread `EVENT_{LEADERSHIP_RESET_WEBINAR,PREMIUM_WORKSHOP_INTENSIVE,PROVIDER_INNOVATION_EXPO,SEED_DEMO_DAY}_*_CODE` secrets were deleted. Every secret manifest now stays at 60 or fewer names, free of duplicates, never re-adds the deleted 20 (`EVENT_DEMO_*` stay: `lib/env/safeEnv.ts` reads them), and declares the five Cloudflare Stream fallback secrets.
 - Proof behind it: the manifests themselves; live name parity remains `scripts/audit_cloudflare_secret_parity.js`.
+
+## People: real rows first — 2026-09-16
+
+- Validator: `npm run validate:people-real-rows-first`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: the owner opened `/app/people` and found 40 people of whom 34 were our Playwright and Tier-4 fixtures. Test rows are now computed (`services/attendees/testRowClassifier.ts`: reserved test domains, seed and automation events — never a hard-coded name list), counted apart, hidden behind a remembered "Show test rows" toggle, left out of the CSV unless `?includeTest=1`, and archived — never hard-deleted — by an owner-only action that cannot touch a row from a real event (migration 0030 adds `contacts.archived_at`; attendee rows use the existing `status = 'revoked'`).
+- Proof behind it: `tests/unit/peopleTestRows.test.ts`, `tests/e2e/people-test-rows.spec.ts`.

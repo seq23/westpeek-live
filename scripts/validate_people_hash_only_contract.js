@@ -20,9 +20,10 @@ check("services/attendees/attendeeRegistrationService.ts", ["await upsertContact
 check("lib/actions/attendeeProfileActions.ts", ["await upsertContactFromProfile(merged)"]);
 check("lib/actions/networkingActions.ts", ["await upsertContactFromProfile(merged)"]);
 // The page and the export read hash-only profiles, not only contacts.
-const page = check("components/people/ContactsAcrossEvents.tsx", ["listHashOnlyPeople(", "hash-only-people", "hash-only-row-", "EMAIL_NOT_CAPTURED_NOTE", "data-count={total}", "contacts.length + hashOnly.length"]);
-if (page.includes("listContacts(") && !page.includes("listHashOnlyPeople(")) throw new Error("ContactsAcrossEvents reads contacts only; hash-only profiles would be silently missing.");
-check("app/api/contacts/export/route.ts", ["listHashOnlyPeople()", "contactsCsv(await listContacts().catch(() => []), await listHashOnlyPeople().catch(() => []))"]);
+const page = check("components/people/ContactsAcrossEvents.tsx", ["peopleDirectory()", "hash-only-people", "hash-only-row-", "EMAIL_NOT_CAPTURED_NOTE", "directory.realCount", "directory.real.hashOnly"]);
+if (!page.includes("hashOnly")) throw new Error("ContactsAcrossEvents reads contacts only; hash-only profiles would be silently missing.");
+check("services/attendees/peopleDirectoryService.ts", ["listHashOnlyPeople(eventNames)", "hashOnlyIsTestRow", "contactIsTestRow", "realCount", "testCount"]);
+check("app/api/contacts/export/route.ts", ["peopleDirectory()", "directory?.real.hashOnly", "includeTest"]);
 check("app/app/people/page.tsx", ["ContactsAcrossEvents({})"]);
 // Proofs.
 check("tests/unit/hashOnlyPeopleHeal.test.ts", ["two hash-only rows across two events are one grouped person with 2 events", "backfills both rows and builds one contact with three events", "the merge path"]);
