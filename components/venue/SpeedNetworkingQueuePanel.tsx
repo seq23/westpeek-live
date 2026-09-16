@@ -10,7 +10,18 @@ import { getMyNetworkingState } from "@/services/speed-networking/speedNetworkin
  */
 export async function SpeedNetworkingQueuePanel({ eventId }: { eventId: string }) {
   const identity = await getCurrentAttendeeIdentity(eventId).catch(() => undefined);
-  const state = await getMyNetworkingState(eventId, identity?.attendeeId);
+  let state: Awaited<ReturnType<typeof getMyNetworkingState>>;
+  try {
+    state = await getMyNetworkingState(eventId, identity?.attendeeId);
+  } catch (error) {
+    console.warn("networking panel unavailable", error instanceof Error ? error.message : String(error));
+    return (
+      <section data-testid="networking-queue-panel" className="rounded-3xl border border-amber-200 bg-amber-50 p-5 text-amber-900" data-state="unavailable">
+        <h2 className="text-xl font-black">Networking is taking a break</h2>
+        <p className="mt-2 text-sm">The queue is not available right now. The stage and chat still work — try again in a minute.</p>
+      </section>
+    );
+  }
   const showJoinForm = Boolean(identity) && state.status === "idle";
   return (
     <section data-testid="networking-queue-panel" className="space-y-4">

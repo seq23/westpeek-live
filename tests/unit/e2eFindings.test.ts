@@ -137,3 +137,23 @@ describe("the stage shows publishers only, and reset drops the participant", () 
     expect(src).not.toMatch(/participant_name: "StreamYard Production Feed"/);
   });
 });
+
+describe("speed networking tables are the runtime ones, and a failing card never takes a page down", () => {
+  it("migration 0028 moves the legacy uuid tables aside before creating the runtime ones, and the supabase mirror is byte-identical", async () => {
+    const { readFileSync } = await import("node:fs");
+    const a = readFileSync(new URL("../../db/migrations/0028_speed_networking_runtime_tables.sql", import.meta.url), "utf8");
+    const b = readFileSync(new URL("../../supabase/migrations/20260916160000_speed_networking_runtime_tables.sql", import.meta.url), "utf8");
+    expect(a).toBe(b);
+    expect(a).toMatch(/rename to speed_networking_matches_legacy_v1/);
+    expect(a).toMatch(/rename to speed_networking_entries_legacy_v1/);
+    expect(a.indexOf("rename to")).toBeLessThan(a.indexOf("create table if not exists public.speed_networking_entries"));
+  });
+  it("the crew networking card and the attendee queue panel catch store failures", async () => {
+    const { readFileSync } = await import("node:fs");
+    for (const f of ["components/moderation/NetworkingCrewCard.tsx", "components/venue/SpeedNetworkingQueuePanel.tsx"]) {
+      const src = readFileSync(new URL(`../../${f}`, import.meta.url), "utf8");
+      expect(src, f).toMatch(/unavailable/);
+      expect(src, f).toMatch(/try \{/);
+    }
+  });
+});
