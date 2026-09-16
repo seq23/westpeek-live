@@ -87,3 +87,13 @@ describe("event areas land on the canonical event id", () => {
     expect(src).toMatch(/<StreamYardIngressPanel eventId=\{eventId\}[^>]*\/>/);
   });
 });
+
+describe("the stage token fetch cannot cancel itself", () => {
+  it("the fetched-for-grant marker is a ref, never a dependency of the effect that sets it", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../components/video/LiveKitIngressStagePlayer.tsx", import.meta.url), "utf8");
+    expect(src).toMatch(/const fetchedForGrant = useRef</);
+    expect(src).not.toMatch(/setFetchedForGrant/);
+    expect(src).not.toMatch(/\[eventId, roomId, displayName, grantWantsPublish, removed, fetchedForGrant\]/);
+  });
+});

@@ -27,7 +27,10 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
   const [token, setToken] = useState<string | undefined>();
   const [serverUrl, setServerUrl] = useState<string | undefined>();
   const [tokenCanPublish, setTokenCanPublish] = useState(false);
-  const [fetchedForGrant, setFetchedForGrant] = useState<boolean | undefined>();
+  // A ref, not state: as state this was a dependency of the effect that set it, so the effect
+  // re-ran, its cleanup cancelled the token fetch it had just started, and the re-run returned
+  // early — every attendee stage sat on "Connecting…" for good (Scooter's workshop, 16 Sep 2026).
+  const fetchedForGrant = useRef<boolean | undefined>(undefined);
   const [startedOnce, setStartedOnce] = useState(false);
   const [bufferOpen, setBufferOpen] = useState(true);
   const [error, setError] = useState<string | undefined>();
@@ -57,8 +60,8 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
   // the attendee is watching, the polled grant changes and a fresh token is minted to match.
   useEffect(() => {
     if (removed) return;
-    if (fetchedForGrant === grantWantsPublish) return;
-    setFetchedForGrant(grantWantsPublish);
+    if (fetchedForGrant.current === grantWantsPublish) return;
+    fetchedForGrant.current = grantWantsPublish;
     let cancelled = false;
     async function load() {
       try {
@@ -76,7 +79,7 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
     }
     load();
     return () => { cancelled = true; };
-  }, [eventId, roomId, displayName, grantWantsPublish, removed, fetchedForGrant]);
+  }, [eventId, roomId, displayName, grantWantsPublish, removed]);
 
   useEffect(() => {
     if (error && startedOnce && !fallbackTriggered.current && !removedRef.current) {
