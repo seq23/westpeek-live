@@ -199,3 +199,22 @@ describe("speaker stage flow, identity, own-cards-only, and guards (store-backed
     expect(removed).toEqual([]);
   });
 });
+
+describe("VIP lounge default", () => {
+  let vipTempDir: string;
+  beforeEach(() => {
+    vipTempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wpl-vip-"));
+    process.env.AGENCY_EVENT_OS_RUNTIME_STORE = "file";
+    setRuntimeStoreForTests(new FileRuntimeStore(path.join(vipTempDir, "runtime.json")));
+  });
+  afterEach(() => { setRuntimeStoreForTests(undefined); fs.rmSync(vipTempDir, { recursive: true, force: true }); });
+  it("is open for an event with no stored decision; a crew decision (closed, then open) is respected as stored", async () => {
+    const { getVipRoom, setVipRoomOpen, VIP_ROOM_DEFAULT } = await import("@/services/guests/guestStateService");
+    expect(VIP_ROOM_DEFAULT.open).toBe(true);
+    expect((await getVipRoom("event-with-no-vip-decision")).open).toBe(true);
+    await setVipRoomOpen("event-with-no-vip-decision", false, "producer");
+    expect(await getVipRoom("event-with-no-vip-decision")).toMatchObject({ open: false, updatedBy: "producer" });
+    await setVipRoomOpen("event-with-no-vip-decision", true, "producer");
+    expect((await getVipRoom("event-with-no-vip-decision")).open).toBe(true);
+  });
+});

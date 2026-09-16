@@ -185,8 +185,16 @@ export async function listSponsorBooths(eventId: string) {
 
 // ---- vip room --------------------------------------------------------------
 
+/**
+ * The VIP lounge is OPEN by default for every runtime event — new ones and existing ones with no
+ * stored decision (the owner's call, 16 Sep 2026; until then it defaulted closed and every event
+ * needed a crew click). A stored decision (open or closed) is respected as-is, so no back-fill is
+ * needed: the default IS the back-fill for rows that were never written.
+ */
+export const VIP_ROOM_DEFAULT: VipRoomState = { open: true, roomId: VIP_ROOM_ID, label: "VIP lounge", updatedBy: "default", updatedAt: "1970-01-01T00:00:00.000Z" };
+
 export async function getVipRoom(eventId: string): Promise<VipRoomState> {
-  return (await getState<VipRoomState>(eventId, "vip_room")) || { open: false, roomId: VIP_ROOM_ID, label: "VIP lounge", updatedBy: "system", updatedAt: "1970-01-01T00:00:00.000Z" };
+  return (await getState<VipRoomState>(eventId, "vip_room")) || VIP_ROOM_DEFAULT;
 }
 
 export async function setVipRoomOpen(eventId: string, open: boolean, updatedBy: string) {
