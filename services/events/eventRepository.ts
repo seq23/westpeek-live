@@ -167,6 +167,34 @@ async function uniqueSlug(base: string) {
   return `${base}-${randomCode(6).toLowerCase()}`;
 }
 
+/**
+ * A `datetime-local` value has no zone. `new Date("2026-09-23T03:00")` reads it in the Worker's
+ * clock — UTC — so on 15 Sep 2026 a Later event typed as 3:00 AM Chicago was saved as 03:00Z and
+ * shown as 10:00 PM the night before. The form also carries the event's timezone; the wall-clock
+ * time is read in THAT zone. Pure and exact for any IANA zone via Intl, no library.
+ */
+export function zonedLocalToIso(local: string, timeZone: string): string {
+  // Only a bare wall-clock value is zoned; anything carrying its own offset or Z is an instant.
+  const m = /^(\d{4})-(\d{2})-(\d{2})T(\d{2}):(\d{2})(?::(\d{2})(?:\.\d+)?)?$/.exec(local.trim());
+  if (!m) {
+    const parsed = new Date(local);
+    if (Number.isNaN(parsed.getTime())) throw new Error("Start date and time are not readable.");
+    return parsed.toISOString();
+  }
+  const [, y, mo, d, h, mi, sec] = m;
+  const asUtc = Date.UTC(Number(y), Number(mo) - 1, Number(d), Number(h), Number(mi), Number(sec ?? 0));
+  const offsetAt = (utcMs: number) => {
+    const parts = new Intl.DateTimeFormat("en-US", { timeZone, hourCycle: "h23", year: "numeric", month: "2-digit", day: "2-digit", hour: "2-digit", minute: "2-digit", second: "2-digit" }).formatToParts(new Date(utcMs));
+    const get = (type: string) => Number(parts.find((p) => p.type === type)?.value ?? "0");
+    const wall = Date.UTC(get("year"), get("month") - 1, get("day"), get("hour"), get("minute"), get("second"));
+    return wall - utcMs;
+  };
+  // Two passes: the offset at the guess, then the offset at the corrected instant (DST edges).
+  let utc = asUtc - offsetAt(asUtc);
+  utc = asUtc - offsetAt(utc);
+  return new Date(utc).toISOString();
+}
+
 function defaultSessions(eventId: string, name: string, format: RuntimeEventFormat, startAt: string, endAt: string): RuntimeEventSession[] {
   return [{ id: `${eventId}-main-stage`, title: format === "room" ? `${name} room` : "Main stage", room: format === "room" ? "Room" : "Main Stage", startAt, endAt }];
 }
@@ -175,7 +203,7 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
   const name = input.name.trim();
   if (!name) throw new Error("Event name is required.");
   const now = new Date();
-  const startAt = input.when === "now" || !input.startAt ? now.toISOString() : new Date(input.startAt).toISOString();
+  const startAt = input.when === "now" || !input.startAt ? now.toISOString() : zonedLocalToIso(input.startAt, input.timezone || "America/Chicago");
   const endAt = new Date(new Date(startAt).getTime() + 1000 * 60 * 60 * 2).toISOString();
   const format: RuntimeEventFormat = input.format === "room" ? "room" : "stage";
   const slug = await uniqueSlug(slugify(name));

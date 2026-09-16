@@ -75,15 +75,29 @@ function dynamicDraftRunOfShow(eventId: string): SeedRunOfShow[] | undefined {
   const event = peekOverlayEvent(eventId);
   if (!event) return undefined;
   const sessions = dynamicDraftSessions(eventId) || [];
+  // A real event's segment starts from the seed's SHAPE, never its words. On 15 Sep 2026 a Room
+  // created a minute earlier told its producer to "bring Drake live after the 30-second bumper" —
+  // the demo summit's notes, copied along with the field list.
+  const shape = runtimeSeedData.runOfShowSegments[0];
   return sessions.map((session, index) => ({
-    ...runtimeSeedData.runOfShowSegments[0],
+    ...shape,
     id: `${session.id}-segment`,
     eventId: event.id,
     segmentTitle: session.name,
     publicTitle: session.name,
     startAt: session.startAt,
     endAt: session.endAt,
-    readinessStatus: index === 0 ? "ready" : runtimeSeedData.runOfShowSegments[0].readinessStatus,
+    durationMinutes: Math.max(1, Math.round((new Date(session.endAt).getTime() - new Date(session.startAt).getTime()) / 60_000)),
+    room: (session as { room?: string }).room || "Main Stage",
+    speakerId: "",
+    responsibleUserId: "",
+    producerNotes: "No producer notes yet. Add them on Run of Show.",
+    technicalCues: "No technical cues yet.",
+    clientFacingDescription: session.name,
+    backupPlan: "If the feed drops, the stage moves down the fallback ladder; the producer decides when.",
+    pollCue: "",
+    qAndACue: "",
+    readinessStatus: index === 0 ? "ready" : "needs_approval",
   })) as SeedRunOfShow[];
 }
 

@@ -75,6 +75,8 @@ interface LiveKitIngressInfo {
   url?: string;
   stream_key?: string;
   room_name?: string;
+  /** LiveKit reports whether anything is actually being pushed into the ingress. */
+  state?: { status?: string | number; error?: string };
 }
 
 interface LiveKitIngressListResponse {
@@ -138,4 +140,60 @@ export async function provisionStreamYardLiveKitIngress(input: { eventId: string
   } catch (error) {
     return { ok: false, eventId: input.eventId, stageId, roomName, status: "ERROR_SAFE", message: error instanceof Error ? error.message : "LiveKit ingress provisioning failed safely." };
   }
+}
+
+
+/**
+ * RECONCILE WITH LIVEKIT INSTEAD OF WAITING FOR IT TO CALL US.
+ *
+ * The stage only went live on an `ingress_started` webhook. On 15 Sep 2026 a real RTMP feed was
+ * pushed into a freshly minted ingress for two minutes and the attendee stage stayed on
+ * "Stage is getting ready" the whole time — "Last webhook: None yet". A webhook the LiveKit
+ * project has not been told to send is a webhook that never arrives, and the show has no way to
+ * know. So every read of the stage state (the player polls it every 10s) asks LiveKit's
+ * ListIngress what the ingress is doing and applies the signal itself. The webhook stays as the
+ * fast path; this is the floor.
+ *
+ * LiveKit's IngressState.status: ENDPOINT_INACTIVE (0), ENDPOINT_BUFFERING (1),
+ * ENDPOINT_PUBLISHING (2), ENDPOINT_ERROR (3), ENDPOINT_COMPLETE (4). JSON may carry the name or
+ * the number; both are handled.
+ */
+const PUBLISHING_STATES = new Set(["ENDPOINT_PUBLISHING", "ENDPOINT_BUFFERING", "2", "1"]);
+const STOPPED_STATES = new Set(["ENDPOINT_INACTIVE", "ENDPOINT_ERROR", "ENDPOINT_COMPLETE", "0", "3", "4"]);
+const RECONCILE_EVERY_MS = 5_000;
+const lastReconcileAt = new Map<string, number>();
+
+export async function reconcileIngressWithLiveKit(eventId: string, stageId = "main-stage"): Promise<{ checked: boolean; publishing: boolean | null; applied: "ingress_started" | "ingress_ended" | null }> {
+  const state = await getOrCreateStageStreamState(eventId, stageId);
+  if (state.activeStreamSource !== "LIVEKIT_INGRESS" || !state.livekitIngressId) return { checked: false, publishing: null, applied: null };
+  if (state.streamStatus !== "READY_FOR_STREAMYARD" && state.streamStatus !== "LIVEKIT_INGRESS_LIVE") return { checked: false, publishing: null, applied: null };
+  const key = stageStreamKey(eventId, stageId);
+  const last = lastReconcileAt.get(key) ?? 0;
+  if (Date.now() - last < RECONCILE_EVERY_MS) return { checked: false, publishing: null, applied: null };
+  lastReconcileAt.set(key, Date.now());
+
+  const livekit = getLiveKitEnv();
+  if (!livekit.livekitUrl || !livekit.livekitApiKey || !livekit.livekitApiSecret) return { checked: false, publishing: null, applied: null };
+  const roomName = normalizeLiveKitRoomName(eventId, stageId);
+  let info: LiveKitIngressInfo | null = null;
+  try {
+    const token = createLiveKitServerToken({ apiKey: livekit.livekitApiKey, apiSecret: livekit.livekitApiSecret, roomName });
+    const listed = await livekitTwirp<LiveKitIngressListResponse>({ livekitUrl: livekit.livekitUrl, token, method: "Ingress/ListIngress", body: { ingress_id: state.livekitIngressId } });
+    info = (listed.items || listed.ingress || []).find((item) => item.ingress_id === state.livekitIngressId) || null;
+  } catch {
+    // LiveKit unreachable: say nothing rather than guess. The webhook path and the next poll remain.
+    return { checked: false, publishing: null, applied: null };
+  }
+  if (!info) return { checked: true, publishing: null, applied: null };
+  const status = String(info.state?.status ?? "");
+  const publishing = PUBLISHING_STATES.has(status) ? true : STOPPED_STATES.has(status) ? false : null;
+  if (publishing === true && state.streamStatus !== "LIVEKIT_INGRESS_LIVE") {
+    await applyStageStreamSignal({ eventId, stageId, signal: "ingress_started", reason: "LiveKit reports the ingress is publishing (polled; no webhook arrived)." });
+    return { checked: true, publishing, applied: "ingress_started" };
+  }
+  if (publishing === false && state.streamStatus === "LIVEKIT_INGRESS_LIVE") {
+    await applyStageStreamSignal({ eventId, stageId, signal: "ingress_ended", reason: "LiveKit reports the ingress stopped publishing (polled; no webhook arrived)." });
+    return { checked: true, publishing, applied: "ingress_ended" };
+  }
+  return { checked: true, publishing, applied: null };
 }

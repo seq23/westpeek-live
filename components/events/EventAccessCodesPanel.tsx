@@ -11,7 +11,8 @@ const roleRows: Array<{ key: keyof RuntimeEventRecord["accessCodes"]; testId: st
 ];
 
 /** Per-event codes minted at creation and stored on the event row. Shown to workspace actors only. */
-export function EventAccessCodesPanel({ event }: { event: RuntimeEventRecord }) {
+export async function EventAccessCodesPanel({ event }: { event: RuntimeEventRecord }) {
+  const joinLink = await joinLinkFor(event);
   return (
     <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm" data-testid="generated-event-role-codes">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Access codes for {event.name}</p>
@@ -21,7 +22,7 @@ export function EventAccessCodesPanel({ event }: { event: RuntimeEventRecord }) 
         <div className="mt-2 flex flex-wrap items-center gap-3">
           <span className="text-xl font-black" data-testid="access-join-code">{event.joinCode}</span>
           <CopyButton value={event.joinCode} label="Copy code" />
-          <CopyButton value={joinLinkFor(event)} label="Copy join link" />
+          <CopyButton value={joinLink} label="Copy join link" />
         </div>
       </div>
       <dl className="mt-4 grid gap-3 md:grid-cols-2">
