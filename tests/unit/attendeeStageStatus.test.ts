@@ -19,10 +19,15 @@ describe("attendee stage status line", () => {
     expect(status.canPublishVideo).toBe(false);
   });
 
-  it("an unregistered visitor is told to register, not shown a dead end", () => {
+  it("an unregistered visitor keeps watching and is invited, never walled off", () => {
     const status = attendeeStageStatus({ control, registered: false });
     expect(status).toMatchObject({ status: "unregistered", primary: "register" });
-    expect(status.detail).toMatch(/approval/);
+    // Watching is open to anyone holding the link; registering is only what lets a person take part,
+    // and the line says both in plain words rather than naming an approval model.
+    expect(status.detail).toMatch(/Watching costs you nothing/);
+    expect(status.detail).toMatch(/crew/);
+    expect(status.canPublishAudio).toBe(false);
+    expect(status.canPublishVideo).toBe(false);
   });
 
   it("requested → approved → removed, in plain words, with publish flags only while approved", () => {

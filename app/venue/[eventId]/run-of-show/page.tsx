@@ -7,8 +7,8 @@ import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 /**
  * The running order on its own page, for anyone who lands here directly or wants it in its own tab.
  * Every other venue page carries the same panel in place, so nobody has to leave a live show to
- * read it. "Attendee-safe live schedule" was our word for a producer's idea of the schedule, and
- * it only made a guest wonder what the unsafe version said (the owner, 16 Sep 2026).
+ * read it. The old title was a producer's phrase for a producer's idea of the schedule, and it
+ * only made a guest wonder what the unsafe version said (the owner, 16 Sep 2026).
  */
 export default async function VenueRunOfShowRoute({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
