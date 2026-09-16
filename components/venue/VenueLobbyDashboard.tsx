@@ -8,11 +8,13 @@ import { MobileExperienceWarning } from "@/components/venue/MobileExperienceWarn
 import { SupportEscalationPanel } from "@/components/venue/SupportEscalationPanel";
 import { UnsupportedBrowserWarning } from "@/components/venue/UnsupportedBrowserWarning";
 import { FirstVisitCoachStrip } from "@/components/venue/FirstVisitCoachStrip";
+import { EditAttendeeProfilePanel } from "@/components/venue/EditAttendeeProfilePanel";
+import { SafeSection } from "@/components/system/SafeSection";
 import { SessionCard } from "./SessionCard";
 import { BreakoutRoomCard } from "./BreakoutRoomCard";
 import { SponsorBoothCard } from "./SponsorBoothCard";
 
-export async function VenueLobbyDashboard({ model }: { model: VirtualVenueModel }) {
+export async function VenueLobbyDashboard({ model, saved = false }: { model: VirtualVenueModel; saved?: boolean }) {
   const sections = buildVenueLobbySections(model);
   const profile = await getCurrentAttendeeProfile(model.eventId).catch(() => undefined);
   const fallbackState = await getRoomFallbackState(model.eventId, "main_stage").catch(() => createInitialRoomFallbackState(model.eventId, "main_stage"));
@@ -36,6 +38,8 @@ export async function VenueLobbyDashboard({ model }: { model: VirtualVenueModel 
           <a href={`/venue/${model.eventId}/help`} className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold">Get help</a>
         </div>
       </section>
+
+      <SafeSection label="Tell us more" render={() => EditAttendeeProfilePanel({ eventId: model.eventId, returnTo: `/venue/${model.eventId}/lobby`, saved })} />
 
       <section className="grid gap-4 lg:grid-cols-2">
         <div>

@@ -224,6 +224,28 @@
       "role": "operator"
     },
     {
+      "id": "app-people",
+      "path": "/app/people",
+      "authMode": "role-specific",
+      "persona": "operator",
+      "criticality": "standard",
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/app/people"
+      },
+      "safeActions": [
+        "navigate"
+      ],
+      "fixtureRequirements": [],
+      "persistenceRequired": false,
+      "cleanupPolicy": "none",
+      "role": "operator"
+    },
+    {
       "id": "app-contractors",
       "path": "/app/contractors",
       "authMode": "role-specific",

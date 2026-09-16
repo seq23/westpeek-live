@@ -4,6 +4,7 @@ import { VenuePageShell } from "@/components/venue/VenuePageShell";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import type { VirtualVenuePerson } from "@/types/virtualVenue";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
+import { visibleInDirectory } from "@/services/attendees/attendeeProfileMerge";
 
 export default async function PeoplePage({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
@@ -11,12 +12,13 @@ export default async function PeoplePage({ params }: { params: Promise<{ eventId
   const model = buildVirtualVenueModel(resolvedParams.eventId);
   const registeredProfiles = await getRuntimeStore().listAttendeeProfiles(model.eventId, 100).catch(() => []);
   const registeredPeople: VirtualVenuePerson[] = registeredProfiles
-    .filter((profile) => profile.networkingOptIn)
+    // Everyone registered is listed unless they switched "Hide me from the People directory" on.
+    .filter((profile) => visibleInDirectory(profile))
     .map((profile) => ({
       id: profile.attendeeId,
       displayName: profile.name,
       company: profile.company,
-      title: profile.title,
+      title: profile.title || undefined,
       personalWebsite: profile.personalWebsite,
       socialLinks: profile.socialLinks,
       reasonForAttending: profile.reasonForAttending,

@@ -3,6 +3,8 @@ import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsL
 import { RuntimeSchemaStop } from "@/components/system/RuntimeSchemaStop";
 import { createEventAction } from "@/lib/actions/eventWorkspaceActions";
 import { getRuntimeSchemaStatus, listClientRecords } from "@/services/events/eventRepository";
+import { questionLines } from "@/services/attendees/registrationQuestions";
+import { DEFAULT_REGISTRATION_QUESTIONS } from "@/types/attendeeRegistration";
 
 export const dynamic = "force-dynamic";
 
@@ -114,6 +116,11 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
             <div className="md:col-span-2">
               <label htmlFor="description" className="text-sm font-black">One line for attendees (optional)</label>
               <input id="description" name="description" maxLength={240} placeholder="Weekly founder Q&A with the West Peek team." className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
+            </div>
+            <div>
+              <label htmlFor="registrationQuestions" className="text-sm font-black">&ldquo;Tell us more&rdquo; questions (optional, one per line)</label>
+              <p className="mt-1 text-xs text-brand-muted">What attendees are asked after they register, on the stage and lobby. One per line as <code>Label | textarea</code>, <code>Label | text</code>, or <code>Label | tags</code>; up to eight; reorder by moving lines.</p>
+              <textarea id="registrationQuestions" name="registrationQuestions" defaultValue={questionLines(DEFAULT_REGISTRATION_QUESTIONS)} rows={4} className="mt-2 w-full rounded-2xl border border-brand-line px-4 py-3 font-mono text-xs" data-testid="registration-questions-input" />
             </div>
           </div>
 

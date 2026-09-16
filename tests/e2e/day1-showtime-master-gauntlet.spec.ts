@@ -125,8 +125,6 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
   await attendee.getByLabel(/^Email/i).fill("playwright-attendee@example.com");
   await attendee.getByLabel(/Company \/ affiliation/i).fill("West Peek QA");
   await attendee.getByLabel(/Title \/ role/i).fill("Hostile Client Reviewer");
-  await attendee.getByLabel(/What brings you to the conference/i).fill("Testing the full Day 1 venue journey.");
-  await attendee.getByLabel(/Networking goals/i).fill("Find useful people without hitting a registration wall.");
   await attendee.getByRole("button", { name: /submit registration/i }).click();
 
   await expect(attendee).toHaveURL(/\/venue\/(demo|event-summit)\/lobby/);

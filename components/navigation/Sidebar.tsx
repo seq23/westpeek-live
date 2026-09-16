@@ -4,6 +4,7 @@ import { WestPeekLiveMark, WestPeekLiveWordmark } from "@/components/brand/WestP
 const nav = [
   ["Dashboard", "/app"],
   ["Clients", "/app/clients"],
+  ["People", "/app/people"],
   ["Events", "/app/events"],
   ["Email", "/app/email"],
   ["Templates", "/app/templates"],

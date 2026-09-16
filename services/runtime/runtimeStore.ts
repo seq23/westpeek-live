@@ -3,7 +3,7 @@ import type { V4AnalyticsEvent, V4RoomFallbackState, V4VideoProvider } from "@/t
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
 import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
-import type { AttendeeProfile } from "@/types/attendeeRegistration";
+import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
@@ -115,6 +115,7 @@ export interface V6RuntimeSnapshot {
   eventGuestStates: EventGuestStateRecord[];
   speedNetworkingEntries: SpeedNetworkingQueueEntry[];
   speedNetworkingMatches: SpeedNetworkingMatchRecord[];
+  contacts: ContactRecord[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
@@ -139,6 +140,10 @@ export interface RuntimeStore {
   getAttendeeProfile(eventId: string, attendeeId: string): Promise<AttendeeProfile | undefined>;
   getAttendeeProfileByEmailHash(eventId: string, emailHash: string): Promise<AttendeeProfile | undefined>;
   listAttendeeProfiles(eventId: string, limit?: number): Promise<AttendeeProfile[]>;
+  // Contacts across events (migration 0029), keyed by lowercased email.
+  upsertContact(contact: ContactRecord): Promise<ContactRecord>;
+  getContact(email: string): Promise<ContactRecord | undefined>;
+  listContacts(): Promise<ContactRecord[]>;
   upsertAttendeeSession(session: AttendeeSession): Promise<AttendeeSession>;
   getAttendeeSession(eventId: string, sessionId: string): Promise<AttendeeSession | undefined>;
   upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent): Promise<AttendeeAgendaIntent>;
@@ -220,6 +225,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     eventGuestStates: [],
     speedNetworkingEntries: [],
     speedNetworkingMatches: [],
+    contacts: [],
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],

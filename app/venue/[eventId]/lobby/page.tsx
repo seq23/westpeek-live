@@ -13,7 +13,7 @@ import { SafeSection } from "@/components/system/SafeSection";
 
 export const dynamic = "force-dynamic";
 
-export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string }> }) {
+export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string; saved?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const runtimeEvent = await ensureRuntimeEvent(resolvedParams.eventId);
@@ -31,7 +31,7 @@ export default async function LobbyPage({ params, searchParams }: { params: Prom
       {viewAs ? <ViewAsBanner viewAs={viewAs} backHref={`/crew/events/${resolvedParams.eventId}`} /> : null}
       {isHost && runtimeEvent && !viewAs ? <HostJoinCodeBanner event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} crewHost={crewHost} /> : null}
       {guest?.role === "vip" || viewAs ? <SafeSection label="VIP" render={() => VipLobbyPanel({ eventId: resolvedParams.eventId, error: resolvedSearchParams?.error, viewAs })} /> : null}
-      <SafeSection label="Lobby" render={() => VenueLobbyDashboard({ model })} />
+      <SafeSection label="Lobby" render={() => VenueLobbyDashboard({ model, saved: resolvedSearchParams?.saved === "profile" })} />
     </VenuePageShell>
   );
 }

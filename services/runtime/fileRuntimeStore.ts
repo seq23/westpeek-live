@@ -8,6 +8,7 @@ import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, Sponsor
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
+import type { ContactRecord } from "@/types/attendeeRegistration";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 declare const require: undefined | ((moduleName: string) => unknown);
@@ -86,6 +87,7 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     eventGuestStates: Array.isArray(parsed.eventGuestStates) ? parsed.eventGuestStates : [],
     speedNetworkingEntries: Array.isArray(parsed.speedNetworkingEntries) ? parsed.speedNetworkingEntries : [],
     speedNetworkingMatches: Array.isArray(parsed.speedNetworkingMatches) ? parsed.speedNetworkingMatches : [],
+    contacts: Array.isArray(parsed.contacts) ? parsed.contacts : [],
     runtimeEvents: Array.isArray(parsed.runtimeEvents) ? parsed.runtimeEvents : [],
     runtimeClients: Array.isArray(parsed.runtimeClients) ? parsed.runtimeClients : [],
     agencySettings: Array.isArray(parsed.agencySettings) ? parsed.agencySettings : [],
@@ -408,6 +410,22 @@ export class FileRuntimeStore implements RuntimeStore {
 
   async listEventGuestStates(eventId: string, kind?: string) {
     return this.read().eventGuestStates.filter((item: EventGuestStateRecord) => item.eventId === eventId && (!kind || item.kind === kind));
+  }
+
+  async upsertContact(contact: ContactRecord) {
+    const snapshot = this.read();
+    snapshot.contacts = snapshot.contacts.filter((item) => item.email !== contact.email);
+    snapshot.contacts.push(contact);
+    this.write(snapshot);
+    return contact;
+  }
+
+  async getContact(email: string) {
+    return this.read().contacts.find((item) => item.email === email);
+  }
+
+  async listContacts() {
+    return this.read().contacts.slice().sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
   }
 
   async upsertSpeedNetworkingEntry(entry: SpeedNetworkingQueueEntry) {

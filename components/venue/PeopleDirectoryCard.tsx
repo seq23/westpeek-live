@@ -7,21 +7,17 @@ export function PeopleDirectoryCard({ person }: { person: VirtualVenuePerson }) 
         <div className="flex items-start justify-between gap-4">
           <div>
             <h3 className="text-lg font-semibold">{person.displayName}</h3>
-            <p className="mt-1 text-sm text-slate-600">{person.title ?? "Attendee"}{person.company ? ` · ${person.company}` : ""}</p>
+            <p className="mt-1 text-sm text-slate-600">{[person.title, person.company].filter(Boolean).join(" · ") || "Attendee"}</p>
           </div>
           <span className="rounded-full bg-slate-100 px-3 py-1 text-[11px] font-black uppercase tracking-[0.14em] text-slate-500">Profile</span>
         </div>
-        <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">{person.networkingOptIn ? "Networking enabled" : "Private"}</p>
+        {person.networkingOptIn ? <p className="mt-3 text-xs uppercase tracking-wide text-slate-500">Open to networking</p> : null}
       </summary>
       <div className="mt-5 space-y-4 border-t border-slate-100 pt-4 text-sm text-slate-700">
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">What brings me here</p>
-          <p className="mt-1">{person.reasonForAttending || "Here to learn, connect, and contribute to the conference."}</p>
-        </div>
-        <div>
-          <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Interesting fact</p>
-          <p className="mt-1">{person.interestingFact || "Ask me what I am hoping to learn today."}</p>
-        </div>
+        {/* Only what the person wrote; no placeholder sentences (owner, 16 Sep 2026). */}
+        {person.reasonForAttending ? <div><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">What brings me here</p><p className="mt-1" data-testid="person-reason">{person.reasonForAttending}</p></div> : null}
+        {person.interestingFact ? <div><p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Interesting fact</p><p className="mt-1" data-testid="person-fact">{person.interestingFact}</p></div> : null}
+        {!person.reasonForAttending && !person.interestingFact && !person.personalWebsite && !person.socialLinks?.length ? <p className="text-slate-500">{person.displayName} has not added more yet.</p> : null}
         {person.personalWebsite || person.socialLinks?.length ? (
           <div>
             <p className="text-xs font-black uppercase tracking-[0.2em] text-slate-400">Links</p>

@@ -20,7 +20,9 @@ const nav: Array<[string, SponsorSurface, string]> = [["Sponsor portal", "home",
 export async function SponsorPortalLive({ eventId, surface, sponsor, saved, error, viewAs }: { eventId: string; surface: SponsorSurface; sponsor?: SpecialGuestProfile; saved?: boolean; error?: string; viewAs?: ViewAsContext }) {
   const readOnly = Boolean(viewAs);
   const [event, booth] = await Promise.all([findEventRecord(eventId).catch(() => undefined), sponsor ? getSponsorBooth(eventId, sponsor.guestId) : Promise.resolve(undefined)]);
-  const leads = sponsor && surface === "leads" ? (await getRuntimeStore().readSnapshot().catch(() => undefined))?.sponsorLeadOptIns.filter((item) => item.eventId === eventId && item.sponsorBoothId === sponsor.guestId) || [] : [];
+  // An attendee who switched "Hide me from the People directory" on is left out of sponsor lead views too.
+  const hidden = new Set((await getRuntimeStore().listAttendeeProfiles(eventId, 500).catch(() => [])).filter((profile) => profile.hiddenFromDirectory).map((profile) => profile.attendeeId));
+  const leads = sponsor && surface === "leads" ? ((await getRuntimeStore().readSnapshot().catch(() => undefined))?.sponsorLeadOptIns.filter((item) => item.eventId === eventId && item.sponsorBoothId === sponsor.guestId && !hidden.has(item.attendeeId)) || []) : [];
   const ended = event?.status === "ended" || event?.status === "replay_available" || event?.status === "archived";
   return (
     <main className="min-h-screen bg-brand-ash px-5 py-8 text-brand-black sm:px-8" data-view-as={viewAs?.guest.guestId}>

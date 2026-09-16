@@ -46,7 +46,7 @@ export async function submitEventRegistration(formData: FormData) {
 
   if (!eventId || !slug) throw new Error("Registration requires event identity.");
   if (!email.includes("@")) throw new Error("Registration requires a valid email address.");
-  if (!name || !company || !title) throw new Error("Registration requires name, company/affiliation, and title/role.");
+  if (!name || !company) throw new Error("Registration requires name and company/affiliation.");
   // A runtime-created event must be hydrated in THIS request: a server action can run in a fresh
   // isolate where no page has loaded the overlay yet, and registration then failed with
   // "unconfigured event" for a real Room (found by the two-browser networking journey, 16 Sep 2026).
