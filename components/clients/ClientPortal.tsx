@@ -4,8 +4,13 @@ import { AssetLibrary } from "@/components/assets/AssetLibrary";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatEventDate } from "@/lib/utils/format";
+import { peekOverlayEvent } from "@/services/events/runtimeEventOverlay";
+import { ClientRuntimeOverview } from "./ClientRuntimeOverview";
 
-export function ClientPortalDashboard({ clientSlug, eventId, surface }: { clientSlug: string; eventId?: string; surface?: "reports" }) {
+export async function ClientPortalDashboard({ clientSlug, eventId, surface }: { clientSlug: string; eventId?: string; surface?: "reports" }) {
+  // A runtime event gets its own honest read-only overview; the seed portal below is for compiled demo events.
+  const runtime = eventId ? peekOverlayEvent(eventId) : undefined;
+  if (runtime && runtime.source !== "seed") return <ClientRuntimeOverview event={runtime} clientSlug={clientSlug} />;
   const data = getRuntimeData();
   const client = getClientBySlug(clientSlug);
   const events = data.events.filter((event) => event.clientId === client.id);

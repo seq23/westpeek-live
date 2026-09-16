@@ -5,6 +5,9 @@ import { canAttendeeJoinLive, canAttendeePublishLive } from "@/services/venue/at
 import { authorizeVideoTokenRequest } from "@/lib/auth/videoTokenRequestGuard";
 import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
 import type { LiveKitJoinRequest } from "@/types/livekitRoomUi";
+import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
+import { getSpeakerStageState } from "@/services/guests/guestStateService";
+import { decideGuestVideoGrant } from "@/services/guests/guestVideoGrants";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<LiveKitJoinRequest>;
@@ -23,6 +26,22 @@ export async function POST(request: Request) {
   let profileId = body.profileId;
   let publishPermission: Awaited<ReturnType<typeof canAttendeePublishLive>> | undefined;
 
+  // The green room is speakers + crew only, and a speaker reaches the main stage only once the
+  // crew has brought them there. Attendees can never get a green-room token.
+  if (body.roomType === "green_room" || body.role === "speaker") {
+    let stageState;
+    if (body.role === "speaker") {
+      const speaker = await getCurrentGuestIdentity(body.eventId, "speaker");
+      if (!speaker) return NextResponse.json({ ok: false, error: "Tell us who you are on the speaker portal before joining a room." }, { status: 403 });
+      displayName = speaker.name;
+      profileId = speaker.guestId;
+      stageState = await getSpeakerStageState(body.eventId, speaker.guestId);
+    }
+    const grant = decideGuestVideoGrant({ role: body.role as Parameters<typeof decideGuestVideoGrant>[0]["role"], roomType: body.roomType, stageState });
+    if (!grant.ok) return NextResponse.json({ ok: false, error: grant.reason, accessStatus: stageState?.status }, { status: 403 });
+    publishPermission = { canPublishAudio: grant.canPublish, canPublishVideo: grant.canPublish, canShareScreen: grant.canPublish, reason: grant.reason };
+  }
+
   if (body.role === "attendee") {
     const identity = (auth as any).identity || await getCurrentAttendeeIdentity(body.eventId);
     if (!identity) return NextResponse.json({ ok: false, error: "Registered attendee session required for attendee video token." }, { status: 403 });
@@ -34,7 +53,9 @@ export async function POST(request: Request) {
     publishPermission = await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
   }
 
-  const result = await buildResilientVideoJoinResult({
+  let result: Awaited<ReturnType<typeof buildResilientVideoJoinResult>>;
+  try {
+    result = await buildResilientVideoJoinResult({
     eventId: body.eventId,
     roomId: body.roomId,
     roomType: body.roomType,
@@ -42,7 +63,12 @@ export async function POST(request: Request) {
     role: body.role,
     profileId,
     permissionOverride: publishPermission ? { canPublishAudio: publishPermission.canPublishAudio, canPublishVideo: publishPermission.canPublishVideo, canShareScreen: publishPermission.canShareScreen } : undefined,
-  });
+    });
+  } catch (error) {
+    // The grant was allowed; the provider is what failed. Say so with a body the client can show,
+    // never an empty 500 (which the room components read as "Unexpected end of JSON input").
+    return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Video provider is not ready.", providerFailure: true }, { status: 503 });
+  }
 
-  return NextResponse.json({ ok: true, result });
+  return NextResponse.json({ ok: true, result, permissions: publishPermission ? { canPublishAudio: publishPermission.canPublishAudio, canPublishVideo: publishPermission.canPublishVideo, canShareScreen: publishPermission.canShareScreen } : undefined });
 }

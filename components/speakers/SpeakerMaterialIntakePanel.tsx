@@ -1,10 +1,34 @@
 import { intakeSpeakerMaterialAction } from "@/lib/actions/speakerMaterialActions";
+import { approveSpeakerCueDeckAction } from "@/lib/actions/speakerStageActions";
+import { listGuestProfiles } from "@/services/guests/guestIdentityService";
+import { listSpeakerCueDecks } from "@/services/guests/guestStateService";
 import { listSpeakerMaterialSubmissions } from "@/services/speakers/speakerMaterialQueue";
 
-export function SpeakerMaterialIntakePanel({ eventId }: { eventId: string }) {
+export async function SpeakerMaterialIntakePanel({ eventId }: { eventId: string }) {
   const submissions = listSpeakerMaterialSubmissions(eventId);
+  // What speakers pasted from their portal: pending cue-deck versions in the runtime store (the real queue).
+  const [decks, speakers] = await Promise.all([listSpeakerCueDecks(eventId), listGuestProfiles(eventId, "speaker").catch(() => [])]);
+  const nameOf = new Map(speakers.map((speaker) => [speaker.guestId, speaker.name]));
+  const pending = decks.filter((item) => item.state.pending && item.guestId).map((item) => ({ speakerId: item.guestId as string, speakerName: nameOf.get(item.guestId as string) || item.state.pending?.authorLabel || "Speaker", version: item.state.pending! }));
   return (
     <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="operator-speaker-material-intake">
+      <div className="mb-6 rounded-2xl border border-amber-200 bg-amber-50 p-4" data-testid="speaker-pending-cue-decks">
+        <p className="text-xs font-black uppercase tracking-[0.25em] text-amber-800">Pending from speakers · cue cards and notes</p>
+        {pending.length ? pending.map((item) => (
+          <div key={item.speakerId} className="mt-3 rounded-2xl bg-white p-4">
+            <div className="flex flex-wrap items-center justify-between gap-2">
+              <p className="font-semibold text-slate-950">{item.speakerName} · version {item.version.versionNumber}</p>
+              <span className="rounded-full bg-amber-100 px-3 py-1 text-xs font-bold uppercase tracking-wide text-amber-800">Queued for producer review</span>
+            </div>
+            <ul className="mt-2 space-y-1 text-sm text-slate-700">{item.version.cards.map((card) => <li key={card.id}><strong>{card.title}</strong>{card.body ? <span className="whitespace-pre-wrap"> — {card.body}</span> : null}</li>)}{item.version.talkingPoints.map((point, position) => <li key={`tp-${position}`}>• {point}</li>)}</ul>
+            {item.version.script ? <p className="mt-2 whitespace-pre-wrap text-xs text-slate-600">{item.version.script}</p> : null}
+            <div className="mt-3 flex gap-2">
+              <form action={approveSpeakerCueDeckAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={item.speakerId} /><input type="hidden" name="decision" value="approve" /><button className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-black text-white">Approve · make it live</button></form>
+              <form action={approveSpeakerCueDeckAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={item.speakerId} /><input type="hidden" name="decision" value="discard" /><button className="rounded-full border border-slate-300 px-4 py-2 text-xs font-black text-slate-700">Discard</button></form>
+            </div>
+          </div>
+        )) : <p className="mt-2 text-sm text-amber-900">Nothing pasted by a speaker is waiting. Speakers paste from their portal&rsquo;s Cue cards page; the crew console shows the same queue per speaker.</p>}
+      </div>
       <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">Speaker material intake</p>
       <h2 className="mt-2 text-2xl font-semibold text-slate-950">Email, crew upload, and self-serve materials land here</h2>
       <p className="mt-2 text-sm leading-6 text-slate-600">

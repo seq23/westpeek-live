@@ -1,2 +1,37 @@
-import { SpeakerPortalDashboard } from "@/components/speakers/SpeakerManager";
-export default function SpeakerBackstage(){ return <main className="min-h-screen bg-slate-50 p-6"><SpeakerPortalDashboard /></main>; }
+import { SpeakerPortalShell } from "@/components/speakers/SpeakerPortalShell";
+import { GuestIdentityForm } from "@/components/guests/GuestIdentityForm";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
+import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
+import { getSpeakerStageState } from "@/services/guests/guestStateService";
+
+export const dynamic = "force-dynamic";
+import { GuestRoomVideo } from "@/components/video/GuestRoomVideo";
+
+/** "On stage": the main-stage LiveKit room with the speaker's publish grant, once the crew brought them up. */
+export default async function SpeakerOnStagePage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = await params;
+  await ensureRuntimeEvent(eventId);
+  const speaker = await getCurrentGuestIdentity(eventId, "speaker");
+  const stage = speaker ? await getSpeakerStageState(eventId, speaker.guestId) : undefined;
+  return (
+    <SpeakerPortalShell eventId={eventId} active="backstage" speaker={speaker} stage={stage}>
+      {!speaker ? <GuestIdentityForm eventId={eventId} role="speaker" returnTo={`/speaker/events/${eventId}/backstage`} /> : stage?.status === "backstage" ? (
+        <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" data-testid="speaker-on-stage" data-stage-grant="backstage">
+          <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-orange">Backstage</p>
+          <h2 className="mt-2 text-2xl font-black text-slate-950">You are not on the stage yet.</h2>
+          <p className="mt-2 text-sm text-slate-600">The crew brings you to the stage from the green room. Until then this room refuses a stage token.</p>
+          <a href={`/speaker/events/${eventId}/green-room`} className="mt-4 inline-block rounded-full bg-brand-black px-5 py-3 text-sm font-bold text-white">Back to the green room</a>
+        </section>
+      ) : (
+        <div className="space-y-4" data-testid="speaker-on-stage" data-stage-grant={stage?.status}>
+          <section className="rounded-3xl border border-emerald-300 bg-emerald-50 p-5">
+            <p className="text-xs font-black uppercase tracking-[0.3em] text-emerald-800">On stage</p>
+            <h2 className="mt-2 text-2xl font-black text-slate-950">Your camera and microphone publish to the main stage. Attendees see your tile.</h2>
+            <p className="mt-2 text-sm text-slate-700">When the crew sends you backstage, this room closes and you return to the green room.</p>
+          </section>
+          <GuestRoomVideo eventId={eventId} roomId="main-stage" roomType="main_stage" role="speaker" displayName={speaker.name} title="Main stage" />
+        </div>
+      )}
+    </SpeakerPortalShell>
+  );
+}

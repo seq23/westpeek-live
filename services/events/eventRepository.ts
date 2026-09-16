@@ -372,6 +372,9 @@ export async function getRuntimeSchemaStatus(): Promise<RuntimeSchemaStatus> {
     ["runtime_agency_settings", () => store.getAgencySettings("west-peek")],
     // Migration 0025: crew chat moderation. Probed by name so an unapplied mirror is a named stop.
     ["live_chat_moderation_states", () => store.listLiveChatModerationStates("__schema_probe__")],
+    // Migration 0026: special-guest identity and state.
+    ["special_guest_profiles", () => store.listSpecialGuestProfiles("__schema_probe__")],
+    ["event_guest_states", () => store.listEventGuestStates("__schema_probe__")],
   ];
   for (const [table, probe] of probes) {
     try {

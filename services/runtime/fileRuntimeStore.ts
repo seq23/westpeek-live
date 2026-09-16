@@ -6,6 +6,7 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 declare const require: undefined | ((moduleName: string) => unknown);
@@ -72,6 +73,8 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     attendeePermissions: Array.isArray(parsed.attendeePermissions) ? parsed.attendeePermissions : [],
     attendeeLiveCapabilities: Array.isArray(parsed.attendeeLiveCapabilities) ? parsed.attendeeLiveCapabilities : [],
     attendeeLiveControlStates: Array.isArray(parsed.attendeeLiveControlStates) ? parsed.attendeeLiveControlStates : [],
+    specialGuestProfiles: Array.isArray(parsed.specialGuestProfiles) ? parsed.specialGuestProfiles : [],
+    eventGuestStates: Array.isArray(parsed.eventGuestStates) ? parsed.eventGuestStates : [],
     runtimeEvents: Array.isArray(parsed.runtimeEvents) ? parsed.runtimeEvents : [],
     runtimeClients: Array.isArray(parsed.runtimeClients) ? parsed.runtimeClients : [],
     agencySettings: Array.isArray(parsed.agencySettings) ? parsed.agencySettings : [],
@@ -355,6 +358,38 @@ export class FileRuntimeStore implements RuntimeStore {
   async getAttendeeLiveControlState(key: string) {
     const snapshot = this.read();
     return snapshot.attendeeLiveControlStates.find((item: AttendeeLiveControlState) => `${item.eventId}:${item.roomKind}:${item.roomId}` === key);
+  }
+
+  async upsertSpecialGuestProfile(profile: SpecialGuestProfile) {
+    const snapshot = this.read();
+    snapshot.specialGuestProfiles = snapshot.specialGuestProfiles.filter((item: SpecialGuestProfile) => !(item.eventId === profile.eventId && item.guestId === profile.guestId));
+    snapshot.specialGuestProfiles.push(profile);
+    this.write(snapshot);
+    return profile;
+  }
+
+  async getSpecialGuestProfile(eventId: string, guestId: string) {
+    return this.read().specialGuestProfiles.find((item: SpecialGuestProfile) => item.eventId === eventId && item.guestId === guestId);
+  }
+
+  async listSpecialGuestProfiles(eventId: string, role?: SpecialGuestRole) {
+    return this.read().specialGuestProfiles.filter((item: SpecialGuestProfile) => item.eventId === eventId && (!role || item.role === role)).sort((a: SpecialGuestProfile, b: SpecialGuestProfile) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async setEventGuestState(record: EventGuestStateRecord) {
+    const snapshot = this.read();
+    snapshot.eventGuestStates = snapshot.eventGuestStates.filter((item: EventGuestStateRecord) => item.key !== record.key);
+    snapshot.eventGuestStates.push(record);
+    this.write(snapshot);
+    return record;
+  }
+
+  async getEventGuestState(key: string) {
+    return this.read().eventGuestStates.find((item: EventGuestStateRecord) => item.key === key);
+  }
+
+  async listEventGuestStates(eventId: string, kind?: string) {
+    return this.read().eventGuestStates.filter((item: EventGuestStateRecord) => item.eventId === eventId && (!kind || item.kind === kind));
   }
 
   async upsertRuntimeEvent(event: RuntimeEventRecord) {

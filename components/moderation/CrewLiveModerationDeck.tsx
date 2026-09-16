@@ -2,6 +2,7 @@ import { AttendeeLiveRoster } from "@/components/moderation/AttendeeLiveRoster";
 import { ChatModerationQueue } from "@/components/moderation/ChatModerationQueue";
 import { EndShowControl } from "@/components/moderation/EndShowControl";
 import { LiveRoomControlForms } from "@/components/moderation/LiveRoomControlForms";
+import { SpeakerRosterPanel } from "@/components/moderation/SpeakerRosterPanel";
 
 /**
  * Where the crew is: the pending requests + roster, the chat moderation queue, and the room-wide
@@ -13,6 +14,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, in
   return (
     <div className="space-y-6" data-testid="crew-live-moderation-deck">
       <EndShowControl eventId={eventId} />
+      <SpeakerRosterPanel eventId={eventId} />
       <AttendeeLiveRoster eventId={eventId} search={search} searchAction={searchAction} />
       <ChatModerationQueue eventId={eventId} />
       {includeRoomControls ? (

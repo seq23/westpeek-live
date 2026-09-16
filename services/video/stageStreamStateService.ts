@@ -157,8 +157,8 @@ export function evaluateStageFallbackDecision(previous: StageStreamState, signal
     state.fallbackRecommendation = "Primary path is live: StreamYard-compatible RTMP into LiveKit. keep StreamYard running when available, keep backend monitors open, and do not expose provider detail to attendees.";
   }
   if (signal === "ingress_ended") {
-    state.lastWebhookEvent = "ingress_ended";
-    state.lastWebhookAt = now();
+    // lastWebhookEvent is set by applyStageStreamSignal only when a webhook actually delivered the
+    // signal; a polled ingress_ended must not claim a webhook arrived (the console names which path is live).
     if (state.operatorMarkedShowEnded) {
       state.streamStatus = "ENDED";
       state.failurePlane = "NONE";

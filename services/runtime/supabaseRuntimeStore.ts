@@ -8,6 +8,7 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 
@@ -26,6 +27,14 @@ function mapLiveChatMessage(row: Record<string, unknown>): LiveChatMessage {
     moderatedAt: row.moderated_at ? String(row.moderated_at) : undefined,
     createdAt: String(row.created_at || ""),
   };
+}
+
+function mapSpecialGuestProfile(row: Record<string, unknown>): SpecialGuestProfile {
+  return { guestId: String(row.guest_id), eventId: String(row.event_id), role: row.role as SpecialGuestRole, name: String(row.name || ""), company: String(row.company || ""), title: String(row.title || ""), createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+}
+
+function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord {
+  return { key: String(row.key), eventId: String(row.event_id), kind: row.kind as EventGuestStateRecord["kind"], guestId: row.guest_id ? String(row.guest_id) : undefined, state: row.state, updatedAt: String(row.updated_at || "") };
 }
 
 function mapAttendeeProfile(row: Record<string, unknown>): AttendeeProfile {
@@ -63,6 +72,12 @@ type PostgrestErrorLike = { code?: string; message: string };
 /** PostgREST reports an unmigrated table as PGRST205 (schema cache) or 42P01 (undefined_table). */
 function isMissingTableError(error: PostgrestErrorLike) {
   return error.code === "PGRST205" || error.code === "42P01" || /schema cache|does not exist/i.test(error.message);
+}
+
+/** Diagnostic snapshot reads only: an unapplied migration must not take the testing console down. */
+function tolerateMissingTable(error: unknown) {
+  if (error instanceof Error && isMissingTableError({ message: error.message })) return [] as Record<string, unknown>[];
+  throw error;
 }
 
 function failOrSchemaMissing(table: string, error: PostgrestErrorLike): never {
@@ -499,6 +514,46 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return data?.state as AttendeeLiveControlState | undefined;
   }
 
+  async upsertSpecialGuestProfile(profile: SpecialGuestProfile) {
+    const { error } = await this.client.from("special_guest_profiles").upsert({ guest_id: profile.guestId, event_id: profile.eventId, role: profile.role, name: profile.name, company: profile.company, title: profile.title, created_at: profile.createdAt, updated_at: profile.updatedAt }, { onConflict: "event_id,guest_id" });
+    if (error) failOrSchemaMissing("special_guest_profiles", error);
+    return profile;
+  }
+
+  async getSpecialGuestProfile(eventId: string, guestId: string) {
+    const { data, error } = await this.client.from("special_guest_profiles").select("*").eq("event_id", eventId).eq("guest_id", guestId).maybeSingle();
+    if (error) failOrSchemaMissing("special_guest_profiles", error);
+    return data ? mapSpecialGuestProfile(data as Record<string, unknown>) : undefined;
+  }
+
+  async listSpecialGuestProfiles(eventId: string, role?: SpecialGuestRole) {
+    let query = this.client.from("special_guest_profiles").select("*").eq("event_id", eventId);
+    if (role) query = query.eq("role", role);
+    const { data, error } = await query.order("created_at", { ascending: true });
+    if (error) failOrSchemaMissing("special_guest_profiles", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapSpecialGuestProfile);
+  }
+
+  async setEventGuestState(record: EventGuestStateRecord) {
+    const { error } = await this.client.from("event_guest_states").upsert({ key: record.key, event_id: record.eventId, kind: record.kind, guest_id: record.guestId ?? null, state: record.state, updated_at: record.updatedAt }, { onConflict: "key" });
+    if (error) failOrSchemaMissing("event_guest_states", error);
+    return record;
+  }
+
+  async getEventGuestState(key: string) {
+    const { data, error } = await this.client.from("event_guest_states").select("*").eq("key", key).maybeSingle();
+    if (error) failOrSchemaMissing("event_guest_states", error);
+    return data ? mapEventGuestState(data as Record<string, unknown>) : undefined;
+  }
+
+  async listEventGuestStates(eventId: string, kind?: string) {
+    let query = this.client.from("event_guest_states").select("*").eq("event_id", eventId);
+    if (kind) query = query.eq("kind", kind);
+    const { data, error } = await query;
+    if (error) failOrSchemaMissing("event_guest_states", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEventGuestState);
+  }
+
   async upsertRuntimeEvent(event: RuntimeEventRecord) {
     const { error } = await this.client.from("runtime_events").upsert(runtimeEventToRow(event), { onConflict: "id" });
     if (error) failOrSchemaMissing("runtime_events", error);
@@ -559,7 +614,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
 
   async readSnapshot(): Promise<V6RuntimeSnapshot> {
     const snapshot = emptyRuntimeSnapshot();
-    const [auditLogs, accessAttempts, analyticsEvents, fallbackEvents, fallbackStates, incidentEvents, supportRequests, emailEvents, registrations, attendeeProfiles, attendeeSessions, attendeeAgendaIntents, sponsorLeadOptIns, attendeePermissions, runOfShowEvents, stageStreamStates, stageStreamEvents, liveChatMessages, attendeeLiveCapabilities, attendeeLiveControlStates, liveChatModerationStates] = await Promise.all([
+    const [auditLogs, accessAttempts, analyticsEvents, fallbackEvents, fallbackStates, incidentEvents, supportRequests, emailEvents, registrations, attendeeProfiles, attendeeSessions, attendeeAgendaIntents, sponsorLeadOptIns, attendeePermissions, runOfShowEvents, stageStreamStates, stageStreamEvents, liveChatMessages, attendeeLiveCapabilities, attendeeLiveControlStates, liveChatModerationStates, specialGuestProfiles, eventGuestStates] = await Promise.all([
       selectAll<Record<string, unknown>>(this.client, "audit_logs"),
       selectAll<Record<string, unknown>>(this.client, "v5_access_attempt_events"),
       selectAll<Record<string, unknown>>(this.client, "v5_analytics_events"),
@@ -582,10 +637,9 @@ export class SupabaseRuntimeStore implements RuntimeStore {
       selectAll<Record<string, unknown>>(this.client, "attendee_live_control_states", "*", "updated_at"),
       // Diagnostic snapshot only: an unapplied 0025 must not take the testing console down with it.
       // The moderation paths themselves surface RuntimeSchemaMissingError by name.
-      selectAll<Record<string, unknown>>(this.client, "live_chat_moderation_states", "*", "updated_at").catch((error: unknown) => {
-        if (error instanceof Error && isMissingTableError({ message: error.message })) return [] as Record<string, unknown>[];
-        throw error;
-      }),
+      selectAll<Record<string, unknown>>(this.client, "live_chat_moderation_states", "*", "updated_at").catch(tolerateMissingTable),
+      selectAll<Record<string, unknown>>(this.client, "special_guest_profiles", "*", "created_at").catch(tolerateMissingTable),
+      selectAll<Record<string, unknown>>(this.client, "event_guest_states", "*", "updated_at").catch(tolerateMissingTable),
     ]);
 
     snapshot.auditLogs = auditLogs.map((row) => ({
@@ -692,6 +746,8 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     snapshot.stageStreamEvents = stageStreamEvents.map((row) => row.state_event as StageStreamEvent).filter(Boolean);
     snapshot.liveChatMessages = liveChatMessages.map(mapLiveChatMessage);
     snapshot.liveChatModerationStates = liveChatModerationStates.map((row) => row.state as LiveChatModerationState).filter(Boolean);
+    snapshot.specialGuestProfiles = specialGuestProfiles.map(mapSpecialGuestProfile);
+    snapshot.eventGuestStates = eventGuestStates.map(mapEventGuestState);
     snapshot.attendeeLiveCapabilities = attendeeLiveCapabilities.map((row) => row.capability as AttendeeLiveCapability).filter(Boolean);
     snapshot.attendeeLiveControlStates = attendeeLiveControlStates.map((row) => row.state as AttendeeLiveControlState).filter(Boolean);
     return snapshot;
