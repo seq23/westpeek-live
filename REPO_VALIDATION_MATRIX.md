@@ -229,3 +229,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: one case convention for every code (`lib/access/accessCodes.ts`: uppercase display, `codesMatch` ignoring case, spaces, dashes) at both gates and resolvers; guest links (`guestGatePath`) prefill the right gate and never auto-submit; custom codes (`services/events/accessCodeService.ts`) validated and unique, a change rotating the old code out (crew → host-link version; guest roles → `access_code_versions`, checked by the speaker / sponsor / client layouts and the VIP panel); every gated area in the middleware matcher.
 - Proof behind it: `tests/unit/accessCodes.test.ts`, `tests/unit/accessCodeService.test.ts`, `tests/e2e/access-codes-and-links.spec.ts` (incl. "every gated area sends a fresh browser to its gate").
+
+## People hash-only heal contract — 2026-09-16
+
+- Validator: `npm run validate:people-hash-only-contract`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: `/app/people` must read hash-only attendee rows (registered before 16 Sep 2026, email null) as well as `contacts` — grouped by hash across events (`groupHashOnlyProfiles`), masked email + "not captured", counted, exported with a blank email column; the one heal-on-match contact write (`upsertContactFromProfile`, run by registration, profile save, and the networking gate) backfills the email onto every hash sibling and builds one contact from the union of their events with the earliest `first_seen`; `listAttendeeProfilesByEmailHash` / `listAttendeeProfilesWithoutEmail` implemented by both stores.
+- Proof behind it: `tests/unit/hashOnlyPeopleHeal.test.ts`, `tests/e2e/people-hash-only-heal.spec.ts`.
