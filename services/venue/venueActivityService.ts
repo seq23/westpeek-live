@@ -1,4 +1,5 @@
-import { getNetworkingSettings } from "@/services/speed-networking/speedNetworkingService";
+import { getNetworkingSettings, networkingClosedByEventStatus } from "@/services/speed-networking/speedNetworkingService";
+import { findEventRecord } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { getPublicStageStreamState } from "@/services/video/stageStreamStateService";
 import type { VenueSurface, VirtualVenueModel } from "@/types/virtualVenue";
@@ -34,20 +35,29 @@ export const EMPTY_VENUE_ACTIVITY: VenueActivity = {
 
 /** Fail soft: every read is independent, and a store failure drops that one marker, not the nav. */
 export async function getVenueActivity(model: VirtualVenueModel): Promise<VenueActivity> {
-  const [settings, entries, stage] = await Promise.all([
+  const [settings, entries, stage, event] = await Promise.all([
     getNetworkingSettings(model.eventId).catch(() => undefined),
     getRuntimeStore().listSpeedNetworkingEntries(model.eventId).catch(() => []),
     getPublicStageStreamState(model.eventId, "main-stage").catch(() => undefined),
+    findEventRecord(model.eventId).catch(() => undefined),
   ]);
+  /**
+   * An event that is over has no live signal of any kind, whatever the stage state or the agenda
+   * still say. The owner found an ENDED event whose nav read "Stage LIVE" and "Networking OPEN"
+   * while the page body said the event had ended (16 Sep 2026); a marker that outlives its signal
+   * is worse than no marker.
+   */
+  const eventIsOver = networkingClosedByEventStatus(event?.status);
   return {
     // "Live" is the provider actually carrying a picture, or a session the model says is on now.
-    stageLive: Boolean(stage && /_LIVE$/.test(stage.streamStatus)) || model.liveNow.length > 0,
-    liveSessionTitle: model.liveNow[0]?.title,
-    networkingOpen: Boolean(settings?.open),
-    networkingQueueSize: entries.filter((entry) => entry.status === "waiting").length,
+    stageLive: !eventIsOver && (Boolean(stage && /_LIVE$/.test(stage.streamStatus)) || model.liveNow.length > 0),
+    liveSessionTitle: eventIsOver ? undefined : model.liveNow[0]?.title,
+    networkingOpen: Boolean(settings?.open) && !eventIsOver,
+    networkingQueueSize: eventIsOver ? 0 : entries.filter((entry) => entry.status === "waiting").length,
     networkingMatchMinutes: settings?.matchMinutes || 0,
-    boothCount: model.booths.length,
-    breakoutsOpen: model.breakouts.filter((room) => room.status === "open").length,
+    boothCount: eventIsOver ? 0 : model.booths.length,
+    breakoutsOpen: eventIsOver ? 0 : model.breakouts.filter((room) => room.status === "open").length,
+    // Replays and the people who attended are the two things a finished event still has.
     replaysReady: model.replays.filter((replay) => replay.status === "available").length,
     peopleListed: model.people.length,
   };

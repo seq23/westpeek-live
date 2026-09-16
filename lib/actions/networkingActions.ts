@@ -2,7 +2,7 @@
 
 import { redirect } from "next/navigation";
 import { recordAnalyticsEvent } from "@/services/analytics/analyticsEventService";
-import { joinNetworkingQueue, leaveNetworkingQueue, nextNetworkingMatch, setNetworkingSettings } from "@/services/speed-networking/speedNetworkingService";
+import { allowRepeatNetworkingMatch, joinNetworkingQueue, leaveNetworkingQueue, nextNetworkingMatch, setNetworkingSettings } from "@/services/speed-networking/speedNetworkingService";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { SPEED_NETWORKING_DEFAULT_MINUTES } from "@/types/speedNetworking";
 import { revalidatePath } from "next/cache";
@@ -79,4 +79,18 @@ export async function leaveSpeedNetworkingQueueAction(formData: FormData) {
   if (!identity) redirect(`/events/${eventId}/register?reason=networking`);
   await leaveNetworkingQueue(eventId, identity.attendeeId, clean(formData.get("reason")) === "end" ? "ended" : "left");
   redirect(`/venue/${eventId}/networking?state=left`);
+}
+
+/**
+ * "Meet someone again": the way out of a queue that cannot resolve. Once an attendee has met
+ * everyone else waiting, leaving them in the queue is a silent dead end — this lets them be paired
+ * with someone they already met, and only ever pairs two people who have both asked for it.
+ */
+export async function allowRepeatSpeedNetworkingMatchAction(formData: FormData) {
+  const eventId = clean(formData.get("eventId"));
+  if (!eventId) return;
+  const identity = await getCurrentAttendeeIdentity(eventId);
+  if (!identity) redirect(`/events/${eventId}/register?reason=networking`);
+  await allowRepeatNetworkingMatch(eventId, identity.attendeeId);
+  redirect(`/venue/${eventId}/networking?state=waiting&repeat=1`);
 }

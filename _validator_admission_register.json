@@ -5011,6 +5011,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:speed-networking-room-privacy",
+      "command": "node scripts/validate_speed_networking_room_privacy.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "privacy boundary",
+      "whatItProves": "A 1:1 networking room is closed to everyone but the two attendees of that one active match, in three independent layers: the token gate is hoisted above every role branch so an observer or crew role cannot name an arbitrary LiveKit room; the room is created with a participant cap of two; and strangers plus the joiner's own stale connection are removed before the token is minted. Also proves the LiveKit identity is never derived from a display name, that ending a match deletes the room, and that the 1:1 renders the partner only, never the local participant as a remote tile and never an anonymous avatar.",
+      "whatItDoesNotProve": "Does not exercise a live LiveKit project; the reproduction that found the exposure was run by hand against the real project and is recorded in the pull request.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; a failure here is a privacy regression and must be fixed before release.",
+      "runtimeCost": "Static file reads only; sub-second.",
+      "maintenanceCost": "Review on each speed networking or video token change.",
+      "removalConditions": "Retire only if speed networking is retired.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

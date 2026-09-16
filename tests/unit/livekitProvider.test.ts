@@ -23,7 +23,10 @@ describe("LiveKit provider implementation", () => {
 
     expect(token.token.split(".")).toHaveLength(3);
     expect(token.token).not.toContain("dev-secret");
-    expect(token.participantIdentity).toBe("producer");
+    // The identity is never the display name: LiveKit disconnects whoever already holds an
+    // identity, so two "Producer"s would displace each other and leave a ghost tile behind.
+    expect(token.participantIdentity).not.toBe("producer");
+    expect(token.participantIdentity).toMatch(/^anon-/);
   });
 
   it("creates LiveKit rooms and participant tokens", async () => {
