@@ -41,10 +41,11 @@ describe("runtime-first event repository", () => {
     const event = await createEventRecord({ name: "Founder Office Hours", when: "now", format: "stage" }, owner);
     expect(event.status).toBe("live");
     expect(event.slug).toBe("founder-office-hours");
-    expect(event.joinCode).toMatch(/^wpl-[a-z0-9]{6}$/);
-    expect(event.accessCodes.crew).toMatch(/^CREW-/);
-    expect(event.accessCodes.speaker).toMatch(/^SPK-/);
-    expect(event.accessCodes.client).toMatch(/^CLT-/);
+    // Readable codes (16 Sep 2026): WPL-[ROLE-]STEM, the stem from the event's own name.
+    expect(event.joinCode).toBe("wpl-founde");
+    expect(event.accessCodes.crew).toBe("WPL-CREW-FOUNDE");
+    expect(event.accessCodes.speaker).toBe("WPL-SPEAKER-FOUNDE");
+    expect(event.accessCodes.client).toBe("WPL-CLIENT-FOUNDE");
     expect(event.sessions).toHaveLength(1);
     expect(event.createdByLabel).toBe("Owner");
     expect(event.clientName).toBe("West Peek");

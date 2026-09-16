@@ -1,4 +1,4 @@
-import { codeKey } from "@/lib/access/accessCodes";
+import { codeStem, derivedCodes, stemWithSuffix, codeKey } from "@/lib/access/accessCodes";
 import type { RegistrationQuestion } from "@/types/attendeeRegistration";
 import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
 import { applyStageStreamSignal, getOrCreateStageStreamState } from "@/services/video/stageStreamStateService";
@@ -101,6 +101,41 @@ export function mintAccessCodes(): RuntimeAccessCodes {
     sponsor: `SPN-${randomCode(6)}`,
     vip: `VIP-${randomCode(6)}`,
     client: `CLT-${randomCode(6)}`,
+  };
+}
+
+/**
+ * The readable scheme (16 Sep 2026): every code for an event is WPL-[ROLE-]STEM, where the stem is
+ * the first six letters of the event's own name. One stem to remember, the role written in the
+ * code. Two live events can want the same stem ("Sequoia's first Room" and "…second Room" both
+ * give SEQUOI), so the stem is checked against every other non-archived event and takes the next
+ * free digit — never two live events on one code.
+ */
+export async function freeCodeStem(name: string, eventId: string, events?: RuntimeEventRecord[]): Promise<string> {
+  const all = events || await getRuntimeStore().listRuntimeEvents().catch(() => [] as RuntimeEventRecord[]);
+  const others = all.filter((event) => event.id !== eventId && event.status !== "archived");
+  const takenKeys = new Set<string>();
+  for (const event of others) {
+    takenKeys.add(codeKey(event.joinCode));
+    for (const code of Object.values(event.accessCodes || {})) takenKeys.add(codeKey(code));
+  }
+  const base = codeStem(name, eventId);
+  for (let attempt = 1; attempt <= 50; attempt += 1) {
+    const stem = stemWithSuffix(base, attempt);
+    const candidate = derivedCodes(stem);
+    const clashes = [candidate.join, candidate.crew, candidate.speaker, candidate.sponsor, candidate.vip, candidate.client].some((code) => takenKeys.has(codeKey(code)));
+    if (!clashes) return stem;
+  }
+  // 50 events sharing one six-letter stem is not a thing, but never hand back a colliding code.
+  return `${base}${randomCode(2)}`;
+}
+
+/** The six codes an event gets from its stem. Join codes are stored lowercase, role codes uppercase. */
+export function codesFromStem(stem: string): { joinCode: string; accessCodes: RuntimeAccessCodes } {
+  const derived = derivedCodes(stem);
+  return {
+    joinCode: derived.join.toLowerCase(),
+    accessCodes: { crew: derived.crew, speaker: derived.speaker, sponsor: derived.sponsor, vip: derived.vip, client: derived.client },
   };
 }
 
@@ -256,8 +291,7 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
     startAt,
     endAt,
     timezone: input.timezone?.trim() || "America/Chicago",
-    joinCode: mintJoinCode(),
-    accessCodes: mintAccessCodes(),
+    ...codesFromStem(await freeCodeStem(name, slug)),
     registrationEnabled: false,
     registrationQuestions: input.registrationQuestions,
     branding: { logo: "west-peek-live", hero: name, theme: "west-peek-live" },

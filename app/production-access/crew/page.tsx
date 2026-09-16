@@ -58,7 +58,7 @@ async function enterCrew(formData: FormData) {
  * the owner generated, or the "Switch role" link on a crew page. Nothing is submitted until the person
  * presses Enter crew workspace; the prefilled crew code is the event's own code, never the global password.
  */
-export default async function CrewAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string; event?: string; role?: string; code?: string }> }) {
+export default async function CrewAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; retry?: string; next?: string; event?: string; role?: string; code?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const prefilledRole = normalizeCrewRole(resolvedSearchParams?.role);
   const prefilledEvent = String(resolvedSearchParams?.event || "").trim().slice(0, 80);
@@ -103,6 +103,7 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
           </div>
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Enter crew workspace</button>
         </form>
+        {resolvedSearchParams?.error === "too_many" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="gate-too-many">Too many wrong codes from here. Wait about {resolvedSearchParams?.retry || "60"} seconds and try again — or ask the producer for the link, which fills the code in for you.</p> : null}
         {resolvedSearchParams?.error === "invalid" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That crew password did not match. Check the Day 1 internal password or ask the operator/admin.</p> : null}
         {resolvedSearchParams?.error === "launchpad_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter the crew password first. The Operator Launchpad requires the separate operator password.</p> : null}
         {resolvedSearchParams?.error === "operator_packet_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter operator access first. The Operator Packet contains internal launchpad instructions and stays behind the operator gate.</p> : null}

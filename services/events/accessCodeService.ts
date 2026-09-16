@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
-import { codeKey, displayCode, validateCustomCode, type AccessCodeField } from "@/lib/access/accessCodes";
+import { codeStem, codesMatch, codeKey, displayCode, isDerivedCode, isLegacyGeneratedCode, stemForEvent, stemFromCode, validateCustomCode, type AccessCodeField } from "@/lib/access/accessCodes";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
-import { mintAccessCodes, mintJoinCode } from "@/services/events/eventRepository";
+import { codesFromStem, freeCodeStem, mintAccessCodes, mintJoinCode } from "@/services/events/eventRepository";
 import { revokeHostLinks } from "@/services/events/hostLinkService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
@@ -90,4 +90,61 @@ export async function guestAccessStale(eventId: string): Promise<boolean> {
   } catch {
     return false;
   }
+}
+
+
+/**
+ * Adopt the readable scheme for one event, or rotate the whole stem at once. Both do the same
+ * thing — give every role the code its stem implies — and both kill every link and cookie minted
+ * under the old codes, which is the point of rotating. A code a producer set by hand is left alone
+ * unless `includeCustom` says otherwise: a custom code is a decision, not an accident.
+ */
+export interface AdoptCodesResult {
+  ok: boolean;
+  stem?: string;
+  changed?: AccessCodeField[];
+  kept?: AccessCodeField[];
+  reason?: string;
+}
+
+export async function adoptReadableCodes(eventId: string, actor: string, options: { includeCustom?: boolean; newStem?: boolean } = {}): Promise<AdoptCodesResult> {
+  const store = getRuntimeStore();
+  const event = await store.getRuntimeEvent(eventId);
+  if (!event) return { ok: false, reason: "Only a runtime-created event has codes to change." };
+  const all = await store.listRuntimeEvents().catch(() => [] as RuntimeEventRecord[]);
+  const currentStem = stemForEvent(event.joinCode, event.name, event.id);
+  const stem = options.newStem || !currentStem ? await freeCodeStem(event.name, event.id, all) : currentStem;
+  const target = codesFromStem(stem);
+  const changed: AccessCodeField[] = [];
+  const kept: AccessCodeField[] = [];
+  const fields: AccessCodeField[] = ["join", "crew", "speaker", "sponsor", "vip", "client"];
+  for (const field of fields) {
+    const current = field === "join" ? event.joinCode : event.accessCodes[field];
+    const next = field === "join" ? target.joinCode : target.accessCodes[field];
+    if (codesMatch(current, next)) { kept.push(field); continue; }
+    // A hand-set code is kept unless the owner asked for everything.
+    // Ours to replace: the derived code for another stem, or one of the old generated shapes.
+    const custom = !isLegacyGeneratedCode(current, field) && (currentStem ? !isDerivedCode(current, currentStem, field) : !stemFromCode(current));
+    if (custom && !options.includeCustom) { kept.push(field); continue; }
+    const result = await setEventAccessCode(eventId, field, { value: next }, actor);
+    if (result.ok) changed.push(field); else kept.push(field);
+  }
+  return { ok: true, stem, changed, kept };
+}
+
+/** What the vault shows per event: the stem, whether each code is the derived one, and what it would be. */
+export function codeSchemeSummary(event: RuntimeEventRecord) {
+  const stem = stemForEvent(event.joinCode, event.name, event.id) || codeStem(event.name, event.id);
+  const target = codesFromStem(stem);
+  const fields: AccessCodeField[] = ["join", "crew", "speaker", "sponsor", "vip", "client"];
+  return {
+    stem,
+    onScheme: fields.every((field) => codesMatch(field === "join" ? event.joinCode : event.accessCodes[field], field === "join" ? target.joinCode : target.accessCodes[field])),
+    rows: fields.map((field) => ({
+      field,
+      current: displayCode(field === "join" ? event.joinCode : event.accessCodes[field]),
+      derived: displayCode(field === "join" ? target.joinCode : target.accessCodes[field]),
+      custom: !codesMatch(field === "join" ? event.joinCode : event.accessCodes[field], field === "join" ? target.joinCode : target.accessCodes[field]),
+    })),
+  };
 }

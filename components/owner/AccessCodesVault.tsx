@@ -5,6 +5,7 @@ import { displayCode, guestGatePath } from "@/lib/access/accessCodes";
 import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import { getEnv } from "@/lib/env";
 import { listEventRecords } from "@/services/events/eventRepository";
+import { codeSchemeSummary } from "@/services/events/accessCodeService";
 
 /**
  * The access-codes vault: every code for every event, behind the owner gate, so nobody has to keep
@@ -38,6 +39,9 @@ export async function AccessCodesVault() {
     id: event.id,
     name: event.name,
     status: event.status,
+    group: event.status === "archived" ? "archived" as const : ["ended", "replay_available"].includes(event.status) ? "ended" as const : "current" as const,
+    stem: codeSchemeSummary(event).stem,
+    onScheme: codeSchemeSummary(event).onScheme,
     codes: [
       { field: "join", label: "Join code (attendees)", code: displayCode(event.joinCode), link: `${base}/events/${event.id}/register` },
       { field: "crew", label: "Crew", code: displayCode(event.accessCodes.crew), link: `${base}${guestGatePath(event, "crew")}` },
