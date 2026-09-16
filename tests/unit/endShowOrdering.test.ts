@@ -142,3 +142,30 @@ describe("End the show vs dropped feed", () => {
     expect((await findEventRecord(event.id))?.status).toBe("ended");
   });
 });
+
+describe("Go live after an ended show resets the stage", () => {
+  let tempDir: string;
+  beforeEach(() => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wpl-golive-"));
+    process.env.AGENCY_EVENT_OS_RUNTIME_STORE = "file";
+    setRuntimeStoreForTests(new FileRuntimeStore(path.join(tempDir, "runtime.json")));
+    resetOverlayForTests();
+    control.mockReset();
+    control.mockResolvedValue({ ok: true, actorRole: "owner" });
+  });
+  afterEach(() => {
+    setRuntimeStoreForTests(undefined);
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    process.env = { ...ORIGINAL_ENV };
+  });
+  it("an ended stage returns to ready when the event is taken live again, so the venue stops saying ended", async () => {
+    const event = await liveEvent("Encore");
+    await endShowForEvent({ eventId: event.id, actorRole: "owner" });
+    expect((await getOrCreateStageStreamState(event.id)).streamStatus).toBe("ENDED");
+    await setEventStatus(event.id, "live", owner);
+    const stage = await getOrCreateStageStreamState(event.id);
+    expect(stage.streamStatus).not.toBe("ENDED");
+    expect(stage.operatorMarkedShowEnded).toBeFalsy();
+    expect((await findEventRecord(event.id))?.status).toBe("live");
+  });
+});

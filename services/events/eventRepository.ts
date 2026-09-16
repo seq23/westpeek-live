@@ -1,4 +1,5 @@
 import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
+import { applyStageStreamSignal, getOrCreateStageStreamState } from "@/services/video/stageStreamStateService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { findEventIndexRecord, getAttendeeConfig, getEventConfig, getEventConfigPackage, getEventIndex } from "@/services/events/eventConfigRepository";
 import { createAuditLog } from "@/services/audit";
@@ -304,6 +305,17 @@ export async function setEventStatus(id: string, status: EventStatus, actor: Wor
   const updated: RuntimeEventRecord = { ...event, status, updatedAt: new Date().toISOString() };
   if (status === "live" && new Date(event.startAt).getTime() > Date.now()) updated.startAt = new Date().toISOString();
   await getRuntimeStore().upsertRuntimeEvent(updated);
+  // TAKING AN ENDED EVENT LIVE AGAIN RESETS ITS STAGE. The venue follows the stage state, and an
+  // "End the show" leaves it ENDED — so "Go live" on the publish page put the event back on the
+  // join code while every attendee still read "Event ended" (16 Sep 2026). Publish / go live /
+  // back to draft on a stage that was ended returns it to the ready state, keeping the ingress
+  // credentials if any survived.
+  if (["live", "registration_open", "pre_event", "published", "draft"].includes(status)) {
+    const stage = await getOrCreateStageStreamState(updated.id, "main-stage").catch(() => undefined);
+    if (stage && (stage.streamStatus === "ENDED" || stage.operatorMarkedShowEnded)) {
+      await applyStageStreamSignal({ eventId: updated.id, stageId: "main-stage", signal: "operator_reset_primary", reason: `Event set to ${status} after an ended show; stage reset to ready.` }).catch(() => undefined);
+    }
+  }
   await createAuditLog({ agencyId: "west-peek", clientId: updated.clientId, eventId: updated.id, actorUserId: actor.id, actorRole: actor.role, action: "event_status_changed", previousValue: event.status, newValue: status, resourceType: "event", resourceId: updated.id, visibility: "internal_agency" }).catch(() => undefined);
   return updated;
 }
