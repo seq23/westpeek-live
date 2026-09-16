@@ -67,7 +67,10 @@ export type AuditAction =
   | "host_link_minted"
   | "host_link_revoked"
   // An access code (join or a role code) set by hand or regenerated: a rotation.
-  | "access_code_rotated";
+  | "access_code_rotated"
+  // The owner looked up a code in the console's vault, or copied it for a producer. The value is never in the row.
+  | "access_code_revealed"
+  | "access_code_copied";
 
 export interface CreateAuditLogInput {
   agencyId: string;

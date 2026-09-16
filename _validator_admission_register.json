@@ -4591,6 +4591,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:access-codes-vault-contract",
+      "command": "node scripts/validate_access_codes_vault_contract.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "The Owner Console's access-codes vault is behind the owner master key (an operator or crew session is refused), every per-event code is masked until Reveal with copy, copy-all and Rotate (which warns that existing links and sessions stop working), reveals and copies write an audit row that never carries the value, and no route, component or action in app/, components/ or lib/actions renders the value of OWNER_MASTER_ACCESS_PASSWORD, OPERATOR_LAUNCHPAD_PASSWORD or CREW_ACCESS_PASSWORD \u2014 they render SET / NOT SET with the wrangler command.",
+      "whatItDoesNotProve": "Static contract; the gate, the reveal and the rotation are proven by tests/e2e/access-codes-vault.spec.ts.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only with the Owner Console.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",
