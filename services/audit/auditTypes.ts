@@ -70,7 +70,11 @@ export type AuditAction =
   | "access_code_rotated"
   // The owner looked up a code in the console's vault, or copied it for a producer. The value is never in the row.
   | "access_code_revealed"
-  | "access_code_copied";
+  | "access_code_copied"
+  // A producer looked at one named attendee: their reported state (Diagnose) or their view
+  // (See their view). The row carries the attendee id and nothing else — never an IP, never a location.
+  | "attendee_diagnosed"
+  | "attendee_view_mirrored";
 
 export interface CreateAuditLogInput {
   agencyId: string;

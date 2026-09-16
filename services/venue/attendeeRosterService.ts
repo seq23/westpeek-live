@@ -1,4 +1,5 @@
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
+import { excludePreviewIdentities } from "@/lib/auth/previewIdentity";
 import type { AttendeeLiveCapability, AttendeeLiveRoomKind } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
@@ -86,11 +87,14 @@ export async function getAttendeeRoster(input: { eventId: string; roomKind?: Att
     const capability = capabilityByAttendee.get(profile.attendeeId);
     return { attendeeId: profile.attendeeId, name: profile.name, company: profile.company, title: profile.title, emailMasked: profile.emailMasked, registeredAt: profile.createdAt, capability, liveStatus: liveStatusOf(capability), silenced: silenced.has(profile.attendeeId), lastChatAt: lastChat.get(profile.attendeeId) };
   };
-  const sorted = profiles.slice().sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
+  // A preview identity is never persisted, so it cannot be here — but the roster is the count an
+  // owner reads off the wall, so it is filtered rather than assumed. Same for the total below.
+  const visible = excludePreviewIdentities(profiles, (profile) => profile.attendeeId);
+  const sorted = visible.slice().sort((a, b) => String(b.createdAt || "").localeCompare(String(a.createdAt || "")));
   const rows = sorted.filter((profile) => matches(profile, search)).slice(0, limit).map(toRow);
 
   const profileById = new Map(sorted.map((profile) => [profile.attendeeId, profile]));
-  const pending = capabilities
+  const pending = excludePreviewIdentities(capabilities, (item) => item.attendeeId)
     .filter((item) => item.roomKind === roomKind && item.roomId === roomId && item.requestStatus === "requested" && !item.revoked)
     .sort((a, b) => String(a.requestedAt || a.updatedAt).localeCompare(String(b.requestedAt || b.updatedAt)))
     .map((capability) => {
@@ -98,5 +102,5 @@ export async function getAttendeeRoster(input: { eventId: string; roomKind?: Att
       return profile ? toRow(profile) : { attendeeId: capability.attendeeId, name: capability.attendeeId, company: "Profile not found", title: "", registeredAt: capability.requestedAt || capability.updatedAt, capability, liveStatus: "requested" as const, silenced: silenced.has(capability.attendeeId), lastChatAt: lastChat.get(capability.attendeeId) };
     });
 
-  return { eventId: input.eventId, roomKind, roomId, search, rows, total: profiles.length, pending };
+  return { eventId: input.eventId, roomKind, roomId, search, rows, total: visible.length, pending };
 }

@@ -22,8 +22,13 @@ export function canViewAsGuest(input: { owner?: V5AccessCookiePayload; operator?
   return { ok: false };
 }
 
-/** The guest surfaces `?viewAs=` is honoured on. `/venue` is public; the lobby renders the VIP panel from the param. */
-export const VIEW_AS_PATH_PREFIXES = ["/speaker/events/", "/sponsor/events/", "/client/"] as const;
+/**
+ * The surfaces `?viewAs=` is honoured on. `/venue/` is here because the room is the thing the owner
+ * most needs to check before a show — without it you could not see the event as an attendee at all,
+ * and the VIP preview only half-worked (the lobby read the param for the VIP panel; nothing else
+ * did). Adding a surface does not widen WHO may preview: `canViewAsGuest` above is unchanged.
+ */
+export const VIEW_AS_PATH_PREFIXES = ["/venue/", "/speaker/events/", "/sponsor/events/", "/client/"] as const;
 
 export function isViewAsPath(pathname: string) {
   return VIEW_AS_PATH_PREFIXES.some((prefix) => pathname.startsWith(prefix));

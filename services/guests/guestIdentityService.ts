@@ -1,4 +1,5 @@
 import { cookies } from "next/headers";
+import { refusePreviewWrite } from "@/lib/auth/previewIdentity";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { randomId } from "@/lib/security/portableCrypto";
@@ -46,6 +47,7 @@ export function cleanGuestField(value: unknown, max = 120) {
 
 /** First entry: the guest gives name / company / title once. Re-entry with the cookie updates the same row. */
 export async function registerGuestIdentity(input: { eventId: string; role: SpecialGuestRole; name: string; company?: string; title?: string; existingGuestId?: string }) {
+  refusePreviewWrite(input.existingGuestId, "become a stored guest");
   const name = cleanGuestField(input.name);
   if (!name) throw new Error("Your name is required.");
   const store = getRuntimeStore();

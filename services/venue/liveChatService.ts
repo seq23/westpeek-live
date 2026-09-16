@@ -1,4 +1,5 @@
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
+import { refusePreviewWrite } from "@/lib/auth/previewIdentity";
 import { LIVE_CHAT_LOCKED_MESSAGE, LIVE_CHAT_SILENCED_MESSAGE, liveChatAttendeeModerationKey, liveChatRoomModerationKey, type LiveChatMessage, type LiveChatModerationState, type LiveChatPostRejection, type LiveChatRoomKind } from "@/types/liveChat";
 
 export type LiveChatViewer = "attendee" | "crew";
@@ -59,6 +60,8 @@ export type LiveChatPostResult = { ok: true; message: LiveChatMessage } | { ok: 
  * a locked room or past a silence.
  */
 export async function postLiveRoomChatMessage(input: { eventId: string; roomKind: LiveChatRoomKind; roomId: string; attendeeId: string; displayName: string; company?: string; message: string }): Promise<LiveChatPostResult> {
+  // A preview is never a voice in the room. Refused HERE so a hand-made POST cannot post either.
+  refusePreviewWrite(input.attendeeId, "post a chat message");
   const message = input.message.trim();
   if (!message) return { ok: false, rejection: "empty", reason: rejectionMessage("empty") };
   const [room, attendee] = await Promise.all([

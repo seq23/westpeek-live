@@ -1,4 +1,5 @@
 import { randomId } from "@/lib/security/portableCrypto";
+import { refusePreviewWrite } from "@/lib/auth/previewIdentity";
 import { selectNextSpeedNetworkingPair } from "@/services/speed-networking/speedNetworkingEngine";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
@@ -38,6 +39,8 @@ export async function setNetworkingSettings(eventId: string, input: { open: bool
 // ---- queue ---------------------------------------------------------------------------
 
 export async function joinNetworkingQueue(eventId: string, attendee: { attendeeId: string; displayName: string; company?: string; title?: string }) {
+  // Pairing is the loudest way a preview could reach a real person: they would be put in a room together.
+  refusePreviewWrite(attendee.attendeeId, "join the networking queue");
   const store = getRuntimeStore();
   const existing = await store.getSpeedNetworkingEntry(eventId, attendee.attendeeId);
   if (existing?.status === "matched" || existing?.status === "waiting") return existing;
