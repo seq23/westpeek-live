@@ -197,3 +197,82 @@ describe("speed networking tiers", () => {
     });
   });
 });
+
+/**
+ * The rotation (16 Sep 2026, the owner: "it should continually keep u in a 4 min cycle of talking
+ * to new people"). Finishing a match puts both people at the back of the queue; the person an odd
+ * round could not seat keeps their place and leads the next one.
+ *
+ * These fixtures give everyone the SAME join time on purpose: that is a roomful pressing Join the
+ * moment the crew opens networking, and it is the case where "goes to the back" and "nobody
+ * starves" pull against each other. With nothing to sort on, the priority flag alone leaves the
+ * same person out repeatedly — 3 of 7 rounds before the sit-out debt was tracked. With distinct
+ * join times the pre-existing rotation already held; the debt is what makes it hold either way.
+ */
+describe("the rotation over many rounds", () => {
+  /** One round: pair everybody it can, then requeue exactly the way the service does. */
+  function playRounds(people: number, rounds: number) {
+    let clock = NOW;
+    let queue = queueOf(people).map((candidate) => ({ ...candidate, joinedAt: waitedFor(people) }));
+    const history: SpeedNetworkingPairHistory[] = [];
+    const satOut: string[] = [];
+    const met = new Map<string, number>();
+    for (let round = 0; round < rounds; round += 1) {
+      const plan = planSpeedNetworkingRound({ eventId: EVENT, waiting: queue, pairHistory: history, nowMs: clock, random: fixedRandom([0.5, 0.2, 0.8]) });
+      for (const pair of plan.pairs) {
+        history.push(...historyFor([[pair.first.attendeeId, pair.second.attendeeId]]));
+        for (const id of [pair.first.attendeeId, pair.second.attendeeId]) met.set(id, (met.get(id) || 0) + 1);
+      }
+      satOut.push(plan.oddOneOut?.attendeeId ?? plan.unmatched.map((candidate) => candidate.attendeeId).join("+"));
+      // The match runs; everyone who was in one goes to the back, whoever sat out keeps their place.
+      clock += 4 * 60_000;
+      const paired = new Set(plan.pairs.flatMap((pair) => [pair.first.attendeeId, pair.second.attendeeId]));
+      const oddId = plan.oddOneOut?.attendeeId;
+      queue = queue.map((candidate) => ({
+        ...candidate,
+        joinedAt: paired.has(candidate.attendeeId) ? new Date(clock).toISOString() : candidate.joinedAt,
+        priority: candidate.attendeeId === oddId,
+        timesSatOut: (candidate.timesSatOut || 0) + (candidate.attendeeId === oddId ? 1 : 0),
+      }));
+    }
+    return { satOut, met };
+  }
+
+  /**
+   * Measured with these simultaneous-join fixtures once the sit-out debt leads the queue:
+   *   3 waiting, 3 rounds — sat out att-02, att-01, att-00; everyone matched twice.
+   *   5 waiting, 5 rounds — every person sits out exactly once; everyone matched four times.
+   *   7 waiting, 7 rounds — matched 6,6,6,5,6,5,6; nobody sits out twice running.
+   * Without the debt the 7-person case sits one person out 3 rounds of 7 (this test catches it).
+   */
+  for (const people of [3, 5, 7]) {
+    it(`rotates the person left over with ${people} waiting: never the same one twice running, and everyone gets matched`, () => {
+      // An odd-sized round robin takes n rounds for everyone to sit out exactly once.
+      const rounds = people;
+      const { satOut, met } = playRounds(people, rounds);
+      expect(satOut).toHaveLength(rounds);
+      for (let index = 1; index < satOut.length; index += 1) {
+        expect(satOut[index], `round ${index} sat out the same person as round ${index - 1}`).not.toBe(satOut[index - 1]);
+      }
+      // Nobody starves: over a full rotation every single person has been in a match.
+      expect(met.size).toBe(people);
+      const counts = Array.from(met.values());
+      expect(Math.min(...counts)).toBeGreaterThan(0);
+      // And the load is even to within one round — no one is matched far less than anyone else.
+      expect(Math.max(...counts) - Math.min(...counts)).toBeLessThanOrEqual(1);
+    });
+  }
+
+  it("keeps the wait-time weighting honest across a rotation: a long waiter outscores a fresh pairing", () => {
+    const justFinished = person("att-fresh", { joinedAt: waitedFor(0), topicsOfInterest: ["ai", "ml", "data"] });
+    const stillWaiting = person("att-patient", { joinedAt: waitedFor(12) });
+    const other = person("att-other", { joinedAt: waitedFor(11) });
+    expect(scoreSpeedNetworkingPair(stillWaiting, other, NOW).score).toBeGreaterThan(scoreSpeedNetworkingPair(justFinished, other, NOW).score);
+  });
+
+  it("keeps the cycle in the same named config as the tiers", () => {
+    expect(SPEED_NETWORKING_MATCHING_CONFIG.cycle).toMatchObject({ setupGapSeconds: 9, tokenLeadSeconds: 2, idlePollMs: 5_000, transitionPollMs: 1_000, transitionWindowSeconds: 15 });
+    expect(SPEED_NETWORKING_MATCHING_CONFIG.cycle.setupGapSeconds).toBeGreaterThanOrEqual(8);
+    expect(SPEED_NETWORKING_MATCHING_CONFIG.cycle.setupGapSeconds).toBeLessThanOrEqual(10);
+  });
+});

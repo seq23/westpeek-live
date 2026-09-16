@@ -1,9 +1,10 @@
 "use client";
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer, ControlBar, VideoTrack, isTrackReference, useLocalParticipant, useRemoteParticipants, useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import type { TrackReference } from "@livekit/components-core";
 import type { MyNetworkingState } from "@/services/speed-networking/speedNetworkingService";
+import { SPEED_NETWORKING_CYCLE } from "@/types/speedNetworking";
 
 type Snapshot = MyNetworkingState & { registered: boolean; attendeeId: string | null };
 
@@ -69,6 +70,86 @@ function PairStage({ partnerIdentity, partnerName }: { partnerIdentity: string; 
   );
 }
 
+/**
+ * A countdown that cannot drift. The server says how many seconds are left; the moment that answer
+ * arrives we turn it into a wall-clock deadline on THIS device and read the clock from then on, so
+ * a backgrounded tab or a sleeping phone comes back to the true remaining time instead of however
+ * many ticks a throttled interval managed to fire. Deriving the deadline from the server's own
+ * `expiresAt` instead would import the gap between the two clocks; this imports only the round trip.
+ */
+function useDeadlineCountdown(secondsFromServer: number, receivedKey: string) {
+  const deadline = useMemo(() => Date.now() + secondsFromServer * 1_000, [secondsFromServer, receivedKey]);
+  const [left, setLeft] = useState(() => Math.max(0, Math.round((deadline - Date.now()) / 1_000)));
+  useEffect(() => {
+    const read = () => setLeft(Math.max(0, Math.round((deadline - Date.now()) / 1_000)));
+    read();
+    const interval = window.setInterval(read, 500);
+    const onVisible = () => read();
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
+  }, [deadline]);
+  return left;
+}
+
+/** The local camera, with no LiveKit room behind it: the setup beat is a mirror, not a meeting. */
+function CameraPreview({ testId }: { testId: string }) {
+  const videoRef = useRef<HTMLVideoElement | null>(null);
+  const [denied, setDenied] = useState(false);
+  useEffect(() => {
+    let stream: MediaStream | undefined;
+    let cancelled = false;
+    navigator.mediaDevices?.getUserMedia({ video: true, audio: false })
+      .then((granted) => {
+        if (cancelled) { granted.getTracks().forEach((track) => track.stop()); return; }
+        stream = granted;
+        if (videoRef.current) videoRef.current.srcObject = granted;
+      })
+      .catch(() => { if (!cancelled) setDenied(true); });
+    return () => { cancelled = true; stream?.getTracks().forEach((track) => track.stop()); };
+  }, []);
+  return (
+    <div className="relative aspect-video max-h-[30vh] overflow-hidden rounded-2xl bg-slate-900" data-testid={testId} data-preview-state={denied ? "denied" : "live"}>
+      {denied ? (
+        <p className="flex h-full w-full items-center justify-center px-3 text-center text-xs font-black text-slate-200">Your camera is not available on this device. The match still works with audio.</p>
+      ) : (
+        <video ref={videoRef} autoPlay playsInline muted className="h-full w-full -scale-x-100 object-cover" />
+      )}
+      <p className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1 text-[11px] font-black text-white">You, before you are on</p>
+    </div>
+  );
+}
+
+/**
+ * The setup beat between two conversations. The pair is already decided, so this says what just
+ * happened, who is next, and shows the camera preview — the point of the gap is that nobody is
+ * dropped straight from one stranger's face onto the next.
+ */
+function SetupBeat({ eventId, match, justFinishedWith, startAction, leaveAction }: { eventId: string; match: NonNullable<Snapshot["match"]>; justFinishedWith?: string; startAction?: Action; leaveAction: Action }) {
+  const secondsUntilStart = useDeadlineCountdown(match.secondsUntilStart, match.id);
+  return (
+    <section className="rounded-3xl border border-slate-300 bg-white p-5" data-testid="networking-setup" data-match-id={match.id} data-seconds-until-start={secondsUntilStart}>
+      <div className="flex flex-wrap items-start justify-between gap-3">
+        <div>
+          {justFinishedWith ? <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500" data-testid="networking-just-finished">That is time with {justFinishedWith}</p> : null}
+          <p className="mt-1 text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Up next</p>
+          <h3 className="mt-1 text-2xl font-black text-slate-950" data-testid="networking-next-partner-name">{match.partner.name}</h3>
+          <p className="text-sm text-slate-600" data-testid="networking-next-partner-detail">{[match.partner.company, match.partner.title].filter(Boolean).join(" · ") || "Registered attendee"}</p>
+        </div>
+        <div className="rounded-2xl bg-brand-orange px-4 py-2 text-white" data-testid="networking-setup-countdown">
+          <p className="text-[10px] font-black uppercase tracking-wide">Starts in</p>
+          <p className="text-2xl font-black tabular-nums">{secondsUntilStart}</p>
+        </div>
+      </div>
+      <div className="mt-4"><CameraPreview testId="networking-camera-preview" /></div>
+      <div className="mt-4 flex flex-wrap gap-2">
+        {startAction ? <form action={startAction}><input type="hidden" name="eventId" value={eventId} /><button type="submit" className="min-h-12 rounded-full bg-slate-950 px-5 text-sm font-black text-white" data-testid="networking-start-now">Start now</button></form> : null}
+        <form action={leaveAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="reason" value="end" /><button type="submit" className="min-h-12 rounded-full border border-slate-300 px-5 text-sm font-black" data-testid="networking-end-setup">End networking</button></form>
+      </div>
+      <p className="mt-2 text-xs text-slate-500">A few seconds between matches to check your camera. When the count reaches zero you are live with {match.partner.name} for {Math.round((Date.parse(match.expiresAt) - Date.parse(match.startsAt)) / 60_000)} minutes, then straight on to the next person.</p>
+    </section>
+  );
+}
+
 function mmss(seconds: number) {
   const m = Math.floor(seconds / 60);
   const s = seconds % 60;
@@ -86,12 +167,7 @@ function MatchRoom({ eventId, match, nextAction, leaveAction }: { eventId: strin
   const [token, setToken] = useState<string | undefined>();
   const [serverUrl, setServerUrl] = useState<string | undefined>();
   const [error, setError] = useState<string | undefined>();
-  const [secondsLeft, setSecondsLeft] = useState(match.secondsLeft);
-  useEffect(() => { setSecondsLeft(match.secondsLeft); }, [match.id, match.secondsLeft]);
-  useEffect(() => {
-    const interval = window.setInterval(() => setSecondsLeft((value) => Math.max(0, value - 1)), 1_000);
-    return () => window.clearInterval(interval);
-  }, [match.id]);
+  const secondsLeft = useDeadlineCountdown(match.secondsLeft, `${match.id}:${match.secondsLeft}`);
   useEffect(() => {
     let cancelled = false;
     (async () => {
@@ -144,7 +220,7 @@ function MatchRoom({ eventId, match, nextAction, leaveAction }: { eventId: strin
  * (~5s); every poll runs the matcher server-side.
  */
 /** Join / Next / Leave / End are real server-action forms (they work before hydration and without JS); the poll keeps the state live. */
-export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, joinAction, nextAction, leaveAction, repeatAction }: { eventId: string; initial: Snapshot; serverJoinForm?: boolean; joinAction: Action; nextAction: Action; leaveAction: Action; repeatAction?: Action }) {
+export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, joinAction, nextAction, leaveAction, repeatAction, startAction }: { eventId: string; initial: Snapshot; serverJoinForm?: boolean; joinAction: Action; nextAction: Action; leaveAction: Action; repeatAction?: Action; startAction?: Action }) {
   const [snapshot, setSnapshot] = useState<Snapshot>(initial);
   // The server already rendered the Join queue form for this idle state; the client's own join appears once the state has moved.
   const [touched, setTouched] = useState(false);
@@ -159,13 +235,27 @@ export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, 
       if (json.ok) { setSnapshot(json); if (json.status !== initial.status) setTouched(true); }
     } catch { /* keep the last snapshot */ }
   }, [eventId, initial.status]);
+  /**
+   * The rotation only advances when somebody reads state — every read runs the matcher server-side,
+   * which is what expires a finished match and pairs the next one. So the poll IS the clock, and it
+   * changes pace: a second near a transition, five when nothing is about to happen. The obvious
+   * alternative, the combined /api/venue/tick, is owner and operator only and answers an attendee
+   * 403, so it cannot carry this.
+   *
+   * A backgrounded tab has its timers throttled to about once a minute by the browser whatever we
+   * ask for, so coming back to the page refreshes immediately rather than waiting for the next tick.
+   */
+  const aboutToChange = snapshot.status === "setup" || (snapshot.status === "matched" && (snapshot.match?.secondsLeft ?? Infinity) <= SPEED_NETWORKING_CYCLE.transitionWindowSeconds);
+  const pollMs = aboutToChange ? SPEED_NETWORKING_CYCLE.transitionPollMs : SPEED_NETWORKING_CYCLE.idlePollMs;
   useEffect(() => {
-    const interval = window.setInterval(refresh, 5_000);
-    return () => window.clearInterval(interval);
-  }, [refresh]);
+    const interval = window.setInterval(refresh, pollMs);
+    const onVisible = () => { if (document.visibilityState === "visible") refresh(); };
+    document.addEventListener("visibilitychange", onVisible);
+    return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
+  }, [refresh, pollMs]);
   const registerHref = `/events/${eventId}/register?reason=networking`;
   return (
-    <div className="space-y-4" data-testid="networking-live" data-networking-status={snapshot.registered ? snapshot.status : "unregistered"} data-queue-size={snapshot.queueSize}>
+    <div className="space-y-4" data-testid="networking-live" data-networking-status={snapshot.registered ? snapshot.status : "unregistered"} data-queue-size={snapshot.queueSize} data-poll-ms={pollMs} data-setup-gap={snapshot.setupGapSeconds}>
       {!snapshot.registered ? (
         <section className="rounded-3xl bg-white p-6" data-testid="networking-registration-required">
           <p className="text-sm font-black text-slate-950">Register once to meet other attendees.</p>
@@ -174,6 +264,8 @@ export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, 
         </section>
       ) : snapshot.status === "closed" ? (
         <section className="rounded-3xl bg-white p-6" data-testid="networking-closed"><p className="text-sm font-black text-slate-950">The crew has closed networking for now.</p><p className="mt-1 text-sm text-slate-600">Come back when they open it; this page updates on its own.</p></section>
+      ) : snapshot.status === "setup" && snapshot.match ? (
+        <SetupBeat key={`setup-${snapshot.match.id}`} eventId={eventId} match={snapshot.match} justFinishedWith={snapshot.justFinishedWith} startAction={startAction} leaveAction={leaveAction} />
       ) : snapshot.status === "matched" && snapshot.match ? (
         <MatchRoom key={snapshot.match.id} eventId={eventId} match={snapshot.match} nextAction={nextAction} leaveAction={leaveAction} />
       ) : snapshot.status === "waiting" ? (

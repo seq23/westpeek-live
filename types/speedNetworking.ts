@@ -45,6 +45,30 @@ export interface SpeedNetworkingSettings {
 
 export const SPEED_NETWORKING_DEFAULT_MINUTES = 4;
 
+/**
+ * The rotation (16 Sep 2026, the owner: "it should continually keep u in a 4 min cycle of talking
+ * to new people with a small lag between to set up"). When a match runs out both people are put
+ * straight back in the queue and paired again — but the next match does not start on the same
+ * beat: it is created with a `startsAt` a few seconds out, and that gap is the setup beat. During
+ * it each person sees who they just finished with, who is coming, and their own camera preview.
+ *
+ * Here rather than in the matching config because a client component reads it, and the matching
+ * config reaches the pure engine and through it the server-only video services. It is re-exported
+ * as SPEED_NETWORKING_MATCHING_CONFIG.cycle so there is still one object to read.
+ */
+export const SPEED_NETWORKING_CYCLE = {
+  /** The beat between one match ending and the next starting. */
+  setupGapSeconds: 9,
+  /** A token is issued this long before the bell, so the connection is up when the match starts. */
+  tokenLeadSeconds: 2,
+  /** How often the attendee's own state is polled while nothing is about to change. */
+  idlePollMs: 5_000,
+  /** ...and inside the last seconds of a match, or during the gap, where a second matters. */
+  transitionPollMs: 1_000,
+  /** The tail of a match that counts as a transition. */
+  transitionWindowSeconds: 15,
+} as const;
+
 export function speedNetworkingRoomName(eventId: string, matchId: string) {
   return `${eventId}-net-${matchId}`.replace(/[^a-zA-Z0-9_-]+/g, "-").toLowerCase();
 }

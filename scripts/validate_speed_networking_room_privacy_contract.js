@@ -134,6 +134,33 @@ check("lib/actions/networkingActions.ts", ["export async function allowRepeatSpe
 check("components/venue/SpeedNetworkingQueuePanel.tsx", ["allowRepeatSpeedNetworkingMatchAction", "repeatAction="]);
 check("components/venue/SpeedNetworkingLive.tsx", ["networking-next-up", "networking-met-everyone", "networking-allow-repeat"]);
 
+// 7b. The 4-minute rotation and its setup beat: the gap is a real server-side state, the token is
+//     held until the bell, "Start now" never shortens the match, and the countdown cannot drift.
+check("types/speedNetworking.ts", [
+  "export const SPEED_NETWORKING_CYCLE",
+  "setupGapSeconds: 9",
+  "tokenLeadSeconds: 2",
+  "transitionPollMs: 1_000",
+]);
+check("services/speed-networking/speedNetworkingTiers.ts", ["cycle: SPEED_NETWORKING_CYCLE", "timesSatOut", "(b.timesSatOut || 0) - (a.timesSatOut || 0)"]);
+check("services/speed-networking/speedNetworkingService.ts", [
+  "const startsAt = new Date(nowMs + SPEED_NETWORKING_CYCLE.setupGapSeconds * 1_000);",
+  "export function matchIsInSetup",
+  "SPEED_NETWORKING_CYCLE.tokenLeadSeconds",
+  "export async function startNetworkingMatchNow",
+  "satOutCounts",
+]);
+const live = read("components/venue/SpeedNetworkingLive.tsx");
+for (const token of ["function useDeadlineCountdown", "function CameraPreview", "function SetupBeat", "networking-setup-countdown", "networking-next-partner-name", "networking-camera-preview", "networking-start-now", "SPEED_NETWORKING_CYCLE.transitionPollMs", "visibilitychange"]) {
+  if (live && !live.includes(token)) failures.push(`components/venue/SpeedNetworkingLive.tsx missing: ${token}`);
+}
+// A countdown that decrements a client-side interval drifts whenever the tab is throttled.
+if (live && /setSecondsLeft\(\(value\) => Math\.max\(0, value - 1\)\)/.test(live)) {
+  failures.push("components/venue/SpeedNetworkingLive.tsx: the match countdown must be read from a deadline, not decremented by an interval.");
+}
+check("lib/actions/networkingActions.ts", ["export async function startSpeedNetworkingMatchNowAction"]);
+check("app/api/networking/mine/route.ts", ['action === "start"']);
+
 // 8. An ended event has no queue and no live markers. The queue closing server-side is the real
 //    rule; the nav marker is only how it shows, so both are asserted.
 check("services/speed-networking/speedNetworkingService.ts", [
@@ -173,11 +200,22 @@ check("tests/unit/speedNetworkingTiers.test.ts", [
   "names the odd person out so they can be told they are next",
   "says who has met everyone instead of leaving them waiting",
   "pairs the whole queue in one deterministic batch",
+  "for (const people of [3, 5, 7])",
+  "rotates the person left over with ${people} waiting",
+  "never the same one twice running",
+  "keeps the cycle in the same named config as the tiers",
+]);
+check("tests/unit/speedNetworkingReal.test.ts", [
+  "opens a new match one setup beat after it is decided",
+  "releases the token just before the bell",
+  "Start now skips the rest of the beat without shortening the match or adding another gap",
+  "rolls straight into the next person when the timer runs out",
+  "rotates who sits out through the real matcher, not just in the planner",
 ]);
 check("docs/manual-notes/speed-networking-fix.md", ["max_participants", "ListParticipants", "privacy"]);
 
 // Rule 0: a validator that examined nothing has not validated anything.
-if (examined < 14) failures.push(`validate_speed_networking_room_privacy_contract examined only ${examined} files; it must read every file it governs.`);
+if (examined < 18) failures.push(`validate_speed_networking_room_privacy_contract examined only ${examined} files; it must read every file it governs.`);
 
 if (failures.length) {
   console.error("validate_speed_networking_room_privacy_contract: FAIL");

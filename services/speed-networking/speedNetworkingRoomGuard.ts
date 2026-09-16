@@ -1,4 +1,4 @@
-import { tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
+import { matchIsInSetup, tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
 import { ensureLiveKitRoomWithCapacity, listLiveKitRoomParticipants, removeLiveKitRoomParticipant, type LiveKitRoomParticipant } from "@/services/video/livekitRoomAdmin";
 import type { SpeedNetworkingMatchRecord } from "@/types/speedNetworking";
 
@@ -55,6 +55,7 @@ export interface SpeedNetworkingAdmission {
 
 const NOT_YOURS = "This networking room is not yours: tokens go only to the two matched attendees while the match is active.";
 const ATTENDEES_ONLY = "A speed networking room is a private 1:1 between two registered attendees; no other role can be given a token for it.";
+const NOT_OPEN_YET = "Your next match has not started yet. The room opens when the countdown reaches zero.";
 
 function isPresent(participant: LiveKitRoomParticipant) {
   return participant.state !== "DISCONNECTED";
@@ -74,7 +75,12 @@ export function decideSpeedNetworkingRoomAdmission(input: {
 }): SpeedNetworkingAdmission {
   const empty = { allowedIdentities: [] as string[], strangers: [] as string[], staleSelf: [] as string[] };
   if (input.role !== "attendee") return { ok: false, reason: ATTENDEES_ONLY, ...empty };
-  if (!tokenAllowedForRoom(input.match, input.roomName, input.attendeeId)) return { ok: false, reason: NOT_YOURS, ...empty };
+  if (!tokenAllowedForRoom(input.match, input.roomName, input.attendeeId)) {
+    // A match decided but still inside its setup beat is refused too, with a reason that says so —
+    // the client shows the countdown rather than "this room is not yours".
+    const waitingForTheBell = input.match && matchIsInSetup(input.match) && (input.match.attendeeAId === input.attendeeId || input.match.attendeeBId === input.attendeeId);
+    return { ok: false, reason: waitingForTheBell ? NOT_OPEN_YET : NOT_YOURS, ...empty };
+  }
 
   const match = input.match!;
   const allowedIdentities = speedNetworkingRoomIdentities(match);

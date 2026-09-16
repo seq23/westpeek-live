@@ -1,13 +1,12 @@
 import { randomId } from "@/lib/security/portableCrypto";
 import { refusePreviewWrite } from "@/lib/auth/previewIdentity";
-import { selectNextSpeedNetworkingPair } from "@/services/speed-networking/speedNetworkingEngine";
 import { planSpeedNetworkingRound, selectSpeedNetworkingTier, type SpeedNetworkingCandidate, type SpeedNetworkingTier } from "@/services/speed-networking/speedNetworkingTiers";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { deleteLiveKitRoom } from "@/services/video/livekitRoomAdmin";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
 import type { SpeedNetworkingPairHistory } from "@/types/speedNetworkingEngine";
-import { SPEED_NETWORKING_DEFAULT_MINUTES, speedNetworkingRoomName, type SpeedNetworkingMatchRecord, type SpeedNetworkingQueueEntry, type SpeedNetworkingSettings } from "@/types/speedNetworking";
+import { SPEED_NETWORKING_CYCLE, SPEED_NETWORKING_DEFAULT_MINUTES, speedNetworkingRoomName, type SpeedNetworkingMatchRecord, type SpeedNetworkingQueueEntry, type SpeedNetworkingSettings } from "@/types/speedNetworking";
 
 /**
  * Real speed networking. A queue per event; a matcher that runs on every read and pairs the two
@@ -58,19 +57,30 @@ export async function setNetworkingSettings(eventId: string, input: { open: bool
  */
 export interface SpeedNetworkingRoundState {
   priorityAttendeeIds: string[];
+  /**
+   * How many rounds each attendee has been the odd one out. Sit-outs are mostly rotated by
+   * "you are next" plus the requeue putting the pair at the back — but only while the queue has
+   * distinct join times to sort on. When a roomful joins together (the crew opens networking and
+   * everyone presses Join) every joinedAt is effectively identical, the sort falls back to a
+   * stable tie-break, and the same person is left out over and over: measured 3 sit-outs in 7
+   * rounds with 7 people who joined at the same instant. The debt makes the rotation independent
+   * of the tie-break — most sat out lead the queue until the count is level.
+   */
+  satOutCounts: Record<string, number>;
   metEveryoneAttendeeIds: string[];
   repeatOptInAttendeeIds: string[];
   lastTier: SpeedNetworkingTier;
   lastRoundAt: string;
 }
 
-const EMPTY_ROUND_STATE: SpeedNetworkingRoundState = { priorityAttendeeIds: [], metEveryoneAttendeeIds: [], repeatOptInAttendeeIds: [], lastTier: "fifo", lastRoundAt: "" };
+const EMPTY_ROUND_STATE: SpeedNetworkingRoundState = { priorityAttendeeIds: [], satOutCounts: {}, metEveryoneAttendeeIds: [], repeatOptInAttendeeIds: [], lastTier: "fifo", lastRoundAt: "" };
 
 export async function getNetworkingRoundState(eventId: string): Promise<SpeedNetworkingRoundState> {
   const record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "networking_round_state")).catch(() => undefined);
   const state = record?.state as Partial<SpeedNetworkingRoundState> | undefined;
   return {
     priorityAttendeeIds: state?.priorityAttendeeIds || [],
+    satOutCounts: state?.satOutCounts || {},
     metEveryoneAttendeeIds: state?.metEveryoneAttendeeIds || [],
     repeatOptInAttendeeIds: state?.repeatOptInAttendeeIds || [],
     lastTier: state?.lastTier || EMPTY_ROUND_STATE.lastTier,
@@ -170,7 +180,7 @@ export async function endMatch(eventId: string, matchId: string, reason: string,
  * profile says about what they came for. Profiles are read at match time rather than copied onto
  * the queue row, so an attendee who fills in their topics mid-event is scored on the new answer.
  */
-async function buildRoundCandidates(eventId: string, entries: SpeedNetworkingQueueEntry[], priorityAttendeeIds: string[]): Promise<SpeedNetworkingCandidate[]> {
+async function buildRoundCandidates(eventId: string, entries: SpeedNetworkingQueueEntry[], roundState: SpeedNetworkingRoundState): Promise<SpeedNetworkingCandidate[]> {
   const waiting = entries.filter((entry) => entry.status === "waiting");
   if (!waiting.length) return [];
   const profiles = await getRuntimeStore().listAttendeeProfiles(eventId).catch(() => []);
@@ -185,7 +195,8 @@ async function buildRoundCandidates(eventId: string, entries: SpeedNetworkingQue
       topicsOfInterest: profile?.topicsOfInterest || [],
       networkingGoals: profile?.networkingGoals,
       joinedAt: entry.joinedAt,
-      priority: priorityAttendeeIds.includes(entry.attendeeId),
+      priority: roundState.priorityAttendeeIds.includes(entry.attendeeId),
+      timesSatOut: roundState.satOutCounts[entry.attendeeId] || 0,
     };
   });
 }
@@ -211,13 +222,15 @@ export async function runNetworkingMatcher(eventId: string, options: { random?: 
   if (!settings.open) return { created: [] as SpeedNetworkingMatchRecord[], settings, roundState };
   const history = (await store.listSpeedNetworkingMatches(eventId)).map(toPairHistory);
   const entries = await store.listSpeedNetworkingEntries(eventId);
-  const candidates = await buildRoundCandidates(eventId, entries, roundState.priorityAttendeeIds);
+  const candidates = await buildRoundCandidates(eventId, entries, roundState);
   const plan = planSpeedNetworkingRound({ eventId, waiting: candidates, pairHistory: history, repeatOptIn: roundState.repeatOptInAttendeeIds, nowMs, random: options.random });
 
   const created: SpeedNetworkingMatchRecord[] = [];
   for (const pair of plan.pairs) {
     const matchId = randomId("match");
-    const startsAt = new Date();
+    // The setup beat: the pair is decided now, but the match starts a few seconds out so both
+    // people get a moment between strangers instead of one face cutting to the next.
+    const startsAt = new Date(nowMs + SPEED_NETWORKING_CYCLE.setupGapSeconds * 1_000);
     const match: SpeedNetworkingMatchRecord = {
       id: matchId,
       eventId,
@@ -239,8 +252,18 @@ export async function runNetworkingMatcher(eventId: string, options: { random?: 
 
   // The odd one out leads the next round, and a repeat opt-in is spent once it has been honoured.
   const stillNeedsARepeat = roundState.repeatOptInAttendeeIds.filter((attendeeId) => !created.some((match) => match.attendeeAId === attendeeId || match.attendeeBId === attendeeId));
+  // The sit-out debt only grows for the person a round could not seat, and only when there WAS a
+  // round: an empty queue must not quietly hand somebody a permanent place at the front.
+  const satOutCounts = { ...roundState.satOutCounts };
+  if (plan.oddOneOut) satOutCounts[plan.oddOneOut.attendeeId] = (satOutCounts[plan.oddOneOut.attendeeId] || 0) + 1;
+  for (const match of created) {
+    // Paired at last: the debt is paid, so they take their ordinary place at the back of the queue.
+    delete satOutCounts[match.attendeeAId];
+    delete satOutCounts[match.attendeeBId];
+  }
   const nextRoundState: SpeedNetworkingRoundState = {
     priorityAttendeeIds: plan.oddOneOut ? [plan.oddOneOut.attendeeId] : [],
+    satOutCounts,
     metEveryoneAttendeeIds: plan.metEveryone.map((candidate) => candidate.attendeeId),
     repeatOptInAttendeeIds: stillNeedsARepeat,
     lastTier: plan.tier,
@@ -253,7 +276,8 @@ export async function runNetworkingMatcher(eventId: string, options: { random?: 
 // ---- what one attendee sees ------------------------------------------------------------
 
 export interface MyNetworkingState {
-  status: "idle" | "waiting" | "matched" | "closed";
+  /** "setup" is the beat between two matches: the next partner is known, the room is not open yet. */
+  status: "idle" | "waiting" | "setup" | "matched" | "closed";
   queueSize: number;
   matchesInProgress: number;
   matchMinutes: number;
@@ -266,7 +290,11 @@ export interface MyNetworkingState {
   metEveryone: boolean;
   /** They have asked to be paired with someone they already met. */
   repeatRequested: boolean;
-  match?: { id: string; roomName: string; partner: { attendeeId: string; name: string; company: string; title: string }; startsAt: string; expiresAt: string; secondsLeft: number };
+  match?: { id: string; roomName: string; partner: { attendeeId: string; name: string; company: string; title: string }; startsAt: string; expiresAt: string; secondsLeft: number; secondsUntilStart: number };
+  /** Who the last match was with, so the beat can say what just happened as well as what is next. */
+  justFinishedWith?: string;
+  /** The setup beat in seconds, so the client counts down the same gap the server applied. */
+  setupGapSeconds: number;
 }
 
 export async function getMyNetworkingState(eventId: string, attendeeId: string | undefined): Promise<MyNetworkingState> {
@@ -284,6 +312,7 @@ export async function getMyNetworkingState(eventId: string, attendeeId: string |
     nextUp: Boolean(attendeeId && roundState.priorityAttendeeIds.includes(attendeeId)),
     metEveryone: Boolean(attendeeId && roundState.metEveryoneAttendeeIds.includes(attendeeId)),
     repeatRequested: Boolean(attendeeId && roundState.repeatOptInAttendeeIds.includes(attendeeId)),
+    setupGapSeconds: SPEED_NETWORKING_CYCLE.setupGapSeconds,
   };
   if (!attendeeId) return { status: settings.open ? "idle" : "closed", ...base };
   const mine = entries.find((entry) => entry.attendeeId === attendeeId);
@@ -293,10 +322,52 @@ export async function getMyNetworkingState(eventId: string, attendeeId: string |
     if (match && match.status === "active") {
       const partnerId = match.attendeeAId === attendeeId ? match.attendeeBId : match.attendeeAId;
       const partner = entries.find((entry) => entry.attendeeId === partnerId);
-      return { status: "matched", ...base, match: { id: match.id, roomName: match.roomName, partner: { attendeeId: partnerId, name: partner?.displayName || "Your match", company: partner?.company || "", title: partner?.title || "" }, startsAt: match.startsAt, expiresAt: match.expiresAt, secondsLeft: Math.max(0, Math.round((new Date(match.expiresAt).getTime() - Date.now()) / 1000)) } };
+      const nowMs = Date.now();
+      const inSetup = matchIsInSetup(match, nowMs);
+      return {
+        status: inSetup ? "setup" : "matched",
+        ...base,
+        justFinishedWith: inSetup ? await lastPartnerName(eventId, attendeeId, match.id, entries) : undefined,
+        match: {
+          id: match.id,
+          roomName: match.roomName,
+          partner: { attendeeId: partnerId, name: partner?.displayName || "Your match", company: partner?.company || "", title: partner?.title || "" },
+          startsAt: match.startsAt,
+          expiresAt: match.expiresAt,
+          secondsLeft: Math.max(0, Math.round((new Date(match.expiresAt).getTime() - nowMs) / 1000)),
+          secondsUntilStart: Math.max(0, Math.round((new Date(match.startsAt).getTime() - nowMs) / 1000)),
+        },
+      };
     }
   }
   return { status: settings.open ? "waiting" : "closed", ...base };
+}
+
+/** The other person in this attendee's most recently finished match, for the setup beat's "that was". */
+async function lastPartnerName(eventId: string, attendeeId: string, excludeMatchId: string, entries: SpeedNetworkingQueueEntry[]) {
+  const previous = (await getRuntimeStore().listSpeedNetworkingMatches(eventId))
+    .filter((match) => match.id !== excludeMatchId && match.endedAt && (match.attendeeAId === attendeeId || match.attendeeBId === attendeeId))
+    .sort((a, b) => String(b.endedAt).localeCompare(String(a.endedAt)))[0];
+  if (!previous) return undefined;
+  const otherId = previous.attendeeAId === attendeeId ? previous.attendeeBId : previous.attendeeAId;
+  return entries.find((entry) => entry.attendeeId === otherId)?.displayName;
+}
+
+/**
+ * "Start now": skip the rest of the setup beat. The match opens immediately and still runs its
+ * full length — skipping the gap must never cost the conversation the time it was promised, and
+ * must never add another gap.
+ */
+export async function startNetworkingMatchNow(eventId: string, attendeeId: string) {
+  const store = getRuntimeStore();
+  const entry = await store.getSpeedNetworkingEntry(eventId, attendeeId);
+  const match = entry?.matchId ? await store.getSpeedNetworkingMatch(eventId, entry.matchId) : undefined;
+  if (match && matchIsInSetup(match)) {
+    const settings = await getNetworkingSettings(eventId);
+    const startsAt = new Date();
+    await store.upsertSpeedNetworkingMatch({ ...match, startsAt: startsAt.toISOString(), expiresAt: new Date(startsAt.getTime() + settings.matchMinutes * 60_000).toISOString() });
+  }
+  return getMyNetworkingState(eventId, attendeeId);
 }
 
 /** "Next match": end the current one (both back to waiting) and keep this attendee waiting. */
@@ -306,12 +377,23 @@ export async function nextNetworkingMatch(eventId: string, attendeeId: string) {
   return getMyNetworkingState(eventId, attendeeId);
 }
 
-/** Pure: a token for a networking room goes only to one of the two attendees of that ACTIVE match. */
-export function tokenAllowedForRoom(match: SpeedNetworkingMatchRecord | undefined, roomName: string, attendeeId: string) {
+/**
+ * Pure: a token for a networking room goes only to one of the two attendees of that ACTIVE match,
+ * and only once the match is about to start. A match created during the setup beat is real but not
+ * yet open — the token is released tokenLeadSeconds early so the connection is up on the bell, and
+ * refused before that, which is what keeps the beat a beat rather than an early meeting.
+ */
+export function tokenAllowedForRoom(match: SpeedNetworkingMatchRecord | undefined, roomName: string, attendeeId: string, nowMs = Date.now()) {
   if (!match || match.status !== "active") return false;
   if (match.roomName !== roomName) return false;
-  if (new Date(match.expiresAt).getTime() <= Date.now()) return false;
+  if (new Date(match.expiresAt).getTime() <= nowMs) return false;
+  if (new Date(match.startsAt).getTime() - SPEED_NETWORKING_CYCLE.tokenLeadSeconds * 1_000 > nowMs) return false;
   return match.attendeeAId === attendeeId || match.attendeeBId === attendeeId;
+}
+
+/** True while a decided match has not opened yet: the setup beat between two conversations. */
+export function matchIsInSetup(match: SpeedNetworkingMatchRecord, nowMs = Date.now()) {
+  return match.status === "active" && new Date(match.startsAt).getTime() > nowMs;
 }
 
 export async function findActiveMatchForRoom(eventId: string, roomName: string) {
@@ -350,6 +432,6 @@ export async function closeNetworkingForEndedEvent(eventId: string, closedBy = "
   }
   const cleared = inQueue.length;
   await setNetworkingSettings(eventId, { open: false, matchMinutes: (await getNetworkingSettings(eventId)).matchMinutes }, closedBy);
-  await setNetworkingRoundState(eventId, { priorityAttendeeIds: [], metEveryoneAttendeeIds: [], repeatOptInAttendeeIds: [], lastTier: "fifo", lastRoundAt: now() });
+  await setNetworkingRoundState(eventId, { ...EMPTY_ROUND_STATE, lastRoundAt: now() });
   return { cleared, matchesEnded };
 }
