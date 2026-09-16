@@ -47,6 +47,8 @@ export interface RuntimeEventRecord {
   registrationEnabled: boolean;
   /** The event's own "Tell us more" questions; undefined = the default four. */
   registrationQuestions?: RegistrationQuestion[];
+  /** How many days an attendee session lasts on one browser for this event; undefined = the platform default. */
+  attendeeSessionDays?: number;
   branding: RuntimeEventBranding;
   sessions: RuntimeEventSession[];
   source: RuntimeEventSource;

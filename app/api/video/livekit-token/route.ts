@@ -3,7 +3,7 @@ import { NextResponse } from "next/server";
 import { buildResilientVideoJoinResult } from "@/services/video/livekitRoomUiService";
 import { canAttendeeJoinLive, canAttendeePublishLive } from "@/services/venue/attendeeLivePermissionService";
 import { authorizeVideoTokenRequest } from "@/lib/auth/videoTokenRequestGuard";
-import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
+import { currentAttendeeMayHoldPrivilege, getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
 import type { LiveKitJoinRequest } from "@/types/livekitRoomUi";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
 import { getSpeakerStageState } from "@/services/guests/guestStateService";
@@ -57,7 +57,13 @@ export async function POST(request: Request) {
     const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
     const joinPermission = await canAttendeeJoinLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
     if (!joinPermission.canJoin) return NextResponse.json({ ok: false, error: joinPermission.reason, accessStatus: joinPermission.status }, { status: 403 });
-    publishPermission = await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
+    // No privileged state crosses an unverified email: a session restored on a second device from
+    // the address alone may watch and chat, and is issued a watch-only token until the crew approves
+    // it here, or the person registers on this device.
+    const mayHoldPrivilege = await currentAttendeeMayHoldPrivilege(body.eventId);
+    publishPermission = mayHoldPrivilege
+      ? await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId })
+      : { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "You are back on a new device from your email alone. Camera and microphone stay off until the crew approves you here." };
     }
   }
 
