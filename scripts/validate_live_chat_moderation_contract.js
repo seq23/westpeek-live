@@ -67,7 +67,9 @@ forbidTokens("lib/actions/liveChatActions.ts", ["appendLiveRoomChatMessage("]);
 // 5. Attendee chat renders the notices; the queue is on every crew surface.
 requireTokens("components/venue/LiveRoomChat.tsx", ["chat-silenced-notice", "chat-locked-notice", "chat-hidden-tag", "LIVE_CHAT_SILENCED_MESSAGE", "LIVE_CHAT_LOCKED_MESSAGE", 'viewer = crewAuth.ok ? "crew" : "attendee"']);
 requireTokens("components/moderation/ChatModerationQueue.tsx", ["chat-moderation-queue", "moderateLiveChatMessage", "silenceLiveChatAttendee", "lockLiveChatRoom", "Hidden by"]);
-for (const surface of ["components/testing/TestingConsole.tsx", "components/production/ProductionCommandCenter.tsx"]) requireTokens(surface, ["<ChatModerationQueue eventId="]);
+requireTokens("components/testing/TestingConsole.tsx", ["<ChatModerationQueue eventId="]);
+requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["<ChatModerationQueue eventId=", "<AttendeeLiveRoster eventId="]);
+for (const surface of ["components/production/ProductionCommandCenter.tsx", "app/crew/events/[eventId]/page.tsx"]) requireTokens(surface, ["<CrewLiveModerationDeck eventId="]);
 forbidTokens("components/production/ProductionCommandCenter.tsx", ["Moderation queue for room and attendee activity."]);
 
 // 6. Proof exists.
