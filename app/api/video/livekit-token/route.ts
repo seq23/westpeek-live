@@ -56,19 +56,11 @@ export async function POST(request: Request) {
       profileId = undefined;
       publishPermission = { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "Watching only. Register to take part." };
     } else {
-    const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
-    const joinPermission = await canAttendeeJoinLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
-    if (!joinPermission.canJoin) return NextResponse.json({ ok: false, error: joinPermission.reason, accessStatus: joinPermission.status }, { status: 403 });
-    // No privileged state crosses an unverified email: a session restored on a second device from
-    // the address alone may watch and chat, and is issued a watch-only token until the crew approves
-    // it here, or the person registers on this device.
-    const mayHoldPrivilege = await currentAttendeeMayHoldPrivilege(body.eventId);
-    publishPermission = mayHoldPrivilege
-      ? await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId })
-      : { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "You are back on a new device from your email alone. Camera and microphone stay off until the crew approves you here." };
       displayName = identity.displayName;
       profileId = identity.attendeeId;
-      // A speed-networking room: only the two attendees of THAT active match, camera and mic on (both opted in).
+      // A speed-networking room: only the two attendees of THAT active match, camera and mic on.
+      // Both people queued from the device in front of them, so this grant is not held back by the
+      // restored-session guard below.
       if (body.roomType === "speed_networking") {
         const match = await findActiveMatchForRoom(body.eventId, body.roomId).catch(() => undefined);
         if (!tokenAllowedForRoom(match, body.roomId, identity.attendeeId)) return NextResponse.json({ ok: false, error: "This networking room is not yours: tokens go only to the two matched attendees while the match is active." }, { status: 403 });
@@ -77,7 +69,13 @@ export async function POST(request: Request) {
         const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
         const joinPermission = await canAttendeeJoinLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
         if (!joinPermission.canJoin) return NextResponse.json({ ok: false, error: joinPermission.reason, accessStatus: joinPermission.status }, { status: 403 });
-        publishPermission = await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
+        // No privileged state crosses an unverified email: a session restored on a second device from
+        // the address alone may watch and chat, and is issued a watch-only token until the crew
+        // approves it here, or the person registers on this device.
+        const mayHoldPrivilege = await currentAttendeeMayHoldPrivilege(body.eventId);
+        publishPermission = mayHoldPrivilege
+          ? await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId })
+          : { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "You are back on a new device from your email alone. Camera and microphone stay off until the crew approves you here." };
       }
     }
   }

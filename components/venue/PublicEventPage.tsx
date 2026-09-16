@@ -104,21 +104,11 @@ export async function EventRegistration({ slug, prefillEmail = "", waitSeconds }
     );
   }
 
-  // Fail soft: the lifetime is a sentence, the form is the product. A store hiccup reading the
-  // event's own setting falls back to the platform default rather than taking registration down.
-  let sessionDays = DEFAULT_ATTENDEE_SESSION_DAYS;
-  try {
-    sessionDays = await attendeeSessionDaysFor(config.event.id);
-  } catch {
-    sessionDays = DEFAULT_ATTENDEE_SESSION_DAYS;
-  }
-
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto mb-4 max-w-2xl">
         <ReturningAttendeeForm eventId={config.event.id} slug={config.event.slug} defaultEmail={prefillEmail} waitSeconds={waitSeconds} heading="Already registered for this event?" help="Enter the email you used and this device picks your registration up. Nothing else to fill in." />
       </div>
-      <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
       <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6">
         <input type="hidden" name="eventId" value={config.event.id} />
         <input type="hidden" name="slug" value={config.event.slug} />
@@ -136,10 +126,9 @@ export async function EventRegistration({ slug, prefillEmail = "", waitSeconds }
           ].map(([field, label, type, required, placeholder, defaultValue]) => (
             <div key={String(field)}>
               <label htmlFor={String(field)} className="text-sm font-medium text-slate-700">{label}{required ? <span className="ml-1 font-black text-brand-orange" aria-hidden="true">*</span> : null}</label>
-              <input id={String(field)} name={String(field)} required={Boolean(required)} aria-required={Boolean(required)} type={String(type)} placeholder={String(placeholder)} defaultValue={defaultValue ? String(defaultValue) : undefined} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
+              <input id={String(field)} name={String(field)} required={Boolean(required)} aria-required={Boolean(required)} type={String(type)} placeholder={String(placeholder)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
             </div>
           ))}
-          <p className="text-xs text-slate-500" data-testid="registration-lifetime-note">{registeredForWords(sessionDays)} Leave and come back on this device and you are still in. On another device, open the same link and enter this email.</p>
           <button type="submit" className="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white">Submit registration</button>
         </div>
       </form>
