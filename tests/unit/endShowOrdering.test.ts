@@ -107,6 +107,8 @@ describe("End the show vs dropped feed", () => {
     expect(state.streamStatus).toBe("ENDED");
     expect(state.activeStreamSource).toBe("LIVEKIT_INGRESS");
     expect(state.lastHealthCheckAt).toBeTruthy();
+    // A polled ingress_ended must not be labelled as a webhook, or the console can never say "polling is carrying the state".
+    expect(state.lastWebhookEvent).toBeUndefined();
   });
 
   it("the polled reconcile still fails a live event over to Daily when the feed really drops", async () => {
