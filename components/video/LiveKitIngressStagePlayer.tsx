@@ -29,11 +29,13 @@ function IngressTrackView() {
       {feed.length ? (
         <div className="wpl-production-feed rounded-2xl bg-black" data-testid="production-feed-tile">
           <style>{`.wpl-production-feed .lk-participant-metadata, .wpl-production-feed .lk-participant-placeholder { display: none !important; }`}</style>
-          <GridLayout tracks={feed} className="min-h-[420px] rounded-2xl"><ParticipantTile /></GridLayout>
+          {/* 16:9, not a fixed 420px. On a 414px phone a fixed height left roughly 200px of dead
+              black under a small picture and the stage read as broken (the owner, 16 Sep 2026). */}
+          <GridLayout tracks={feed} className="aspect-video rounded-2xl"><ParticipantTile /></GridLayout>
         </div>
       ) : null}
-      {people.length ? <GridLayout tracks={people} className={`${feed.length ? "min-h-[180px]" : "min-h-[420px]"} rounded-2xl bg-slate-950/70 p-3`}><ParticipantTile /></GridLayout> : null}
-      {!feed.length && !people.length ? <div className="min-h-[420px] rounded-2xl bg-slate-950/70" /> : null}
+      {people.length ? <GridLayout tracks={people} className={`${feed.length ? "min-h-[9rem]" : "aspect-video"} rounded-2xl bg-slate-950/70 p-3`}><ParticipantTile /></GridLayout> : null}
+      {!feed.length && !people.length ? <div className="aspect-video rounded-2xl bg-slate-950/70" /> : null}
     </div>
   );
 }
@@ -130,7 +132,7 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
       ) : !token || !serverUrl || !room ? (
         <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white"><p>{bufferOpen ? "Stage is getting ready. Live stream will begin shortly." : "Connecting to LiveKit Ingress feed..."}</p></div>
       ) : (
-        <LiveKitRoom key={token} room={room} token={token} serverUrl={serverUrl} connect audio={false} video={false} onConnected={() => setStartedOnce(true)} onDisconnected={() => { if (removedRef.current) return; if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive("LiveKit disconnected after stream had started."); } }} onError={(e) => { if (removedRef.current) return; if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive(e.message); } else setError(e.message); }} className="rounded-3xl border border-white/10 bg-black/40 p-4">
+        <LiveKitRoom key={token} room={room} token={token} serverUrl={serverUrl} connect audio={false} video={false} onConnected={() => setStartedOnce(true)} onDisconnected={() => { if (removedRef.current) return; if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive("LiveKit disconnected after stream had started."); } }} onError={(e) => { if (removedRef.current) return; if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive(e.message); } else setError(e.message); }} className="rounded-3xl border border-white/10 bg-black/40 p-2 sm:p-4">
           <IngressTrackView />
           {/* Reports what only this browser knows — quality and subscribed tracks — so the crew's
               Diagnose panel can tell "receiving nothing" from "receiving it badly". */}

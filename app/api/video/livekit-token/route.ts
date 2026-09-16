@@ -10,6 +10,9 @@ import { getSpeakerStageState } from "@/services/guests/guestStateService";
 import { decideGuestVideoGrant } from "@/services/guests/guestVideoGrants";
 import { findActiveMatchForRoom, tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
 
+/** Rooms anyone holding the link may watch. A green room and a 1:1 networking room never are. */
+const WATCHABLE_ROOMS = ["main_stage", "session", "breakout"];
+
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<LiveKitJoinRequest>;
 
@@ -20,7 +23,7 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "displayName is required for non-attendee video roles." }, { status: 400 });
   }
 
-  const auth = await authorizeVideoTokenRequest({ role: body.role, eventId: body.eventId });
+  const auth = await authorizeVideoTokenRequest({ role: body.role, eventId: body.eventId, allowAnonymousViewer: body.role === "attendee" && WATCHABLE_ROOMS.includes(String(body.roomType)) });
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 403 });
 
   let displayName = body.displayName;
@@ -45,14 +48,13 @@ export async function POST(request: Request) {
 
   if (body.role === "attendee") {
     const identity = (auth as any).identity || await getCurrentAttendeeIdentity(body.eventId);
-    if (!identity) return NextResponse.json({ ok: false, error: "Registered attendee session required for attendee video token." }, { status: 403 });
-    displayName = identity.displayName;
-    profileId = identity.attendeeId;
-    // A speed-networking room: only the two attendees of THAT active match, camera and mic on (both opted in).
-    if (body.roomType === "speed_networking") {
-      const match = await findActiveMatchForRoom(body.eventId, body.roomId).catch(() => undefined);
-      if (!tokenAllowedForRoom(match, body.roomId, identity.attendeeId)) return NextResponse.json({ ok: false, error: "This networking room is not yours: tokens go only to the two matched attendees while the match is active." }, { status: 403 });
-      publishPermission = { canPublishAudio: true, canPublishVideo: true, canShareScreen: false, reason: "Matched for speed networking." };
+    if (!identity) {
+      // No session: a subscribe-only token for the rooms anyone holding the link may watch.
+      // Registration is what unlocks taking part, and the venue asks for it at the point of use.
+      if (!WATCHABLE_ROOMS.includes(body.roomType)) return NextResponse.json({ ok: false, error: "Register for this event to join this room." }, { status: 403 });
+      displayName = "Guest";
+      profileId = undefined;
+      publishPermission = { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "Watching only. Register to take part." };
     } else {
     const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
     const joinPermission = await canAttendeeJoinLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
@@ -64,6 +66,19 @@ export async function POST(request: Request) {
     publishPermission = mayHoldPrivilege
       ? await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId })
       : { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "You are back on a new device from your email alone. Camera and microphone stay off until the crew approves you here." };
+      displayName = identity.displayName;
+      profileId = identity.attendeeId;
+      // A speed-networking room: only the two attendees of THAT active match, camera and mic on (both opted in).
+      if (body.roomType === "speed_networking") {
+        const match = await findActiveMatchForRoom(body.eventId, body.roomId).catch(() => undefined);
+        if (!tokenAllowedForRoom(match, body.roomId, identity.attendeeId)) return NextResponse.json({ ok: false, error: "This networking room is not yours: tokens go only to the two matched attendees while the match is active." }, { status: 403 });
+        publishPermission = { canPublishAudio: true, canPublishVideo: true, canShareScreen: false, reason: "Matched for speed networking." };
+      } else {
+        const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
+        const joinPermission = await canAttendeeJoinLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
+        if (!joinPermission.canJoin) return NextResponse.json({ ok: false, error: joinPermission.reason, accessStatus: joinPermission.status }, { status: 403 });
+        publishPermission = await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
+      }
     }
   }
 

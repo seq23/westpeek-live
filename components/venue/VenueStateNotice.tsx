@@ -10,7 +10,7 @@ export function VenueStateNotice({ model, gate, isHost }: { model: VirtualVenueM
   const eventId = model.eventId;
   return (
     <div className="space-y-6" data-testid="venue-state-notice" data-gate={gate}>
-      <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <section className="rounded-3xl border border-slate-200 bg-white p-6">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">{gate === "ended" ? "Event ended" : gate === "archived" ? "Event archived" : "Event not open"}</p>
         <h2 className="mt-2 text-2xl font-black text-slate-950" data-testid="venue-state-headline">{VENUE_GATE_MESSAGE[gate]}</h2>
         <p className="mt-2 text-sm text-slate-600">

@@ -24,6 +24,7 @@ export async function LiveRoomChat({ eventId, roomKind, roomId, title, descripti
   const visible = messages;
   return (
     <aside className="flex h-full min-h-[34rem] flex-col rounded-3xl border border-slate-200 bg-white shadow-sm" aria-label={`${title} live chat`} data-testid={`${roomKind}-live-chat`} data-chat-locked={room.locked ? "true" : "false"} data-chat-slow-mode={room.slowModeSeconds}>
+    <aside className="flex max-h-[42rem] min-h-[24rem] flex-col rounded-3xl border border-slate-200 bg-white sm:min-h-[30rem]" aria-label={`${title} live chat`} data-testid={`${roomKind}-live-chat`} data-chat-locked={room.locked ? "true" : "false"}>
       <div className="border-b border-slate-100 p-5">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Live chat</p>
         <h2 className="mt-2 text-xl font-black text-slate-950">{title}</h2>
@@ -46,9 +47,16 @@ export async function LiveRoomChat({ eventId, roomKind, roomId, title, descripti
           </div>
         ) : (
           <LiveChatComposer action={sendLiveRoomChatMessage} eventId={eventId} roomKind={roomKind} roomId={roomId} identityLine={`Posting as ${identity.displayName} · ${identity.company}`} slowModeSeconds={room.slowModeSeconds} nextPostAllowedAt={postWindow.nextPostAllowedAt} cooldownUntil={postWindow.cooldownUntil} exempt={postWindow.exempt} />
+          <form action={sendLiveRoomChatMessage} className="border-t border-slate-100 p-4" data-testid="attendee-identity-chat-form">
+            <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="roomKind" value={roomKind} /><input type="hidden" name="roomId" value={roomId} />
+            <p className="mb-2 text-xs text-slate-500">Posting as {identity.displayName} · {identity.company}</p>
+            <label htmlFor={`${roomKind}-${roomId}-chat-message`} className="sr-only">Send a live chat message</label>
+            <div className="flex gap-2"><input id={`${roomKind}-${roomId}-chat-message`} name="message" placeholder="Message this room…" className="min-h-11 flex-1 rounded-full border border-slate-200 px-4 text-sm outline-none focus:border-brand-orange" /><button className="rounded-full bg-slate-950 px-4 text-sm font-black text-white">Send</button></div>
+            <p className="mt-2 text-xs text-slate-500">Everyone watching sees this. The crew can hide a message, mute someone, or pause the chat.</p>
+          </form>
         )
       ) : (
-        <div className="border-t border-slate-100 p-4 text-sm text-slate-600" data-testid="chat-registration-required"><a href={`/events/${eventId}/register`} className="font-bold text-brand-orange underline">Register for this event</a> to chat with your real attendee identity — it takes 30 seconds and brings you straight back here.</div>
+        <div className="border-t border-slate-100 p-4 text-sm text-slate-600" data-testid="chat-registration-required"><p className="font-bold text-slate-900">Read along as long as you like.</p><p className="mt-1">To post, we need your name, email and company. About fifteen seconds, and it brings you straight back here.</p><a href={`/events/${eventId}/register`} className="mt-3 inline-flex min-h-11 items-center rounded-full bg-brand-orange px-5 text-sm font-black text-white">Register to join the conversation</a></div>
       )}
     </aside>
   );

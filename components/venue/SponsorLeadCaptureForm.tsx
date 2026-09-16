@@ -4,7 +4,7 @@ import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSession
 export async function SponsorLeadCaptureForm({ eventId, boothId }: { eventId: string; boothId: string }) {
   const identity = await getCurrentAttendeeIdentity(eventId).catch(() => undefined);
   return (
-    <form action={submitSponsorLeadAction} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="sponsor-lead-opt-in-form">
+    <form action={submitSponsorLeadAction} className="rounded-3xl border border-slate-200 bg-white p-5" data-testid="sponsor-lead-opt-in-form">
       <input type="hidden" name="eventId" value={eventId} />
       <input type="hidden" name="boothId" value={boothId} />
       <h3 className="text-lg font-semibold">Request sponsor follow-up</h3>

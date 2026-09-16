@@ -31,7 +31,7 @@ export default async function PeoplePage({ params }: { params: Promise<{ eventId
   const mergedModel = { ...model, people: Array.from(peopleById.values()) };
   return (
     <VenuePageShell model={mergedModel}>
-      <PeopleDirectory people={mergedModel.people} />
+      <PeopleDirectory people={mergedModel.people} eventId={mergedModel.eventId} />
     </VenuePageShell>
   );
 }

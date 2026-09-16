@@ -2,7 +2,7 @@ import type { VirtualVenuePerson } from "@/types/virtualVenue";
 
 export function PeopleDirectoryCard({ person }: { person: VirtualVenuePerson }) {
   return (
-    <details className="group rounded-3xl border border-slate-200 bg-white p-5 shadow-sm open:border-brand-orange open:shadow-brand">
+    <details className="group rounded-3xl border border-slate-200 bg-white p-5 open:border-brand-orange">
       <summary className="cursor-pointer list-none">
         <div className="flex items-start justify-between gap-4">
           <div>

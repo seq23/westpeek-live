@@ -61,9 +61,10 @@ describe("a join code typed on a phone still finds the Room", () => {
 describe("a guest inside the venue can find registration", () => {
   it("every 'register' notice in the venue links to the event's registration form", async () => {
     const { readFileSync } = await import("node:fs");
-    for (const file of ["VenueLobbyDashboard", "LiveRoomChat", "AttendeeStageJoinControls", "MyAgendaPanel"]) {
+    for (const file of ["RegisterToTakePart", "LiveRoomChat", "AttendeeStageJoinControls", "MyAgendaPanel"]) {
       const src = readFileSync(new URL(`../../components/venue/${file}.tsx`, import.meta.url), "utf8");
-      expect(src, file).toMatch(/href=\{`\/events\/\$\{[a-zA-Z.]+\}\/register`\}/);
+      // The path may carry a returnTo, so the match is on the registration route, not the whole attribute.
+      expect(src, file).toMatch(/`\/events\/\$\{[a-zA-Z.]+\}\/register/);
     }
   });
   it("a typed code resolves through the record's real join code", async () => {
@@ -115,6 +116,29 @@ describe("timestamps render in the viewer's clock, never the Worker's UTC", () =
       }
     };
     for (const root of ["components", "app"]) walk(new URL(`../../${root}`, import.meta.url).pathname);
+    expect(offenders).toEqual([]);
+  });
+
+  it("no attendee-facing venue surface can print a raw UTC suffix", async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    // timeZoneName on a server render resolves in the Worker's clock, which is UTC — that is how
+    // "Wed, Sep 16 · 2:18 PM UTC – 4:18 PM UTC" reached the owner's own phone (16 Sep 2026).
+    // LocalTime / LocalTimeWindow own the pre-hydration fallback; nothing else in the venue may.
+    const allowed = new Set(["LocalTime.tsx", "LocalTimeWindow.tsx"]);
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) { walk(p); continue; }
+        if (!/\.tsx$/.test(name) || allowed.has(name)) continue;
+        // The copy, not the comments that record why the copy reads the way it does.
+        const src = readFileSync(p, "utf8").replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
+        if (/timeZoneName/.test(src) || /\bUTC\b/.test(src)) offenders.push(p);
+      }
+    };
+    walk(new URL("../../components/venue", import.meta.url).pathname);
+    walk(new URL("../../app/venue", import.meta.url).pathname);
     expect(offenders).toEqual([]);
   });
 });

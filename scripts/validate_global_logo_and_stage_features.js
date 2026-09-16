@@ -32,9 +32,25 @@ for (const term of ["reasonForAttending", "interestingFact", "personalWebsite", 
   if (!people.includes(term)) fail("People profile cards missing " + term);
 }
 
+// The running order opens IN PLACE. "Open Run of Show" used to navigate an attendee off a live
+// broadcast (the owner, 16 Sep 2026): the agenda strip links to the on-page panel, the shell
+// renders that panel on every venue page, and the standalone route still answers for a direct hit.
 const agenda = read("components/venue/MainStageAgendaStrip.tsx");
-if (!agenda.includes("/run-of-show") || !agenda.includes("Open Run of Show")) fail("Main stage agenda strip must link to attendee Run of Show");
-if (!fs.existsSync("app/venue/[eventId]/run-of-show/page.tsx")) fail("Attendee-safe venue Run of Show route must exist");
+if (!agenda.includes("/run-of-show")) fail("Main stage agenda strip must still offer the full running order page");
+const shell = read("components/venue/VenuePageShell.tsx");
+if (!shell.includes("<RunOfShowStrip")) fail("Every venue page must carry the run of show strip through VenuePageShell");
+const strip = read("components/venue/RunOfShowStrip.tsx");
+for (const token of ['data-testid="run-of-show-strip"', "run-of-show-strip-now", "attendeeRunOfShowView"]) {
+  if (!strip.includes(token) && !read("components/venue/VenuePageShell.tsx").includes(token)) fail("Run of show strip missing " + token);
+}
+// Guest surfaces read the attendee-safe projection, never the producer snapshot.
+for (const guestFile of ["components/venue/RunOfShowStrip.tsx", "components/venue/AttendeeRunOfShow.tsx"]) {
+  for (const leak of ["technicalCues", "producerNotes", "backupPlan", "emergencyNotes", "liveNotes"]) {
+    if (read(guestFile).includes(leak)) fail(`${guestFile} must not read ${leak}`);
+  }
+}
+if (/attendee-safe/i.test(read("app/venue/[eventId]/run-of-show/page.tsx"))) fail("Attendee run of show must not say attendee-safe");
+if (!fs.existsSync("app/venue/[eventId]/run-of-show/page.tsx")) fail("Venue Run of Show route must exist");
 for (const file of ["tests/e2e/role-gates.spec.ts", "tests/e2e/registration-profile.spec.ts", "tests/e2e/people-profile.spec.ts"]) {
   if (!fs.existsSync(file)) fail("missing browser coverage " + file);
 }

@@ -1,6 +1,6 @@
 export function LiveKitVideoSurface({ label = "LiveKit video room" }: { label?: string }) {
   return (
-    <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-950 text-white shadow-sm">
+    <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-950 text-white">
       <div className="text-center">
         <p className="text-sm font-medium uppercase tracking-[0.2em] text-brand-orange">LiveKit video surface</p>
         <p className="mt-2 text-2xl font-semibold">{label}</p>
