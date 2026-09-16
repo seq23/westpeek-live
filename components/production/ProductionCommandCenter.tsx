@@ -3,8 +3,9 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { formatEventDate } from "@/lib/utils/format";
+import { ChatModerationQueue } from "@/components/moderation/ChatModerationQueue";
 
-export function ProductionCommandCenter({ eventId }: { eventId: string }) {
+export async function ProductionCommandCenter({ eventId }: { eventId: string }) {
   const event = getEvent(eventId);
   const segments = getRunOfShowForEvent(event.id);
   const current = segments[0];
@@ -112,10 +113,9 @@ export function ProductionCommandCenter({ eventId }: { eventId: string }) {
         </SectionCard>
       </div>
 
-      <div className="grid gap-4 sm:gap-6 lg:grid-cols-3">
-        <SectionCard title="Chat moderation queue">
-          <p className="text-sm text-slate-600">Moderation queue for room and attendee activity.</p>
-        </SectionCard>
+      <ChatModerationQueue eventId={event.id} />
+
+      <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <SectionCard title="Q&A queue">
           <p className="text-sm text-slate-600">Question approval and stage-pinning controls.</p>
         </SectionCard>

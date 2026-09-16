@@ -1,7 +1,7 @@
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
@@ -64,6 +64,7 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     stageStreamStates: Array.isArray(parsed.stageStreamStates) ? parsed.stageStreamStates : [],
     stageStreamEvents: Array.isArray(parsed.stageStreamEvents) ? parsed.stageStreamEvents : [],
     liveChatMessages: Array.isArray(parsed.liveChatMessages) ? parsed.liveChatMessages : [],
+    liveChatModerationStates: Array.isArray(parsed.liveChatModerationStates) ? parsed.liveChatModerationStates : [],
     attendeeProfiles: Array.isArray(parsed.attendeeProfiles) ? parsed.attendeeProfiles : [],
     attendeeSessions: Array.isArray(parsed.attendeeSessions) ? parsed.attendeeSessions : [],
     attendeeAgendaIntents: Array.isArray(parsed.attendeeAgendaIntents) ? parsed.attendeeAgendaIntents : [],
@@ -283,9 +284,47 @@ export class FileRuntimeStore implements RuntimeStore {
     return message;
   }
 
-  async listLiveChatMessages(eventId: string, roomKind: string, roomId: string) {
+  async listLiveChatMessages(eventId: string, roomKind: string, roomId: string, options?: { includeHidden?: boolean }) {
     const snapshot = this.read();
-    return snapshot.liveChatMessages.filter((message: LiveChatMessage) => message.eventId === eventId && message.roomKind === roomKind && message.roomId === roomId && message.moderationStatus !== "hidden");
+    return snapshot.liveChatMessages.filter((message: LiveChatMessage) => message.eventId === eventId && message.roomKind === roomKind && message.roomId === roomId && (options?.includeHidden || message.moderationStatus !== "hidden"));
+  }
+
+  async listRecentLiveChatMessages(eventId: string, limit: number) {
+    const snapshot = this.read();
+    // Newest first; same-millisecond posts keep insertion order (later insert = newer).
+    return snapshot.liveChatMessages
+      .map((message: LiveChatMessage, index: number) => ({ message, index }))
+      .filter(({ message }) => message.eventId === eventId)
+      .sort((a, b) => b.message.createdAt.localeCompare(a.message.createdAt) || b.index - a.index)
+      .slice(0, Math.max(1, limit))
+      .map(({ message }) => message);
+  }
+
+  async updateLiveChatMessageModeration(input: { id: string; eventId: string; moderationStatus: LiveChatMessage["moderationStatus"]; moderatedBy: string; moderatedAt: string }) {
+    const snapshot = this.read();
+    const message = snapshot.liveChatMessages.find((item: LiveChatMessage) => item.id === input.id && item.eventId === input.eventId);
+    if (!message) return undefined;
+    message.moderationStatus = input.moderationStatus;
+    message.moderatedBy = input.moderatedBy;
+    message.moderatedAt = input.moderatedAt;
+    this.write(snapshot);
+    return { ...message };
+  }
+
+  async setLiveChatModerationState(state: LiveChatModerationState) {
+    const snapshot = this.read();
+    snapshot.liveChatModerationStates = snapshot.liveChatModerationStates.filter((item: LiveChatModerationState) => item.key !== state.key);
+    snapshot.liveChatModerationStates.push(state);
+    this.write(snapshot);
+    return state;
+  }
+
+  async getLiveChatModerationState(key: string) {
+    return this.read().liveChatModerationStates.find((item: LiveChatModerationState) => item.key === key);
+  }
+
+  async listLiveChatModerationStates(eventId: string) {
+    return this.read().liveChatModerationStates.filter((item: LiveChatModerationState) => item.eventId === eventId);
   }
 
   async setAttendeeLiveCapability(key: string, capability: AttendeeLiveCapability) {

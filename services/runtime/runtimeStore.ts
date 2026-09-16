@@ -1,7 +1,7 @@
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState, V4VideoProvider } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
@@ -106,6 +106,7 @@ export interface V6RuntimeSnapshot {
   stageStreamStates: StageStreamState[];
   stageStreamEvents: StageStreamEvent[];
   liveChatMessages: LiveChatMessage[];
+  liveChatModerationStates: LiveChatModerationState[];
   attendeeLiveCapabilities: AttendeeLiveCapability[];
   attendeeLiveControlStates: AttendeeLiveControlState[];
   runtimeEvents: RuntimeEventRecord[];
@@ -144,7 +145,14 @@ export interface RuntimeStore {
   setStageStreamState(key: string, state: StageStreamState): Promise<StageStreamState>;
   appendStageStreamEvent(event: StageStreamEvent): Promise<StageStreamEvent>;
   appendLiveChatMessage(message: LiveChatMessage): Promise<LiveChatMessage>;
-  listLiveChatMessages(eventId: string, roomKind: string, roomId: string): Promise<LiveChatMessage[]>;
+  /** Attendee listing by default (hidden messages excluded); crew surfaces pass includeHidden. */
+  listLiveChatMessages(eventId: string, roomKind: string, roomId: string, options?: { includeHidden?: boolean }): Promise<LiveChatMessage[]>;
+  /** Newest first, every room of the event, hidden included: the crew moderation queue. */
+  listRecentLiveChatMessages(eventId: string, limit: number): Promise<LiveChatMessage[]>;
+  updateLiveChatMessageModeration(input: { id: string; eventId: string; moderationStatus: LiveChatMessage["moderationStatus"]; moderatedBy: string; moderatedAt: string }): Promise<LiveChatMessage | undefined>;
+  setLiveChatModerationState(state: LiveChatModerationState): Promise<LiveChatModerationState>;
+  getLiveChatModerationState(key: string): Promise<LiveChatModerationState | undefined>;
+  listLiveChatModerationStates(eventId: string): Promise<LiveChatModerationState[]>;
   setAttendeeLiveCapability(key: string, capability: AttendeeLiveCapability): Promise<AttendeeLiveCapability>;
   getAttendeeLiveCapability(key: string): Promise<AttendeeLiveCapability | undefined>;
   setAttendeeLiveControlState(key: string, state: AttendeeLiveControlState): Promise<AttendeeLiveControlState>;
@@ -180,6 +188,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     stageStreamStates: [],
     stageStreamEvents: [],
     liveChatMessages: [],
+    liveChatModerationStates: [],
     attendeeLiveCapabilities: [],
     attendeeLiveControlStates: [],
     runtimeEvents: [],

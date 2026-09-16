@@ -15,6 +15,7 @@ import { BrowserDiagnosticsPanel } from "./BrowserDiagnosticsPanel";
 import { ShowtimeReadinessPanel } from "./ShowtimeReadinessPanel";
 import { StreamYardIngressPanel } from "./StreamYardIngressPanel";
 import { AttendeeLiveControlPanel } from "./AttendeeLiveControlPanel";
+import { ChatModerationQueue } from "@/components/moderation/ChatModerationQueue";
 import { getTestingConsoleSnapshot } from "@/services/testing";
 
 export async function TestingConsole({ eventId = "event-summit" }: { eventId?: string }) {
@@ -53,6 +54,7 @@ export async function TestingConsole({ eventId = "event-summit" }: { eventId?: s
         <ShowtimeReadinessPanel snapshot={testingSnapshot} />
         <StreamYardIngressPanel eventId={event.id} />
         <AttendeeLiveControlPanel eventId={event.id} />
+        <ChatModerationQueue eventId={event.id} />
         <BrowserDiagnosticsPanel eventId={event.id} />
         <section className="rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm"><strong>Live deployment smoke diagnostics</strong><span className="sr-only"> {smokeDiagnosticsTerms.join(" ")}</span></section>
         <div className="grid gap-4 lg:grid-cols-2 xl:grid-cols-3">
