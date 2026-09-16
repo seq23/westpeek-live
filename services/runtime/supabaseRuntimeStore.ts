@@ -14,6 +14,7 @@ import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } fro
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { ContactRecord, RegistrationQuestion } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { SupplierEventLink, SupplierKind, SupplierRateKind, SupplierRecord, SupplierStatus } from "@/types/suppliers";
 import type { EmailSendLog } from "@/types/emailProduction";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
@@ -101,6 +102,29 @@ function mapEventAsset(row: Record<string, unknown>): EventAssetRecord {
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || ""),
   };
+}
+
+function mapSupplier(row: Record<string, unknown>): SupplierRecord {
+  return {
+    id: String(row.id),
+    kind: (row.kind as SupplierKind) || "contractor",
+    name: String(row.name || ""),
+    company: String(row.company || ""),
+    roleOrService: String(row.role_or_service || ""),
+    email: String(row.email || ""),
+    phone: String(row.phone || ""),
+    rateKind: (row.rate_kind as SupplierRateKind) || "day_rate",
+    rateAmount: Number(row.rate_amount || 0),
+    notes: String(row.notes || ""),
+    status: (row.status as SupplierStatus) || "shortlisted",
+    archivedAt: row.archived_at ? String(row.archived_at) : undefined,
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
+}
+
+function mapSupplierEventLink(row: Record<string, unknown>): SupplierEventLink {
+  return { id: String(row.id), supplierId: String(row.supplier_id), eventId: String(row.event_id), note: String(row.note || ""), createdAt: String(row.created_at || "") };
 }
 
 function mapAttendeeSession(row: Record<string, unknown>): AttendeeSession {
@@ -782,6 +806,52 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     const { data, error } = await query.order("created_at", { ascending: false }).limit(2000);
     if (error) failOrSchemaMissing("event_assets", error);
     return ((data || []) as Record<string, unknown>[]).map(mapEventAsset);
+  }
+
+  async upsertSupplier(supplier: SupplierRecord) {
+    const { error } = await this.client.from("suppliers").upsert({
+      id: supplier.id, kind: supplier.kind, name: supplier.name, company: supplier.company, role_or_service: supplier.roleOrService,
+      email: supplier.email, phone: supplier.phone, rate_kind: supplier.rateKind, rate_amount: supplier.rateAmount,
+      notes: supplier.notes, status: supplier.status, archived_at: supplier.archivedAt ?? null,
+      created_at: supplier.createdAt, updated_at: supplier.updatedAt,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("suppliers", error);
+    return supplier;
+  }
+
+  async getSupplier(id: string) {
+    const { data, error } = await this.client.from("suppliers").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("suppliers", error);
+    return data ? mapSupplier(data as Record<string, unknown>) : undefined;
+  }
+
+  async listSuppliers(includeArchived = false) {
+    let query = this.client.from("suppliers").select("*");
+    if (!includeArchived) query = query.is("archived_at", null);
+    const { data, error } = await query.order("created_at", { ascending: false }).limit(2000);
+    if (error) failOrSchemaMissing("suppliers", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapSupplier);
+  }
+
+  async upsertSupplierEventLink(link: SupplierEventLink) {
+    // supplier_id + event_id is unique in 0033: attaching twice updates the one attachment.
+    const { error } = await this.client.from("supplier_event_links").upsert({
+      id: link.id, supplier_id: link.supplierId, event_id: link.eventId, note: link.note, created_at: link.createdAt,
+    }, { onConflict: "supplier_id,event_id" });
+    if (error) failOrSchemaMissing("supplier_event_links", error);
+    return link;
+  }
+
+  /** Detach really removes the link row: the supplier and its other events are untouched. */
+  async deleteSupplierEventLink(supplierId: string, eventId: string) {
+    const { error } = await this.client.from("supplier_event_links").delete().eq("supplier_id", supplierId).eq("event_id", eventId);
+    if (error) failOrSchemaMissing("supplier_event_links", error);
+  }
+
+  async listSupplierEventLinks() {
+    const { data, error } = await this.client.from("supplier_event_links").select("*").order("created_at", { ascending: false }).limit(5000);
+    if (error) failOrSchemaMissing("supplier_event_links", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapSupplierEventLink);
   }
 
   async appendEmailSendLog(log: EmailSendLog & { sentBy?: string }) {

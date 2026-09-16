@@ -5,6 +5,7 @@ import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat"
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { SupplierEventLink, SupplierRecord } from "@/types/suppliers";
 import type { EmailSendLog } from "@/types/emailProduction";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
@@ -121,6 +122,8 @@ export interface V6RuntimeSnapshot {
   speedNetworkingMatches: SpeedNetworkingMatchRecord[];
   contacts: ContactRecord[];
   eventAssets: EventAssetRecord[];
+  suppliers: SupplierRecord[];
+  supplierEventLinks: SupplierEventLink[];
   emailSendLogs: EmailSendLog[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
@@ -163,6 +166,14 @@ export interface RuntimeStore {
   getEventAsset(id: string): Promise<EventAssetRecord | undefined>;
   listEventAssets(eventId: string, includeArchived?: boolean): Promise<EventAssetRecord[]>;
   listAllEventAssets(includeArchived?: boolean): Promise<EventAssetRecord[]>;
+  // Contractors and vendors (migration 0033): one table, `kind` tells them apart. Suppliers are
+  // global; supplier_event_links is which events each one is on.
+  upsertSupplier(supplier: SupplierRecord): Promise<SupplierRecord>;
+  getSupplier(id: string): Promise<SupplierRecord | undefined>;
+  listSuppliers(includeArchived?: boolean): Promise<SupplierRecord[]>;
+  upsertSupplierEventLink(link: SupplierEventLink): Promise<SupplierEventLink>;
+  deleteSupplierEventLink(supplierId: string, eventId: string): Promise<void>;
+  listSupplierEventLinks(): Promise<SupplierEventLink[]>;
   // The email send log (migration 0032): one row per message the app actually sent.
   appendEmailSendLog(log: EmailSendLog & { sentBy?: string }): Promise<EmailSendLog>;
   listEmailSendLogs(eventId: string, limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
@@ -260,6 +271,8 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     speedNetworkingMatches: [],
     contacts: [],
     eventAssets: [],
+    suppliers: [],
+    supplierEventLinks: [],
     emailSendLogs: [],
     runtimeEvents: [],
     runtimeClients: [],

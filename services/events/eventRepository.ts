@@ -462,6 +462,9 @@ export async function getRuntimeSchemaStatus(): Promise<RuntimeSchemaStatus> {
     ["networking_queue_matches", () => store.listSpeedNetworkingMatches("__schema_probe__")],
     // Migration 0029: contacts across events.
     ["contacts", () => store.getContact("__schema_probe__")],
+    // Migration 0033: contractors and vendors, and which events they are on.
+    ["suppliers", () => store.listSuppliers()],
+    ["supplier_event_links", () => store.listSupplierEventLinks()],
   ];
   for (const [table, probe] of probes) {
     try {
