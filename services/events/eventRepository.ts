@@ -330,7 +330,7 @@ async function resolveClientForEvent(input: CreateEventInput, actor: WorkspaceAc
   return createClientRecord({ name: clientName }, actor);
 }
 
-export type EventPatch = Partial<Pick<RuntimeEventRecord, "name" | "eventType" | "description" | "startAt" | "endAt" | "timezone" | "registrationEnabled" | "registrationQuestions" | "branding" | "sessions" | "clientName" | "clientSlug" | "clientId" | "format">>;
+export type EventPatch = Partial<Pick<RuntimeEventRecord, "name" | "eventType" | "description" | "startAt" | "endAt" | "timezone" | "registrationEnabled" | "registrationQuestions" | "attendeeSessionDays" | "branding" | "sessions" | "clientName" | "clientSlug" | "clientId" | "format">>;
 
 async function requireRuntimeEvent(id: string) {
   const event = await getRuntimeStore().getRuntimeEvent(id);

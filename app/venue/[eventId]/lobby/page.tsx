@@ -6,7 +6,7 @@ import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { VipLobbyPanel } from "@/components/venue/VipLobbyPanel";
 import { VipCodeCard } from "@/components/venue/VipCodeCard";
-import { getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
+import { currentAttendeeMayHoldPrivilege, getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
 import { vipStandingFor } from "@/services/guests/vipGrantService";
 import { getCurrentSpecialGuestAccess } from "@/services/guests/guestIdentityService";
 import { resolveViewAs } from "@/lib/auth/viewAs";
@@ -16,7 +16,7 @@ import { SafeSection } from "@/components/system/SafeSection";
 
 export const dynamic = "force-dynamic";
 
-export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string; saved?: string; vip?: "1" | "no" }> }) {
+export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string; saved?: string; vip?: "1" | "no"; returned?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const runtimeEvent = await ensureRuntimeEvent(resolvedParams.eventId);
@@ -29,7 +29,10 @@ export default async function LobbyPage({ params, searchParams }: { params: Prom
   const guest = await getCurrentSpecialGuestAccess(resolvedParams.eventId);
   // VIP is code-bound: either a VIP cookie from the gate, or a grant this attendee holds.
   const attendee = await getCurrentAttendeeProfile(resolvedParams.eventId).catch(() => undefined);
-  const vipStanding = attendee ? await vipStandingFor(resolvedParams.eventId, attendee.attendeeId).catch(() => undefined) : undefined;
+  // VIP never rides in on an unverified email: a session restored from an address alone is not
+  // evidence of who is holding the phone, so the grant stays behind until the code is entered here.
+  const mayHoldPrivilege = attendee ? await currentAttendeeMayHoldPrivilege(resolvedParams.eventId) : false;
+  const vipStanding = attendee && mayHoldPrivilege ? await vipStandingFor(resolvedParams.eventId, attendee.attendeeId).catch(() => undefined) : undefined;
   // "View as" a VIP: an owner / operator / producer sees the VIP panel as that person, read-mostly.
   const viewAs = await resolveViewAs(resolvedParams.eventId, resolvedSearchParams?.viewAs, "vip");
   return (
@@ -38,7 +41,7 @@ export default async function LobbyPage({ params, searchParams }: { params: Prom
       {isHost && runtimeEvent && !viewAs ? <HostJoinCodeBanner event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} crewHost={crewHost} /> : null}
       {guest?.role === "vip" || viewAs || vipStanding?.current ? <SafeSection label="VIP" render={() => VipLobbyPanel({ eventId: resolvedParams.eventId, error: resolvedSearchParams?.error, viewAs, grantedName: vipStanding?.current ? vipStanding.name : undefined })} /> : null}
       {!viewAs && guest?.role !== "vip" && !vipStanding?.current ? <VipCodeCard eventId={resolvedParams.eventId} registered={Boolean(attendee)} result={resolvedSearchParams?.vip} /> : null}
-      <SafeSection label="Lobby" render={() => VenueLobbyDashboard({ model, saved: resolvedSearchParams?.saved === "profile" })} />
+      <SafeSection label="Lobby" render={() => VenueLobbyDashboard({ model, saved: resolvedSearchParams?.saved === "profile", justReturned: resolvedSearchParams?.returned === "1" })} />
     </VenuePageShell>
   );
 }

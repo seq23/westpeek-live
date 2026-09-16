@@ -4822,6 +4822,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:registration-continuity",
+      "command": "node scripts/validate_registration_continuity.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "A guest is told how long their registration lasts and that it survives leaving; the lifetime is a named default with a per-event override (runtime_events.attendee_session_days, migration 0039) that reaches the database, and no sentence hard-codes it; a second device is restored from the email alone, rate-limited through the same gate limiter as the access codes, counting every attempt before the match is known, and never saying whether an address is registered; the session it creates is stamped assurance email_restored, and each privileged read checks that stamp by name (lobby VIP standing, the attendee's own stage status, and the LiveKit publish grant, which falls back to watch-only); the cookie outlives the session so an expired return meets a one-field way back instead of a blank form; and migration 0039 is byte-identical to its Supabase mirror.",
+      "whatItDoesNotProve": "Static contract. Restore, refusal, healing, expiry and the rate limit are proven behaviourally by tests/unit/registrationContinuity.test.ts. It does not prove a browser actually keeps the cookie, nor that an email is owned by the person typing it: by design an unverified email restores only self-declared profile fields.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Static file reads; negligible.",
+      "maintenanceCost": "Review whenever a new surface reads attendee privilege from the session cookie.",
+      "removalConditions": "Retire only if registration stops being per browser, or privilege stops being device-bound.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

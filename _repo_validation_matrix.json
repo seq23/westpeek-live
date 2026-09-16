@@ -1189,6 +1189,22 @@
       "owner": "Juniper / autonomous engineering department",
       "blockerPolicy": "Blocks delivery or push.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "name": "Registration continuity: lifetime, second device, no privilege on an unverified email",
+      "command": "npm run validate:registration-continuity",
+      "tier": "tier1",
+      "category": "attendee-identity",
+      "severity": "HARD FAIL",
+      "productionRisk": "A guest who registered on a laptop opens the link on a phone mid-show, meets a blank form, and reads the product as broken; or the fix for that becomes a hole where any typed address inherits VIP and stage-publishing rights.",
+      "proofLayer": "STATIC / CONTRACT",
+      "whatItProves": "The session lifetime is named and per-event and the copy reads the resolved value; the same-email return path is rate-limited and silent about who is registered; the restored session is stamped and every privileged read checks the stamp.",
+      "whatItDoesNotProve": "Does not prove runtime behaviour; tests/unit/registrationContinuity.test.ts covers restore, refusal, healing, expiry and enumeration.",
+      "failureHandling": "Repair source, rerun, and revalidate before push.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "Blocks delivery or push.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "validatorAdmissionRegister": "_validator_admission_register.json",

@@ -8,13 +8,14 @@ import { MobileExperienceWarning } from "@/components/venue/MobileExperienceWarn
 import { SupportEscalationPanel } from "@/components/venue/SupportEscalationPanel";
 import { UnsupportedBrowserWarning } from "@/components/venue/UnsupportedBrowserWarning";
 import { FirstVisitCoachStrip } from "@/components/venue/FirstVisitCoachStrip";
+import { RegistrationContinuityNote } from "@/components/venue/RegistrationContinuityNote";
 import { EditAttendeeProfilePanel } from "@/components/venue/EditAttendeeProfilePanel";
 import { SafeSection } from "@/components/system/SafeSection";
 import { SessionCard } from "./SessionCard";
 import { BreakoutRoomCard } from "./BreakoutRoomCard";
 import { SponsorBoothCard } from "./SponsorBoothCard";
 
-export async function VenueLobbyDashboard({ model, saved = false }: { model: VirtualVenueModel; saved?: boolean }) {
+export async function VenueLobbyDashboard({ model, saved = false, justReturned = false }: { model: VirtualVenueModel; saved?: boolean; justReturned?: boolean }) {
   const sections = buildVenueLobbySections(model);
   const profile = await getCurrentAttendeeProfile(model.eventId).catch(() => undefined);
   const fallbackState = await getRoomFallbackState(model.eventId, "main_stage").catch(() => createInitialRoomFallbackState(model.eventId, "main_stage"));
@@ -36,6 +37,9 @@ export async function VenueLobbyDashboard({ model, saved = false }: { model: Vir
           {profile ? null : <a href={`/events/${model.eventId}/register`} className="rounded-xl bg-brand-orange px-5 py-3 text-sm font-semibold text-white" data-testid="lobby-register-cta">Register to chat and raise your hand</a>}
           <a href={`/venue/${model.eventId}/networking`} className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold">Start networking</a>
           <a href={`/venue/${model.eventId}/help`} className="rounded-xl border border-slate-300 px-5 py-3 text-sm font-semibold">Get help</a>
+        </div>
+        <div className="mt-5">
+          <SafeSection label="Registration" render={() => RegistrationContinuityNote({ eventId: model.eventId, justReturned })} />
         </div>
       </section>
 

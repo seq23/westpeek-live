@@ -8,6 +8,8 @@ import { EventEndedState } from "@/components/venue/EventEndedState";
 import { EventNotOpenState } from "@/components/venue/EventNotOpenState";
 import { RegistrationClosedState } from "@/components/venue/RegistrationClosedState";
 import { RegistrationRequiredState } from "@/components/venue/RegistrationRequiredState";
+import { ReturningAttendeeForm } from "@/components/venue/ReturningAttendeeForm";
+import { attendeeSessionDaysFor, registeredForWords } from "@/services/attendees/attendeeSessionPolicy";
 import { getEventConfigPackage } from "@/services/events/eventConfigRepository";
 import { mapEventStatusToPublicState } from "@/services/events/eventStateResolver";
 
@@ -81,7 +83,12 @@ export function PublicEventPage({ slug }: { slug: string }) {
   );
 }
 
-export function EventRegistration({ slug }: { slug: string }) {
+/**
+ * `prefillEmail` arrives from the return path: an address that did not match an existing
+ * registration comes back here already typed in, and is never told that it did not match. That is
+ * deliberate. Saying "that email is not registered" would confirm who is and is not attending.
+ */
+export async function EventRegistration({ slug, prefillEmail = "", waitSeconds }: { slug: string; prefillEmail?: string; waitSeconds?: number }) {
   const config = getEventConfigPackage(slug);
   const publicState = mapEventStatusToPublicState(config.event.state as any);
 
@@ -97,8 +104,13 @@ export function EventRegistration({ slug }: { slug: string }) {
     );
   }
 
+  const sessionDays = await attendeeSessionDaysFor(config.event.id);
+
   return (
     <main className="min-h-screen bg-slate-50 p-6">
+      <div className="mx-auto mb-4 max-w-2xl">
+        <ReturningAttendeeForm eventId={config.event.id} slug={config.event.slug} defaultEmail={prefillEmail} waitSeconds={waitSeconds} heading="Already registered for this event?" help="Enter the email you used and this device picks your registration up. Nothing else to fill in." />
+      </div>
       <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <input type="hidden" name="eventId" value={config.event.id} />
         <input type="hidden" name="slug" value={config.event.slug} />
@@ -110,15 +122,16 @@ export function EventRegistration({ slug }: { slug: string }) {
           <p className="text-xs text-slate-500">Three fields and you are in. Fields marked <span className="font-black text-brand-orange">*</span> are required; everything else you can add later from &ldquo;Tell us more about you&rdquo; inside the venue.</p>
           {[
             ["name", "Name", "text", true, "Ada Lovelace"],
-            ["email", "Email", "email", true, "you@company.com"],
+            ["email", "Email", "email", true, "you@company.com", prefillEmail],
             ["company", "Company / affiliation", "text", true, "Analytical Engines"],
             ["title", "Title / role (optional)", "text", false, "Founder"],
-          ].map(([field, label, type, required, placeholder]) => (
+          ].map(([field, label, type, required, placeholder, defaultValue]) => (
             <div key={String(field)}>
               <label htmlFor={String(field)} className="text-sm font-medium text-slate-700">{label}{required ? <span className="ml-1 font-black text-brand-orange" aria-hidden="true">*</span> : null}</label>
-              <input id={String(field)} name={String(field)} required={Boolean(required)} aria-required={Boolean(required)} type={String(type)} placeholder={String(placeholder)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
+              <input id={String(field)} name={String(field)} required={Boolean(required)} aria-required={Boolean(required)} type={String(type)} placeholder={String(placeholder)} defaultValue={defaultValue ? String(defaultValue) : undefined} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
             </div>
           ))}
+          <p className="text-xs text-slate-500" data-testid="registration-lifetime-note">{registeredForWords(sessionDays)} Leave and come back on this device and you are still in. On another device, open the same link and enter this email.</p>
           <button type="submit" className="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white">Submit registration</button>
         </div>
       </form>
