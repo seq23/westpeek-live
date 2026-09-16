@@ -142,7 +142,8 @@ describe("attendee roster and pending requests (store-backed)", () => {
     expect(await getAttendeeLiveCapability(EVENT, "main_stage", "main-stage", "att-1")).toMatchObject({ approvedForStage: true, canPublishCamera: true, canPublishMicrophone: true, updatedBy: "crew" });
 
     await decideAttendeeLiveAccess(form({ eventId: EVENT, roomKind: "main_stage", roomId: "main-stage", attendeeId: "att-1", decision: "revoke", reason: "Time's up" }));
-    expect(removed).toEqual(["att-1"]);
+    // decline dropped att-2 from the room too (any decision that takes publishing away does); revoke drops att-1.
+    expect(removed).toEqual(["att-2", "att-1"]);
     expect((await getAttendeeRoster({ eventId: EVENT })).rows.find((row) => row.attendeeId === "att-1")).toMatchObject({ liveStatus: "revoked" });
   });
 

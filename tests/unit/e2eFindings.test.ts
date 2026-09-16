@@ -117,3 +117,23 @@ describe("timestamps render in the viewer's clock, never the Worker's UTC", () =
     expect(offenders).toEqual([]);
   });
 });
+
+describe("the stage shows publishers only, and reset drops the participant", () => {
+  it("the player asks LiveKit for no placeholders and filters to published tracks", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../components/video/LiveKitIngressStagePlayer.tsx", import.meta.url), "utf8");
+    expect(src).toMatch(/Track\.Source\.Camera, withPlaceholder: false/);
+    expect(src).toMatch(/tracks\.filter\(\(t\) => Boolean\(t\.publication\)\)/);
+    expect(src).toMatch(/isProductionFeedIdentity/);
+  });
+  it("reset and decline remove the participant from the stage room like revoke", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../lib/actions/attendeeLiveActions.ts", import.meta.url), "utf8");
+    expect(src).toMatch(/decision === "revoke" \|\| decision === "reset" \|\| decision === "decline"/);
+  });
+  it("the ingress participant carries no name plate", async () => {
+    const { readFileSync } = await import("node:fs");
+    const src = readFileSync(new URL("../../services/video/livekitIngressService.ts", import.meta.url), "utf8");
+    expect(src).not.toMatch(/participant_name: "StreamYard Production Feed"/);
+  });
+});

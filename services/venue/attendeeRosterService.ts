@@ -44,7 +44,7 @@ export function liveStatusOf(capability?: AttendeeLiveCapability): AttendeeLiveS
 
 export function liveStatusLabel(status: AttendeeLiveStatus) {
   return {
-    open: "Registered · no live decision",
+    open: "Watching · open to all",
     requested: "Stage request pending",
     declined: "Stage request declined",
     permitted: "Permitted to watch",

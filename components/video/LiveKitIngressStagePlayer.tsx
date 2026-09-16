@@ -4,9 +4,37 @@ import { LiveKitRoom, RoomAudioRenderer, useTracks, ParticipantTile, GridLayout 
 import { Room, Track } from "livekit-client";
 import type { AttendeePublishGrant } from "@/components/video/AttendeeStageControls";
 
+/** The production feed's participant identity, as minted by the ingress service. */
+export function isProductionFeedIdentity(identity: string | undefined) {
+  return Boolean(identity && identity.startsWith("streamyard-"));
+}
+
+/**
+ * The production feed first and full width, with no name plate — "StreamYard Production Feed"
+ * across the host's picture is not something the audience should read (Scooter's workshop,
+ * 16 Sep 2026). People on the stage keep their tiles and names beneath it.
+ */
 function IngressTrackView() {
-  const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: true }, { source: Track.Source.ScreenShare, withPlaceholder: false }], { onlySubscribed: false });
-  return <GridLayout tracks={tracks} className="min-h-[420px] rounded-2xl bg-slate-950/70 p-3"><ParticipantTile /></GridLayout>;
+  // NO PLACEHOLDERS. Everyone watching joins the LiveKit room to receive the feed, and with
+  // placeholders on, every viewer became an avatar tile on the stage — "Cal", a plain attendee,
+  // sat above the host's picture (Scooter's workshop, 16 Sep 2026). A tile is earned by publishing:
+  // the production feed, or a person the crew approved who has turned a camera or mic on.
+  const tracks = useTracks([{ source: Track.Source.Camera, withPlaceholder: false }, { source: Track.Source.ScreenShare, withPlaceholder: false }], { onlySubscribed: false });
+  const publishing = tracks.filter((t) => Boolean(t.publication));
+  const feed = publishing.filter((t) => isProductionFeedIdentity(t.participant?.identity));
+  const people = publishing.filter((t) => !isProductionFeedIdentity(t.participant?.identity));
+  return (
+    <div className="space-y-3">
+      {feed.length ? (
+        <div className="wpl-production-feed rounded-2xl bg-black" data-testid="production-feed-tile">
+          <style>{`.wpl-production-feed .lk-participant-metadata, .wpl-production-feed .lk-participant-placeholder { display: none !important; }`}</style>
+          <GridLayout tracks={feed} className="min-h-[420px] rounded-2xl"><ParticipantTile /></GridLayout>
+        </div>
+      ) : null}
+      {people.length ? <GridLayout tracks={people} className={`${feed.length ? "min-h-[180px]" : "min-h-[420px]"} rounded-2xl bg-slate-950/70 p-3`}><ParticipantTile /></GridLayout> : null}
+      {!feed.length && !people.length ? <div className="min-h-[420px] rounded-2xl bg-slate-950/70" /> : null}
+    </div>
+  );
 }
 
 interface Props {
