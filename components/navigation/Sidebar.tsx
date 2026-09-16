@@ -2,6 +2,7 @@ import Link from "next/link";
 import { WestPeekLiveMark, WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
 
 const nav = [
+  ["Owner console", "/app/owner"],
   ["Dashboard", "/app"],
   ["Clients", "/app/clients"],
   ["People", "/app/people"],

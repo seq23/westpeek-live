@@ -246,6 +246,28 @@
       "role": "operator"
     },
     {
+      "id": "app-owner",
+      "path": "/app/owner",
+      "authMode": "role-specific",
+      "persona": "owner",
+      "criticality": "standard",
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/app/owner"
+      },
+      "safeActions": [
+        "navigate"
+      ],
+      "fixtureRequirements": [],
+      "persistenceRequired": false,
+      "cleanupPolicy": "none",
+      "role": "owner"
+    },
+    {
       "id": "app-contractors",
       "path": "/app/contractors",
       "authMode": "role-specific",

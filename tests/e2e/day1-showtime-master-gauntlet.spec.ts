@@ -229,8 +229,6 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
   await operator.getByLabel(/^Email/i).fill("playwright-created-event-attendee@example.com");
   await operator.getByLabel(/Company \/ affiliation/i).fill("West Peek QA");
   await operator.getByLabel(/Title \/ role/i).fill("Hostile Client Reviewer");
-  await operator.getByLabel(/What brings you to the conference/i).fill("Testing the created-event attendee journey.");
-  await operator.getByLabel(/Networking goals/i).fill("Confirm created event registration reaches the created event venue.");
   await operator.getByRole("button", { name: /submit registration/i }).click();
   await expect(operator).toHaveURL(createdVenueUrl);
   await assertUsefulPage(operator, /Lobby|Attendee venue|West Peek/i);
@@ -391,7 +389,11 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
   await loginOperator(producerReview);
   await gotoAndAssert(producerReview, `/app/events/${createdEventSlug}/approval-queue`);
   await assertUsefulPage(producerReview, /Approvals, blockers, and final locks|Approval items/i);
-  await expect(producerReview.locator("body")).toContainText(/Playwright keynote timing note/i);
-  await expect(producerReview.locator("body")).toContainText(/sponsor-safe transition/i);
+  // Runtime events: what the speaker pastes waits on the crew deck's speaker row (the approval queue points there).
+  await expect(producerReview.locator("body")).toContainText(/waits there for your approval/i);
+  await gotoAndAssert(producerReview, `/crew/events/${createdEventSlug}`);
+  const pendingCue = producerReview.getByTestId(/^speaker-pending-/).first();
+  await expect(pendingCue).toContainText(/Playwright keynote timing note/i);
+  await expect(pendingCue).toContainText(/sponsor-safe transition/i);
   await producerReviewContext.close();
 });

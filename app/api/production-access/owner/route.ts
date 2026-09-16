@@ -9,7 +9,7 @@ export const dynamic = "force-dynamic";
 export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const password = String(formData.get("password") ?? "");
-  const safeNext = safeAccessRedirectTarget(String(formData.get("next") ?? "/app"), "/app");
+  const safeNext = safeAccessRedirectTarget(String(formData.get("next") ?? "/app/owner"), "/app/owner");
   const env = getEnv();
 
   const ownerKey = matchOwnerMasterPassword(password, env);

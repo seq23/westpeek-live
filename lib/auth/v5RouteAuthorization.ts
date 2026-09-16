@@ -60,6 +60,7 @@ const operatorExactPaths = new Set([
   "/app/events",
   "/app/events/new",
   "/app/people",
+  "/app/owner",
   "/admin/testing",
   "/admin/testing/demo",
   "/admin/testing/event-summit",

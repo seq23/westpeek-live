@@ -14,9 +14,11 @@ export async function Topbar() {
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Link href="/app/events/new" className="rounded-full bg-brand-black px-4 py-2 text-sm font-bold text-white hover:bg-brand-orange" data-testid="topbar-new-event">New event</Link>
-          <span className="inline-flex w-fit rounded-full border border-brand-line bg-brand-ash px-3 py-2 text-sm font-semibold text-brand-black" data-testid="workspace-actor">
-            {actor?.label || "Not signed in"}
-          </span>
+          {actor?.kind === "owner" ? (
+            <Link href="/app/owner" className="inline-flex w-fit rounded-full border border-brand-line bg-brand-ash px-3 py-2 text-sm font-semibold text-brand-black hover:border-brand-orange hover:text-brand-orange" data-testid="workspace-actor" title="Owner console">{actor.label}</Link>
+          ) : (
+            <span className="inline-flex w-fit rounded-full border border-brand-line bg-brand-ash px-3 py-2 text-sm font-semibold text-brand-black" data-testid="workspace-actor">{actor?.label || "Not signed in"}</span>
+          )}
         </div>
       </div>
     </header>
