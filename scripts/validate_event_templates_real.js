@@ -10,7 +10,7 @@ function read(file) { if (!fs.existsSync(file)) throw new Error(`Missing ${file}
 let examined = 0;
 function check(file, tokens) { const body = read(file); examined += 1; const missing = tokens.filter((t) => !body.includes(t)); if (missing.length) throw new Error(`${file} missing: ${missing.join(" | ")}`); return body; }
 
-check("db/migrations/0033_event_templates.sql", ["create table if not exists public.runtime_event_templates", "sessions", "registration_questions", "duration_minutes"]);
+check("db/migrations/0035_event_templates.sql", ["create table if not exists public.runtime_event_templates", "sessions", "registration_questions", "duration_minutes"]);
 for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) check(store, ["upsertEventTemplate", "listEventTemplates", "getEventTemplate", "deleteEventTemplate"]);
 const service = check("services/events/eventTemplateService.ts", ["export async function saveEventTemplate", "export async function templateFromEvent", "export async function listEventTemplates", "Math.max(15, Math.min(480"]);
 if (!service.includes("A template needs a name")) throw new Error("A nameless template must be refused in words.");

@@ -29,7 +29,7 @@ function forbidTokens(file, tokens) {
 }
 
 // 1. Migration and mirror. Slow mode deliberately has no column — it rides the room's jsonb state.
-const canonical = "db/migrations/0033_live_chat_scale_controls.sql";
+const canonical = "db/migrations/0034_live_chat_scale_controls.sql";
 const canonicalSql = read(canonical);
 const mirrorDir = "supabase/migrations";
 const mirrors = fs.existsSync(mirrorDir) ? fs.readdirSync(mirrorDir).filter((name) => name.endsWith("_live_chat_scale_controls.sql")) : [];
@@ -43,7 +43,7 @@ for (const token of ["add column if not exists archived_at", "add column if not 
 }
 requireTokens("scripts/validate_supabase_schema_parity.js", ["live_chat_post_rates", '"archived_at"']);
 requireTokens("services/events/eventRepository.ts", ['["live_chat_post_rates"']);
-requireTokens("types/runtimeEvent.ts", ["LIVE_CHAT_SCALE_MIGRATION_FILE", "0033_live_chat_scale_controls.sql"]);
+requireTokens("types/runtimeEvent.ts", ["LIVE_CHAT_SCALE_MIGRATION_FILE", "0034_live_chat_scale_controls.sql"]);
 
 // 2. Both stores implement the delta read, the archive write, and the rate row; archived rows leave
 //    every listing, crew included.
