@@ -4822,6 +4822,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:capacity-contract",
+      "command": "node scripts/validate_capacity_and_keepalive_contract.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Every plan allowance (LiveKit Ship 600 transcode minutes / 150,000 participant-minutes / 250 GB / 1,000 concurrent, Workers Paid, Cloudflare Stream, Supabase Free) lives once in lib/capacity/capacityPlans.ts and is never retyped; an allowance or reading nobody could confirm is null with a reason and is rendered as \"unknown\" with no bar, never as 0; transcode minutes are the first and most prominent block of the /app/capacity readout; the page is behind the owner/operator gate and is linked from the operator launchpad; the Supabase keep-alive reads one row, writes nothing, logs nothing, and is registered on a daily schedule that hard-fails when the deployment is not on the Supabase store.",
+      "whatItDoesNotProve": "Static contract; the allowances, the unknown-not-zero rule and keep-alive idempotence are proven by tests/unit/capacityAndKeepAlive.test.ts. Month-to-date provider usage is not readable from any API this deployment holds and is reported as unknown by design.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; fails when a plan number is edited in prose instead of the module, or the keep-alive schedule is removed.",
+      "runtimeCost": "Static file reads; sub-second.",
+      "maintenanceCost": "Review when a provider plan changes or a new tier is adopted.",
+      "removalConditions": "Retire only if capacity stops being owner-visible or the Supabase project leaves the Free plan.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

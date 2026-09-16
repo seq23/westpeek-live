@@ -1,0 +1,58 @@
+name: Supabase keep-alive
+
+# Supabase Free pauses a project after seven idle days, which takes the runtime store — every
+# event, attendee and access code — offline until somebody notices. Between shows this repo can go
+# a fortnight without a real query, so one trivial read a day keeps the clock at zero.
+#
+# Why here and not a Worker cron trigger: the Worker entrypoint is the generated
+# .open-next/worker.js, which exports fetch() and nothing else, and both
+# scripts/read-wrangler-config.mjs and the deploy workflow pin `main` to it. A cron trigger against
+# that Worker would fire into a Worker with no scheduled() handler and fail silently every day.
+# This hits the same Worker through its front door instead, ~30 requests a month against 10M.
+
+on:
+  schedule:
+    # 07:17 UTC daily — a seven-times-over margin on the seven-day idle window.
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: supabase-keep-alive
+  cancel-in-progress: false
+
+jobs:
+  ping:
+    name: Read one row so the project stays awake
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - name: Ping /api/runtime/keep-alive
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          body=$(curl -sS --fail-with-body --max-time 30 \
+            -H 'user-agent: west-peek-supabase-keep-alive' \
+            "https://west-peek-live.seq-taylor.workers.dev/api/runtime/keep-alive")
+          echo "$body"
+          if ! echo "$body" | grep -q '"ok":true'; then
+            echo "Keep-alive read failed — the Supabase project may be paused or the service role key is wrong." >&2
+            exit 1
+          fi
+          if ! echo "$body" | grep -q '"store":"supabase"'; then
+            echo "The deployment is not on the Supabase store, so this ping kept nothing awake." >&2
+            exit 1
+          fi
+          echo "Supabase keep-alive: the project answered a single-row read."
+
+      - name: Summary
+        if: always()
+        shell: bash
+        run: |
+          {
+            echo "## Supabase keep-alive"
+            echo "- Target: https://west-peek-live.seq-taylor.workers.dev/api/runtime/keep-alive"
+            echo "- Conclusion: ${{ job.status }}"
+          } >> "$GITHUB_STEP_SUMMARY"
