@@ -114,3 +114,23 @@ Risks Accepted: The roster reads the latest 500 chat messages to compute "last c
 Validation Impact: `tests/unit/attendeeLiveRoster.test.ts`, `tests/e2e/crew-attendee-roster.spec.ts`, `scripts/validate_attendee_roster_contract.js`.
 
 Future Reversal Conditions: If attendees get a real-time presence channel, the roster should read presence from it and keep this decision record as the authority.
+
+## Decision ID: ADM-2026-09-16-INTENTIONAL-END
+
+Status: Accepted
+
+Context: When the ingress stops publishing, `evaluateStageFallbackDecision` steps the ladder down to Daily. Right for a dropped feed; wrong at the end of a show — the first production e2e ended with attendees moved to a Daily fallback for a show that was simply over. Separately, the LiveKit Cloud project was never told where to send webhooks ("Last webhook: None yet" through a 12-minute feed); the polled reconcile carried the show and nothing on the console said so.
+
+Decision: Two signals mean "over", honoured in either order, in the one choke point both the webhook route and the polled reconcile pass through (`applyStageStreamSignal`): the operator's explicit **End the show** (`operatorMarkedShowEnded` on the stage state) and the event itself being `ended`. `endShowForEvent` (a plain service; the only request-reachable caller is the guarded `endTheShow` action) marks the stage and sets the event to `ended`; seed events keep their compiled status. The control renders inside `CrewLiveModerationDeck` (crew console, command page, testing console) and on the publish page while live. Every stage server action now runs `requireLiveEventControlAccessForRequest` (they had no guard). The reconcile writes `lastHealthCheckAt` at most once a minute so the console can say "None yet — polling is carrying the state (every ~10s)". The webhook URL is derived from the request host (`lib/runtime/appBaseUrl.ts`, shared with the join link) and documented in `docs/LIVEKIT_WEBHOOKS.md`.
+
+Alternatives Considered: Reading event status inside the pure `evaluateStageFallbackDecision` (would make it async and store-aware; it stays pure and unit-testable); a separate "ended" flag on the event that the stage checks (the event status already exists and the publish page already sets it).
+
+Reasoning: One choke point means the webhook and the poll cannot disagree; two independent signals mean neither a stage reset nor a forgotten button strands the show.
+
+Tradeoffs: `applyStageStreamSignal` does one event read per `ingress_ended`. The heartbeat is a store write per minute per polled live stage.
+
+Risks Accepted: Registering the webhook in LiveKit Cloud is a manual step; the console names it and shows which path is live.
+
+Validation Impact: `tests/unit/endShowOrdering.test.ts` (7), `tests/e2e/end-the-show.spec.ts` (3), `scripts/validate_end_show_contract.js`.
+
+Future Reversal Conditions: If LiveKit ingress gains a "stopped by producer" reason in its state, prefer it over the event status as the second signal.

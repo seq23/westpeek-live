@@ -1,5 +1,6 @@
 import { AttendeeLiveRoster } from "@/components/moderation/AttendeeLiveRoster";
 import { ChatModerationQueue } from "@/components/moderation/ChatModerationQueue";
+import { EndShowControl } from "@/components/moderation/EndShowControl";
 import { LiveRoomControlForms } from "@/components/moderation/LiveRoomControlForms";
 
 /**
@@ -11,6 +12,7 @@ import { LiveRoomControlForms } from "@/components/moderation/LiveRoomControlFor
 export async function CrewLiveModerationDeck({ eventId, search, searchAction, includeRoomControls = true }: { eventId: string; search?: string; searchAction: string; includeRoomControls?: boolean }) {
   return (
     <div className="space-y-6" data-testid="crew-live-moderation-deck">
+      <EndShowControl eventId={eventId} />
       <AttendeeLiveRoster eventId={eventId} search={search} searchAction={searchAction} />
       <ChatModerationQueue eventId={eventId} />
       {includeRoomControls ? (
