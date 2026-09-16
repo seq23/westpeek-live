@@ -90,6 +90,14 @@ export function PublicEventPage({ slug }: { slug: string }) {
  */
 export async function EventRegistration({ slug, prefillEmail = "", waitSeconds }: { slug: string; prefillEmail?: string; waitSeconds?: number }) {
   const config = getEventConfigPackage(slug);
+  // Fail soft: the lifetime is a sentence, the form is the product. A store hiccup reading the
+  // event's own setting falls back to the platform default rather than taking registration down.
+  let sessionDays = DEFAULT_ATTENDEE_SESSION_DAYS;
+  try {
+    sessionDays = await attendeeSessionDaysFor(config.event.id);
+  } catch {
+    sessionDays = DEFAULT_ATTENDEE_SESSION_DAYS;
+  }
   const publicState = mapEventStatusToPublicState(config.event.state as any);
 
   if (publicState === "draft" || publicState === "archived") {
@@ -118,6 +126,7 @@ export async function EventRegistration({ slug, prefillEmail = "", waitSeconds }
         <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Attendee registration does not grant speaker, sponsor, client, crew, operator, admin, VIP, restricted-session, or camera/mic publishing access.</p>
         <div className="mt-6 space-y-4">
           <p className="text-xs text-slate-500">Three fields and you are in. Fields marked <span className="font-black text-brand-orange">*</span> are required; everything else you can add later from &ldquo;Tell us more about you&rdquo; inside the venue.</p>
+          <p className="mt-2 text-xs text-slate-500" data-testid="registration-lifetime-note">{registeredForWords(sessionDays)} Leave and come back on this device and you are still in. On another device, open the same link and enter this email.</p>
           {[
             ["name", "Name", "text", true, "Ada Lovelace"],
             ["email", "Email", "email", true, "you@company.com", prefillEmail],
