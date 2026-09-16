@@ -22,7 +22,7 @@ import { applyStageStreamSignal } from "@/services/video/stageStreamStateService
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
-const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Sequoia Taylor / owner", role: "owner" };
+const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 
 // 6:00 AM America/Chicago on 23 Sep 2026 (CDT, UTC-5) — the Later event from the e2e.
 const SIX_AM_CHICAGO = "2026-09-23T11:00:00.000Z";

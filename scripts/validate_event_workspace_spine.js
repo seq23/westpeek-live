@@ -44,8 +44,8 @@ if (duplicates.length) failures.push(`the spine lists these twice: ${duplicates.
 // The spine must actually be mounted for every event page, and be fail-soft.
 const layout = fs.readFileSync(`${root}/layout.tsx`, "utf8");
 for (const token of ["EventWorkspaceSpine", "SafeSection"]) if (!layout.includes(token)) failures.push(`${root}/layout.tsx must render ${token}`);
-const spine = fs.readFileSync("components/events/EventWorkspaceSpine.tsx", "utf8");
-for (const token of ["spine-whats-next", "spine-drawer", "spine-group-", "data-ready"]) if (!spine.includes(token)) failures.push(`EventWorkspaceSpine must carry ${token}`);
+const spine = fs.readFileSync("components/events/EventWorkspaceSpine.tsx", "utf8") + fs.readFileSync("components/events/EventSpineNav.tsx", "utf8");
+for (const token of ["spine-whats-next", "spine-drawer", "spine-group-", "data-ready", "event-spine-scroll", "aria-current"]) if (!spine.includes(token)) failures.push(`EventWorkspaceSpine must carry ${token}`);
 // Readiness dots only where something is measured: every readiness key must be answered.
 const keys = [...source.matchAll(/readiness:\s*"([a-z-]+)"/g)].map((match) => match[1]);
 for (const key of new Set(keys)) if (!spine.includes(`"${key}"`) && !spine.includes(`${key}:`)) failures.push(`readiness "${key}" is declared but never measured`);

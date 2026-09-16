@@ -13,11 +13,21 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
  * accepted for the surfaces the operator gate already opens.
  */
 export type WorkspaceActor =
-  | { kind: "owner"; id: "owner"; label: string; role: "owner" }
+  | { kind: "owner"; id: "owner"; label: string; role: "owner"; ownerKey?: "primary" | "secondary" }
   | { kind: "user"; id: string; label: string; role: string }
   | { kind: "operator"; id: "operator"; label: string; role: string };
 
-export const OWNER_ACTOR_LABEL = "Sequoia Taylor / owner";
+/**
+ * Owner access is one shared master password (two, counting the spare). The app cannot know which
+ * human is holding it, so it never claims one: the chip says "Owner". Which KEY was used is knowable
+ * — it is stamped in the cookie at the gate — and the Owner Console shows that, because a key is a
+ * fact and a name would be a guess.
+ */
+export const OWNER_ACTOR_LABEL = "Owner";
+
+export function ownerKeyLabel(ownerKey?: "primary" | "secondary") {
+  return ownerKey === "secondary" ? "key 2" : ownerKey === "primary" ? "key 1" : undefined;
+}
 
 export class WorkspaceActorRequiredError extends Error {
   constructor() {
@@ -33,7 +43,7 @@ export async function getWorkspaceActor(): Promise<WorkspaceActor | null> {
     const secret = getV5AccessCookieSecret(env);
     const cookieStore = await cookies();
     const owner = await readV5AccessCookie(cookieStore.get(ownerCookieName)?.value, secret);
-    if (owner?.kind === "owner") return { kind: "owner", id: "owner", label: OWNER_ACTOR_LABEL, role: "owner" };
+    if (owner?.kind === "owner") return { kind: "owner", id: "owner", label: OWNER_ACTOR_LABEL, role: "owner", ownerKey: owner.ownerKey };
 
     const user = await getCurrentUser();
     if (user) return { kind: "user", id: user.id, label: user.name || user.email, role: user.roles[0] || "agency_member" };

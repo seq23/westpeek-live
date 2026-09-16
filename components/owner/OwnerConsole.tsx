@@ -14,6 +14,7 @@ import { CURRENT_BUILD_ID } from "@/lib/runtime/buildVersion";
 import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import { getCrewAccessPassword, getEnv, getOperatorLaunchpadPassword } from "@/lib/env";
 import { getRuntimeSchemaStatus, listEventRecords } from "@/services/events/eventRepository";
+import { getWorkspaceActor, ownerKeyLabel } from "@/lib/auth/workspaceActor";
 import { getHostLinkState, hostLinkPath } from "@/services/events/hostLinkService";
 import { listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { listSpeakerStageStates } from "@/services/guests/guestStateService";
@@ -158,6 +159,8 @@ export async function OwnerConsole() {
   const operatorPasswordSet = Boolean(env && getOperatorLaunchpadPassword(env));
   const resendSet = Boolean(env?.RESEND_API_KEY);
   const schema = await getRuntimeSchemaStatus().catch((error) => ({ ok: false, store: "unknown", missingTables: [], migrationFile: "", detail: error instanceof Error ? error.message : String(error) }));
+  const consoleActor = await getWorkspaceActor();
+  const keyLabel = consoleActor?.kind === "owner" ? ownerKeyLabel(consoleActor.ownerKey) : undefined;
   const newestLive = live[0] || active[0];
   const stage = newestLive ? await getOperatorStageStreamState(newestLive.id, "main-stage").catch(() => undefined) : undefined;
   const replays = ended.map((event) => ({ event, count: buildVirtualVenueModel(event.id).replays.length }));
@@ -170,7 +173,7 @@ export async function OwnerConsole() {
         <div>
           <p className="text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Owner console</p>
           <h1 className="mt-2 text-3xl font-black tracking-tight">Everything, in order</h1>
-          <p className="mt-1 text-sm text-brand-muted">{events.length} event{events.length === 1 ? "" : "s"} on the books · {live.length} live now. Every section folds; the table of contents above scrolls to it.</p>
+          <p className="mt-1 text-sm text-brand-muted" data-testid="console-actor-line">{events.length} event{events.length === 1 ? "" : "s"} on the books · {live.length} live now. Every section folds; the table of contents above scrolls to it.{keyLabel ? ` You are in on ${keyLabel} of the owner master password — the app never guesses which person that is.` : ""}</p>
         </div>
         <Link href="/app/events/new" className="rounded-full bg-brand-black px-5 py-3 text-sm font-black text-white hover:bg-brand-orange" data-testid="console-new-event">New event</Link>
       </div>

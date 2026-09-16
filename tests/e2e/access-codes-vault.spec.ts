@@ -42,13 +42,29 @@ test("owner sees every code masked-until-reveal, finds an event by a code, rotat
   const vault = owner.getByTestId("access-codes-vault");
   await expect(vault).toBeVisible();
 
-  // Global gates: SET / NOT SET and the command, never the value.
-  await expect(owner.getByTestId("vault-gate-OWNER_MASTER_ACCESS_PASSWORD")).toHaveAttribute("data-set", "true");
-  await expect(owner.getByTestId("vault-gate-CREW_ACCESS_PASSWORD")).toContainText("npx wrangler secret put CREW_ACCESS_PASSWORD");
-  const body = await owner.locator("body").innerText();
-  expect(body).not.toContain(ownerPassword());
-  expect(body).not.toContain(requiredDay1Default("CREW_ACCESS_PASSWORD"));
-  expect(body).not.toContain(requiredDay1Default("OPERATOR_LAUNCHPAD_PASSWORD"));
+  // The three gate passwords the owner has to type again are here, masked until Reveal. The spare
+  // owner key is reported set / not set and its value never reaches the page.
+  const ownerGate = owner.getByTestId("vault-gate-OWNER_MASTER_ACCESS_PASSWORD");
+  await expect(ownerGate).toHaveAttribute("data-set", "true");
+  await expect(owner.getByTestId("vault-gate-value-OWNER_MASTER_ACCESS_PASSWORD")).toContainText("•");
+  const maskedBody = await owner.locator("body").innerText();
+  expect(maskedBody).not.toContain(ownerPassword());
+  await owner.getByTestId("vault-gate-reveal-OWNER_MASTER_ACCESS_PASSWORD").click();
+  await expect(owner.getByTestId("vault-gate-value-OWNER_MASTER_ACCESS_PASSWORD")).toHaveText(ownerPassword());
+  await owner.getByTestId("vault-gate-reveal-OPERATOR_LAUNCHPAD_PASSWORD").click();
+  await expect(owner.getByTestId("vault-gate-value-OPERATOR_LAUNCHPAD_PASSWORD")).toHaveText(requiredDay1Default("OPERATOR_LAUNCHPAD_PASSWORD"));
+  await owner.getByTestId("vault-gate-reveal-CREW_ACCESS_PASSWORD").click();
+  await expect(owner.getByTestId("vault-gate-value-CREW_ACCESS_PASSWORD")).toHaveText(requiredDay1Default("CREW_ACCESS_PASSWORD"));
+  // The spare: no value, no Reveal, just the rotation command.
+  const spare = owner.getByTestId("vault-gate-OWNER_MASTER_ACCESS_PASSWORD_2");
+  await expect(spare).toContainText("npx wrangler secret put OWNER_MASTER_ACCESS_PASSWORD_2");
+  await expect(owner.getByTestId("vault-gate-reveal-OWNER_MASTER_ACCESS_PASSWORD_2")).toHaveCount(0);
+  const spareValue = process.env.OWNER_MASTER_ACCESS_PASSWORD_2 || "";
+  const revealedBody = await owner.locator("body").innerText();
+  if (spareValue) expect(revealedBody).not.toContain(spareValue);
+  // The console response is never cached: it now carries these values.
+  const consoleResponse = await owner.request.get("/app/owner");
+  expect(consoleResponse.headers()["cache-control"] || "").toContain("no-store");
 
   // Per-event codes: masked until Reveal.
   const speaker = owner.getByTestId(`vault-code-${eventId}-speaker`);

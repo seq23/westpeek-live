@@ -1,5 +1,5 @@
-import Link from "next/link";
 import { EVENT_SPINE, spineHref, type SpineEntry } from "@/lib/navigation/eventWorkspaceSpine";
+import { EventSpineNav, type SpineNavGroup } from "@/components/events/EventSpineNav";
 import { listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
@@ -23,10 +23,6 @@ async function readiness(eventId: string): Promise<Readiness> {
   };
 }
 
-function Dot({ ready }: { ready: boolean }) {
-  return <span aria-hidden="true" className={`ml-2 inline-block h-2 w-2 rounded-full ${ready ? "bg-emerald-500" : "bg-amber-400"}`} />;
-}
-
 function NextStep({ state }: { state: Readiness }) {
   const next = !state.speakers.ready
     ? "Name the speakers — their green room, cue cards and tech check all hang off that."
@@ -42,50 +38,39 @@ function NextStep({ state }: { state: Readiness }) {
   );
 }
 
-function Groups({ eventId, state }: { eventId: string; state: Readiness }) {
-  return (
-    <nav aria-label="Event pages" className="space-y-4" data-testid="event-spine">
-      {EVENT_SPINE.map((group) => (
-        <div key={group.id} data-testid={`spine-group-${group.id}`}>
-          <p className="text-[11px] font-black uppercase tracking-[0.25em] text-brand-muted">{group.title}</p>
-          <ul className="mt-1 space-y-0.5">
-            {group.entries.map((entry) => {
-              const measured = entry.readiness ? state[entry.readiness] : undefined;
-              return (
-                <li key={entry.path || "root"}>
-                  <Link
-                    href={spineHref(eventId, entry.path)}
-                    title={measured ? `${entry.blurb} — ${measured.detail}` : entry.blurb}
-                    className="flex items-center rounded-xl px-2 py-1.5 text-sm font-bold text-brand-black hover:bg-brand-ash hover:text-brand-orange"
-                    data-testid={`spine-link-${entry.path || "root"}`}
-                    data-ready={measured ? (measured.ready ? "true" : "false") : undefined}
-                  >
-                    {entry.label}
-                    {measured ? <Dot ready={measured.ready} /> : null}
-                  </Link>
-                </li>
-              );
-            })}
-          </ul>
-        </div>
-      ))}
-    </nav>
-  );
+function navGroups(eventId: string, state: Readiness): SpineNavGroup[] {
+  return EVENT_SPINE.map((group) => ({
+    id: group.id,
+    title: group.title,
+    entries: group.entries.map((entry) => {
+      const measured = entry.readiness ? state[entry.readiness] : undefined;
+      return {
+        href: spineHref(eventId, entry.path),
+        label: entry.label,
+        title: measured ? `${entry.blurb} — ${measured.detail}` : entry.blurb,
+        ready: measured?.ready,
+      };
+    }),
+  }));
 }
 
 export async function EventWorkspaceSpine({ eventId }: { eventId: string }) {
   const state = await readiness(eventId);
   return (
     <aside className="lg:w-64 lg:shrink-0">
-      <div className="hidden lg:block lg:sticky lg:top-4 lg:space-y-3 lg:rounded-3xl lg:border lg:border-brand-line lg:bg-white lg:p-4">
-        <NextStep state={state} />
-        <Groups eventId={eventId} state={state} />
+      {/* The column is taller than a laptop screen: it scrolls inside itself, with "What's next"
+          pinned at the top so it stays readable while the groups move under it (16 Sep 2026). */}
+      <div className="hidden lg:sticky lg:top-4 lg:flex lg:max-h-[calc(100vh-2rem)] lg:flex-col lg:rounded-3xl lg:border lg:border-brand-line lg:bg-white" data-testid="event-spine-column">
+        <div className="shrink-0 p-4 pb-2"><NextStep state={state} /></div>
+        <div className="min-h-0 flex-1 overflow-y-auto overscroll-contain p-4 pt-2" data-testid="event-spine-scroll">
+          <EventSpineNav groups={navGroups(eventId, state)} />
+        </div>
       </div>
       <details className="rounded-3xl border border-brand-line bg-white p-3 lg:hidden" data-testid="spine-drawer">
         <summary className="cursor-pointer text-sm font-black">All event pages</summary>
         <div className="mt-3 space-y-3">
           <NextStep state={state} />
-          <Groups eventId={eventId} state={state} />
+          <EventSpineNav groups={navGroups(eventId, state)} />
         </div>
       </details>
     </aside>

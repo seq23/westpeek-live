@@ -24,7 +24,7 @@ import { createV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 
-const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Sequoia Taylor / owner", role: "owner" };
+const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 
 describe("custom and rotated access codes", () => {
   let tempDir: string;

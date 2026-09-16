@@ -44,16 +44,25 @@ async function readSpecialGuestAccess(request: NextRequest) {
   }
 }
 
+/**
+ * The Owner Console carries the gate passwords themselves (the owner asked for them there), so its
+ * response is never cached anywhere — not the browser, not a proxy, not Cloudflare.
+ */
+function noStore(response: NextResponse, pathname: string) {
+  if (pathname === "/app/owner" || pathname.startsWith("/app/owner/")) response.headers.set("cache-control", "no-store, no-cache, must-revalidate, private");
+  return response;
+}
+
 export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (!isProtectedPath(pathname)) return NextResponse.next();
 
   let sessionCookie: string | undefined;
   try { sessionCookie = request.cookies.get(getAuthCookieName())?.value; } catch { sessionCookie = undefined; }
-  if (sessionCookie && (pathname.startsWith("/app") || pathname.startsWith("/admin"))) return NextResponse.next();
+  if (sessionCookie && (pathname.startsWith("/app") || pathname.startsWith("/admin"))) return noStore(NextResponse.next(), pathname);
 
   const ownerAccess = await readOwnerAccess(request);
-  if (canOwnerAccessPath(pathname, ownerAccess)) return NextResponse.next();
+  if (canOwnerAccessPath(pathname, ownerAccess)) return noStore(NextResponse.next(), pathname);
 
   const operatorAccess = await readOperatorAccess(request);
   if (canOperatorAccessPath(pathname, operatorAccess)) return NextResponse.next();

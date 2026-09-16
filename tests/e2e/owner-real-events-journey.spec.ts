@@ -168,7 +168,7 @@ test.describe("owner real events", () => {
     expect(JSON.stringify(body)).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY|wpl-[a-z0-9]{6}|CREW-/);
 
     await loginOwner(page);
-    await expect(page.getByTestId("workspace-actor")).toContainText("Sequoia Taylor / owner");
+    await expect(page.getByTestId("workspace-actor")).toContainText("Owner");
     // The owner gate lands on the Owner Console; the dashboard is one click away.
     await gotoAndAssert(page, "/app");
     await expect(page.getByTestId("persistence-mode")).toContainText(/tables ready/i);
@@ -205,7 +205,8 @@ test.describe("owner real events", () => {
     await page.getByLabel(/Member 2 role/i).fill("producer");
     await page.getByTestId("settings-save").click();
     await expect(page).toHaveURL(/\/app\/settings\?saved=1/);
-    await expect(page.getByTestId("settings-saved")).toContainText(/Sequoia Taylor \/ owner/);
+    // Owner access is shared: the record says "Owner", never a person (16 Sep 2026).
+    await expect(page.getByTestId("settings-saved")).toContainText(/Settings saved by Owner/);
     await expect(page.getByTestId("settings-agency-name")).toHaveValue(agencyName);
     await expect(page.getByLabel(/Member 2 name/i)).toHaveValue("Playwright Producer");
     await gotoAndAssert(page, "/app");

@@ -22,7 +22,7 @@ import { provisionStreamYardLiveKitIngress, reclaimStaleIngresses, releaseIngres
 import { endShowForEvent } from "@/services/video/showEndService";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 
-const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Sequoia Taylor / owner", role: "owner" };
+const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 const ORIGINAL_ENV = { ...process.env };
 
 function fakeLiveKit(handlers: Record<string, (body: unknown) => { status?: number; body: unknown }>, calls: { method: string; body: unknown }[]) {
