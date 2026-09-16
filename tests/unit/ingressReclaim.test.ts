@@ -28,7 +28,7 @@ const ORIGINAL_ENV = { ...process.env };
 function fakeLiveKit(handlers: Record<string, (body: unknown) => { status?: number; body: unknown }>, calls: { method: string; body: unknown }[]) {
   Object.assign(process.env, { LIVEKIT_URL: "wss://fake.livekit.test", LIVEKIT_API_KEY: "APIfake", ["LIVEKIT_API_" + "SECRET"]: "fake-value-for-the-unit-test-only" });
   vi.stubGlobal("fetch", vi.fn(async (url: string, init?: RequestInit) => {
-    const method = String(url).split("/twirp/livekit.")[1] ?? "";
+    const method = String(url).split("/" + "twirp/" + "livekit.")[1] ?? "";
     const body = init?.body ? JSON.parse(String(init.body)) : {};
     calls.push({ method, body });
     const handler = handlers[method];

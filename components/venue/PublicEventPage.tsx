@@ -1,3 +1,4 @@
+import { formatSessionWindow } from "@/lib/utils/format";
 /* eslint-disable @typescript-eslint/no-explicit-any -- boundary adapters normalize legacy/runtime payloads before typed domain use */
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { submitEventRegistration } from "@/lib/actions/registrationActions";
@@ -45,7 +46,7 @@ export function PublicEventPage({ slug }: { slug: string }) {
               {config.agenda.sessions.map((session, index) => (
                 <div key={session.id || String(index)} className="rounded-xl bg-slate-50 p-3">
                   <p className="font-medium">{session.title}</p>
-                  <p className="text-sm text-slate-500">{session.room} · {session.startsAt}</p>
+                  <p className="text-sm text-slate-500">{session.room} · {formatSessionWindow(session.startsAt, session.endsAt)}</p>
                 </div>
               ))}
             </div>

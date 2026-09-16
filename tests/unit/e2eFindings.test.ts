@@ -35,3 +35,14 @@ describe("watching the stage never publishes the attendee's microphone", () => {
     expect(src).toMatch(/<RoomAudioRenderer muted=\{muted\} volume=\{volume\} \/>/);
   });
 });
+
+describe("the attendee agenda shows times, not ISO strings", () => {
+  it("formats a same-day window as day · start – end", async () => {
+    const { formatSessionWindow } = await import("@/lib/utils/format");
+    const out = formatSessionWindow("2026-09-16T05:10:38.777Z", "2026-09-16T07:10:38.777Z");
+    expect(out).not.toMatch(/T\d\d:\d\d:\d\d/);
+    expect(out).toContain("\u2013");
+    expect(formatSessionWindow(undefined)).toBe("Time TBA");
+    expect(formatSessionWindow("garbage")).toBe("garbage");
+  });
+});
