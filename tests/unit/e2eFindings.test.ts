@@ -84,7 +84,8 @@ describe("event areas land on the canonical event id", () => {
   it("the crew deck carries the go-live console", async () => {
     const { readFileSync } = await import("node:fs");
     const src = readFileSync(new URL("../../components/moderation/CrewLiveModerationDeck.tsx", import.meta.url), "utf8");
-    expect(src).toMatch(/<StreamYardIngressPanel eventId=\{eventId\}[^>]*\/>/);
+    // Rendered through SafeSection (called inside its try) so a store failure never takes the deck down.
+    expect(src).toMatch(/render=\{\(\) => StreamYardIngressPanel\(\{ eventId/);
   });
 });
 

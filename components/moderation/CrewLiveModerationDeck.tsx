@@ -5,6 +5,8 @@ import { StreamYardIngressPanel } from "@/components/testing/StreamYardIngressPa
 import { LiveRoomControlForms } from "@/components/moderation/LiveRoomControlForms";
 import { SpeakerRosterPanel } from "@/components/moderation/SpeakerRosterPanel";
 import { getCrewViewer } from "@/lib/auth/crewViewer";
+import { SafeSection } from "@/components/system/SafeSection";
+
 import { HostPanel } from "@/components/events/HostPanel";
 import { NetworkingCrewCard } from "@/components/moderation/NetworkingCrewCard";
 
@@ -27,20 +29,20 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, in
             <h2 className="mt-2 text-2xl font-black tracking-tight">Make the stage live, and move it if the feed fails</h2>
             <p className="mt-2 max-w-3xl text-sm text-slate-300">Generate the RTMP credentials once, paste them into StreamYard → Custom RTMP, and start the broadcast there; the stage flips within seconds. The ladder below moves attendees to a backup room when the feed drops, and back up when it returns.</p>
           </div>
-          <StreamYardIngressPanel eventId={eventId} viewer={viewer} includeEndShow={false} />
+          <SafeSection label="Go live" render={() => StreamYardIngressPanel({ eventId, viewer, includeEndShow: false })} />
         </section>
       ) : null}
-      <HostPanel eventId={eventId} viewer={viewer} />
-      <EndShowControl eventId={eventId} viewer={viewer} />
-      <SpeakerRosterPanel eventId={eventId} viewer={viewer} />
-      <AttendeeLiveRoster eventId={eventId} search={search} searchAction={searchAction} viewer={viewer} />
-      <ChatModerationQueue eventId={eventId} viewer={viewer} />
-      <NetworkingCrewCard eventId={eventId} viewer={viewer} />
+      <SafeSection label="Host" render={() => HostPanel({ eventId, viewer })} />
+      <SafeSection label="End of show" render={() => EndShowControl({ eventId, viewer })} />
+      <SafeSection label="Speakers" render={() => SpeakerRosterPanel({ eventId, viewer })} />
+      <SafeSection label="Attendee roster" render={() => AttendeeLiveRoster({ eventId, search, searchAction, viewer })} />
+      <SafeSection label="Chat moderation" render={() => ChatModerationQueue({ eventId, viewer })} />
+      <SafeSection label="Networking" render={() => NetworkingCrewCard({ eventId, viewer })} />
       {includeRoomControls ? (
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="crew-live-room-controls">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Room-wide live controls</p>
           <h2 className="mt-2 text-xl font-black text-slate-950">Camera, microphone, join approval, and the kill switch</h2>
-          <div className="mt-4"><LiveRoomControlForms eventId={eventId} viewer={viewer} /></div>
+          <div className="mt-4"><SafeSection label="Room-wide live controls" render={() => LiveRoomControlForms({ eventId, viewer })} /></div>
         </section>
       ) : null}
     </div>

@@ -3,6 +3,7 @@ import { LiveRoomChat } from "@/components/venue/LiveRoomChat";
 import { getCurrentGuestIdentity, listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { getVipRoom } from "@/services/guests/guestStateService";
 import type { ViewAsContext } from "@/lib/auth/viewAs";
+import { SafeSection } from "@/components/system/SafeSection";
 
 /**
  * What a VIP code holder sees on the lobby: the badge, their name (given once), and the VIP
@@ -25,7 +26,7 @@ export async function VipLobbyPanel({ eventId, error, viewAs }: { eventId: strin
         <section className="rounded-3xl border border-brand-orange/40 bg-brand-orangeSoft p-5" data-testid="vip-lounge">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">{room.label}</p>
           <p className="mt-2 text-sm text-slate-700">{vips.length} VIP{vips.length === 1 ? "" : "s"} named for this event{vips.length ? `: ${vips.map((item) => item.name).join(", ")}` : ""}. Chat here is VIP-and-crew only; register as an attendee with the join code to post with your identity.</p>
-          {viewAs ? <p className="mt-4 rounded-2xl bg-white/70 p-4 text-sm text-slate-700" data-testid="vip-chat-preview-disabled">Lounge chat is not shown in preview; open the lounge from the crew deck to read or moderate it as crew.</p> : <div className="mt-4"><LiveRoomChat eventId={eventId} roomKind="breakout" roomId={room.roomId} title={room.label} description="Opened by the crew for VIP guests." /></div>}
+          {viewAs ? <p className="mt-4 rounded-2xl bg-white/70 p-4 text-sm text-slate-700" data-testid="vip-chat-preview-disabled">Lounge chat is not shown in preview; open the lounge from the crew deck to read or moderate it as crew.</p> : <div className="mt-4"><SafeSection label="VIP lounge chat" render={() => LiveRoomChat({ eventId: eventId, roomKind: "breakout", roomId: room.roomId, title: room.label, description: "Opened by the crew for VIP guests." })} /></div>}
         </section>
       ) : null}
     </div>

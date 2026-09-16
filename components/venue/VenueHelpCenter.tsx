@@ -1,5 +1,6 @@
 import type { VirtualVenueModel } from "@/types/virtualVenue";
 import { HelpRequestForm } from "./HelpRequestForm";
+import { SafeSection } from "@/components/system/SafeSection";
 
 const supportHref =
   "mailto:info@westpeek.ventures?subject=West%20Peek%20Live%20Event%20Help";
@@ -75,7 +76,7 @@ export function VenueHelpCenter({ model }: { model: VirtualVenueModel }) {
           </div>
         </section>
 
-        <HelpRequestForm eventId={eventId} topics={model.helpTopics} />
+        <SafeSection label="Help request" render={() => HelpRequestForm({ eventId: eventId, topics: model.helpTopics })} />
       </div>
     </div>
   );

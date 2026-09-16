@@ -40,10 +40,10 @@ requireTokens("app/api/attendee-live/access/route.ts", ["applyAttendeeLiveDecisi
 
 // 4. The deck lives where the crew is, and the testing console keeps working through the same component.
 requireTokens("components/moderation/AttendeeLiveRoster.tsx", ["attendee-live-roster", "pending-stage-requests", "roster-search-form", "decideAttendeeLiveAccess", "silenceLiveChatAttendee", "Permit to watch", "Approve to publish", "Revoke"]);
-requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["<AttendeeLiveRoster eventId=", "<ChatModerationQueue eventId=", "<LiveRoomControlForms eventId="]);
+requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["=> AttendeeLiveRoster({ eventId", "=> ChatModerationQueue({ eventId", "=> LiveRoomControlForms({ eventId"]);
 requireTokens("app/crew/events/[eventId]/page.tsx", ["<CrewLiveModerationDeck eventId=", "roster"]);
 requireTokens("components/production/ProductionCommandCenter.tsx", ["<CrewLiveModerationDeck eventId="]);
-requireTokens("components/testing/AttendeeLiveControlPanel.tsx", ["<AttendeeLiveRoster eventId=", "<LiveRoomControlForms eventId="]);
+requireTokens("components/testing/AttendeeLiveControlPanel.tsx", ["=> AttendeeLiveRoster({ eventId", "=> LiveRoomControlForms({ eventId"]);
 requireTokens("components/venue/AttendeeStageJoinControls.tsx", ["attendee-stage-request-pending", "attendee-stage-approved", "attendee-stage-request-declined"]);
 
 // 5. Proof.

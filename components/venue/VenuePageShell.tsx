@@ -28,14 +28,22 @@ export async function VenuePageShell({
   showLegalFooter?: boolean;
   surface?: "replay" | "other";
 }) {
-  const [event, stage, actor, viewer] = await Promise.all([
-    findEventRecord(model.eventId).catch(() => undefined),
-    getPublicStageStreamState(model.eventId, "main-stage").catch(() => undefined),
-    getWorkspaceActor(),
-    getCrewViewer(model.eventId),
-  ]);
-  const isHost = Boolean(actor) || viewer.isHost;
-  const gate = venueGateFor({ status: event?.status, stageEnded: stage?.streamStatus === "ENDED", isHost, surface });
+  // The shell's own reads fail soft too: a store failure here must not take every venue page down;
+  // the page renders open and the poller keeps asking.
+  let gate: ReturnType<typeof venueGateFor> = "open";
+  let isHost = false;
+  try {
+    const [event, stage, actor, viewer] = await Promise.all([
+      findEventRecord(model.eventId).catch(() => undefined),
+      getPublicStageStreamState(model.eventId, "main-stage").catch(() => undefined),
+      getWorkspaceActor(),
+      getCrewViewer(model.eventId),
+    ]);
+    isHost = Boolean(actor) || viewer.isHost;
+    gate = venueGateFor({ status: event?.status, stageEnded: stage?.streamStatus === "ENDED", isHost, surface });
+  } catch (error) {
+    console.warn("venue shell gate unavailable", error instanceof Error ? error.message : String(error));
+  }
   return (
     <main className="min-h-screen bg-brand-ash px-4 py-4 text-brand-black sm:px-6 lg:px-8" data-venue-gate={gate}>
       <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6">

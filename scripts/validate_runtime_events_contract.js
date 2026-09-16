@@ -74,6 +74,34 @@ forbidTokens("app/api/runtime/health/route.ts", ["SUPABASE_SERVICE_ROLE_KEY", "a
 // 6. Post-deploy proof reads the health endpoint.
 requireTokens("scripts/post_deploy_smoke_test.js", ["/api/runtime/health"]);
 
+// 7. No migration may re-create a table name an earlier migration already created, unless it first
+//    moves that table aside (rename) or drops it. Migration 0027 said `create table if not exists`
+//    for speed_networking_entries / speed_networking_matches while 0010 had already created tables of
+//    those names with uuid ids: the create was a no-op, the store wrote slugs into uuid columns, and
+//    every crew page 500'd during a live workshop (16 Sep 2026). Applies to db/migrations in order.
+{
+  const migrationDir = "db/migrations";
+  const names = fs.existsSync(migrationDir) ? fs.readdirSync(migrationDir).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort() : [];
+  const createdBy = new Map(); // table -> migration that first created it
+  for (const name of names) {
+    const sql = read(path.join(migrationDir, name));
+    // Comments are prose ("0027 used `create table if not exists`…"), not statements.
+    const lower = sql.split("\n").map((line) => line.replace(/--.*$/, "")).join("\n").toLowerCase();
+    // The rule is enforced from the runtime-first era (0024) on; 0001–0023 carry historic duplicate
+    // creates of the same shape from the pre-runtime schema and are the baseline, not a target.
+    const enforced = Number(name.slice(0, 4)) >= 24;
+    const creates = [...lower.matchAll(/create\s+table\s+(?:if\s+not\s+exists\s+)?(?:public\.)?([a-z0-9_]+)/g)].map((m) => m[1]);
+    for (const table of creates) {
+      const first = createdBy.get(table);
+      if (first && first !== name && enforced) {
+        const movedAside = new RegExp(`alter\\s+table\\s+(?:public\\.)?${table}\\s+rename\\s+to`).test(lower) || new RegExp(`drop\\s+table\\s+(?:if\\s+exists\\s+)?(?:public\\.)?${table}\\b`).test(lower);
+        if (!movedAside) failures.push(`${migrationDir}/${name} creates ${table}, which ${first} already created: a "create table if not exists" is a silent no-op against a table of another shape — rename the old table aside (or drop it) in the same migration, or pick a new name`);
+      } else if (!first) createdBy.set(table, name);
+    }
+  }
+  if (names.length < 20) failures.push(`only ${names.length} migrations examined; expected the full history`);
+}
+
 if (examined === 0) failures.push("validate_runtime_events_contract examined zero files");
 if (failures.length) {
   console.error("validate_runtime_events_contract: FAIL");

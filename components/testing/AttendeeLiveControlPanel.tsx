@@ -1,6 +1,7 @@
 import { setAttendeeLiveApproval } from "@/lib/actions/attendeeLiveActions";
 import { AttendeeLiveRoster } from "@/components/moderation/AttendeeLiveRoster";
 import { LiveRoomControlForms } from "@/components/moderation/LiveRoomControlForms";
+import { SafeSection } from "@/components/system/SafeSection";
 
 /**
  * Testing-console view of the crew live controls: the room-wide switches, the roster with
@@ -13,8 +14,8 @@ export async function AttendeeLiveControlPanel({ eventId = "event-summit", searc
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Attendee live controls</p>
       <h2 className="mt-2 text-xl font-black text-slate-950">Crew-controlled camera and mic permissions</h2>
       <p className="mt-2 text-sm text-slate-600">Main stage attendee publishing is off/request-based by default. Breakout rooms can allow attendee camera/mic, but crew can revoke or emergency-disable all publishing.</p>
-      <div className="mt-4"><LiveRoomControlForms eventId={eventId} /></div>
-      <div className="mt-4"><AttendeeLiveRoster eventId={eventId} search={search} searchAction={searchAction || `/admin/testing/${eventId}`} /></div>
+      <div className="mt-4"><SafeSection label="Room-wide live controls" render={() => LiveRoomControlForms({ eventId: eventId })} /></div>
+      <div className="mt-4"><SafeSection label="Attendee roster" render={() => AttendeeLiveRoster({ eventId, search, searchAction: searchAction || `/admin/testing/${eventId}` })} /></div>
       <details className="mt-4 rounded-2xl border border-slate-200 p-4">
         <summary className="cursor-pointer text-sm font-black">By attendee id (fallback when someone is not on the roster)</summary>
         <form action={setAttendeeLiveApproval} className="mt-3">

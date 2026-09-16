@@ -9,6 +9,7 @@ import { getCurrentSpecialGuestAccess } from "@/services/guests/guestIdentitySer
 import { resolveViewAs } from "@/lib/auth/viewAs";
 import { ViewAsBanner } from "@/components/guests/ViewAsBanner";
 import { getCrewViewer } from "@/lib/auth/crewViewer";
+import { SafeSection } from "@/components/system/SafeSection";
 
 export const dynamic = "force-dynamic";
 
@@ -29,8 +30,8 @@ export default async function LobbyPage({ params, searchParams }: { params: Prom
     <VenuePageShell model={model}>
       {viewAs ? <ViewAsBanner viewAs={viewAs} backHref={`/crew/events/${resolvedParams.eventId}`} /> : null}
       {isHost && runtimeEvent && !viewAs ? <HostJoinCodeBanner event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} crewHost={crewHost} /> : null}
-      {guest?.role === "vip" || viewAs ? <VipLobbyPanel eventId={resolvedParams.eventId} error={resolvedSearchParams?.error} viewAs={viewAs} /> : null}
-      <VenueLobbyDashboard model={model} />
+      {guest?.role === "vip" || viewAs ? <SafeSection label="VIP" render={() => VipLobbyPanel({ eventId: resolvedParams.eventId, error: resolvedSearchParams?.error, viewAs })} /> : null}
+      <SafeSection label="Lobby" render={() => VenueLobbyDashboard({ model })} />
     </VenuePageShell>
   );
 }

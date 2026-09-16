@@ -15,6 +15,7 @@ import { EditAttendeeProfilePanel } from "@/components/venue/EditAttendeeProfile
 import { FirstVisitCoachStrip } from "@/components/venue/FirstVisitCoachStrip";
 import { requestAttendeeStageAccess } from "@/lib/actions/attendeeLiveActions";
 import { attendeeStageStatus } from "@/services/venue/attendeeStageStatus";
+import { SafeSection } from "@/components/system/SafeSection";
 
 export async function MainStageExperience({ model }: { model: VirtualVenueModel }) {
   const fallbackState = await getRoomFallbackState(model.eventId, "main_stage").catch(() => createInitialRoomFallbackState(model.eventId, "main_stage"));
@@ -43,8 +44,8 @@ export async function MainStageExperience({ model }: { model: VirtualVenueModel 
         </section>
         <MainStageLiveChat model={model} />
       </div>
-      <MyAgendaPanel model={model} />
-      <EditAttendeeProfilePanel eventId={model.eventId} />
+      <SafeSection label="My agenda" render={() => MyAgendaPanel({ model: model })} />
+      <SafeSection label="Attendee profile" render={() => EditAttendeeProfilePanel({ eventId: model.eventId })} />
       <MainStageAgendaStrip sessions={model.sessions} eventId={model.eventId} />
       {model.sessions.length > 50 ? <SessionFullState /> : null}
     </div>
