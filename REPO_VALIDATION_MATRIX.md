@@ -209,3 +209,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: one pure gate (`services/venue/venueStateGate.ts`) applied by `VenuePageShell`, which every `app/venue/[eventId]/*` page renders through: ended / replay_available (or the stage marked ENDED) → the ended state with the replay center; archived → the archived notice; draft → not open unless the host previews. `VenueStatePoller` refreshes an open page when the gate changes (End the show reaches an open attendee tab within one poll).
 - Proof behind it: `tests/unit/venueStateGate.test.ts`, `tests/e2e/venue-follows-event-state.spec.ts`.
+
+## Real speed networking — 2026-09-16
+
+- Validator: `npm run validate:speed-networking-real-contract`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: migration `0027_speed_networking.sql` and its Supabase mirror byte-identical and probed by `/api/runtime/health`; both runtime stores implement `speed_networking_entries` / `speed_networking_matches`; the matcher (`services/speed-networking/speedNetworkingService.ts`) runs on every read through the existing pure engine with the match history (no repeats), one LiveKit room `<eventId>-net-<matchId>` per match with a crew-set window (default 4 min); the token route issues a networking-room token only to the two matched attendees; the networking page states and the crew Networking card.
+- Proof behind it: `tests/unit/speedNetworkingReal.test.ts`, `tests/e2e/speed-networking-real.spec.ts` (two browsers).

@@ -98,6 +98,7 @@ export class RuntimeSchemaMissingError extends Error {
 export const RUNTIME_EVENTS_MIGRATION_FILE = "db/migrations/0024_runtime_events.sql";
 export const LIVE_CHAT_MODERATION_MIGRATION_FILE = "db/migrations/0025_live_chat_moderation.sql";
 export const SPECIAL_GUEST_MIGRATION_FILE = "db/migrations/0026_special_guest_identity_and_state.sql";
+export const SPEED_NETWORKING_MIGRATION_FILE = "db/migrations/0027_speed_networking.sql";
 
 /** Which SQL file creates each runtime table the health probe checks. */
 export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
@@ -108,4 +109,6 @@ export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
   "live_chat_messages.moderated_by": LIVE_CHAT_MODERATION_MIGRATION_FILE,
   special_guest_profiles: SPECIAL_GUEST_MIGRATION_FILE,
   event_guest_states: SPECIAL_GUEST_MIGRATION_FILE,
+  speed_networking_entries: SPEED_NETWORKING_MIGRATION_FILE,
+  speed_networking_matches: SPEED_NETWORKING_MIGRATION_FILE,
 };

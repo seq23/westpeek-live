@@ -6,6 +6,7 @@ import { LiveRoomControlForms } from "@/components/moderation/LiveRoomControlFor
 import { SpeakerRosterPanel } from "@/components/moderation/SpeakerRosterPanel";
 import { getCrewViewer } from "@/lib/auth/crewViewer";
 import { HostPanel } from "@/components/events/HostPanel";
+import { NetworkingCrewCard } from "@/components/moderation/NetworkingCrewCard";
 
 /**
  * Where the crew is: the pending requests + roster, the chat moderation queue, and the room-wide
@@ -34,6 +35,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, in
       <SpeakerRosterPanel eventId={eventId} viewer={viewer} />
       <AttendeeLiveRoster eventId={eventId} search={search} searchAction={searchAction} viewer={viewer} />
       <ChatModerationQueue eventId={eventId} viewer={viewer} />
+      <NetworkingCrewCard eventId={eventId} viewer={viewer} />
       {includeRoomControls ? (
         <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="crew-live-room-controls">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Room-wide live controls</p>

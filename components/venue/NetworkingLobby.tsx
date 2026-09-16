@@ -9,7 +9,7 @@ export function NetworkingLobby({ model }: { model: VirtualVenueModel }) {
       <section className="rounded-3xl bg-white p-6 shadow-sm">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Networking</p>
         <h2 className="mt-2 text-3xl font-semibold">Meet another attendee</h2>
-        <p className="mt-2 text-slate-600">Join the queue for timed 1:1 conversations. The matching engine looks for a no-repeat attendee match, starts a visible timer when a match is ready, and falls back safely to queue context when no match is available yet. You can skip, report, or return to the lobby at any time. Joining records a networking analytics event for post-event reporting.</p>
+        <p className="mt-2 text-slate-600">Join the queue for timed 1:1 video conversations. You are paired with the longest-waiting attendee you have not met yet; camera and mic come on in a private room for the two of you, a timer counts down, and when it ends you both go back to the queue. Next match or End networking at any time.</p>
       </section>
       <SpeedNetworkingQueuePanel eventId={model.eventId} />
     </div>

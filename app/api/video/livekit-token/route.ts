@@ -8,6 +8,7 @@ import type { LiveKitJoinRequest } from "@/types/livekitRoomUi";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
 import { getSpeakerStageState } from "@/services/guests/guestStateService";
 import { decideGuestVideoGrant } from "@/services/guests/guestVideoGrants";
+import { findActiveMatchForRoom, tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<LiveKitJoinRequest>;
@@ -47,10 +48,17 @@ export async function POST(request: Request) {
     if (!identity) return NextResponse.json({ ok: false, error: "Registered attendee session required for attendee video token." }, { status: 403 });
     displayName = identity.displayName;
     profileId = identity.attendeeId;
+    // A speed-networking room: only the two attendees of THAT active match, camera and mic on (both opted in).
+    if (body.roomType === "speed_networking") {
+      const match = await findActiveMatchForRoom(body.eventId, body.roomId).catch(() => undefined);
+      if (!tokenAllowedForRoom(match, body.roomId, identity.attendeeId)) return NextResponse.json({ ok: false, error: "This networking room is not yours: tokens go only to the two matched attendees while the match is active." }, { status: 403 });
+      publishPermission = { canPublishAudio: true, canPublishVideo: true, canShareScreen: false, reason: "Matched for speed networking." };
+    } else {
     const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
     const joinPermission = await canAttendeeJoinLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
     if (!joinPermission.canJoin) return NextResponse.json({ ok: false, error: joinPermission.reason, accessStatus: joinPermission.status }, { status: 403 });
     publishPermission = await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
+    }
   }
 
   let result: Awaited<ReturnType<typeof buildResilientVideoJoinResult>>;

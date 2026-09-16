@@ -399,6 +399,9 @@ export async function getRuntimeSchemaStatus(): Promise<RuntimeSchemaStatus> {
     // Migration 0026: special-guest identity and state.
     ["special_guest_profiles", () => store.listSpecialGuestProfiles("__schema_probe__")],
     ["event_guest_states", () => store.listEventGuestStates("__schema_probe__")],
+    // Migration 0027: speed networking queue and matches.
+    ["speed_networking_entries", () => store.listSpeedNetworkingEntries("__schema_probe__")],
+    ["speed_networking_matches", () => store.listSpeedNetworkingMatches("__schema_probe__")],
   ];
   for (const [table, probe] of probes) {
     try {

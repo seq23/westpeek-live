@@ -31,7 +31,8 @@ export async function buildLiveKitJoinResult(input: LiveKitJoinRequest): Promise
   const livekitUrl = typeof room.metadata.livekitUrl === "string" ? room.metadata.livekitUrl : undefined;
   // The stage room is the ingress-backed room; the green room is one deterministic room per event
   // so crew and speakers land in the same place from any page.
-  const ingressBackedRoomName = input.roomType === "main_stage" ? normalizeLiveKitRoomName(input.eventId, input.roomId || "main-stage") : input.roomType === "green_room" ? normalizeLiveKitRoomName(input.eventId, "green-room") : undefined;
+  // A speed-networking roomId is already the full, normalized room name (<eventId>-net-<matchId>).
+  const ingressBackedRoomName = input.roomType === "main_stage" ? normalizeLiveKitRoomName(input.eventId, input.roomId || "main-stage") : input.roomType === "green_room" ? normalizeLiveKitRoomName(input.eventId, "green-room") : input.roomType === "speed_networking" ? input.roomId : undefined;
   const tokenRoom = ingressBackedRoomName ? {
     ...room,
     id: ingressBackedRoomName,
