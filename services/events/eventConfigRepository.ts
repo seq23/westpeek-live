@@ -46,7 +46,8 @@ import workshopRunOfShow from "@/data/events/premium-workshop-intensive/run-of-s
 import workshopVideo from "@/data/events/premium-workshop-intensive/video.json";
 import workshopCommunications from "@/data/events/premium-workshop-intensive/communications.json";
 import type { V4SpecialGuestRole } from "@/types/v4";
-import { getEventSetupDraftByEventCode, getEventSetupDraftRoleCodes } from "@/services/events/eventDraftStore";
+import { peekOverlayEvent } from "@/services/events/runtimeEventOverlay";
+import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
 export interface EventIndexRecord {
   slug: string;
@@ -132,30 +133,30 @@ function normalizeEventLookupKey(rawCode: string | undefined) {
 }
 
 function dynamicEventIndexRecord(code: string | undefined): EventIndexRecord | undefined {
-  const draft = getEventSetupDraftByEventCode(code);
-  if (!draft) return undefined;
+  const event = peekOverlayEvent(code);
+  if (!event) return undefined;
   return {
-    slug: draft.eventCode,
-    eventId: draft.eventCode,
-    publicCode: draft.eventCode,
-    status: "registration_open",
-    configPath: `.runtime-data/event-drafts.json#${draft.id}`,
+    slug: event.slug,
+    eventId: event.id,
+    publicCode: event.joinCode,
+    status: event.status,
+    configPath: `runtime_events#${event.id}`,
   };
 }
 
 function dynamicEventConfig(code: string | undefined): EventConfigRecord | undefined {
-  const draft = getEventSetupDraftByEventCode(code);
-  if (!draft) return undefined;
+  const event = peekOverlayEvent(code);
+  if (!event) return undefined;
   return {
-    id: draft.eventCode,
-    slug: draft.eventCode,
-    name: draft.eventName,
-    client: draft.clientName,
-    clientSlug: draft.clientName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") || "client",
-    timezone: "America/Chicago",
-    state: "registration_open",
-    publishLifecycle: "test_created_runtime_event",
-    publicCode: draft.eventCode,
+    id: event.id,
+    slug: event.slug,
+    name: event.name,
+    client: event.clientName,
+    clientSlug: event.clientSlug,
+    timezone: event.timezone,
+    state: event.status,
+    publishLifecycle: event.status === "draft" ? "draft" : "published",
+    publicCode: event.joinCode,
     runtimeStateBoundary: "event_scoped_runtime",
   };
 }
@@ -163,49 +164,64 @@ function dynamicEventConfig(code: string | undefined): EventConfigRecord | undef
 function dynamicAttendeeConfig(code: string | undefined): AttendeeConfigRecord | undefined {
   const event = dynamicEventConfig(code);
   if (!event) return undefined;
-  return { eventId: event.id, joinStates: ["registration_open", "live"], defaultDestination: `/venue/${event.id}/lobby`, supportEnabled: true };
+  const joinStates = ["invalid_code", "not_open", "live", "ended", "replay_available"];
+  if (peekOverlayEvent(code)?.registrationEnabled) joinStates.push("registration_required");
+  return { eventId: event.id, joinStates, defaultDestination: `/venue/${event.id}/lobby`, supportEnabled: true };
 }
 
-function dynamicPackageBody(event: EventConfigRecord): Omit<EventConfigPackage, "event" | "attendee"> {
+function formatTime(iso: string, timezone: string) {
+  try {
+    return new Intl.DateTimeFormat("en-US", { hour: "numeric", minute: "2-digit", timeZone: timezone }).format(new Date(iso));
+  } catch {
+    return iso;
+  }
+}
+
+export function runtimePackageBody(event: RuntimeEventRecord): Omit<EventConfigPackage, "event" | "attendee"> {
+  const sessions = event.sessions.length
+    ? event.sessions
+    : [{ id: `${event.id}-main-stage`, title: "Main stage", room: "Main Stage", startAt: event.startAt, endAt: event.endAt }];
   return {
-    branding: { eventId: event.id, logo: "west-peek-live", hero: event.name, theme: "west-peek-live" },
-    agenda: { eventId: event.id, sessions: [
-      { id: `${event.id}-main-stage`, title: `${event.name} Main Stage`, room: "Main Stage", startsAt: "10:00 AM" },
-      { id: `${event.id}-operator-briefing`, title: "Operator briefing", room: "Session Room", startsAt: "11:00 AM" },
-    ] },
-    speakers: { eventId: event.id, speakers: [
-      { id: `${event.id}-speaker`, name: "Playwright Speaker", roleCodeEnvKey: "generated_event_speaker_code" },
-    ] },
-    sponsors: { eventId: event.id, sponsors: [
-      { id: `${event.id}-sponsor`, name: "Playwright Sponsor", headline: "Generated sponsor booth", websiteUrl: "https://westpeek.live" },
-    ] },
-    runOfShow: { eventId: event.id, segments: [
-      { id: `${event.id}-opening`, title: "Opening remarks", startsAt: "10:00 AM", stage: "Main Stage" },
-      { id: `${event.id}-stream-check`, title: "StreamYard to LiveKit check", startsAt: "10:10 AM", stage: "Main Stage" },
-    ] },
-    video: { eventId: event.id, providerLadder: ["StreamYard production feed", "LiveKit embedded distribution", "Cloudflare Stream fallback", "Daily fallback", "Zoom + Google Meet manual backup"], dailyAutomatic: true, zoomRequiresCrewConfirmation: true, googleMeetManualOnly: true, roomLevelOverrides: true },
+    branding: { eventId: event.id, logo: event.branding.logo || "west-peek-live", hero: event.branding.hero || event.name, theme: event.branding.theme || "west-peek-live" },
+    agenda: { eventId: event.id, sessions: sessions.map((session) => ({ id: session.id, title: session.title, room: session.room, startsAt: formatTime(session.startAt, event.timezone) })) },
+    speakers: { eventId: event.id, speakers: [] },
+    sponsors: { eventId: event.id, sponsors: [] },
+    runOfShow: { eventId: event.id, segments: sessions.map((session) => ({ id: `${session.id}-segment`, title: session.title, startsAt: formatTime(session.startAt, event.timezone), stage: session.room })) },
+    video: { eventId: event.id, providerLadder: ["livekit", "cloudflare-stream", "daily", "zoom", "google-meet"], dailyAutomatic: true, zoomRequiresCrewConfirmation: true, googleMeetManualOnly: true, roomLevelOverrides: true },
     communications: { eventId: event.id, templates: ["attendee_registration", "speaker_instructions", "sponsor_instructions", "crew_call_sheet"] },
   };
 }
 
+function dynamicPackageBody(event: EventConfigRecord): Omit<EventConfigPackage, "event" | "attendee"> | undefined {
+  const runtime = peekOverlayEvent(event.id);
+  return runtime ? runtimePackageBody(runtime) : undefined;
+}
+
+/**
+ * Runtime events store their role codes on the row (minted at creation), so the
+ * env-key names below are labels for the access page, not secrets to resolve.
+ */
 function dynamicAccessConfig(code: string | undefined): EventAccessConfigRecord | undefined {
   const event = dynamicEventConfig(code);
   if (!event) return undefined;
   return {
     eventId: event.id,
-    crewPasswordEnvKey: "CREW_ACCESS_PASSWORD",
+    crewPasswordEnvKey: "runtime_events.crew_code",
     specialGuestCodes: [
-      { role: "client", envKey: `GENERATED_${event.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_CLIENT_CODE`, destinationTemplate: "/client/{clientSlug}/events/{eventId}" },
-      { role: "speaker", envKey: `GENERATED_${event.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_SPEAKER_CODE`, destinationTemplate: "/speaker/events/{eventId}" },
-      { role: "sponsor", envKey: `GENERATED_${event.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_SPONSOR_CODE`, destinationTemplate: "/sponsor/events/{eventId}" },
-      { role: "vip", envKey: `GENERATED_${event.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_VIP_CODE`, destinationTemplate: "/venue/{eventId}/lobby" },
-      { role: "crew_lite", envKey: `GENERATED_${event.id.toUpperCase().replace(/[^A-Z0-9]+/g, "_")}_CREW_LITE_CODE`, destinationTemplate: "/crew/events/{eventId}" },
+      { role: "client", envKey: "runtime_events.client_code", destinationTemplate: "/client/{clientSlug}/events/{eventId}" },
+      { role: "speaker", envKey: "runtime_events.speaker_code", destinationTemplate: "/speaker/events/{eventId}" },
+      { role: "sponsor", envKey: "runtime_events.sponsor_code", destinationTemplate: "/sponsor/events/{eventId}" },
+      { role: "vip", envKey: "runtime_events.vip_code", destinationTemplate: "/venue/{eventId}/lobby" },
+      { role: "crew_lite", envKey: "runtime_events.crew_code", destinationTemplate: "/crew/events/{eventId}" },
     ],
   };
 }
 
-export function getGeneratedEventRoleCode(eventCode: string | undefined, role: V4SpecialGuestRole) {
-  return getEventSetupDraftRoleCodes(eventCode)[role as keyof ReturnType<typeof getEventSetupDraftRoleCodes>];
+export function getGeneratedEventRoleCode(eventCode: string | undefined, role: V4SpecialGuestRole): string | undefined {
+  const event = peekOverlayEvent(eventCode);
+  if (!event) return undefined;
+  if (role === "crew_lite") return event.accessCodes.crew || undefined;
+  return event.accessCodes[role] || undefined;
 }
 
 const eventConfigPackages: Record<string, Omit<EventConfigPackage, "event" | "attendee">> = {

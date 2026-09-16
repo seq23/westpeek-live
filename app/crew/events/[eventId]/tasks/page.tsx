@@ -1,8 +1,10 @@
 import { CrewInstructionShell } from "@/components/crew/CrewInstructionShell";
 import { crewTasks } from "@/lib/crew/crewBriefing";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export default async function CrewTasksPage({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId);
   return (
     <CrewInstructionShell eventId={resolvedParams.eventId} active="tasks" eyebrow="Crew Tasks" title="Crew task list">
       <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="crew-task-list">

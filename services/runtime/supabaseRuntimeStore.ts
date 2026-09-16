@@ -7,6 +7,7 @@ import type { LiveChatMessage } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
+import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 
@@ -37,6 +38,134 @@ async function selectAll<T>(client: SupabaseClient, table: string, columns = "*"
   const { data, error } = await query;
   if (error) fail(`${table} read: ${error.message}`);
   return (data || []) as T[];
+}
+
+
+type PostgrestErrorLike = { code?: string; message: string };
+
+/** PostgREST reports an unmigrated table as PGRST205 (schema cache) or 42P01 (undefined_table). */
+function isMissingTableError(error: PostgrestErrorLike) {
+  return error.code === "PGRST205" || error.code === "42P01" || /schema cache|does not exist/i.test(error.message);
+}
+
+function failOrSchemaMissing(table: string, error: PostgrestErrorLike): never {
+  if (isMissingTableError(error)) throw new RuntimeSchemaMissingError(table, error.message);
+  fail(`${table}: ${error.message}`);
+}
+
+function runtimeEventToRow(event: RuntimeEventRecord) {
+  return {
+    id: event.id,
+    slug: event.slug,
+    name: event.name,
+    format: event.format,
+    event_type: event.eventType,
+    status: event.status,
+    status_before_archive: event.statusBeforeArchive ?? null,
+    client_id: event.clientId ?? null,
+    client_name: event.clientName,
+    client_slug: event.clientSlug,
+    description: event.description ?? null,
+    start_at: event.startAt,
+    end_at: event.endAt,
+    timezone: event.timezone,
+    join_code: event.joinCode,
+    crew_code: event.accessCodes.crew,
+    speaker_code: event.accessCodes.speaker,
+    sponsor_code: event.accessCodes.sponsor,
+    vip_code: event.accessCodes.vip,
+    client_code: event.accessCodes.client,
+    registration_enabled: event.registrationEnabled,
+    branding: event.branding,
+    sessions: event.sessions,
+    source: event.source === "seed" ? "runtime" : event.source,
+    created_by: event.createdBy,
+    created_by_label: event.createdByLabel,
+    created_at: event.createdAt,
+    updated_at: event.updatedAt,
+    archived_at: event.archivedAt ?? null,
+  };
+}
+
+function rowToRuntimeEvent(row: Record<string, unknown>): RuntimeEventRecord {
+  return {
+    id: String(row.id),
+    slug: String(row.slug || row.id),
+    name: String(row.name || ""),
+    format: (row.format as RuntimeEventRecord["format"]) || "stage",
+    eventType: String(row.event_type || "webinar"),
+    status: (row.status as RuntimeEventRecord["status"]) || "draft",
+    statusBeforeArchive: row.status_before_archive ? (row.status_before_archive as RuntimeEventRecord["status"]) : undefined,
+    clientId: row.client_id ? String(row.client_id) : undefined,
+    clientName: String(row.client_name || "West Peek"),
+    clientSlug: String(row.client_slug || "west-peek"),
+    description: row.description ? String(row.description) : undefined,
+    startAt: String(row.start_at || ""),
+    endAt: String(row.end_at || ""),
+    timezone: String(row.timezone || "America/Chicago"),
+    joinCode: String(row.join_code || ""),
+    accessCodes: {
+      crew: String(row.crew_code || ""),
+      speaker: String(row.speaker_code || ""),
+      sponsor: String(row.sponsor_code || ""),
+      vip: String(row.vip_code || ""),
+      client: String(row.client_code || ""),
+    },
+    registrationEnabled: Boolean(row.registration_enabled),
+    branding: (row.branding && typeof row.branding === "object" ? row.branding : {}) as RuntimeEventRecord["branding"],
+    sessions: Array.isArray(row.sessions) ? (row.sessions as RuntimeEventRecord["sessions"]) : [],
+    source: (row.source as RuntimeEventRecord["source"]) || "runtime",
+    createdBy: String(row.created_by || ""),
+    createdByLabel: String(row.created_by_label || ""),
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || ""),
+    archivedAt: row.archived_at ? String(row.archived_at) : undefined,
+  };
+}
+
+function runtimeClientToRow(client: RuntimeClientRecord) {
+  return {
+    id: client.id,
+    slug: client.slug,
+    name: client.name,
+    industry: client.industry ?? null,
+    primary_contact_name: client.primaryContactName ?? null,
+    primary_contact_email: client.primaryContactEmail ?? null,
+    status: client.status,
+    created_by: client.createdBy,
+    created_by_label: client.createdByLabel,
+    created_at: client.createdAt,
+    updated_at: client.updatedAt,
+  };
+}
+
+function rowToRuntimeClient(row: Record<string, unknown>): RuntimeClientRecord {
+  return {
+    id: String(row.id),
+    slug: String(row.slug || row.id),
+    name: String(row.name || ""),
+    industry: row.industry ? String(row.industry) : undefined,
+    primaryContactName: row.primary_contact_name ? String(row.primary_contact_name) : undefined,
+    primaryContactEmail: row.primary_contact_email ? String(row.primary_contact_email) : undefined,
+    status: (row.status as RuntimeClientRecord["status"]) || "active",
+    createdBy: String(row.created_by || ""),
+    createdByLabel: String(row.created_by_label || ""),
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
+}
+
+function rowToAgencySettings(row: Record<string, unknown>): AgencySettingsRecord {
+  return {
+    id: String(row.id),
+    agencyName: String(row.agency_name || ""),
+    primaryColor: String(row.primary_color || ""),
+    accentColor: String(row.accent_color || ""),
+    members: Array.isArray(row.members) ? (row.members as AgencySettingsRecord["members"]) : [],
+    updatedBy: String(row.updated_by || ""),
+    updatedByLabel: String(row.updated_by_label || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
 }
 
 export class SupabaseRuntimeStore implements RuntimeStore {
@@ -312,6 +441,64 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     const { data, error } = await this.client.from("attendee_live_control_states").select("state").eq("key", key).maybeSingle();
     if (error) fail(`attendee_live_control_states read: ${error.message}`);
     return data?.state as AttendeeLiveControlState | undefined;
+  }
+
+  async upsertRuntimeEvent(event: RuntimeEventRecord) {
+    const { error } = await this.client.from("runtime_events").upsert(runtimeEventToRow(event), { onConflict: "id" });
+    if (error) failOrSchemaMissing("runtime_events", error);
+    return event;
+  }
+
+  async getRuntimeEvent(idOrSlugOrJoinCode: string) {
+    const key = idOrSlugOrJoinCode.trim().toLowerCase();
+    if (!key || !/^[a-z0-9][a-z0-9-]*$/.test(key)) return undefined;
+    const { data, error } = await this.client
+      .from("runtime_events")
+      .select("*")
+      .or(`id.eq.${key},slug.eq.${key},join_code.eq.${key}`)
+      .limit(1)
+      .maybeSingle();
+    if (error) failOrSchemaMissing("runtime_events", error);
+    return data ? rowToRuntimeEvent(data as Record<string, unknown>) : undefined;
+  }
+
+  async listRuntimeEvents() {
+    const { data, error } = await this.client.from("runtime_events").select("*").order("created_at", { ascending: false });
+    if (error) failOrSchemaMissing("runtime_events", error);
+    return ((data || []) as Record<string, unknown>[]).map(rowToRuntimeEvent);
+  }
+
+  async upsertRuntimeClient(client: RuntimeClientRecord) {
+    const { error } = await this.client.from("runtime_clients").upsert(runtimeClientToRow(client), { onConflict: "id" });
+    if (error) failOrSchemaMissing("runtime_clients", error);
+    return client;
+  }
+
+  async listRuntimeClients() {
+    const { data, error } = await this.client.from("runtime_clients").select("*").order("name", { ascending: true });
+    if (error) failOrSchemaMissing("runtime_clients", error);
+    return ((data || []) as Record<string, unknown>[]).map(rowToRuntimeClient);
+  }
+
+  async getAgencySettings(id: string) {
+    const { data, error } = await this.client.from("runtime_agency_settings").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("runtime_agency_settings", error);
+    return data ? rowToAgencySettings(data as Record<string, unknown>) : undefined;
+  }
+
+  async setAgencySettings(settings: AgencySettingsRecord) {
+    const { error } = await this.client.from("runtime_agency_settings").upsert({
+      id: settings.id,
+      agency_name: settings.agencyName,
+      primary_color: settings.primaryColor,
+      accent_color: settings.accentColor,
+      members: settings.members,
+      updated_by: settings.updatedBy,
+      updated_by_label: settings.updatedByLabel,
+      updated_at: settings.updatedAt,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("runtime_agency_settings", error);
+    return settings;
   }
 
   async readSnapshot(): Promise<V6RuntimeSnapshot> {

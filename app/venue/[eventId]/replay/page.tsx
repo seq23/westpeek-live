@@ -3,9 +3,11 @@ import { ReplayCenter } from "@/components/venue/ReplayCenter";
 import { ReplayRecordingStatusPanel } from "@/components/venue/ReplayRecordingStatusPanel";
 import { buildLiveKitEgressRequest } from "@/services/video";
 import { VenuePageShell } from "@/components/venue/VenuePageShell";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export default async function ReplayPage({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId);
   const model = buildVirtualVenueModel(resolvedParams.eventId);
   const recordingJob = buildLiveKitEgressRequest({
     agencyId: "runtime-agency",

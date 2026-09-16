@@ -1,0 +1,161 @@
+import { expect, test, type Browser, type Page } from "@playwright/test";
+import { gotoAndAssert } from "./helpers/assertNoAppError";
+import { requiredDay1Default } from "./helpers/day1AccessDefaults";
+
+/**
+ * The owner's real-event journeys (locked design, 15 Sep 2026):
+ *  (a) owner cookie → New event → NOW → lands in the lobby with a join code → a second browser context joins via /join?code= and reaches the lobby
+ *  (b) LATER → publish → /join finds it
+ *  (c) archive hides the event, restore shows it again
+ *  (d) the compiled seed `demo` still resolves
+ */
+
+const forbidden = /Supabase Auth required|login\?next=|Application error|Internal Server Error|NEXT_REDIRECT/i;
+
+async function loginOwner(page: Page) {
+  await gotoAndAssert(page, "/production-access/owner");
+  await page.getByLabel(/owner master password/i).fill(process.env.E2E_OWNER_PASSWORD || process.env.OWNER_MASTER_ACCESS_PASSWORD || requiredDay1Default("OWNER_MASTER_ACCESS_PASSWORD"));
+  await page.getByRole("button", { name: /enter owner workspace/i }).click();
+  await expect(page).toHaveURL(/\/app/);
+}
+
+async function joinFromFreshContext(browser: Browser, code: string) {
+  const context = await browser.newContext();
+  const page = await context.newPage();
+  try {
+    await gotoAndAssert(page, `/join?code=${encodeURIComponent(code)}`);
+    return { page, context };
+  } catch (error) {
+    await context.close();
+    throw error;
+  }
+}
+
+test.describe("owner real events", () => {
+  test("(a) NOW creates a live Room, lands in the lobby with a code, and a second context joins through /join", async ({ page, browser }) => {
+    await loginOwner(page);
+    await gotoAndAssert(page, "/app/events/new");
+    await expect(page.getByRole("heading", { name: /Start a Room now/i })).toBeVisible();
+    await expect(page.getByTestId("runtime-schema-stop")).toHaveCount(0);
+
+    const name = `Playwright Room ${Date.now()}`;
+    await page.getByTestId("when-now").check();
+    await page.getByLabel(/^Event name/i).fill(name);
+    await page.getByLabel(/^Format/i).selectOption("room");
+    await page.getByTestId("create-event-submit").click();
+
+    await expect(page).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?created=1/);
+    await expect(page.getByTestId("event-created-notice")).toContainText(/is live/i);
+    const code = (await page.getByTestId("event-join-code").innerText()).trim();
+    expect(code).toMatch(/^wpl-[a-z0-9]{6}$/);
+    await expect(page.getByTestId("event-join-link")).toContainText(`/join?code=${code}`);
+    await expect(page.getByTestId("copy-join-code")).toBeVisible();
+    await expect(page.locator("body")).toContainText(name);
+    await expect(page.locator("body")).not.toContainText(forbidden);
+
+    const joiner = await joinFromFreshContext(browser, code);
+    try {
+      await expect(joiner.page.locator("body")).toContainText(/Event found/i);
+      await expect(joiner.page.locator("body")).toContainText(name);
+      await joiner.page.getByRole("link", { name: /Continue/i }).click();
+      await expect(joiner.page).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby/);
+      await expect(joiner.page.locator("body")).toContainText(name);
+      // Attendees never see the host panel.
+      await expect(joiner.page.getByTestId("host-join-code-banner")).toHaveCount(0);
+      await expect(joiner.page.locator("body")).not.toContainText(forbidden);
+    } finally {
+      await joiner.context.close();
+    }
+  });
+
+  test("(b) LATER creates a draft that /join refuses until Publish, then finds it", async ({ page, browser }) => {
+    await loginOwner(page);
+    await gotoAndAssert(page, "/app/events/new?when=later");
+    const name = `Playwright Planned ${Date.now()}`;
+    await page.getByTestId("when-later").check();
+    await page.getByLabel(/^Event name/i).fill(name);
+    await page.getByLabel(/New client name/i).fill("Playwright Client Co");
+    await page.getByLabel(/^Type/i).selectOption("webinar");
+    await page.getByTestId("create-event-submit").click();
+
+    await expect(page).toHaveURL(/\/app\/events\/[a-z0-9-]+\?created=1/);
+    await expect(page.getByTestId("event-created-notice")).toContainText(/created as a draft/i);
+    await expect(page.getByTestId("runtime-event-header")).toContainText(/Draft/);
+    await expect(page.getByTestId("runtime-event-header")).toContainText("Playwright Client Co");
+    const code = (await page.getByTestId("event-join-code").innerText()).trim();
+
+    const closed = await joinFromFreshContext(browser, code);
+    try {
+      await expect(closed.page.locator("body")).toContainText(/not publicly open yet/i);
+    } finally {
+      await closed.context.close();
+    }
+
+    await page.getByTestId("publish-event").click();
+    await expect(page).toHaveURL(/\/app\/events\/[a-z0-9-]+\/publish\?updated=registration_open/);
+    await expect(page.locator("body")).toContainText(/registration open/i);
+
+    const open = await joinFromFreshContext(browser, code);
+    try {
+      await expect(open.page.locator("body")).toContainText(/Event found/i);
+      await expect(open.page.locator("body")).toContainText(name);
+      await open.page.getByRole("link", { name: /Continue/i }).click();
+      await expect(open.page).toHaveURL(/\/events\/[a-z0-9-]+/);
+      await expect(open.page.locator("body")).toContainText(name);
+      await expect(open.page.locator("body")).not.toContainText(forbidden);
+    } finally {
+      await open.context.close();
+    }
+  });
+
+  test("(c) archive hides the event from the list and /join; restore brings it back", async ({ page, browser }) => {
+    await loginOwner(page);
+    await gotoAndAssert(page, "/app/events/new");
+    const name = `Playwright Archive ${Date.now()}`;
+    await page.getByTestId("when-now").check();
+    await page.getByLabel(/^Event name/i).fill(name);
+    await page.getByTestId("create-event-submit").click();
+    await expect(page).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?created=1/);
+    const code = (await page.getByTestId("event-join-code").innerText()).trim();
+    const eventId = new URL(page.url()).pathname.split("/")[2];
+
+    await gotoAndAssert(page, "/app/events");
+    await expect(page.getByTestId(`event-card-${eventId}`)).toBeVisible();
+
+    await gotoAndAssert(page, `/app/events/${eventId}`);
+    await page.getByTestId("archive-event").click();
+    await expect(page).toHaveURL(/\/app\/events\?archived=/);
+    await expect(page.getByTestId(`event-card-${eventId}`)).toHaveCount(0);
+
+    const archived = await joinFromFreshContext(browser, code);
+    try {
+      await expect(archived.page.locator("body")).toContainText(/archived/i);
+    } finally {
+      await archived.context.close();
+    }
+
+    await gotoAndAssert(page, "/app/events?showArchived=1");
+    await expect(page.getByTestId(`event-card-${eventId}`)).toBeVisible();
+    await gotoAndAssert(page, `/app/events/${eventId}`);
+    await page.getByTestId("restore-event").click();
+    await expect(page).toHaveURL(/restored=/);
+    await gotoAndAssert(page, "/app/events");
+    await expect(page.getByTestId(`event-card-${eventId}`)).toBeVisible();
+
+    const restored = await joinFromFreshContext(browser, code);
+    try {
+      await expect(restored.page.locator("body")).toContainText(/Event found/i);
+    } finally {
+      await restored.context.close();
+    }
+  });
+
+  test("(d) the compiled seed demo event still resolves through /join and the lobby", async ({ page }) => {
+    await gotoAndAssert(page, "/join?code=demo");
+    await expect(page.locator("body")).toContainText(/Event found/i);
+    await expect(page.locator("body")).toContainText(/Nova Founder Summit/i);
+    await gotoAndAssert(page, "/venue/demo/lobby");
+    await expect(page.locator("body")).toContainText(/Nova Founder Summit/i);
+    await expect(page.getByTestId("host-join-code-banner")).toHaveCount(0);
+  });
+});

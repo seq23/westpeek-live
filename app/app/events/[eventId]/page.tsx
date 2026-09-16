@@ -1,7 +1,19 @@
 import { ProductionCommandCenter } from "@/components/production/ProductionCommandCenter";
 import { ManageEventTabs } from "@/components/events/ManageEventTabs";
+import { RuntimeEventHeader } from "@/components/events/RuntimeEventHeader";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
-export default async function EventCommandCenterPage({ params }: { params: Promise<{ eventId: string }> }) {
+export const dynamic = "force-dynamic";
+
+export default async function EventCommandCenterPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string }> }) {
   const resolvedParams = await params;
-  return <div className="space-y-6"><ManageEventTabs eventId={resolvedParams.eventId} /><ProductionCommandCenter eventId={resolvedParams.eventId} /></div>;
+  const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const runtimeEvent = await ensureRuntimeEvent(resolvedParams.eventId);
+  return (
+    <div className="space-y-6">
+      <ManageEventTabs eventId={resolvedParams.eventId} />
+      {runtimeEvent && runtimeEvent.source !== "seed" ? <RuntimeEventHeader event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} error={resolvedSearchParams?.error} returnTo={`/app/events/${resolvedParams.eventId}`} /> : null}
+      <ProductionCommandCenter eventId={resolvedParams.eventId} />
+    </div>
+  );
 }

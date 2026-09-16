@@ -1,3 +1,5 @@
 import { ClientPortalDashboard } from "@/components/clients/ClientPortal";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 export default async function ClientAssets({ params }: { params: Promise<{ clientSlug: string; eventId: string }> }) {
-  const resolvedParams = await params; return <ClientPortalDashboard clientSlug={resolvedParams.clientSlug} eventId={resolvedParams.eventId} />; }
+  const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId); return <ClientPortalDashboard clientSlug={resolvedParams.clientSlug} eventId={resolvedParams.eventId} />; }

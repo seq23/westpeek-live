@@ -25,7 +25,7 @@ export interface V4AccessResolution {
   clientSlug?: string;
   role?: V4SpecialGuestRole | V4CrewRole;
   destination?: string;
-  reason?: "missing_code" | "invalid_event" | "invalid_role_code" | "expired" | "forbidden";
+  reason?: "missing_code" | "invalid_event" | "invalid_role_code" | "invalid_password" | "expired" | "forbidden";
   message: string;
 }
 
