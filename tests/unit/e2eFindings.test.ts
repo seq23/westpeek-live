@@ -46,3 +46,14 @@ describe("the attendee agenda shows times, not ISO strings", () => {
     expect(formatSessionWindow("garbage")).toBe("garbage");
   });
 });
+
+describe("a join code typed on a phone still finds the Room", () => {
+  it("maps capitals, dashes, spaces, a dropped hyphen and a dropped prefix to the one code", async () => {
+    const { joinCodeCandidates } = await import("@/services/events/eventRepository");
+    for (const typed of ["WPL-VXCKX6", "wpl–vxckx6", "wpl vxckx6", "wplvxckx6", " wpl-vxckx6 ", "vxckx6", "Wpl- vxckx6"]) {
+      expect(joinCodeCandidates(typed), typed).toContain("wpl-vxckx6");
+    }
+    // Slugs and ids still pass through untouched as the first candidate.
+    expect(joinCodeCandidates("sequoia-s-first-room")[0]).toBe("sequoia-s-first-room");
+  });
+});
