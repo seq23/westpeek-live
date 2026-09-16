@@ -14,7 +14,8 @@ interface Snapshot {
  * card, large type, and — polled every ~5s — a "producer pushed a change" banner when the crew
  * updates the deck while they are live, plus the live cue banner ("wrap in 2 min").
  */
-export function SpeakerTeleprompterLive({ eventId, initial, fullScreenHref }: { eventId: string; initial: Snapshot; fullScreenHref?: string }) {
+/** `speakerId` is set only in view-as mode: the crew reader polls THAT speaker's deck (the route allows it for a crew cookie). */
+export function SpeakerTeleprompterLive({ eventId, initial, fullScreenHref, speakerId }: { eventId: string; initial: Snapshot; fullScreenHref?: string; speakerId?: string }) {
   const [snapshot, setSnapshot] = useState<Snapshot>(initial);
   const [index, setIndex] = useState(0);
   const [changed, setChanged] = useState<string | null>(null);
@@ -26,7 +27,7 @@ export function SpeakerTeleprompterLive({ eventId, initial, fullScreenHref }: { 
 
   const poll = useCallback(async () => {
     try {
-      const response = await fetch(`/api/speaker/cue-deck?eventId=${encodeURIComponent(eventId)}`, { cache: "no-store" });
+      const response = await fetch(`/api/speaker/cue-deck?eventId=${encodeURIComponent(eventId)}${speakerId ? `&speakerId=${encodeURIComponent(speakerId)}` : ""}`, { cache: "no-store" });
       const json = await response.json();
       if (!json.ok) return;
       const next: Snapshot = { approved: json.approved, pendingVersionNumber: json.pendingVersionNumber, liveCue: json.liveCue, stage: json.stage };
@@ -41,7 +42,7 @@ export function SpeakerTeleprompterLive({ eventId, initial, fullScreenHref }: { 
     } catch {
       // keep the last good snapshot
     }
-  }, [eventId]);
+  }, [eventId, speakerId]);
 
   useEffect(() => {
     const interval = window.setInterval(poll, 5_000);

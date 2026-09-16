@@ -1,6 +1,9 @@
 import type { ReactNode } from "react";
 import Link from "next/link";
 import { findEventRecord } from "@/services/events/eventRepository";
+import { ViewAsBanner } from "@/components/guests/ViewAsBanner";
+import type { ViewAsContext } from "@/lib/auth/viewAs";
+import { withViewAs } from "@/lib/auth/viewAsGuard";
 import type { SpecialGuestProfile, SpeakerStageState } from "@/types/specialGuest";
 
 const nav = [
@@ -11,11 +14,13 @@ const nav = [
   ["On stage", "backstage"],
 ];
 
-export async function SpeakerPortalShell({ eventId, active, speaker, stage, children }: { eventId: string; active: string; speaker?: SpecialGuestProfile; stage?: SpeakerStageState; children: ReactNode }) {
+export async function SpeakerPortalShell({ eventId, active, speaker, stage, children, viewAs }: { eventId: string; active: string; speaker?: SpecialGuestProfile; stage?: SpeakerStageState; children: ReactNode; viewAs?: ViewAsContext }) {
   const event = await findEventRecord(eventId).catch(() => undefined);
+  const viewAsId = viewAs?.guest.guestId;
   return (
-    <main className="min-h-screen bg-brand-ash px-5 py-8 text-brand-black sm:px-8">
+    <main className="min-h-screen bg-brand-ash px-5 py-8 text-brand-black sm:px-8" data-view-as={viewAsId}>
       <section className="mx-auto max-w-6xl space-y-6">
+        {viewAs ? <ViewAsBanner viewAs={viewAs} backHref={`/crew/events/${eventId}`} /> : null}
         <div className="rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-8" data-testid="speaker-portal-shell" data-stage-status={stage?.status || "backstage"}>
           <p className="text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Speaker portal</p>
           <div className="mt-3 flex flex-col gap-4 lg:flex-row lg:items-end lg:justify-between">
@@ -27,7 +32,7 @@ export async function SpeakerPortalShell({ eventId, active, speaker, stage, chil
           </div>
           <nav className="mt-6 flex flex-wrap gap-2" aria-label="Speaker portal navigation">
             {nav.map(([label, suffix]) => {
-              const href = suffix ? `/speaker/events/${eventId}/${suffix}` : `/speaker/events/${eventId}`;
+              const href = withViewAs(suffix ? `/speaker/events/${eventId}/${suffix}` : `/speaker/events/${eventId}`, viewAsId);
               const selected = active === suffix || (!suffix && active === "home");
               return <Link key={label} href={href} className={`rounded-full px-4 py-2 text-sm font-bold ${selected ? "bg-brand-black text-white" : "border border-brand-line bg-white text-brand-black hover:border-brand-orange hover:text-brand-orange"}`}>{label}</Link>;
             })}

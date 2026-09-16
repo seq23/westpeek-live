@@ -11,7 +11,8 @@ import { SpeakerTeleprompterLive } from "./SpeakerTeleprompterLive";
  * notes to speakers, the recorded tech check, the approved cue cards, the backstage LiveKit room
  * (<eventId>-green-room, speakers + crew only), and "Go on stage" once the crew brings them up.
  */
-export async function SpeakerGreenRoomLive({ eventId, speaker, error }: { eventId: string; speaker: SpecialGuestProfile; error?: string }) {
+export async function SpeakerGreenRoomLive({ eventId, speaker, error, viewAs }: { eventId: string; speaker: SpecialGuestProfile; error?: string; viewAs?: string }) {
+  const readOnly = Boolean(viewAs);
   const [stage, techCheck, notes, deck, liveCue] = await Promise.all([
     getSpeakerStageState(eventId, speaker.guestId),
     getSpeakerTechCheck(eventId, speaker.guestId),
@@ -38,13 +39,13 @@ export async function SpeakerGreenRoomLive({ eventId, speaker, error }: { eventI
           <>
             <p className="text-xs font-black uppercase tracking-[0.3em] text-emerald-800">{stage.status === "on_stage" ? "You are on stage" : "The crew is bringing you to the stage"}</p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">{stage.status === "on_stage" ? "Your camera and microphone are live on the main stage." : "Go on stage now: your camera and microphone will publish to the main stage."}</h2>
-            <form action={goOnStageAction} className="mt-4"><input type="hidden" name="eventId" value={eventId} /><button className="rounded-full bg-emerald-700 px-6 py-3 text-base font-black text-white hover:bg-emerald-800" data-testid="go-on-stage">{stage.status === "on_stage" ? "Open the stage" : "Go on stage"}</button></form>
+            <form action={readOnly ? undefined : goOnStageAction} className="mt-4"><input type="hidden" name="eventId" value={eventId} /><button className="rounded-full bg-emerald-700 px-6 py-3 text-base font-black text-white hover:bg-emerald-800 disabled:cursor-not-allowed disabled:opacity-40" data-testid="go-on-stage" disabled={readOnly} title={readOnly ? "Disabled while viewing as this speaker." : undefined}>{stage.status === "on_stage" ? "Open the stage" : "Go on stage"}</button></form>
           </>
         )}
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[1.3fr_0.9fr]">
-        <GuestRoomVideo eventId={eventId} roomId={GREEN_ROOM_ID} roomType="green_room" role="speaker" displayName={speaker.name} title="Backstage room · crew and speakers see and hear each other here" />
+        {readOnly ? <div className="rounded-3xl bg-slate-950 p-4 text-white" data-testid="guest-room-video-preview-placeholder"><p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Backstage room · crew and speakers see and hear each other here</p><p className="mt-3 rounded-2xl bg-white/10 p-6 text-sm text-slate-200">Not joined in preview: joining here would put you in the room under {speaker.name}&rsquo;s name. Open the green room from the crew deck to join as crew.</p></div> : <GuestRoomVideo eventId={eventId} roomId={GREEN_ROOM_ID} roomType="green_room" role="speaker" displayName={speaker.name} title="Backstage room · crew and speakers see and hear each other here" />}
         <div className="space-y-4">
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="producer-notes-to-speakers">
             <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Producer notes to speakers</p>
@@ -54,7 +55,7 @@ export async function SpeakerGreenRoomLive({ eventId, speaker, error }: { eventI
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="speaker-tech-check-summary" data-status={techCheck?.status || "none"}>
             <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Tech check</p>
             <p className="mt-2 text-sm text-slate-700">{techCheck ? `${techCheck.status.replaceAll("_", " ")} · ${techCheck.score}/100 · recorded ${new Date(techCheck.recordedAt).toLocaleString()}` : "Not recorded yet."}</p>
-            <a href={`/speaker/events/${eventId}/tech-check`} className="mt-3 inline-block rounded-full border border-slate-300 px-4 py-2 text-xs font-black">{techCheck ? "Run it again" : "Run the tech check"}</a>
+            {readOnly ? <span className="mt-3 inline-block cursor-not-allowed rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-400" title="Disabled while viewing as this speaker." data-testid="run-tech-check-disabled">{techCheck ? "Run it again" : "Run the tech check"}</span> : <a href={`/speaker/events/${eventId}/tech-check`} className="mt-3 inline-block rounded-full border border-slate-300 px-4 py-2 text-xs font-black">{techCheck ? "Run it again" : "Run the tech check"}</a>}
           </section>
         </div>
       </div>
@@ -72,7 +73,7 @@ export async function SpeakerGreenRoomLive({ eventId, speaker, error }: { eventI
         {segments.length && !mine.length ? <p className="mt-3 text-xs text-slate-500">No segment names you yet; the producer assigns your slot.</p> : null}
       </section>
 
-      <SpeakerTeleprompterLive eventId={eventId} initial={{ approved: deck.approved || null, pendingVersionNumber: deck.pending?.versionNumber || null, liveCue: liveCue?.text ? liveCue : null, stage }} fullScreenHref={`/speaker/events/${eventId}/teleprompter`} />
+      <SpeakerTeleprompterLive eventId={eventId} speakerId={viewAs} initial={{ approved: deck.approved || null, pendingVersionNumber: deck.pending?.versionNumber || null, liveCue: liveCue?.text ? liveCue : null, stage }} fullScreenHref={readOnly ? `/speaker/events/${eventId}/teleprompter?viewAs=${encodeURIComponent(viewAs || "")}` : `/speaker/events/${eventId}/teleprompter`} />
     </div>
   );
 }

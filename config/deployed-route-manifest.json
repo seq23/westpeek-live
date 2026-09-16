@@ -1805,6 +1805,30 @@
       "role": "owner"
     },
     {
+      "id": "production-access-special-guest-preview",
+      "path": "/production-access/special-guest/preview",
+      "authMode": "role-specific",
+      "persona": "owner",
+      "criticality": "standard",
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/production-access/special-guest/preview"
+      },
+      "safeActions": [
+        "navigate"
+      ],
+      "fixtureRequirements": [
+        "event"
+      ],
+      "persistenceRequired": false,
+      "cleanupPolicy": "none",
+      "role": "owner"
+    },
+    {
       "id": "production-access",
       "path": "/production-access",
       "authMode": "role-specific",

@@ -2,7 +2,7 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { missingAccessEnv } from "@/lib/env/safeEnv";
-import { ownerOverrideResponseIfMatched, redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
+import { ownerOverrideResponseIfMatched, redirectTo } from "@/lib/auth/accessGateResponse";
 import { resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import type { V4SpecialGuestRole } from "@/types/v4";
@@ -14,9 +14,9 @@ export async function POST(request: NextRequest) {
   const formData = await request.formData();
   const eventCode = String(formData.get("eventCode") ?? "");
   const roleCode = String(formData.get("roleCode") ?? "");
-  const safeNext = safeAccessRedirectTarget(String(formData.get("next") ?? "/app"), "/app");
 
-  const ownerOverride = await ownerOverrideResponseIfMatched({ request, password: roleCode, route: "/production-access/special-guest", next: safeNext, fallback: "/app" });
+  // The owner master password here lands on "Preview a guest" for the typed event code, not the workspace.
+  const ownerOverride = await ownerOverrideResponseIfMatched({ request, password: roleCode, route: "/production-access/special-guest", next: `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode)}`, fallback: "/production-access/special-guest/preview" });
   if (ownerOverride) return ownerOverride;
 
   const access = await resolveSpecialGuestAccess(eventCode, roleCode);

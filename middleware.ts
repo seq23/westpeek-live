@@ -2,7 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthCookieName, getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { isProtectedPath } from "@/lib/auth/routeAccess";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
-import { canCrewAccessPath, canOperatorAccessPath, canOwnerAccessPath, canSpecialGuestAccessPath, specialGuestEntryPathFor } from "@/lib/auth/v5RouteAuthorization";
+import { canCrewAccessPath, canOperatorAccessPath, canOwnerAccessPath, canSpecialGuestAccessPath, canViewAsAccessPath, specialGuestEntryPathFor } from "@/lib/auth/v5RouteAuthorization";
 
 async function readCrewAccess(request: NextRequest) {
   try {
@@ -63,6 +63,9 @@ export async function middleware(request: NextRequest) {
 
   const specialGuestAccess = await readSpecialGuestAccess(request);
   if (canSpecialGuestAccessPath(pathname, specialGuestAccess)) return NextResponse.next();
+
+  // "View as" a guest: an operator or a producer opening a speaker / sponsor / client page as that guest.
+  if (canViewAsAccessPath(pathname, request.nextUrl.searchParams.get("viewAs"), { owner: ownerAccess, operator: operatorAccess, crew: crewAccess })) return NextResponse.next();
 
   const loginUrl = new URL(specialGuestEntryPathFor(pathname), request.url);
   loginUrl.searchParams.set("next", pathname);
