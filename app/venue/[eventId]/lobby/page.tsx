@@ -18,8 +18,7 @@ import { SafeSection } from "@/components/system/SafeSection";
 
 export const dynamic = "force-dynamic";
 
-export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string; leaveTo?: string; saved?: string; vip?: "1" | "no" }> }) {
-export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string; saved?: string; vip?: "1" | "no"; returned?: string }> }) {
+export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string; leaveTo?: string; saved?: string; vip?: "1" | "no"; returned?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const runtimeEvent = await ensureRuntimeEvent(resolvedParams.eventId);
@@ -47,11 +46,6 @@ export default async function LobbyPage({ params, searchParams }: { params: Prom
       {isHost && runtimeEvent && !viewAs && !preview ? <HostJoinCodeBanner event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} crewHost={crewHost} /> : null}
       {guest?.role === "vip" || viewAs || vipStanding?.current || preview?.state.vip ? <SafeSection label="VIP" render={() => VipLobbyPanel({ eventId: resolvedParams.eventId, error: resolvedSearchParams?.error, viewAs, grantedName: vipStanding?.current ? vipStanding.name : undefined })} /> : null}
       {!viewAs && !preview && guest?.role !== "vip" && !vipStanding?.current ? <VipCodeCard eventId={resolvedParams.eventId} registered={Boolean(attendee)} result={resolvedSearchParams?.vip} /> : null}
-      <SafeSection label="Lobby" render={() => VenueLobbyDashboard({ model, saved: resolvedSearchParams?.saved === "profile" })} />
-      {viewAs ? <ViewAsBanner viewAs={viewAs} backHref={`/crew/events/${resolvedParams.eventId}`} /> : null}
-      {isHost && runtimeEvent && !viewAs ? <HostJoinCodeBanner event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} crewHost={crewHost} /> : null}
-      {guest?.role === "vip" || viewAs || vipStanding?.current ? <SafeSection label="VIP" render={() => VipLobbyPanel({ eventId: resolvedParams.eventId, error: resolvedSearchParams?.error, viewAs, grantedName: vipStanding?.current ? vipStanding.name : undefined })} /> : null}
-      {!viewAs && guest?.role !== "vip" && !vipStanding?.current ? <VipCodeCard eventId={resolvedParams.eventId} registered={Boolean(attendee)} result={resolvedSearchParams?.vip} /> : null}
       <SafeSection label="Lobby" render={() => VenueLobbyDashboard({ model, saved: resolvedSearchParams?.saved === "profile", justReturned: resolvedSearchParams?.returned === "1" })} />
     </VenuePageShell>
   );
