@@ -5,7 +5,7 @@ import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export const dynamic = "force-dynamic";
 
-export default async function EventCommandCenterPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; roster?: string }> }) {
+export default async function EventCommandCenterPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; roster?: string; diagnose?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const runtimeEvent = await ensureRuntimeEvent(resolvedParams.eventId);
@@ -13,7 +13,7 @@ export default async function EventCommandCenterPage({ params, searchParams }: {
     <div className="space-y-6">
       <ManageEventTabs eventId={resolvedParams.eventId} />
       {runtimeEvent && runtimeEvent.source !== "seed" ? <RuntimeEventHeader event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} error={resolvedSearchParams?.error} returnTo={`/app/events/${resolvedParams.eventId}`} /> : null}
-      <ProductionCommandCenter eventId={resolvedParams.eventId} rosterSearch={resolvedSearchParams?.roster || ""} />
+      <ProductionCommandCenter eventId={resolvedParams.eventId} rosterSearch={resolvedSearchParams?.roster || ""} diagnose={resolvedSearchParams?.diagnose} />
     </div>
   );
 }

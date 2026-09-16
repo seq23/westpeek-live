@@ -83,6 +83,10 @@ export type AuditAction =
   | "event_request_paid"
   // An instruction page was edited from the workspace. Everyone holding the link reads the change.
   | "how_it_works_page_edited";
+  // A producer looked at one named attendee: their reported state (Diagnose) or their view
+  // (See their view). The row carries the attendee id and nothing else — never an IP, never a location.
+  | "attendee_diagnosed"
+  | "attendee_view_mirrored";
 
 export interface CreateAuditLogInput {
   agencyId: string;

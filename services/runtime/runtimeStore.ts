@@ -188,6 +188,8 @@ export interface RuntimeStore {
   deleteEventTemplate(id: string): Promise<void>;
   upsertAttendeeSession(session: AttendeeSession): Promise<AttendeeSession>;
   getAttendeeSession(eventId: string, sessionId: string): Promise<AttendeeSession | undefined>;
+  /** Every session of an event, newest heartbeat first: the Diagnose panel's one read for the roster. */
+  listAttendeeSessions(eventId: string, limit?: number): Promise<AttendeeSession[]>;
   upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent): Promise<AttendeeAgendaIntent>;
   getAttendeeAgendaIntent(eventId: string, attendeeId: string): Promise<AttendeeAgendaIntent | undefined>;
   appendSponsorLeadOptIn(optIn: SponsorLeadOptIn): Promise<SponsorLeadOptIn>;

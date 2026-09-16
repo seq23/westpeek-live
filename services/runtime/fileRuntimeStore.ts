@@ -247,6 +247,14 @@ export class FileRuntimeStore implements RuntimeStore {
     return snapshot.attendeeSessions.find((item: AttendeeSession) => item.eventId === eventId && item.sessionId === sessionId);
   }
 
+  async listAttendeeSessions(eventId: string, limit = 500) {
+    const snapshot = this.read();
+    return snapshot.attendeeSessions
+      .filter((item: AttendeeSession) => item.eventId === eventId)
+      .sort((a: AttendeeSession, b: AttendeeSession) => String(b.lastSeenAt || b.issuedAt).localeCompare(String(a.lastSeenAt || a.issuedAt)))
+      .slice(0, limit);
+  }
+
   async upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent) {
     const snapshot = this.read();
     snapshot.attendeeAgendaIntents = snapshot.attendeeAgendaIntents.filter((item: AttendeeAgendaIntent) => !(item.eventId === intent.eventId && item.attendeeId === intent.attendeeId));

@@ -480,6 +480,8 @@ export async function getRuntimeSchemaStatus(): Promise<RuntimeSchemaStatus> {
     // Migration 0033: contractors and vendors, and which events they are on.
     ["suppliers", () => store.listSuppliers()],
     ["supplier_event_links", () => store.listSupplierEventLinks()],
+    // Migration 0037: the attendee client heartbeat the Diagnose panel reads.
+    ["attendee_sessions.client_build_id", () => store.listAttendeeSessions("__schema_probe__", 1)],
   ];
   for (const [table, probe] of probes) {
     try {

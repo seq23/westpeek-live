@@ -7,6 +7,20 @@ export interface AttendeeSession {
   issuedAt: string;
   expiresAt: string;
   lastSeenAt?: string;
+  /**
+   * What this attendee's own browser reports, because LiveKit cannot: the bundle it is running, the
+   * quality it is getting, and how many stage tracks it is actually subscribed to. Together with the
+   * LiveKit participant row these separate "never connected" from "connected and receiving nothing"
+   * from "receiving it badly". Never a raw user agent, never an IP, never a location.
+   */
+  clientBuildId?: string;
+  /** The derived label the Diagnose panel prints, e.g. "Chrome 140 on macOS". */
+  clientBrowser?: string;
+  clientConnectionQuality?: "excellent" | "good" | "poor" | "lost" | "unknown";
+  clientSubscribedTracks?: number;
+  /** Which venue page they were last on ("stage", "lobby", …). */
+  clientSurface?: string;
+  lastChatPollAt?: string;
 }
 
 export interface AttendeeAgendaIntent {

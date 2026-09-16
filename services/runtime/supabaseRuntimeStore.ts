@@ -147,7 +147,7 @@ function mapSupplierEventLink(row: Record<string, unknown>): SupplierEventLink {
 }
 
 function mapAttendeeSession(row: Record<string, unknown>): AttendeeSession {
-  return { sessionId: String(row.session_id || ""), attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), role: "attendee", status: (row.status as AttendeeSession["status"]) || "active", issuedAt: String(row.issued_at || ""), expiresAt: String(row.expires_at || ""), lastSeenAt: row.last_seen_at ? String(row.last_seen_at) : undefined };
+  return { sessionId: String(row.session_id || ""), attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), role: "attendee", status: (row.status as AttendeeSession["status"]) || "active", issuedAt: String(row.issued_at || ""), expiresAt: String(row.expires_at || ""), lastSeenAt: row.last_seen_at ? String(row.last_seen_at) : undefined, clientBuildId: row.client_build_id ? String(row.client_build_id) : undefined, clientBrowser: row.client_browser ? String(row.client_browser) : undefined, clientConnectionQuality: row.client_connection_quality ? (String(row.client_connection_quality) as AttendeeSession["clientConnectionQuality"]) : undefined, clientSubscribedTracks: row.client_subscribed_tracks === null || row.client_subscribed_tracks === undefined ? undefined : Number(row.client_subscribed_tracks), clientSurface: row.client_surface ? String(row.client_surface) : undefined, lastChatPollAt: row.last_chat_poll_at ? String(row.last_chat_poll_at) : undefined };
 }
 
 function mapAttendeeAgendaIntent(row: Record<string, unknown>): AttendeeAgendaIntent {
@@ -580,9 +580,19 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async upsertAttendeeSession(session: AttendeeSession) {
-    const { error } = await this.client.from("attendee_sessions").upsert({ session_id: session.sessionId, attendee_id: session.attendeeId, event_id: session.eventId, role: session.role, status: session.status, issued_at: session.issuedAt, expires_at: session.expiresAt, last_seen_at: session.lastSeenAt });
+    const { error } = await this.client.from("attendee_sessions").upsert({ session_id: session.sessionId, attendee_id: session.attendeeId, event_id: session.eventId, role: session.role, status: session.status, issued_at: session.issuedAt, expires_at: session.expiresAt, last_seen_at: session.lastSeenAt, client_build_id: session.clientBuildId ?? null, client_browser: session.clientBrowser ?? null, client_connection_quality: session.clientConnectionQuality ?? null, client_subscribed_tracks: session.clientSubscribedTracks ?? null, client_surface: session.clientSurface ?? null, last_chat_poll_at: session.lastChatPollAt ?? null });
     if (error) fail(`attendee_sessions upsert: ${error.message}`);
     return session;
+  }
+
+  async listAttendeeSessions(eventId: string, limit = 500) {
+    // The 0037 columns are named explicitly, not swept up by `*`, so an unapplied migration is a
+    // NAMED stop on the health probe instead of a Diagnose panel quietly reading "Not reported"
+    // for every attendee (the 0030 lesson: an unapplied mirror that looked like working software).
+    const columns = "session_id, attendee_id, event_id, role, status, issued_at, expires_at, last_seen_at, client_build_id, client_browser, client_connection_quality, client_subscribed_tracks, client_surface, last_chat_poll_at";
+    const { data, error } = await this.client.from("attendee_sessions").select(columns).eq("event_id", eventId).order("last_seen_at", { ascending: false, nullsFirst: false }).limit(limit);
+    if (error) failOrSchemaMissing("attendee_sessions.client_build_id", error);
+    return (data || []).map((row) => mapAttendeeSession(row as Record<string, unknown>));
   }
 
   async getAttendeeSession(eventId: string, sessionId: string) {

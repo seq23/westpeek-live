@@ -1,4 +1,5 @@
 import { listEventRecords } from "@/services/events/eventRepository";
+import { excludePreviewIdentities } from "@/lib/auth/previewIdentity";
 import { sha256Hex } from "@/lib/security/portableCrypto";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { listContacts, listHashOnlyPeople, type HashOnlyPerson } from "@/services/attendees/contactsService";
@@ -34,8 +35,8 @@ export async function testRowContext(): Promise<TestRowContext & { eventNames: R
 export async function peopleDirectory(): Promise<PeopleDirectory> {
   const { eventNames, testEventIds } = await testRowContext();
   const context = { testEventIds };
-  const contacts = await listContacts().catch(() => [] as ContactRecord[]);
-  const hashOnly = await listHashOnlyPeople(eventNames).catch(() => [] as HashOnlyPerson[]);
+  const contacts = excludePreviewIdentities(await listContacts().catch(() => [] as ContactRecord[]), (contact) => contact.email);
+  const hashOnly = excludePreviewIdentities(await listHashOnlyPeople(eventNames).catch(() => [] as HashOnlyPerson[]), (person) => person.emailHash);
   const realContacts = contacts.filter((contact) => !contactIsTestRow(contact, context));
   const testContacts = contacts.filter((contact) => contactIsTestRow(contact, context));
   const realHashOnly = hashOnly.filter((person) => !hashOnlyIsTestRow(person, context));

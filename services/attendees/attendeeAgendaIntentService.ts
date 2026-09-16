@@ -1,4 +1,5 @@
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
+import { refusePreviewWrite } from "@/lib/auth/previewIdentity";
 import type { AttendeeAgendaIntent } from "@/types/attendeeSession";
 
 function unique(values: string[]) {
@@ -6,6 +7,7 @@ function unique(values: string[]) {
 }
 
 export async function upsertAttendeeAgendaIntent(input: Omit<AttendeeAgendaIntent, "id" | "updatedAt">) {
+  refusePreviewWrite(input.attendeeId, "save an agenda");
   const intent: AttendeeAgendaIntent = {
     ...input,
     id: `agenda-intent-${input.eventId}-${input.attendeeId}`,

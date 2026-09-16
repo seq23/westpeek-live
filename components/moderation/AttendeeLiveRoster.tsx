@@ -7,6 +7,9 @@ import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { VipRowControl } from "@/components/moderation/VipRowControl";
 import { listVipStanding, vipCodeFor } from "@/services/guests/vipGrantService";
 import { getAttendeeRoster, liveStatusLabel, ROSTER_LIMIT, type AttendeeRosterRow } from "@/services/venue/attendeeRosterService";
+import { AttendeeDiagnosePanel } from "@/components/moderation/AttendeeDiagnosePanel";
+import { diagnoseRoster } from "@/services/venue/attendeeDiagnosticsService";
+import { recordPreviewAudit } from "@/services/venue/previewAuditService";
 import type { AttendeeLiveDecision, AttendeeLiveRoomKind } from "@/types/attendeeLive";
 
 function when(value?: string) {
@@ -54,17 +57,25 @@ function RowActions({ eventId, roomKind, roomId, row, viewer, joinRequiresApprov
  * requests at the top with Approve / Decline. Shared by the crew console, the event command
  * page, and the testing console. Every button is a guarded server action.
  */
-export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roomId = "main-stage", search = "", searchAction, viewer: givenViewer }: { eventId: string; roomKind?: AttendeeLiveRoomKind; roomId?: string; search?: string; searchAction: string; viewer?: CrewViewer }) {
+export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roomId = "main-stage", search = "", searchAction, viewer: givenViewer, diagnose }: { eventId: string; roomKind?: AttendeeLiveRoomKind; roomId?: string; search?: string; searchAction: string; viewer?: CrewViewer; diagnose?: string }) {
   const [roster, viewer, control] = await Promise.all([getAttendeeRoster({ eventId, roomKind, roomId, search }), givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId), getAttendeeLiveControlState(eventId, roomKind, roomId).catch(() => undefined)]);
   const joinRequiresApproval = Boolean(control?.attendeeJoinRequiresApproval);
   // VIP is code-bound: the roster shows who holds the code, how, and hands the crew the code to send.
   const [vipStanding, vipCode] = await Promise.all([listVipStanding(eventId).catch(() => []), vipCodeFor(eventId).catch(() => undefined)]);
   const vipByAttendee = new Map(vipStanding.map((grant) => [grant.attendeeId, grant]));
+  // ONE LiveKit call and ONE session read behind the whole roster, and only when a row is actually
+  // being diagnosed — a probe per row would be 200 twirp calls on every render of the crew deck.
+  const opened = diagnose && roster.rows.some((row) => row.attendeeId === diagnose) ? diagnose : undefined;
+  const diagnoses = opened ? await diagnoseRoster({ eventId, stageId: roomId, rows: roster.rows.filter((row) => row.attendeeId === opened) }).catch(() => undefined) : undefined;
+  // Looking at a named person is recorded: who, whom, when. Never an IP and never a location.
+  if (opened) await recordPreviewAudit({ eventId, attendeeId: opened, viewerRole: viewer.role || "crew", action: "attendee_diagnosed" });
+  const diagnoseHref = (attendeeId?: string) => `${searchAction}${search ? `?roster=${encodeURIComponent(search)}&` : "?"}${attendeeId ? `diagnose=${encodeURIComponent(attendeeId)}` : ""}`;
+  const returnTo = diagnoseHref(opened);
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="attendee-live-roster">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Attendee roster · {roomKind === "main_stage" ? "main stage" : `${roomKind} ${roomId}`}</p>
       <h2 className="mt-2 text-xl font-black text-slate-950">{roster.total} registered · {roster.pending.length} pending stage request{roster.pending.length === 1 ? "" : "s"}</h2>
-      <p className="mt-2 text-sm text-slate-600">Permit lets an attendee watch the live stage when join approval is on. Approve to publish grants camera and microphone on the stage. Revoke removes both and drops them from the LiveKit room. Silence stops their chat in this room. Nothing here needs an attendee id typed by hand.</p>
+      <p className="mt-2 text-sm text-slate-600">Permit lets an attendee watch the live stage when join approval is on. Approve to publish grants camera and microphone on the stage. Revoke removes both and drops them from the LiveKit room. Silence stops their chat in this room. Nothing here needs an attendee id typed by hand. <strong>Diagnose</strong> answers &ldquo;I can&rsquo;t see it&rdquo; — whether they never connected, are connected but receiving nothing (ours), or are receiving it badly (their network) — and <strong>See their view</strong> opens the stage with their real state, read-only.</p>
       <DeniedNote viewer={viewer} action="manage_stage_access" className="mt-3" />
 
       <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" data-testid="pending-stage-requests">
@@ -98,7 +109,7 @@ export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roo
       <div className="mt-3 overflow-x-auto">
         <table className="w-full text-left text-sm" data-testid="roster-table">
           <thead className="text-[11px] font-black uppercase tracking-wide text-slate-500">
-            <tr><th className="py-2 pr-3">Attendee</th><th className="py-2 pr-3">Registered</th><th className="py-2 pr-3">Live status</th><th className="py-2 pr-3">Chat</th><th className="py-2 pr-3">Decide</th><th className="py-2">VIP</th></tr>
+            <tr><th className="py-2 pr-3">Attendee</th><th className="py-2 pr-3">Registered</th><th className="py-2 pr-3">Live status</th><th className="py-2 pr-3">Chat</th><th className="py-2 pr-3">Decide</th><th className="py-2 pr-3">VIP</th><th className="py-2">Seeing it?</th></tr>
           </thead>
           <tbody>
             {roster.rows.length ? roster.rows.map((row) => (
@@ -108,9 +119,10 @@ export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roo
                 <td className="py-3 pr-3"><StatusPill row={row} />{row.capability?.revokedReason && row.liveStatus === "revoked" ? <p className="mt-1 text-xs text-slate-500">{row.capability.revokedReason}</p> : null}</td>
                 <td className="py-3 pr-3 text-xs text-slate-600">{row.silenced ? <span className="font-black text-rose-800">Silenced</span> : "Open"}<p>Last: {when(row.lastChatAt)}</p></td>
                 <td className="py-3"><RowActions eventId={eventId} roomKind={roomKind} roomId={roomId} row={row} viewer={viewer} joinRequiresApproval={joinRequiresApproval} /></td>
-                <td className="py-3"><VipRowControl eventId={eventId} attendeeId={row.attendeeId} name={row.name} email={row.emailMasked} standing={vipByAttendee.get(row.attendeeId)} vipCode={vipCode} viewer={viewer} /></td>
+                <td className="py-3 pr-3"><VipRowControl eventId={eventId} attendeeId={row.attendeeId} name={row.name} email={row.emailMasked} standing={vipByAttendee.get(row.attendeeId)} vipCode={vipCode} viewer={viewer} /></td>
+                <td className="py-3"><AttendeeDiagnosePanel eventId={eventId} row={row} diagnosis={diagnoses?.byAttendee.get(row.attendeeId)} open={opened === row.attendeeId} openHref={diagnoseHref(row.attendeeId)} closeHref={diagnoseHref()} returnTo={returnTo} /></td>
               </tr>
-            )) : <tr><td colSpan={6} className="py-4 text-sm text-slate-500">{search ? `No registered attendee matches "${search}".` : "No registered attendees yet. Rows appear as people register with the join code."}</td></tr>}
+            )) : <tr><td colSpan={7} className="py-4 text-sm text-slate-500">{search ? `No registered attendee matches "${search}".` : "No registered attendees yet. Rows appear as people register with the join code."}</td></tr>}
           </tbody>
         </table>
       </div>
