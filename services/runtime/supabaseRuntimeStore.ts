@@ -450,8 +450,12 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async listAttendeeSessions(eventId: string, limit = 500) {
-    const { data, error } = await this.client.from("attendee_sessions").select("*").eq("event_id", eventId).order("last_seen_at", { ascending: false, nullsFirst: false }).limit(limit);
-    if (error) fail(`attendee_sessions list: ${error.message}`);
+    // The 0037 columns are named explicitly, not swept up by `*`, so an unapplied migration is a
+    // NAMED stop on the health probe instead of a Diagnose panel quietly reading "Not reported"
+    // for every attendee (the 0030 lesson: an unapplied mirror that looked like working software).
+    const columns = "session_id, attendee_id, event_id, role, status, issued_at, expires_at, last_seen_at, client_build_id, client_browser, client_connection_quality, client_subscribed_tracks, client_surface, last_chat_poll_at";
+    const { data, error } = await this.client.from("attendee_sessions").select(columns).eq("event_id", eventId).order("last_seen_at", { ascending: false, nullsFirst: false }).limit(limit);
+    if (error) failOrSchemaMissing("attendee_sessions.client_build_id", error);
     return (data || []).map((row) => mapAttendeeSession(row as Record<string, unknown>));
   }
 

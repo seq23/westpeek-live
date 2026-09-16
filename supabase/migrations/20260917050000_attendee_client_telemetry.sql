@@ -1,4 +1,4 @@
--- 0033 · what the attendee's own browser tells us (16 Sep 2026)
+-- 0037 · what the attendee's own browser tells us (16 Sep 2026)
 --
 -- "I can't see the stream" used to be unanswerable. LiveKit's RoomService says who is connected and
 -- what is being published, but it does NOT expose connection quality or what a viewer is SUBSCRIBED

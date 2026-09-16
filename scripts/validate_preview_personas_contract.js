@@ -113,7 +113,7 @@ check("components/moderation/AttendeeLiveRoster.tsx", ["<AttendeeDiagnosePanel",
 // ---- 8. Audited, and the columns exist in both copies of the migration --------------------
 check("services/venue/previewAuditService.ts", ['"attendee_diagnosed"', '"attendee_view_mirrored"', "NEVER an IP"]);
 check("services/audit/auditTypes.ts", ['| "attendee_diagnosed"', '| "attendee_view_mirrored"']);
-for (const file of ["db/migrations/0033_attendee_client_telemetry.sql", "supabase/migrations/20260916230000_attendee_client_telemetry.sql"]) {
+for (const file of ["db/migrations/0037_attendee_client_telemetry.sql", "supabase/migrations/20260917050000_attendee_client_telemetry.sql"]) {
   const sql = check(file, ["client_build_id", "client_browser", "client_connection_quality", "client_subscribed_tracks", "last_chat_poll_at"]);
   if (/\bip_address\b|\bgeo\b|\blatitude\b/.test(sql)) throw new Error(`${file} must not add an IP or location column.`);
 }

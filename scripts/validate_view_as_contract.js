@@ -21,7 +21,8 @@ if (/moderator|show_caller|technical_director|support|va"/.test(guard.slice(guar
 check("lib/auth/viewAs.ts", ["canViewAsGuest({ owner, operator, crew }, eventId)", "if (!viewer.ok) return undefined", "guest.role !== role) return undefined"]);
 check("lib/auth/v5RouteAuthorization.ts", ["export function canViewAsAccessPath", "canViewAsGuest(payloads, pathEventId).ok"]);
 check("middleware.ts", ['canViewAsAccessPath(pathname, request.nextUrl.searchParams.get("viewAs")']);
-check("components/guests/ViewAsBanner.tsx", ["Viewing as {guest.name} — you are {viewer.label}; they can&rsquo;t see this banner.", 'data-testid="view-as-banner"']);
+// The banner carries a second wording for a PREVIEW persona ("there is no them to hide it from"); both testids stay.
+check("components/guests/ViewAsBanner.tsx", ["Viewing as {guest.name} — you are {viewer.label}; they can&rsquo;t see this banner.", '? "preview-banner" : "view-as-banner"', "Leave preview"]);
 for (const page of ["app/speaker/events/[eventId]/page.tsx", "app/speaker/events/[eventId]/green-room/page.tsx", "app/speaker/events/[eventId]/teleprompter/page.tsx", "app/speaker/events/[eventId]/tech-check/page.tsx", "app/speaker/events/[eventId]/backstage/page.tsx"]) check(page, ['resolveViewAs(eventId, query?.viewAs, "speaker")', "viewAs={viewAs}"]);
 check("app/sponsor/events/[eventId]/booth/page.tsx", ['resolveViewAs(eventId, query?.viewAs, "sponsor")', "viewAs={viewAs}"]);
 check("app/venue/[eventId]/lobby/page.tsx", ['resolveViewAs(resolvedParams.eventId, resolvedSearchParams?.viewAs, "vip")', "<ViewAsBanner"]);

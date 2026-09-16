@@ -103,6 +103,7 @@ export const LIVE_CHAT_MODERATION_MIGRATION_FILE = "db/migrations/0025_live_chat
 export const SPECIAL_GUEST_MIGRATION_FILE = "db/migrations/0026_special_guest_identity_and_state.sql";
 export const SPEED_NETWORKING_MIGRATION_FILE = "db/migrations/0027_speed_networking.sql";
 export const ATTENDEE_VISIBILITY_MIGRATION_FILE = "db/migrations/0029_attendee_profile_visibility.sql";
+export const ATTENDEE_CLIENT_TELEMETRY_MIGRATION_FILE = "db/migrations/0037_attendee_client_telemetry.sql";
 
 /** Which SQL file creates each runtime table the health probe checks. */
 export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
@@ -117,4 +118,7 @@ export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
   networking_queue_matches: SPEED_NETWORKING_MIGRATION_FILE,
   "attendee_profiles.hidden_from_directory": ATTENDEE_VISIBILITY_MIGRATION_FILE,
   contacts: ATTENDEE_VISIBILITY_MIGRATION_FILE,
+  // The Diagnose panel reads these; unapplied, it would quietly show "Not reported" for everyone
+  // instead of saying the column is missing (the 0030 lesson).
+  "attendee_sessions.client_build_id": ATTENDEE_CLIENT_TELEMETRY_MIGRATION_FILE,
 };
