@@ -14,8 +14,8 @@ test("operator Day 1 password unlocks create-event flow without a second auth wa
   await page.getByRole("link", { name: /create event in admin workspace/i }).first().click();
 
   await expect(page).toHaveURL(/\/app\/events\/new/);
-  await expect(page.getByRole("heading", { name: /start a guided event setup/i })).toBeVisible();
-  await expect(page.getByRole("button", { name: /create setup draft and continue/i })).toBeVisible();
+  await expect(page.getByRole("heading", { name: /start a room now, or plan an event for later/i })).toBeVisible();
+  await expect(page.getByTestId("create-event-submit")).toBeVisible();
   await expect(page.locator("body")).not.toContainText(/supabase auth|required admin account|login\?next|operator gate/i);
 });
 

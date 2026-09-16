@@ -8,7 +8,7 @@ This matrix exists to prevent false confidence from route-only browser tests. A 
 
 | Area | Transactional expectation |
 |---|---|
-| Producer setup | Create a local setup draft from the UI and verify `.runtime-data/event-drafts.json` contains the draft. |
+| Producer setup | Create a real event from `/app/events/new` (LATER) and verify the local runtime store (`.runtime-data/local-playwright-runtime.json` → `runtimeEvents`) contains the row with its join code. |
 | Producer run of show | Click a producer run-of-show control and verify `runOfShowEvents` records the action. |
 | Crew / producer testing console | Open `/admin/testing/demo` with scoped test access and verify showtime readiness, livestream, matchmaking, route health, debug/fix, and Zoom/Google Meet fallback decisioning. |
 | Visitor registration | Submit rich registration fields and verify local runtime registration data persists without writing production data. |

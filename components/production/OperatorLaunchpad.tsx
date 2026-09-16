@@ -30,7 +30,8 @@ export function OperatorLaunchpad() {
             <Link className="rounded-2xl bg-brand-black p-4 text-sm font-bold text-white" href="/app/events/new">Create Event in Admin Workspace</Link>
             <Link className="rounded-2xl border border-brand-line p-4 text-sm font-bold" href="/venue/demo/lobby">Preview Demo Venue</Link>
             <Link className="rounded-2xl border border-brand-line p-4 text-sm font-bold" href="/operator-packet">Open Operator Packet</Link>
-            <Link className="rounded-2xl border border-brand-line p-4 text-sm font-bold" href={`/app/events/${demoEventId}/crew`}>Crew Briefing & Instructions</Link>\n            <Link className="rounded-2xl border border-brand-line p-4 text-sm font-bold" href="/production-access/crew">Test Crew Login</Link>
+            <Link className="rounded-2xl border border-brand-line p-4 text-sm font-bold" href={`/app/events/${demoEventId}/crew`}>Crew Briefing & Instructions</Link>
+            <Link className="rounded-2xl border border-brand-line p-4 text-sm font-bold" href="/production-access/crew">Test Crew Login</Link>
             <Link className="rounded-2xl border border-brand-line p-4 text-sm font-bold" href="/production-access/special-guest">Test Speaker/Sponsor Login</Link>
           </div>
           <div className="mt-6 rounded-2xl bg-brand-ash p-5">
@@ -67,7 +68,8 @@ export function OperatorLaunchpad() {
           <LaunchpadCard title="Agenda" href={`/app/events/${demoEventId}/agenda`}>Session timing and sequencing.</LaunchpadCard>
           <LaunchpadCard title="Venue Setup" href={`/app/events/${demoEventId}/venue`}>Lobby, stage, expo, networking, replay, and help configuration.</LaunchpadCard>
           <LaunchpadCard title="Communications" href={`/app/events/${demoEventId}/communications`}>Email and audience comms spine.</LaunchpadCard>
-          <LaunchpadCard title="Access" href={`/app/events/${demoEventId}/access`}>Crew, speaker, sponsor, VIP, and client access setup.</LaunchpadCard>\n          <LaunchpadCard title="Crew Briefing & Instructions" href={`/app/events/${demoEventId}/crew`}>Operator-owned crew briefing, call sheet, run of show, task list, fallback instructions, and escalation package.</LaunchpadCard>
+          <LaunchpadCard title="Access" href={`/app/events/${demoEventId}/access`}>Crew, speaker, sponsor, VIP, and client access setup.</LaunchpadCard>
+          <LaunchpadCard title="Crew Briefing & Instructions" href={`/app/events/${demoEventId}/crew`}>Operator-owned crew briefing, call sheet, run of show, task list, fallback instructions, and escalation package.</LaunchpadCard>
           <LaunchpadCard title="Preview" href={`/app/events/${demoEventId}/preview`}>Internal preflight preview before publishing.</LaunchpadCard>
           <LaunchpadCard title="Publish" href={`/app/events/${demoEventId}/publish`}>Publish readiness and package flow.</LaunchpadCard>
         </LaunchpadSection>

@@ -897,6 +897,22 @@
       "evidence": []
     },
     {
+      "id": "client-clientslug-events-eventid-reports",
+      "path": "/client/[clientSlug]/events/[eventId]/reports",
+      "persona": "client",
+      "required_states": [
+        "empty",
+        "populated",
+        "loading",
+        "error",
+        "success",
+        "disabled",
+        "pending"
+      ],
+      "status": "UNPROVEN",
+      "evidence": []
+    },
+    {
       "id": "client-clientslug",
       "path": "/client/[clientSlug]",
       "persona": "client",

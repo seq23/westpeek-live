@@ -4,7 +4,7 @@ import type { SpeedNetworkingEntry, SpeedNetworkingMatch, SpeedNetworkingPairHis
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { asRegisteredAttendee } from "./helpers/persona";
 import { grantAgencySession, grantOperatorAccess, loginAsOperator } from "./helpers/roleJourney";
-import { expectEventuallyDraft, expectEventuallyRuntime, readRuntimeSnapshot, resetRuntimeTraceFiles } from "./helpers/runtimeTrace";
+import { expectEventuallyRuntime, expectEventuallyRuntimeEvent, readRuntimeSnapshot, resetRuntimeTraceFiles } from "./helpers/runtimeTrace";
 
 const unique = Date.now();
 
@@ -19,23 +19,19 @@ transactionalDescribe("Transactional Full Buffett E2E", () => {
     resetRuntimeTraceFiles();
   });
 
-  test("producer creates a local setup draft, records a run-of-show action, and opens show-readiness cockpit", async ({ page }) => {
+  test("producer creates a real runtime event row, records a run-of-show action, and opens show-readiness cockpit", async ({ page }) => {
     await loginAsOperator(page, "/app/events/new");
 
+    // The former cookie/file "setup draft" is gone: Create writes one runtime_events row.
     const eventName = `Transactional Buffett Summit ${unique}`;
-    await page.locator('[name="eventName"]').fill(eventName);
-    await page.locator('[name="eventCode"]').fill(`transactional-buffett-${unique}`);
+    await page.getByTestId("when-later").check();
+    await page.locator('[name="name"]').fill(eventName);
     await page.locator('[name="clientName"]').fill("West Peek Productions QA");
-    await page.locator('[name="eventDate"]').fill("2026-06-15");
-    await page.locator('[name="audience"]').fill("Operators, speakers, sponsors, VIPs");
-    await page.locator('[name="eventType"]').fill("Virtual summit");
-    await page.getByLabel(/Production feed \/ source/i).fill("StreamYard");
-    await page.getByLabel(/Primary embedded distribution/i).fill("LiveKit");
-    await page.getByLabel(/Fallback video provider/i).fill("Cloudflare Stream, then Daily, then Zoom + Google Meet");
-    await page.getByRole("button", { name: /create setup draft and continue/i }).click();
-    await expect(page).toHaveURL(new RegExp(`/app/events/transactional-buffett-${unique}/setup\\?draftId=`));
+    await page.locator('[name="eventType"]').selectOption("virtual_summit");
+    await page.getByTestId("create-event-submit").click();
+    await expect(page).toHaveURL(new RegExp(`/app/events/transactional-buffett-summit-${unique}[a-z0-9-]*\\?created=1`));
 
-    await expectEventuallyDraft((drafts) => drafts.some((draft) => draft.eventName === eventName && draft.primaryVideo === "LiveKit"), "event setup draft should persist to local runtime");
+    await expectEventuallyRuntimeEvent((events) => events.some((event) => event.name === eventName && event.status === "draft" && /^wpl-/.test(event.joinCode)), "runtime event row should persist to the local runtime store");
 
     await gotoAndAssert(page, "/app/events/demo/run-of-show");
     await page.getByRole("button", { name: /^Mark live$/i }).click();

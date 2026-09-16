@@ -4,8 +4,10 @@ export const dynamic = "force-dynamic";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
-import { getEnv, getOwnerMasterPassword, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
-import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
+import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret, matchOwnerMasterPassword } from "@/lib/env";
+import { logAccessAttempt } from "@/services/access/accessAuditService";
+import { createV5AccessCookie, getV5CookieOptions, readV5AccessCookie } from "@/lib/auth/productionAccess";
+import { canOwnerAccessPath } from "@/lib/auth/v5RouteAuthorization";
 
 async function enterOwner(formData: FormData) {
   "use server";
@@ -13,7 +15,10 @@ async function enterOwner(formData: FormData) {
   const next = String(formData.get("next") ?? "/app");
   const env = getEnv();
 
-  if (password !== getOwnerMasterPassword(env)) {
+  // Either owner master password (OWNER_MASTER_ACCESS_PASSWORD or the optional _2) is a full owner.
+  const ownerKey = matchOwnerMasterPassword(password, env);
+  if (!ownerKey) {
+    await logAccessAttempt({ status: "access_denied", accessKind: "owner", role: "owner", reason: "invalid_password", route: "/production-access/owner" });
     redirect("/production-access/owner?error=invalid");
   }
 
@@ -21,6 +26,7 @@ async function enterOwner(formData: FormData) {
   const cookie = await createV5AccessCookie({
     kind: "owner",
     role: "owner",
+    ownerKey,
     issuedAt: Date.now(),
     expiresAt: Date.now() + 1000 * 60 * 60 * 12,
   }, getV5AccessCookieSecret(env));
@@ -28,11 +34,24 @@ async function enterOwner(formData: FormData) {
   (await cookies()).set(ownerCookieName, cookie, getV5CookieOptions(60 * 60 * 12));
 
   const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/app";
+  await logAccessAttempt({ status: "access_granted", accessKind: "owner", role: "owner", reason: `owner_master:${ownerKey}`, route: safeNext });
   redirect(safeNext);
 }
 
 export default async function OwnerAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  // A valid owner cookie is not asked for the password again.
+  if (!resolvedSearchParams?.error) {
+    try {
+      const env = getEnv();
+      const { ownerCookieName } = getV5AccessCookieNames(env);
+      const owner = await readV5AccessCookie((await cookies()).get(ownerCookieName)?.value, getV5AccessCookieSecret(env));
+      const next = resolvedSearchParams?.next && resolvedSearchParams.next.startsWith("/") && !resolvedSearchParams.next.startsWith("//") ? resolvedSearchParams.next : "/app";
+      if (owner?.kind === "owner" && canOwnerAccessPath(next, owner)) redirect(next);
+    } catch {
+      // Fall through to the form when access config is missing.
+    }
+  }
   return (
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">

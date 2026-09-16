@@ -1,6 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
-import { getEnv, getOwnerMasterPassword, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
+import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret, matchOwnerMasterPassword } from "@/lib/env";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 
 export function safeAccessRedirectTarget(next: string | undefined, fallback = "/app") {
@@ -20,12 +20,14 @@ export async function ownerOverrideResponseIfMatched(input: {
   fallback?: string;
 }) {
   const env = getEnv();
-  if (!input.password || input.password !== getOwnerMasterPassword(env)) return undefined;
+  const ownerKey = matchOwnerMasterPassword(input.password, env);
+  if (!ownerKey) return undefined;
 
   const { ownerCookieName } = getV5AccessCookieNames(env);
   const cookie = await createV5AccessCookie({
     kind: "owner",
     role: "owner",
+    ownerKey,
     issuedAt: Date.now(),
     expiresAt: Date.now() + 1000 * 60 * 60 * 12,
   }, getV5AccessCookieSecret(env));
@@ -34,7 +36,7 @@ export async function ownerOverrideResponseIfMatched(input: {
     status: "access_granted",
     accessKind: "owner",
     role: "owner",
-    reason: "owner_master_override",
+    reason: `owner_master_override:${ownerKey}`,
     route: input.route,
   });
 

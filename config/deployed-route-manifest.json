@@ -1334,6 +1334,30 @@
       "role": "client"
     },
     {
+      "id": "client-clientslug-events-eventid-reports",
+      "path": "/client/[clientSlug]/events/[eventId]/reports",
+      "authMode": "role-specific",
+      "persona": "client",
+      "criticality": "critical",
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/client/[clientSlug]/events/[eventId]/reports"
+      },
+      "safeActions": [
+        "navigate"
+      ],
+      "fixtureRequirements": [
+        "event"
+      ],
+      "persistenceRequired": false,
+      "cleanupPolicy": "exact-run",
+      "role": "client"
+    },
+    {
       "id": "client-clientslug",
       "path": "/client/[clientSlug]",
       "authMode": "role-specific",

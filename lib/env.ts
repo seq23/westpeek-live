@@ -34,6 +34,8 @@ const envSchema = z.object({
   CREW_ACCESS_PASSWORD: z.string().min(12),
   OPERATOR_LAUNCHPAD_PASSWORD: z.string().min(12),
   OWNER_MASTER_ACCESS_PASSWORD: z.string().min(12),
+  // Optional second owner master password: same rule, same authority; absent means only the first works.
+  OWNER_MASTER_ACCESS_PASSWORD_2: z.string().min(12).optional().or(z.literal("")),
 
   RESEND_API_KEY: z.string().optional().or(z.literal("")),
   EMAIL_FROM: emailIdentitySchema.optional().or(z.literal("")),
@@ -70,6 +72,7 @@ export function getEnv(): AppEnv {
     CREW_ACCESS_PASSWORD: requiredInProduction("CREW_ACCESS_PASSWORD", process.env.CREW_ACCESS_PASSWORD, devOnlyCrewPassword),
     OPERATOR_LAUNCHPAD_PASSWORD: requiredInProduction("OPERATOR_LAUNCHPAD_PASSWORD", process.env.OPERATOR_LAUNCHPAD_PASSWORD, devOnlyOperatorPassword),
     OWNER_MASTER_ACCESS_PASSWORD: requiredInProduction("OWNER_MASTER_ACCESS_PASSWORD", process.env.OWNER_MASTER_ACCESS_PASSWORD, devOnlyOwnerPassword),
+    OWNER_MASTER_ACCESS_PASSWORD_2: process.env.OWNER_MASTER_ACCESS_PASSWORD_2 || "",
     RESEND_API_KEY: process.env.RESEND_API_KEY || "",
     EMAIL_FROM: process.env.EMAIL_FROM || "",
     EMAIL_REPLY_TO: process.env.EMAIL_REPLY_TO || "",
@@ -172,11 +175,26 @@ export function getOwnerMasterPassword(env: AppEnv = getEnv()) {
   return env.OWNER_MASTER_ACCESS_PASSWORD;
 }
 
+export type OwnerMasterKey = "primary" | "secondary";
+
+/**
+ * Which owner master password (if any) a submitted value matches. Both keys are
+ * full owners; the key only lets the audit log tell them apart. The secondary
+ * is optional and, when unset, can never match.
+ */
+export function matchOwnerMasterPassword(password: string, env: AppEnv = getEnv()): OwnerMasterKey | undefined {
+  if (!password) return undefined;
+  if (password === env.OWNER_MASTER_ACCESS_PASSWORD) return "primary";
+  if (env.OWNER_MASTER_ACCESS_PASSWORD_2 && password === env.OWNER_MASTER_ACCESS_PASSWORD_2) return "secondary";
+  return undefined;
+}
+
 export function assertSeparatedProductionPasswords(env: AppEnv = getEnv()) {
   const pairs = [
     ["CREW_ACCESS_PASSWORD", env.CREW_ACCESS_PASSWORD],
     ["OPERATOR_LAUNCHPAD_PASSWORD", env.OPERATOR_LAUNCHPAD_PASSWORD],
     ["OWNER_MASTER_ACCESS_PASSWORD", env.OWNER_MASTER_ACCESS_PASSWORD],
+    ...(env.OWNER_MASTER_ACCESS_PASSWORD_2 ? ([["OWNER_MASTER_ACCESS_PASSWORD_2", env.OWNER_MASTER_ACCESS_PASSWORD_2]] as const) : []),
   ] as const;
   for (let left = 0; left < pairs.length; left += 1) {
     for (let right = left + 1; right < pairs.length; right += 1) {

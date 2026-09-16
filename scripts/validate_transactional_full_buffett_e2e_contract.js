@@ -31,9 +31,10 @@ const spec = read('tests/e2e/transactional-full-buffett.spec.ts').toLowerCase();
 for (const term of [
   'resetruntimetracefiles',
   'expecteventuallyruntime',
-  'expecteventuallydraft',
+  'expecteventuallyruntimeevent',
   '/app/events/new',
-  'create setup draft',
+  'create-event-submit',
+  'runtime event row should persist',
   '/app/events/demo/run-of-show',
   'mark live',
   '/events/demo/register',
