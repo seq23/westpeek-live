@@ -20,6 +20,7 @@ const SECTIONS = [
   { id: "run-a-show", label: "Run a show" },
   { id: "set-up", label: "Set up an event" },
   { id: "people-data", label: "People & data" },
+  { id: "plans", label: "Plans & capacity" },
   { id: "diagnostics", label: "Diagnostics" },
   { id: "demo", label: "Demo & training" },
 ] as const;
@@ -96,6 +97,12 @@ async function LaunchpadBody() {
           <LaunchpadCard title="Clients" href="/app/clients">The companies the events belong to.</LaunchpadCard>
           <LaunchpadCard title="All events" href="/app/events">The full portfolio, including archived.</LaunchpadCard>
           {current ? <LaunchpadCard title="Analytics" href={`/app/events/${current.id}/analytics`}>Who came to {current.name}, and what they did.</LaunchpadCard> : null}
+        </div>
+      </ConsoleSection>
+
+      <ConsoleSection storagePrefix="wpl-launchpad" id="plans" title="Plans &amp; capacity" blurb="What the month has cost against the plans we are on, transcode minutes first — and what to upgrade when one of them runs out.">
+        <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
+          <LaunchpadCard title="Plans &amp; capacity" href="/app/capacity">LiveKit transcode minutes, participant-minutes, bandwidth and concurrency, plus the Cloudflare and Supabase positions.</LaunchpadCard>
         </div>
       </ConsoleSection>
 
