@@ -50,7 +50,8 @@ async function checkColumn(baseUrl, serviceRoleKey, table, column) {
 const requiredColumns = {
   stage_stream_states: ["event_id", "stage_id", "state", "updated_at"],
   stage_stream_events: ["id", "event_id", "stage_id", "signal", "state_event", "created_at"],
-  live_chat_messages: ["id", "event_id", "room_kind", "room_id", "attendee_id", "display_name", "company", "message", "moderation_status", "created_at"],
+  live_chat_messages: ["id", "event_id", "room_kind", "room_id", "attendee_id", "display_name", "company", "message", "moderation_status", "moderated_by", "moderated_at", "created_at"],
+  live_chat_moderation_states: ["key", "event_id", "room_kind", "room_id", "scope", "attendee_id", "state", "updated_at"],
   attendee_live_capabilities: ["key", "event_id", "room_kind", "room_id", "attendee_id", "capability", "updated_at"],
   attendee_live_control_states: ["key", "event_id", "room_kind", "room_id", "state", "updated_at"],
   attendee_profiles: ["attendee_id", "event_id", "email_hash", "name", "email_masked", "company", "title", "personal_website", "social_links", "reason_for_attending", "interesting_fact", "topics_of_interest", "networking_goals", "networking_opt_in", "role", "status", "created_at", "updated_at"],

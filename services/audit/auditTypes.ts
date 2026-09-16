@@ -54,7 +54,15 @@ export type AuditAction =
   // Raised when public intake could not be stored. Before this existed there
   // was no action for a dropped request, because a dropped request was
   // indistinguishable from a stored one.
-  | "request_event_persist_failed";
+  | "request_event_persist_failed"
+  // Crew chat moderation (hide / restore a message, silence / unsilence an attendee,
+  // lock / unlock a room). Each is a reversible decision by owner, operator, or crew.
+  | "chat_message_hidden"
+  | "chat_message_restored"
+  | "chat_attendee_silenced"
+  | "chat_attendee_unsilenced"
+  | "chat_room_locked"
+  | "chat_room_unlocked";
 
 export interface CreateAuditLogInput {
   agencyId: string;

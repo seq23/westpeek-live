@@ -3,13 +3,30 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
+
+function mapLiveChatMessage(row: Record<string, unknown>): LiveChatMessage {
+  return {
+    id: String(row.id),
+    eventId: String(row.event_id || ""),
+    roomKind: row.room_kind as LiveChatMessage["roomKind"],
+    roomId: String(row.room_id || ""),
+    attendeeId: row.attendee_id ? String(row.attendee_id) : undefined,
+    displayName: String(row.display_name || "Attendee"),
+    company: row.company ? String(row.company) : undefined,
+    message: String(row.message || ""),
+    moderationStatus: (row.moderation_status as LiveChatMessage["moderationStatus"]) || "visible",
+    moderatedBy: row.moderated_by ? String(row.moderated_by) : undefined,
+    moderatedAt: row.moderated_at ? String(row.moderated_at) : undefined,
+    createdAt: String(row.created_at || ""),
+  };
+}
 
 function mapAttendeeProfile(row: Record<string, unknown>): AttendeeProfile {
   return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingOptIn: Boolean(row.networking_opt_in), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
@@ -414,10 +431,42 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return insertRecord(this.client, "live_chat_messages", { id: message.id, event_id: message.eventId, room_kind: message.roomKind, room_id: message.roomId, attendee_id: message.attendeeId, display_name: message.displayName, company: message.company, message: message.message, moderation_status: message.moderationStatus, created_at: message.createdAt }, message);
   }
 
-  async listLiveChatMessages(eventId: string, roomKind: string, roomId: string) {
-    const { data, error } = await this.client.from("live_chat_messages").select("*").eq("event_id", eventId).eq("room_kind", roomKind).eq("room_id", roomId).neq("moderation_status", "hidden").order("created_at", { ascending: true });
+  async listLiveChatMessages(eventId: string, roomKind: string, roomId: string, options?: { includeHidden?: boolean }) {
+    let query = this.client.from("live_chat_messages").select("*").eq("event_id", eventId).eq("room_kind", roomKind).eq("room_id", roomId);
+    if (!options?.includeHidden) query = query.neq("moderation_status", "hidden");
+    const { data, error } = await query.order("created_at", { ascending: true });
     if (error) fail(`live_chat_messages read: ${error.message}`);
-    return (data || []).map((row: Record<string, unknown>) => ({ id: String(row.id), eventId: String(row.event_id), roomKind: row.room_kind as LiveChatMessage["roomKind"], roomId: String(row.room_id), attendeeId: row.attendee_id ? String(row.attendee_id) : undefined, displayName: String(row.display_name || "Attendee"), company: row.company ? String(row.company) : undefined, message: String(row.message || ""), moderationStatus: (row.moderation_status as LiveChatMessage["moderationStatus"]) || "visible", createdAt: String(row.created_at || "") }));
+    return ((data || []) as Record<string, unknown>[]).map(mapLiveChatMessage);
+  }
+
+  async listRecentLiveChatMessages(eventId: string, limit: number) {
+    const { data, error } = await this.client.from("live_chat_messages").select("*").eq("event_id", eventId).order("created_at", { ascending: false }).limit(Math.max(1, limit));
+    if (error) fail(`live_chat_messages recent read: ${error.message}`);
+    return ((data || []) as Record<string, unknown>[]).map(mapLiveChatMessage);
+  }
+
+  async updateLiveChatMessageModeration(input: { id: string; eventId: string; moderationStatus: LiveChatMessage["moderationStatus"]; moderatedBy: string; moderatedAt: string }) {
+    const { data, error } = await this.client.from("live_chat_messages").update({ moderation_status: input.moderationStatus, moderated_by: input.moderatedBy, moderated_at: input.moderatedAt }).eq("id", input.id).eq("event_id", input.eventId).select("*").maybeSingle();
+    if (error) failOrSchemaMissing("live_chat_messages.moderated_by", error);
+    return data ? mapLiveChatMessage(data as Record<string, unknown>) : undefined;
+  }
+
+  async setLiveChatModerationState(state: LiveChatModerationState) {
+    const { error } = await this.client.from("live_chat_moderation_states").upsert({ key: state.key, event_id: state.eventId, room_kind: state.roomKind, room_id: state.roomId, scope: state.scope, attendee_id: state.attendeeId ?? null, state, updated_at: state.updatedAt }, { onConflict: "key" });
+    if (error) failOrSchemaMissing("live_chat_moderation_states", error);
+    return state;
+  }
+
+  async getLiveChatModerationState(key: string) {
+    const { data, error } = await this.client.from("live_chat_moderation_states").select("state").eq("key", key).maybeSingle();
+    if (error) failOrSchemaMissing("live_chat_moderation_states", error);
+    return data?.state as LiveChatModerationState | undefined;
+  }
+
+  async listLiveChatModerationStates(eventId: string) {
+    const { data, error } = await this.client.from("live_chat_moderation_states").select("state").eq("event_id", eventId);
+    if (error) failOrSchemaMissing("live_chat_moderation_states", error);
+    return ((data || []) as Record<string, unknown>[]).map((row) => row.state as LiveChatModerationState).filter(Boolean);
   }
 
   async setAttendeeLiveCapability(key: string, capability: AttendeeLiveCapability) {
@@ -504,7 +553,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
 
   async readSnapshot(): Promise<V6RuntimeSnapshot> {
     const snapshot = emptyRuntimeSnapshot();
-    const [auditLogs, accessAttempts, analyticsEvents, fallbackEvents, fallbackStates, incidentEvents, supportRequests, emailEvents, registrations, attendeeProfiles, attendeeSessions, attendeeAgendaIntents, sponsorLeadOptIns, attendeePermissions, runOfShowEvents, stageStreamStates, stageStreamEvents, liveChatMessages, attendeeLiveCapabilities, attendeeLiveControlStates] = await Promise.all([
+    const [auditLogs, accessAttempts, analyticsEvents, fallbackEvents, fallbackStates, incidentEvents, supportRequests, emailEvents, registrations, attendeeProfiles, attendeeSessions, attendeeAgendaIntents, sponsorLeadOptIns, attendeePermissions, runOfShowEvents, stageStreamStates, stageStreamEvents, liveChatMessages, attendeeLiveCapabilities, attendeeLiveControlStates, liveChatModerationStates] = await Promise.all([
       selectAll<Record<string, unknown>>(this.client, "audit_logs"),
       selectAll<Record<string, unknown>>(this.client, "v5_access_attempt_events"),
       selectAll<Record<string, unknown>>(this.client, "v5_analytics_events"),
@@ -525,6 +574,12 @@ export class SupabaseRuntimeStore implements RuntimeStore {
       selectAll<Record<string, unknown>>(this.client, "live_chat_messages"),
       selectAll<Record<string, unknown>>(this.client, "attendee_live_capabilities", "*", "updated_at"),
       selectAll<Record<string, unknown>>(this.client, "attendee_live_control_states", "*", "updated_at"),
+      // Diagnostic snapshot only: an unapplied 0025 must not take the testing console down with it.
+      // The moderation paths themselves surface RuntimeSchemaMissingError by name.
+      selectAll<Record<string, unknown>>(this.client, "live_chat_moderation_states", "*", "updated_at").catch((error: unknown) => {
+        if (error instanceof Error && isMissingTableError({ message: error.message })) return [] as Record<string, unknown>[];
+        throw error;
+      }),
     ]);
 
     snapshot.auditLogs = auditLogs.map((row) => ({
@@ -629,7 +684,8 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     }));
     snapshot.stageStreamStates = stageStreamStates.map((row) => row.state as StageStreamState).filter(Boolean);
     snapshot.stageStreamEvents = stageStreamEvents.map((row) => row.state_event as StageStreamEvent).filter(Boolean);
-    snapshot.liveChatMessages = liveChatMessages.map((row) => ({ id: String(row.id), eventId: String(row.event_id || ""), roomKind: row.room_kind as LiveChatMessage["roomKind"], roomId: String(row.room_id || ""), attendeeId: row.attendee_id ? String(row.attendee_id) : undefined, displayName: String(row.display_name || "Attendee"), company: row.company ? String(row.company) : undefined, message: String(row.message || ""), moderationStatus: (row.moderation_status as LiveChatMessage["moderationStatus"]) || "visible", createdAt: String(row.created_at || "") }));
+    snapshot.liveChatMessages = liveChatMessages.map(mapLiveChatMessage);
+    snapshot.liveChatModerationStates = liveChatModerationStates.map((row) => row.state as LiveChatModerationState).filter(Boolean);
     snapshot.attendeeLiveCapabilities = attendeeLiveCapabilities.map((row) => row.capability as AttendeeLiveCapability).filter(Boolean);
     snapshot.attendeeLiveControlStates = attendeeLiveControlStates.map((row) => row.state as AttendeeLiveControlState).filter(Boolean);
     return snapshot;

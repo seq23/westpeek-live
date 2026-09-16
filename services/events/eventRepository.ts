@@ -1,7 +1,7 @@
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { findEventIndexRecord, getAttendeeConfig, getEventConfig, getEventConfigPackage, getEventIndex } from "@/services/events/eventConfigRepository";
 import { createAuditLog } from "@/services/audit";
-import { RUNTIME_EVENTS_MIGRATION_FILE, RuntimeSchemaMissingError, type RuntimeAccessCodes, type RuntimeClientRecord, type RuntimeEventFormat, type RuntimeEventRecord, type RuntimeEventSession } from "@/types/runtimeEvent";
+import { RUNTIME_EVENTS_MIGRATION_FILE, RUNTIME_TABLE_MIGRATIONS, RuntimeSchemaMissingError, type RuntimeAccessCodes, type RuntimeClientRecord, type RuntimeEventFormat, type RuntimeEventRecord, type RuntimeEventSession } from "@/types/runtimeEvent";
 import type { EventStatus } from "@/types/core";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 
@@ -370,6 +370,8 @@ export async function getRuntimeSchemaStatus(): Promise<RuntimeSchemaStatus> {
     ["runtime_events", () => store.listRuntimeEvents()],
     ["runtime_clients", () => store.listRuntimeClients()],
     ["runtime_agency_settings", () => store.getAgencySettings("west-peek")],
+    // Migration 0025: crew chat moderation. Probed by name so an unapplied mirror is a named stop.
+    ["live_chat_moderation_states", () => store.listLiveChatModerationStates("__schema_probe__")],
   ];
   for (const [table, probe] of probes) {
     try {
@@ -379,7 +381,8 @@ export async function getRuntimeSchemaStatus(): Promise<RuntimeSchemaStatus> {
       else detail = error instanceof Error ? error.message : String(error);
     }
   }
-  return { ok: missing.length === 0 && !detail, store: storeKind(), missingTables: missing, migrationFile: RUNTIME_EVENTS_MIGRATION_FILE, detail };
+  const migrationFile = missing.map((table) => RUNTIME_TABLE_MIGRATIONS[table]).find(Boolean) || RUNTIME_EVENTS_MIGRATION_FILE;
+  return { ok: missing.length === 0 && !detail, store: storeKind(), missingTables: missing, migrationFile, detail };
 }
 
 export function isRuntimeSchemaMissing(error: unknown): error is RuntimeSchemaMissingError {

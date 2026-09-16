@@ -74,3 +74,23 @@ Risks Accepted: Migrations reach the live Supabase project through the Supabase 
 Validation Impact: `tests/unit/eventRepository.test.ts`, `tests/e2e/owner-real-events-journey.spec.ts`; `validate_v7_frontdoor_labels.js` now asserts real persistence and refuses the draft store; `validate_access_boundary_contract.js` follows the crew password into the resolver that also honours per-event crew codes.
 
 Future Reversal Conditions: When the five seed events are recreated as runtime rows, delete `data/events/*`, the config-package PR flow, and the overlay.
+
+## Decision ID: ADM-2026-09-16-CHAT-MODERATION
+
+Status: Accepted
+
+Context: The first production e2e (15/16 Sep 2026) proved live chat works and that nothing could moderate it. `LiveChatMessage.moderationStatus` existed but nothing set it; the command page's "Chat moderation queue" was a sentence; the attendee chat promised "Crew can moderate or lock this room" with no crew control anywhere.
+
+Decision: Three reversible crew decisions, all enforced on the write path in `services/venue/liveChatService.ts` (not only in the UI): hide/restore a message (`live_chat_messages.moderation_status`, plus `moderated_by`/`moderated_at` so the crew see "Hidden by <role>"), silence/unsilence an attendee in a room, and lock/unlock a room. Silence and lock live in one new table, `live_chat_moderation_states` (`db/migrations/0025_live_chat_moderation.sql`, mirrored under `supabase/migrations/` for the GitHub integration), keyed `event:roomKind:roomId[:attendeeId]`. The attendee listing excludes hidden messages by default; the crew listing passes `includeHidden`. Every crew server action runs `requireLiveEventControlAccessForRequest` (owner, operator, or event-scoped crew cookie). One server component, `components/moderation/ChatModerationQueue.tsx`, is the queue on the command page, the crew console, and the testing console.
+
+Alternatives Considered: Storing silence on the `attendee_live_capabilities` JSON and lock on `attendee_live_control_states` (three existing writers overwrite those records wholesale; a silence would be lost on the next permit). Client-side hiding (an attendee with a stale page could still post; hidden text would still ship to the browser).
+
+Reasoning: A dedicated table with one row per standing decision is the only shape where "is this attendee silenced" is a key lookup that no other feature can clobber. Enforcing in the service means the same rule covers the form, a replay, and any future API.
+
+Tradeoffs: One more migration to apply; until it lands, moderation actions throw `RuntimeSchemaMissingError` naming the table and `/api/runtime/health` reports it as a named stop (the diagnostic snapshot tolerates the missing table so the testing console stays up).
+
+Risks Accepted: Same migration path as ADM-2026-09-15-RUNTIME-EVENTS; guarded by `validate:live-chat-moderation-contract` (mirror parity, both stores, write-path enforcement, guards, surfaces, proofs).
+
+Validation Impact: `tests/unit/liveChatModeration.test.ts`, `tests/e2e/crew-chat-moderation.spec.ts`, `scripts/validate_live_chat_moderation_contract.js`, `scripts/validate_supabase_schema_parity.js` (new columns and table).
+
+Future Reversal Conditions: If chat moves to a real-time provider with its own moderation, keep the decision table as the source of truth and mirror it outward.

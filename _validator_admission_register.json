@@ -4297,6 +4297,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:live-chat-moderation-contract",
+      "command": "node scripts/validate_live_chat_moderation_contract.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Crew chat moderation: 0025 migration mirror parity, both runtime stores implement hide/restore, silence, lock and the queue; silence and lock are enforced on the service write path; every crew action is cookie-guarded; attendee listings exclude hidden messages; the queue renders on the crew, command, and testing surfaces; unit and Playwright proofs exist.",
+      "whatItDoesNotProve": "Does not prove the 0025 migration has been applied to the live Supabase project; that is read from /api/runtime/health (live_chat_moderation_states probe) by the post-deploy smoke.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only if live chat itself is retired.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",
