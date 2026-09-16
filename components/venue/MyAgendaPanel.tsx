@@ -5,7 +5,7 @@ import type { VirtualVenueModel } from "@/types/virtualVenue";
 
 export async function MyAgendaPanel({ model }: { model: VirtualVenueModel }) {
   const profile = await getCurrentAttendeeProfile(model.eventId);
-  if (!profile) return <section className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-600" data-testid="my-agenda-signed-out"><h2 className="text-lg font-black text-slate-950">My Agenda</h2><p className="mt-1">Register to save your agenda and profile.</p></section>;
+  if (!profile) return <section className="rounded-2xl bg-slate-100 p-4 text-sm text-slate-600" data-testid="my-agenda-signed-out"><h2 className="text-lg font-black text-slate-950">My Agenda</h2><p className="mt-1"><a href={`/events/${model.eventId}/register`} className="font-bold text-brand-orange underline">Register</a> to save your agenda and profile.</p></section>;
   const intent = await getAttendeeAgendaIntent(model.eventId, profile.attendeeId).catch(() => undefined);
   const plannedSessions = model.sessions.filter((session) => intent?.plannedSessionIds.includes(session.id));
   const plannedBreakouts = model.breakouts.filter((breakout) => intent?.plannedBreakoutIds.includes(breakout.id));

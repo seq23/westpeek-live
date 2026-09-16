@@ -58,6 +58,8 @@ export function resolveHydratedEventJoinCode(rawCode: string | undefined): V4Joi
 /** Runtime store first (Supabase in production, file store locally), compiled seed JSON second. */
 export async function resolveEventJoinCode(rawCode: string | undefined): Promise<V4JoinResolution> {
   const code = rawCode?.trim().toLowerCase();
-  if (code) await ensureRuntimeEvent(code);
-  return resolveHydratedEventJoinCode(code);
+  // A typed code may be mangled (no prefix, capitals, a space); the record found tells us the real
+  // code, and the hydrated lookup must use THAT, not what was typed.
+  const runtime = code ? await ensureRuntimeEvent(code) : undefined;
+  return resolveHydratedEventJoinCode(runtime?.joinCode ?? code);
 }
