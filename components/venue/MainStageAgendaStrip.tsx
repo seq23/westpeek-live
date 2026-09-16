@@ -29,7 +29,7 @@ export function MainStageAgendaStrip({ sessions, eventId }: { sessions: VirtualV
               </a>
             ))}
           </div>
-          {eventId ? <p className="mt-4 text-xs text-slate-500"><a href="#run-of-show" className="font-bold text-brand-orange underline" data-testid="agenda-strip-run-of-show">See the running order</a> without leaving the show, or <a href={`/venue/${eventId}/run-of-show`} className="font-bold text-slate-700 underline">open it on its own page</a>.</p> : null}
+          {eventId ? <p className="mt-4 text-xs text-slate-500">The strip at the top of every page says what is on now. <a href={`/venue/${eventId}/run-of-show`} className="font-bold text-brand-orange underline" data-testid="agenda-strip-run-of-show">Open the full running order</a> for the detail.</p> : null}
         </>
       ) : (
         <VenueEmptyState title="No sessions are scheduled yet." line="Everything today is happening on the main stage. The schedule appears here as soon as the production team publishes it." actionHref={eventId ? `/venue/${eventId}/stage` : undefined} actionLabel="Go to the main stage" />

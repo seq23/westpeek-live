@@ -2,7 +2,7 @@ import type { VenueReadModel } from "@/types/venuePersistence";
 
 export function VenueReadinessPanel({ model }: { model: VenueReadModel }) {
   return (
-    <section className="rounded-3xl border border-brand-line bg-white p-4 shadow-sm sm:p-6">
+    <section className="rounded-3xl border border-brand-line bg-white p-4 sm:p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Venue persistence</p>
       <h2 className="mt-2 text-2xl font-semibold text-slate-950">Venue operating model</h2>
       <div className="mt-5 grid gap-3 md:grid-cols-3">

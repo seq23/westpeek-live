@@ -63,7 +63,7 @@ export function VenueSection({
   }
 
   return (
-    <section id={id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white shadow-sm" data-testid={testId || `venue-section-${storageKey}`} data-venue-section={storageKey} data-open={open ? "true" : "false"}>
+    <section id={id} className="overflow-hidden rounded-3xl border border-slate-200 bg-white" data-testid={testId || `venue-section-${storageKey}`} data-venue-section={storageKey} data-open={open ? "true" : "false"}>
       <button type="button" onClick={toggle} aria-expanded={open} aria-controls={regionId} className="flex w-full items-start justify-between gap-4 p-4 text-left sm:p-5">
         <span className="min-w-0">
           {eyebrow ? <span className="block text-xs font-black uppercase tracking-[0.25em] text-brand-orange">{eyebrow}</span> : null}

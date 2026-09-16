@@ -21,7 +21,7 @@ export async function LiveRoomChat({ eventId, roomKind, roomId, title, descripti
   const attendeeModeration = identity ? await getLiveChatAttendeeModeration(eventId, roomKind, roomId, identity.attendeeId) : { silenced: false };
   const visible = messages;
   return (
-    <aside className="flex max-h-[42rem] min-h-[24rem] flex-col rounded-3xl border border-slate-200 bg-white shadow-sm sm:min-h-[30rem]" aria-label={`${title} live chat`} data-testid={`${roomKind}-live-chat`} data-chat-locked={room.locked ? "true" : "false"}>
+    <aside className="flex max-h-[42rem] min-h-[24rem] flex-col rounded-3xl border border-slate-200 bg-white sm:min-h-[30rem]" aria-label={`${title} live chat`} data-testid={`${roomKind}-live-chat`} data-chat-locked={room.locked ? "true" : "false"}>
       <div className="border-b border-slate-100 p-5">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Live chat</p>
         <h2 className="mt-2 text-xl font-black text-slate-950">{title}</h2>

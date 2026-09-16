@@ -12,9 +12,10 @@ import { createInitialRoomFallbackState, getRoomFallbackState } from "@/services
 import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
 import { MyAgendaPanel } from "@/components/venue/MyAgendaPanel";
 import { EditAttendeeProfilePanel } from "@/components/venue/EditAttendeeProfilePanel";
-import { FirstVisitCoachStrip } from "@/components/venue/FirstVisitCoachStrip";
+import { VenueWelcome } from "@/components/venue/VenueWelcome";
 import { NetworkingOpenNow } from "@/components/venue/NetworkingOpenNow";
-import { StageUpNext } from "@/components/venue/AttendeeRunOfShow";
+import { RegisterToTakePart } from "@/components/venue/RegisterToTakePart";
+import { StageChatSheet } from "@/components/venue/StageChatSheet";
 import { requestAttendeeStageAccess } from "@/lib/actions/attendeeLiveActions";
 import { attendeeStageStatus } from "@/services/venue/attendeeStageStatus";
 import { EMPTY_VENUE_ACTIVITY, getVenueActivity } from "@/services/venue/venueActivityService";
@@ -33,8 +34,6 @@ export async function MainStageExperience({ model, saved = false }: { model: Vir
     <div className="space-y-6">
       <AnalyticsBeacon eventId={model.eventId} kind="attendee_joined_session" subjectId={liveSession?.id || "main_stage"} />
       <FallbackActiveBanner state={fallbackState} />
-      <FirstVisitCoachStrip eventId={model.eventId} surface="stage" title="First time here?" lines={["Chat: the panel beside the player — post once you have registered.", "Want to speak? Tap Request to join the stage under the player; the crew sees it on their roster.", "When they approve you, Turn on camera and Turn on microphone appear under the player. Nothing goes live until you tap."]} />
-      <NetworkingOpenNow eventId={model.eventId} activity={activity} />
       {/*
         items-start: the two columns size to their own content. The rail used to be stretched to the
         stage column's height while the chat inside it claimed h-full, so the card under the chat
@@ -43,20 +42,28 @@ export async function MainStageExperience({ model, saved = false }: { model: Vir
         under the stage, where a seven-field form has room to render without clipping URLs.
       */}
       <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
-        <section className="min-w-0 rounded-3xl bg-slate-950 p-5 text-white shadow-sm sm:p-6">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-400">Main stage</p>
-          <h1 className="mt-2 text-2xl font-black sm:text-3xl">{liveSession?.title || "Main stage is standing by"}</h1>
-          <p className="mt-3 max-w-3xl text-sm text-slate-300">You are watching the live show. If it refreshes or switches source behind the scenes, stay on this page — the picture comes back on its own.</p>
-          <div className="mt-4"><StageUpNext eventId={model.eventId} /></div>
-          <div className="mt-6">
-            <StagePlayer initialState={stageStreamState} eventId={model.eventId} stageId="main-stage" viewerRole="attendee" displayName={identity?.displayName || "Registered attendee"} profileId={identity?.attendeeId} initialStageStatus={stageStatus} />
+        {/* Level 1: the video is the page, so it wears no card. No border, no shadow, no white
+            surround competing with it; everything that explains the show is type underneath.
+            The player is also FIRST in the DOM — the old header, title block and four stat tiles
+            put it about 700px down a 414px screen and a newcomer decided the stage was broken
+            (the owner, 16 Sep 2026). */}
+        <div className="min-w-0 space-y-4">
+          <StagePlayer initialState={stageStreamState} eventId={model.eventId} stageId="main-stage" viewerRole="attendee" displayName={identity?.displayName || "Registered attendee"} profileId={identity?.attendeeId} initialStageStatus={stageStatus} />
+          <div>
+            <h1 className="text-xl font-black tracking-[-0.02em] text-balance sm:text-2xl">{liveSession?.title || "Main stage is standing by"}</h1>
+            <p className="mt-1 max-w-[65ch] text-sm leading-6 text-slate-600">If the picture refreshes or switches source behind the scenes, stay on this page. It comes back on its own.</p>
           </div>
-          <div className="mt-5">
-            <AttendeeStageJoinControls eventId={model.eventId} roomId="main-stage" attendeeId={identity?.attendeeId} initial={stageStatus} requestAction={requestAttendeeStageAccess} />
-          </div>
-        </section>
-        <div className="min-w-0"><MainStageLiveChat model={model} /></div>
+          <AttendeeStageJoinControls eventId={model.eventId} roomId="main-stage" attendeeId={identity?.attendeeId} initial={stageStatus} requestAction={requestAttendeeStageAccess} />
+        </div>
+        {/* Level 2: the conversation supports the show. A rail on a wide screen, a bottom sheet on
+            a phone, never a column pushed below everything else. */}
+        <div className="min-w-0 space-y-4">
+          <StageChatSheet><MainStageLiveChat model={model} /></StageChatSheet>
+          <RegisterToTakePart eventId={model.eventId} registered={Boolean(identity?.attendeeId)} returnTo={`/venue/${model.eventId}/stage`} />
+        </div>
       </div>
+      <NetworkingOpenNow eventId={model.eventId} activity={activity} />
+      <VenueWelcome eventId={model.eventId} live={activity.stageLive} networkingOpen={activity.networkingOpen} />
       <SafeSection label="Tell us more" render={() => EditAttendeeProfilePanel({ eventId: model.eventId, returnTo: `/venue/${model.eventId}/stage`, saved })} />
       <SafeSection label="My agenda" render={() => MyAgendaPanel({ model: model })} />
       <MainStageAgendaStrip sessions={model.sessions} eventId={model.eventId} />

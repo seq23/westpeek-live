@@ -31,7 +31,8 @@ export interface AttendeeStageStatus {
 export function attendeeStageStatus(input: { control: AttendeeLiveControlState; capability?: AttendeeLiveCapability; registered: boolean }): AttendeeStageStatus {
   const { control, capability, registered } = input;
   const none = { canPublishAudio: false, canPublishVideo: false };
-  if (!registered) return { status: "unregistered", headline: "Want to speak or chat? Register once.", detail: "Registering takes your name and company; then you can request the stage (crew approval required) and post in chat.", primary: "register", ...none };
+  // Watching is open to everyone. Registering is only what lets a person take part.
+  if (!registered) return { status: "unregistered", headline: "Keep watching. Want to join in?", detail: "Watching costs you nothing. Register with your name, email and company and you can post in the chat and ask the crew to bring you on stage.", primary: "register", ...none };
   const access = evaluateAttendeeLiveAccess({ control, capability, roomKind: "main_stage" });
   if (access.status === "revoked") return { status: "removed", headline: "Removed by the crew", detail: access.reason, primary: "none", reason: access.reason, ...none };
   if (!access.canJoin) return { status: "waiting_to_watch", headline: "Waiting for the crew to let you in", detail: "The crew is permitting people into the live stage one by one. Stay on this page; it updates on its own.", primary: "none", ...none };

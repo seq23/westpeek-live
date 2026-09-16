@@ -48,7 +48,7 @@ function MatchRoom({ eventId, match, nextAction, leaveAction }: { eventId: strin
     return () => { cancelled = true; };
   }, [eventId, match.id, match.roomName]);
   return (
-    <section className="rounded-3xl border border-emerald-300 bg-white p-5 shadow-sm" data-testid="networking-match" data-match-id={match.id} data-room={match.roomName} data-room-state={token ? "token-issued" : error ? "token-error" : "loading"}>
+    <section className="rounded-3xl border border-emerald-300 bg-white p-5" data-testid="networking-match" data-match-id={match.id} data-room={match.roomName} data-room-state={token ? "token-issued" : error ? "token-error" : "loading"}>
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-xs font-black uppercase tracking-[0.25em] text-emerald-800">You are matched</p>
@@ -109,17 +109,17 @@ export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, 
   return (
     <div className="space-y-4" data-testid="networking-live" data-networking-status={snapshot.registered ? snapshot.status : "unregistered"} data-queue-size={snapshot.queueSize}>
       {!snapshot.registered ? (
-        <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="networking-registration-required">
+        <section className="rounded-3xl bg-white p-6" data-testid="networking-registration-required">
           <p className="text-sm font-black text-slate-950">Register once to meet other attendees.</p>
-          <p className="mt-1 text-sm text-slate-600">Networking matches use your event-scoped attendee identity — your name and company — nothing else.</p>
+          <p className="mt-1 text-sm text-slate-600">Your match sees your name and your company. Nothing else.</p>
           <a href={registerHref} className="mt-4 inline-block min-h-12 rounded-full bg-brand-orange px-6 py-3 text-base font-black text-white" data-testid="networking-register-link">Register</a>
         </section>
       ) : snapshot.status === "closed" ? (
-        <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="networking-closed"><p className="text-sm font-black text-slate-950">The crew has closed networking for now.</p><p className="mt-1 text-sm text-slate-600">Come back when they open it; this page updates on its own.</p></section>
+        <section className="rounded-3xl bg-white p-6" data-testid="networking-closed"><p className="text-sm font-black text-slate-950">The crew has closed networking for now.</p><p className="mt-1 text-sm text-slate-600">Come back when they open it; this page updates on its own.</p></section>
       ) : snapshot.status === "matched" && snapshot.match ? (
         <MatchRoom eventId={eventId} match={snapshot.match} nextAction={nextAction} leaveAction={leaveAction} />
       ) : snapshot.status === "waiting" ? (
-        <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="networking-waiting">
+        <section className="rounded-3xl bg-white p-6" data-testid="networking-waiting">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">In the queue</p>
           <h3 className="mt-2 text-2xl font-black text-slate-950">Looking for your match…</h3>
           <p className="mt-1 text-sm text-slate-600" data-testid="networking-queue-count">{snapshot.queueSize} {snapshot.queueSize === 1 ? "person" : "people"} in the queue · {snapshot.matchesInProgress} match{snapshot.matchesInProgress === 1 ? "" : "es"} in progress · {snapshot.matchMinutes} minutes per match</p>
@@ -127,7 +127,7 @@ export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, 
           <form action={leaveAction} className="mt-4"><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="reason" value="leave" /><button type="submit" className="min-h-12 rounded-full border border-slate-300 px-5 text-sm font-black" data-testid="networking-leave">Leave the queue</button></form>
         </section>
       ) : serverJoinForm && !touched ? null : (
-        <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="networking-idle">
+        <section className="rounded-3xl bg-white p-6" data-testid="networking-idle">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Speed networking</p>
           <h3 className="mt-2 text-2xl font-black text-slate-950">Meet another attendee, {snapshot.matchMinutes} minutes at a time</h3>
           <p className="mt-1 text-sm text-slate-600">{snapshot.queueSize} {snapshot.queueSize === 1 ? "person is" : "people are"} waiting right now. Join and you are paired with the longest-waiting person you have not met; camera and mic come on in your 1:1 room.</p>

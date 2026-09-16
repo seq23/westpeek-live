@@ -40,7 +40,8 @@ export async function getVenueActivity(model: VirtualVenueModel): Promise<VenueA
     getPublicStageStreamState(model.eventId, "main-stage").catch(() => undefined),
   ]);
   return {
-    stageLive: stage?.streamStatus === "LIVE" || model.liveNow.length > 0,
+    // "Live" is the provider actually carrying a picture, or a session the model says is on now.
+    stageLive: Boolean(stage && /_LIVE$/.test(stage.streamStatus)) || model.liveNow.length > 0,
     liveSessionTitle: model.liveNow[0]?.title,
     networkingOpen: Boolean(settings?.open),
     networkingQueueSize: entries.filter((entry) => entry.status === "waiting").length,

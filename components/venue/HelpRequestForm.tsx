@@ -4,7 +4,7 @@ import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSession
 export async function HelpRequestForm({ eventId, topics }: { eventId: string; topics: string[] }) {
   const identity = await getCurrentAttendeeIdentity(eventId).catch(() => undefined);
   return (
-    <form action={submitHelpRequestAction} className="rounded-3xl bg-white p-6 shadow-sm" data-testid="attendee-help-request-form">
+    <form action={submitHelpRequestAction} className="rounded-3xl bg-white p-6" data-testid="attendee-help-request-form">
       <input type="hidden" name="eventId" value={eventId} />
       <h3 className="text-xl font-semibold">Ask for help</h3>
       <p className="mt-2 text-sm text-slate-500">Submitting this form creates a runtime support event and analytics event tied to your event-scoped attendee identity when registered.</p>

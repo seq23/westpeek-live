@@ -10,7 +10,7 @@ export function VenueStatusBar({ model, activity }: { model: VirtualVenueModel; 
   const base = `/venue/${model.eventId}`;
   const tiles = [
     activity.stageLive ? { label: "On the main stage now", value: activity.liveSessionTitle || "The show is live", href: `${base}/stage` } : undefined,
-    activity.networkingOpen ? { label: "Networking", value: activity.networkingQueueSize > 0 ? `${activity.networkingQueueSize} waiting to meet someone` : "Open — join the queue", href: `${base}/networking` } : undefined,
+    activity.networkingOpen ? { label: "Networking", value: activity.networkingQueueSize > 0 ? `${activity.networkingQueueSize} waiting to meet someone` : "Open. Join the queue.", href: `${base}/networking` } : undefined,
     activity.boothCount > 0 ? { label: "Sponsor booths", value: `${activity.boothCount} to visit`, href: `${base}/expo` } : undefined,
     activity.replaysReady > 0 ? { label: "Replays", value: `${activity.replaysReady} ready to watch`, href: `${base}/replay` } : undefined,
   ].filter(Boolean) as { label: string; value: string; href: string }[];

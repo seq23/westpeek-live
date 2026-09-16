@@ -1,4 +1,4 @@
-import { formatSessionWindow } from "@/lib/utils/format";
+import { LocalTimeWindow } from "@/components/shared/LocalTimeWindow";
 /* eslint-disable @typescript-eslint/no-explicit-any -- boundary adapters normalize legacy/runtime payloads before typed domain use */
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { submitEventRegistration } from "@/lib/actions/registrationActions";
@@ -45,7 +45,7 @@ export function PublicEventPage({ slug }: { slug: string }) {
               {config.agenda.sessions.map((session, index) => (
                 <div key={session.id || String(index)} className="rounded-xl bg-slate-50 p-3">
                   <p className="font-medium">{session.title}</p>
-                  <p className="text-sm text-slate-500">{session.room} · {formatSessionWindow(session.startsAt, session.endsAt)}</p>
+                  <p className="text-sm text-slate-500">{session.room} · <LocalTimeWindow startsAt={session.startsAt} endsAt={session.endsAt} /></p>
                 </div>
               ))}
             </div>
@@ -99,12 +99,12 @@ export function EventRegistration({ slug }: { slug: string }) {
 
   return (
     <main className="min-h-screen bg-slate-50 p-6">
-      <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6">
         <input type="hidden" name="eventId" value={config.event.id} />
         <input type="hidden" name="slug" value={config.event.slug} />
         <p className="text-sm text-slate-500">Registration</p>
         <h1 className="mt-2 text-3xl font-semibold">{config.event.name}</h1>
-        <p className="mt-2 text-slate-600">Name, email, company — then you are in the venue. You can tell us more about yourself later; it makes the People page and networking work better for you.</p>
+        <p className="mt-2 text-slate-600">Name, email, company, and you are in. You can tell us more about yourself later; it makes the People page and networking work better for you.</p>
         <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Attendee registration does not grant speaker, sponsor, client, crew, operator, admin, VIP, restricted-session, or camera/mic publishing access.</p>
         <div className="mt-6 space-y-4">
           <p className="text-xs text-slate-500">Three fields and you are in. Fields marked <span className="font-black text-brand-orange">*</span> are required; everything else you can add later from &ldquo;Tell us more about you&rdquo; inside the venue.</p>

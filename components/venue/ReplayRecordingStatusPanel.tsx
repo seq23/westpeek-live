@@ -2,7 +2,7 @@ import type { LiveKitEgressJob } from "@/types/livekitEgress";
 
 export function ReplayRecordingStatusPanel({ jobs }: { jobs: LiveKitEgressJob[] }) {
   return (
-    <section className="rounded-3xl bg-white p-6 shadow-sm">
+    <section className="rounded-3xl bg-white p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Recording</p>
       <h2 className="mt-2 text-2xl font-semibold">LiveKit egress jobs</h2>
       <div className="mt-4 space-y-3">

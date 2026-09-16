@@ -14,7 +14,7 @@ export const dynamic = "force-dynamic";
 const TROUBLE: Record<string, { heading: string; line: string }> = {
   missing_code: { heading: "We need your event code", line: "It is in your invitation email, usually near the top and shaped like wpl-ab12cd." },
   invalid_code: { heading: "That code did not match an event", line: "Check it against your invitation. The wpl- part and the hyphen are optional, but every one of the six characters after it counts." },
-  not_public: { heading: "The doors are not open yet", line: "This event has not started letting people in. Keep this link — it will bring you straight in once the host opens it." },
+  not_public: { heading: "The doors are not open yet", line: "This event has not started letting people in. Keep this link. It will bring you straight in once the host opens it." },
   archived: { heading: "This event has been put away", line: "It is over and the recordings are no longer posted. Your host can tell you whether it is coming back." },
 };
 

@@ -12,8 +12,8 @@ import { venueGateFor } from "@/services/venue/venueStateGate";
 import { getPublicStageStreamState } from "@/services/video/stageStreamStateService";
 import { getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
 import { EMPTY_VENUE_ACTIVITY, getVenueActivity, type VenueActivity } from "@/services/venue/venueActivityService";
-import { AttendeeRunOfShow } from "@/components/venue/AttendeeRunOfShow";
-import { SafeSection } from "@/components/system/SafeSection";
+import { RunOfShowStrip } from "@/components/venue/RunOfShowStrip";
+import { attendeeRunOfShowView } from "@/services/run-of-show/attendeeRunOfShow";
 
 /**
  * Every venue page renders through this shell, so this is where the venue follows the event's
@@ -45,6 +45,9 @@ export async function VenuePageShell({
   let attendee: { name: string; company: string } | undefined;
   // A dead activity read costs the nav its markers, never the page.
   let activity: VenueActivity = EMPTY_VENUE_ACTIVITY;
+  // Fails soft by rendering nothing: an unreadable schedule must never become an error bar across
+  // every venue page.
+  const runOfShow = (() => { try { return attendeeRunOfShowView(model.eventId); } catch { return undefined; } })();
   try {
     const [event, stage, actor, viewer, profile, venueActivity] = await Promise.all([
       findEventRecord(model.eventId).catch(() => undefined),
@@ -66,8 +69,8 @@ export async function VenuePageShell({
       <div className="mx-auto max-w-7xl space-y-5 sm:space-y-6">
         <VenueHeader model={model} attendee={attendee} activity={activity} />
         <BuildVersionWatchdog />
+        {gate === "open" && showRunOfShow && runOfShow?.total ? <RunOfShowStrip view={runOfShow} eventId={model.eventId} networkingOpen={activity.networkingOpen} /> : null}
         {gate === "open" ? children : <VenueStateNotice model={model} gate={gate} isHost={isHost} />}
-        {gate === "open" && showRunOfShow ? <SafeSection label="Running order" render={() => AttendeeRunOfShow({ eventId: model.eventId })} /> : null}
         <VenueStatePoller eventId={model.eventId} gate={gate} surface={surface} />
       </div>
       {showLegalFooter ? <LegalFooter variant="venue" /> : null}
