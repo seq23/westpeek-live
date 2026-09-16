@@ -7,6 +7,7 @@ on:
 
 permissions:
   contents: read
+  checks: read
 
 jobs:
   structural-validation:
@@ -20,3 +21,100 @@ jobs:
       - run: npm ci
       - run: npm run validate:cloudflare-workflow-contract
       - run: npm run release:prepush:container
+
+  # The Supabase GitHub integration applies supabase/migrations/ to the production project on every
+  # push to main and reports the result as its own "Supabase Preview" check run. On 16 Sep 2026 it
+  # went RED twice — `relation "public.request_event_intake" does not exist` — and nobody saw it,
+  # because a check run on a main push appears on no pull request, in no workflow run, and in no
+  # notification. Three migrations sat unapplied in production for days behind that silence.
+  #
+  # This job reads that check run and fails this workflow when it is not green, so the outcome lands
+  # in the Actions tab and the failure email, where a person actually looks.
+  supabase-migration-apply:
+    name: Supabase applied the migrations
+    if: github.event_name == 'push'
+    runs-on: ubuntu-latest
+    timeout-minutes: 10
+    steps:
+      - uses: actions/checkout@v5
+        with:
+          fetch-depth: 2
+
+      - name: Did this push change supabase/migrations?
+        id: changed
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          if git rev-parse --verify --quiet "${GITHUB_SHA}^" >/dev/null && git diff --name-only "${GITHUB_SHA}^" "${GITHUB_SHA}" | grep -q '^supabase/migrations/'; then
+            echo "migrations=true" >> "$GITHUB_OUTPUT"
+            echo "This push changes supabase/migrations/; the integration had work to do."
+          else
+            echo "migrations=false" >> "$GITHUB_OUTPUT"
+            echo "This push does not change supabase/migrations/."
+          fi
+
+      - name: Read the Supabase check run for this commit
+        shell: bash
+        env:
+          GH_TOKEN: ${{ github.token }}
+          CHANGED_MIGRATIONS: ${{ steps.changed.outputs.migrations }}
+        run: |
+          set -Eeuo pipefail
+          # Bounded poll: the integration usually finishes in seconds, but it starts when it starts.
+          # Every terminal state is matched, success and failure alike, so a crash cannot look like
+          # "still running" and hang this job to its timeout.
+          conclusion=""
+          summary=""
+          for attempt in $(seq 1 40); do
+            payload="$(gh api "repos/${GITHUB_REPOSITORY}/commits/${GITHUB_SHA}/check-runs" \
+              --jq '[.check_runs[] | select(.app.slug=="supabase")] | sort_by(.started_at) | last // empty')"
+            if [ -n "$payload" ]; then
+              status="$(printf '%s' "$payload" | jq -r '.status')"
+              if [ "$status" = "completed" ]; then
+                conclusion="$(printf '%s' "$payload" | jq -r '.conclusion // "unknown"')"
+                summary="$(printf '%s' "$payload" | jq -r '.output.summary // ""')"
+                break
+              fi
+            fi
+            sleep 15
+          done
+
+          {
+            echo "## Supabase migration apply"
+            echo "- Commit: \`${GITHUB_SHA}\`"
+            echo "- supabase/migrations changed: ${CHANGED_MIGRATIONS}"
+            echo "- Supabase check conclusion: ${conclusion:-<none reported>}"
+            if [ -n "$summary" ]; then
+              echo ""
+              echo "<details><summary>Supabase output</summary>"
+              echo ""
+              echo "$summary"
+              echo ""
+              echo "</details>"
+            fi
+          } >> "$GITHUB_STEP_SUMMARY"
+
+          case "$conclusion" in
+            success|neutral)
+              echo "Supabase applied supabase/migrations/ to the production project."
+              exit 0
+              ;;
+            failure|timed_out|cancelled|action_required|stale)
+              echo "::error title=Supabase did not apply the migrations::The Supabase integration reported '${conclusion}' for this commit. The production database is now BEHIND supabase/migrations/. Paste the failing file into the Supabase SQL editor for project lqxzpwtvolojashknseb, then re-run. See docs/manual-notes/migration-assurance.md." >&2
+              printf '%s\n' "$summary" >&2
+              exit 1
+              ;;
+            skipped|"")
+              if [ "$CHANGED_MIGRATIONS" = "true" ]; then
+                echo "::error title=Supabase never applied this migration::This push changed supabase/migrations/ but the Supabase integration reported '${conclusion:-nothing}' for it, so the SQL did not run. Apply it by hand in the Supabase SQL editor — docs/manual-notes/migration-assurance.md." >&2
+                exit 1
+              fi
+              echo "No migration changed in this push and Supabase reported '${conclusion:-nothing}'; nothing to apply."
+              exit 0
+              ;;
+            *)
+              echo "::error title=Unrecognised Supabase conclusion::'${conclusion}' — treat as not applied until a person confirms otherwise." >&2
+              exit 1
+              ;;
+          esac
+

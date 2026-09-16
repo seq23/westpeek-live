@@ -8,10 +8,16 @@ const path = require("path");
  * shipped unapplied on 16 Sep 2026 and "Archive test rows" silently did nothing.
  *
  * This is the generic rule: from MIRROR_FLOOR on, every canonical migration must have exactly one
- * byte-identical mirror. 0001–0023 predate the convention (they were applied by hand before the
+ * byte-identical mirror. 0001–0022 predate the convention (they were applied by hand before the
  * integration existed) and are the baseline, not a target.
+ *
+ * The floor moved from 0024 to 0023 on 17 Sep 2026. 0023 creates request_event_intake, the base table
+ * of the whole Plan-an-event path, and had no mirror — so it never ran, so 0036's `alter table
+ * public.request_event_intake` could not apply either, and the Supabase integration went red on main
+ * with `relation "public.request_event_intake" does not exist` on two separate merges before anyone
+ * noticed. The mirror is idempotent (`create table if not exists`) and sorts ahead of 0024's.
  */
-const MIRROR_FLOOR = 24;
+const MIRROR_FLOOR = 23;
 const canonicalDir = "db/migrations";
 const mirrorDir = "supabase/migrations";
 const failures = [];
