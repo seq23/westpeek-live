@@ -20,7 +20,7 @@ export interface SpecialGuestProfile {
   updatedAt: string;
 }
 
-export type EventGuestStateKind = "speaker_stage" | "speaker_tech_check" | "speaker_cue_deck" | "speaker_live_cue" | "producer_notes" | "sponsor_booth" | "vip_room" | "host_links" | "networking_settings" | "access_code_versions";
+export type EventGuestStateKind = "speaker_stage" | "speaker_tech_check" | "speaker_cue_deck" | "speaker_live_cue" | "producer_notes" | "sponsor_booth" | "vip_room" | "host_links" | "networking_settings" | "access_code_versions" | "vip_grant" | "vip_invites";
 
 /** One row per standing decision or document, keyed eventId:kind[:guestId]. */
 export interface EventGuestStateRecord<T = unknown> {
@@ -113,3 +113,33 @@ export interface VipRoomState {
 
 export const GREEN_ROOM_ID = "green-room";
 export const VIP_ROOM_ID = "vip-lounge";
+
+
+/**
+ * VIP is never a bare flag. Somebody is a VIP because they hold the event's VIP code — they typed
+ * it, the crew issued it to them, or their address was on the invite list and registration issued
+ * it for them. Every grant carries the code version it was made under, so rotating the VIP code
+ * revokes everyone admitted under the old one, crew grants included.
+ */
+export type VipGrantSource = "entered_code" | "crew_grant" | "invite_list";
+
+export interface VipGrantState {
+  attendeeId: string;
+  name: string;
+  email?: string;
+  source: VipGrantSource;
+  /** Who pressed "Make VIP"; absent when the person entered the code themselves. */
+  grantedBy?: string;
+  grantedAt: string;
+  /** The VIP code version this grant was made under. */
+  codeVersion: number;
+  revokedAt?: string;
+  revokedBy?: string;
+}
+
+/** Addresses pre-authorised for the VIP code: registration issues it to them under the current version. */
+export interface VipInviteListState {
+  emails: string[];
+  updatedBy: string;
+  updatedAt: string;
+}
