@@ -1,14 +1,15 @@
 "use server";
 import { revalidatePath } from "next/cache";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
+import type { CrewAction } from "@/lib/auth/crewRolePermissions";
 import { provisionStreamYardLiveKitIngress } from "@/services/video/livekitIngressService";
 import { applyStageStreamSignal } from "@/services/video/stageStreamStateService";
 import { endShowForEvent } from "@/services/video/showEndService";
 import type { StageStreamSignal } from "@/types/stageStream";
 
-/** Owner, operator, or event-scoped crew. Attendees and anonymous callers are refused before any write. */
-async function requireControl(eventId: string) {
-  const auth = await requireLiveEventControlAccessForRequest(eventId);
+/** Owner, operator, or event-scoped crew whose role may `go_live`. Attendees, anonymous callers, and the other crew roles are refused before any write, with the role reason. */
+async function requireControl(eventId: string, action: CrewAction = "go_live") {
+  const auth = await requireLiveEventControlAccessForRequest(eventId, action);
   if (!auth.ok) throw new Error(auth.error);
   return auth;
 }

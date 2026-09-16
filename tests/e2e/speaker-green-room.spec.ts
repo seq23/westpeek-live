@@ -64,7 +64,7 @@ test("speaker: identity → green room → tech check → cue cards → paste/ap
   // Crew console: the speaker is on the roster with the tech check; write three cue cards and notes.
   const crewContext = await browser.newContext();
   const crew = await crewContext.newPage();
-  await grantCrewAccess(crew, "crew", eventId);
+  await grantCrewAccess(crew, "producer", eventId);
   await gotoAndAssert(crew, `/crew/events/${eventId}`);
   const row = crew.getByTestId(/^speaker-row-/).first();
   await expect(row).toBeVisible();
@@ -201,7 +201,7 @@ test("sponsor booth reaches the Expo; VIP sees the badge and the lounge the crew
   await expect(vip.page.getByTestId("vip-lobby-panel")).toContainText("Welcome, Val VIP");
   const crewContext = await browser.newContext();
   const crew = await crewContext.newPage();
-  await grantCrewAccess(crew, "crew", eventId);
+  await grantCrewAccess(crew, "producer", eventId);
   await gotoAndAssert(crew, `/crew/events/${eventId}`);
   await crew.getByTestId("vip-room-toggle").click();
   await expect(crew.getByTestId("vip-room-control")).toHaveAttribute("data-open", "true");

@@ -188,3 +188,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Added best-effort LiveKit participant removal during revocation.
 - Added hostile review artifact: `HOSTILE_CODE_REVIEW_TIER4_ATTENDEE_LIVE_CONSUMPTION_2026-06-12.md`.
 
+
+## Crew role permissions contract — 2026-09-16
+
+- Validator: `npm run validate:crew-role-permissions-contract`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: one crew permission map (`lib/auth/crewRolePermissions.ts`) covers every role; the live-control guard checks the named action against the role (owner/operator bypass) and refuses with the sentence the deck shows; every deck control is a `GatedForm` rendered disabled with the reason; every crew page shows the role badge with Switch role; the crew gate describes every role and accepts `event`/`role`/`code` prefill.
+- Proof behind it: `tests/unit/crewRolePermissions.test.ts` (map + guard + viewer), `tests/unit/crewServerActionsByRole.test.ts` (real server actions, real signed cookie: moderator refused, TD allowed), `tests/e2e/crew-roles-mean-something.spec.ts` (badge, disabled controls, hide works, TD generates/ends).

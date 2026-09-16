@@ -5,6 +5,8 @@ import type { StageStreamSignal } from "@/types/stageStream";
 import { CopyToClipboardButton } from "@/components/testing/CopyToClipboardButton";
 import { EndShowControl } from "@/components/moderation/EndShowControl";
 import { livekitWebhookUrl } from "@/lib/runtime/appBaseUrl";
+import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
+import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 
 function StatusBadge({ status }: { status: string }) {
   const tone = status.includes("LIVE") || status === "READY_FOR_STREAMYARD" ? "bg-emerald-50 text-emerald-800" : status.includes("SWITCHING") ? "bg-amber-50 text-amber-800" : status.includes("ENDED") ? "bg-slate-100 text-slate-700" : "bg-slate-100 text-slate-700";
@@ -22,15 +24,15 @@ function CopyField({ label, value, sensitive = false }: { label: string; value?:
   );
 }
 
-function SignalButton({ eventId, signal, label, reason, tone = "neutral" }: { eventId: string; signal: StageStreamSignal; label: string; reason: string; tone?: "neutral" | "danger" | "restore" }) {
-  const className = tone === "danger" ? "rounded-full border border-red-300 px-4 py-2 text-sm font-black text-red-800" : tone === "restore" ? "rounded-full border border-emerald-300 px-4 py-2 text-sm font-black text-emerald-800" : "rounded-full border border-slate-300 px-4 py-2 text-sm font-black";
+function SignalButton({ eventId, signal, label, reason, tone = "neutral", viewer }: { eventId: string; signal: StageStreamSignal; label: string; reason: string; tone?: "neutral" | "danger" | "restore"; viewer: CrewViewer }) {
+  const className = `disabled:cursor-not-allowed disabled:opacity-40 ${tone === "danger" ? "rounded-full border border-red-300 px-4 py-2 text-sm font-black text-red-800" : tone === "restore" ? "rounded-full border border-emerald-300 px-4 py-2 text-sm font-black text-emerald-800" : "rounded-full border border-slate-300 px-4 py-2 text-sm font-black"}`;
   return (
-    <form action={applyStageStreamOperatorSignal}>
+    <GatedForm viewer={viewer} action="go_live" formAction={applyStageStreamOperatorSignal}>
       <input type="hidden" name="eventId" value={eventId} />
       <input type="hidden" name="signal" value={signal} />
       <input type="hidden" name="reason" value={reason} />
-      <button className={className}>{label}</button>
-    </form>
+      <button className={className} data-testid={`stage-signal-${signal}`}>{label}</button>
+    </GatedForm>
   );
 }
 
@@ -57,8 +59,10 @@ function ProviderLadderCard({ activeSource }: { activeSource: string }) {
   );
 }
 
-export async function StreamYardIngressPanel({ eventId = "event-summit" }: { eventId?: string }) {
+/** `includeEndShow` is off where the deck already renders the full End-the-show control above this panel (two copies broke the crew end-the-show journey, 16 Sep 2026). */
+export async function StreamYardIngressPanel({ eventId = "event-summit", viewer: givenViewer, includeEndShow = true }: { eventId?: string; viewer?: CrewViewer; includeEndShow?: boolean }) {
   const state = await getOperatorStageStreamState(eventId, "main-stage");
+  const viewer = givenViewer || await getCrewViewer(eventId);
   const webhookUrl = await livekitWebhookUrl();
   const pollingOnly = !state.lastWebhookEvent && Boolean(state.lastHealthCheckAt);
   // Filtered at the store, newest first. Reading the whole snapshot and filtering here showed
@@ -91,7 +95,7 @@ export async function StreamYardIngressPanel({ eventId = "event-summit" }: { eve
         <code className="mt-2 block break-all rounded-xl bg-white p-3 text-xs text-slate-900" data-testid="livekit-webhook-url">{webhookUrl}</code>
         <CopyToClipboardButton value={webhookUrl} label="Webhook URL" />
       </div>
-      <div className="mt-4"><EndShowControl eventId={eventId} compact /></div>
+      {includeEndShow ? <div className="mt-4"><EndShowControl eventId={eventId} compact viewer={viewer} /></div> : null}
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <ProviderLadderCard activeSource={state.activeStreamSource} />
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
@@ -101,16 +105,17 @@ export async function StreamYardIngressPanel({ eventId = "event-summit" }: { eve
           <p className="mt-2 font-bold">Current reason: {state.fallbackReason || "No active fallback reason."}</p>
         </div>
       </div>
+      <DeniedNote viewer={viewer} action="go_live" className="mt-5" />
       <div className="mt-5 flex flex-wrap gap-3">
-        <form action={generateStreamYardCredentials}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="stageId" value="main-stage" /><button className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white">Generate / Refresh Primary RTMP</button></form>
-        <SignalButton eventId={eventId} signal="manual_switch_to_cloudflare_stream" label="Move down: Cloudflare Stream" reason="Operator/showrunner moved fallback ladder to Cloudflare Stream." />
-        <SignalButton eventId={eventId} signal="manual_switch_to_daily" label="Move down: Daily" reason="Operator/showrunner moved fallback ladder to Daily." />
-        <SignalButton eventId={eventId} signal="manual_switch_to_zoom" label="Move down: Zoom" reason="Operator/showrunner moved fallback ladder to Zoom." />
-        <SignalButton eventId={eventId} signal="manual_switch_to_google_meet" label="Move down: Google Meet" reason="Operator/showrunner moved fallback ladder to Google Meet." tone="danger" />
-        <SignalButton eventId={eventId} signal="operator_rollback_to_livekit" label="Move back up: LiveKit/StreamYard" reason="Operator/showrunner confirmed primary path recovered." tone="restore" />
-        <SignalButton eventId={eventId} signal="operator_rollback_to_cloudflare_stream" label="Move back up: Cloudflare" reason="Operator/showrunner confirmed Cloudflare Stream recovered." tone="restore" />
-        <SignalButton eventId={eventId} signal="operator_rollback_to_daily" label="Move back up: Daily" reason="Operator/showrunner confirmed Daily recovered." tone="restore" />
-        <SignalButton eventId={eventId} signal="operator_mark_show_ended" label="Mark show intentionally ended" reason="Operator marked show intentionally ended." />
+        <GatedForm viewer={viewer} action="go_live" formAction={generateStreamYardCredentials}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="stageId" value="main-stage" /><button className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid="generate-rtmp-credentials">Generate / Refresh Primary RTMP</button></GatedForm>
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_cloudflare_stream" label="Move down: Cloudflare Stream" reason="Operator/showrunner moved fallback ladder to Cloudflare Stream." />
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_daily" label="Move down: Daily" reason="Operator/showrunner moved fallback ladder to Daily." />
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_zoom" label="Move down: Zoom" reason="Operator/showrunner moved fallback ladder to Zoom." />
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_google_meet" label="Move down: Google Meet" reason="Operator/showrunner moved fallback ladder to Google Meet." tone="danger" />
+        <SignalButton viewer={viewer} eventId={eventId} signal="operator_rollback_to_livekit" label="Move back up: LiveKit/StreamYard" reason="Operator/showrunner confirmed primary path recovered." tone="restore" />
+        <SignalButton viewer={viewer} eventId={eventId} signal="operator_rollback_to_cloudflare_stream" label="Move back up: Cloudflare" reason="Operator/showrunner confirmed Cloudflare Stream recovered." tone="restore" />
+        <SignalButton viewer={viewer} eventId={eventId} signal="operator_rollback_to_daily" label="Move back up: Daily" reason="Operator/showrunner confirmed Daily recovered." tone="restore" />
+        <SignalButton viewer={viewer} eventId={eventId} signal="operator_mark_show_ended" label="Mark show intentionally ended" reason="Operator marked show intentionally ended." />
       </div>
       <div className="mt-5 rounded-2xl border border-slate-200 bg-slate-50 p-4">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">Fallback event log</p>

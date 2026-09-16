@@ -6,14 +6,13 @@ import { ownerOverrideResponseIfMatched, redirectTo, safeAccessRedirectTarget } 
 import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import type { V4CrewRole } from "@/types/v4";
+import { CREW_ROLES } from "@/lib/auth/crewRolePermissions";
 
 export const dynamic = "force-dynamic";
 
-const allowedCrewRoles: V4CrewRole[] = ["crew", "technical_director", "show_caller", "moderator", "va", "support"];
-
 function normalizeCrewRole(value: FormDataEntryValue | null): V4CrewRole {
   const role = String(value || "crew");
-  if (allowedCrewRoles.includes(role as V4CrewRole)) return role as V4CrewRole;
+  if (CREW_ROLES.includes(role as V4CrewRole)) return role as V4CrewRole;
   return "crew";
 }
 

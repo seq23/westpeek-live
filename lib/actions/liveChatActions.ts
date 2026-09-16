@@ -44,9 +44,9 @@ export async function sendLiveRoomChatMessage(formData: FormData) {
   revalidateChatSurfaces(eventId, roomKind, roomId);
 }
 
-/** Crew, operator, or owner only. The guard throws for attendees and anonymous callers. */
+/** Owner, operator, or crew whose role may `moderate_chat`. The guard throws for attendees, anonymous callers, and crew roles without it (with the role reason). */
 async function requireControl(eventId: string) {
-  const auth = await requireLiveEventControlAccessForRequest(eventId);
+  const auth = await requireLiveEventControlAccessForRequest(eventId, "moderate_chat");
   if (!auth.ok) throw new Error(auth.error);
   return auth;
 }

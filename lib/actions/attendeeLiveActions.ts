@@ -20,8 +20,9 @@ function revalidateLiveSurfaces(eventId: string) {
   revalidatePath(`/venue/${eventId}/stage`);
 }
 
+/** Owner, operator, or crew whose role may `manage_stage_access`; other crew roles are refused with the role reason. */
 async function requireControl(eventId: string) {
-  const auth = await requireLiveEventControlAccessForRequest(eventId);
+  const auth = await requireLiveEventControlAccessForRequest(eventId, "manage_stage_access");
   if (!auth.ok) throw new Error(auth.error);
   return auth;
 }

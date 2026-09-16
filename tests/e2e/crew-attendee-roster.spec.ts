@@ -29,7 +29,7 @@ async function attendeeContext(browser: Browser) {
 async function crewPage(browser: Browser) {
   const context = await browser.newContext();
   const page = await context.newPage();
-  await grantCrewAccess(page, "crew", EVENT);
+  await grantCrewAccess(page, "producer", EVENT);
   return { context, page };
 }
 

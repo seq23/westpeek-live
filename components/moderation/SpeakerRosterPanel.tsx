@@ -1,5 +1,7 @@
 import { approveSpeakerCueDeckAction, bringSpeakerToStageAction, pushLiveCueAction, saveProducerCueDeckAction, saveProducerNotesAction, sendSpeakerBackstageAction, setVipRoomAction } from "@/lib/actions/speakerStageActions";
 import { listGuestProfiles } from "@/services/guests/guestIdentityService";
+import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
+import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { getProducerNotes, getVipRoom, listSpeakerCueDecks, listSpeakerStageStates, listSpeakerTechChecks } from "@/services/guests/guestStateService";
 import type { CueDeckVersion } from "@/types/specialGuest";
 
@@ -17,8 +19,8 @@ function when(value?: string) {
  * backstage per row; the cue-card editor, pending approval, and live cue fold out per speaker.
  * Also the producer's notes to speakers and the VIP room switch. Every button is a guarded action.
  */
-export async function SpeakerRosterPanel({ eventId }: { eventId: string }) {
-  const [speakers, stages, techChecks, decks, notes, vipRoom, vips] = await Promise.all([
+export async function SpeakerRosterPanel({ eventId, viewer: givenViewer }: { eventId: string; viewer?: CrewViewer }) {
+  const [speakers, stages, techChecks, decks, notes, vipRoom, vips, viewer] = await Promise.all([
     listGuestProfiles(eventId, "speaker").catch(() => []),
     listSpeakerStageStates(eventId),
     listSpeakerTechChecks(eventId),
@@ -26,6 +28,7 @@ export async function SpeakerRosterPanel({ eventId }: { eventId: string }) {
     getProducerNotes(eventId),
     getVipRoom(eventId),
     listGuestProfiles(eventId, "vip").catch(() => []),
+    givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId),
   ]);
   const stageOf = new Map(stages.map((item) => [item.guestId, item.state]));
   const techOf = new Map(techChecks.map((item) => [item.guestId, item.state]));
@@ -36,6 +39,8 @@ export async function SpeakerRosterPanel({ eventId }: { eventId: string }) {
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Speakers</p>
       <h2 className="mt-2 text-xl font-black text-slate-950">{speakers.length} speaker{speakers.length === 1 ? "" : "s"} · {onStage} on stage</h2>
       <p className="mt-2 text-sm text-slate-600">Speakers enter with the speaker code and give their name once. Bring to stage grants camera + mic on the main stage and shows them &ldquo;Go on stage&rdquo;; Send backstage revokes it and drops them from the stage room. Cue cards you save here are live on their teleprompter within ~5s.</p>
+      <DeniedNote viewer={viewer} action="manage_stage_access" className="mt-3" />
+      <DeniedNote viewer={viewer} action="manage_cue_cards" className="mt-2" />
 
       <div className="mt-4 space-y-3" data-testid="speaker-rows">
         {speakers.length ? speakers.map((speaker) => {
@@ -54,9 +59,9 @@ export async function SpeakerRosterPanel({ eventId }: { eventId: string }) {
                 <div className="flex flex-wrap items-center gap-2">
                   <span className="rounded-full bg-white px-3 py-1 text-[11px] font-black uppercase tracking-wide text-slate-700" data-testid={`speaker-stage-${speaker.guestId}`}>{status.replaceAll("_", " ")}{status !== "backstage" && stage ? ` · by ${stage.updatedBy}` : ""}</span>
                   {status === "backstage" ? (
-                    <form action={bringSpeakerToStageAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><button className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white" data-testid={`bring-to-stage-${speaker.guestId}`}>Bring to stage</button></form>
+                    <GatedForm viewer={viewer} action="manage_stage_access" formAction={bringSpeakerToStageAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><button className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid={`bring-to-stage-${speaker.guestId}`}>Bring to stage</button></GatedForm>
                   ) : (
-                    <form action={sendSpeakerBackstageAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><button className="rounded-full border border-rose-300 px-4 py-2 text-xs font-black text-rose-800" data-testid={`send-backstage-${speaker.guestId}`}>Send backstage</button></form>
+                    <GatedForm viewer={viewer} action="manage_stage_access" formAction={sendSpeakerBackstageAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><button className="rounded-full border border-rose-300 px-4 py-2 text-xs font-black text-rose-800 disabled:cursor-not-allowed disabled:opacity-40" data-testid={`send-backstage-${speaker.guestId}`}>Send backstage</button></GatedForm>
                   )}
                 </div>
               </div>
@@ -69,24 +74,24 @@ export async function SpeakerRosterPanel({ eventId }: { eventId: string }) {
                     <ul className="mt-2 space-y-1 text-sm text-slate-700">{deck.pending.cards.map((card) => <li key={card.id}><strong>{card.title}</strong>{card.body ? ` — ${card.body}` : ""}</li>)}{deck.pending.talkingPoints.map((point, position) => <li key={`tp-${position}`}>• {point}</li>)}</ul>
                     {deck.pending.script ? <p className="mt-2 whitespace-pre-wrap text-xs text-slate-600">{deck.pending.script}</p> : null}
                     <div className="mt-3 flex gap-2">
-                      <form action={approveSpeakerCueDeckAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><input type="hidden" name="decision" value="approve" /><button className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-black text-white" data-testid={`approve-cue-deck-${speaker.guestId}`}>Approve · make it live</button></form>
-                      <form action={approveSpeakerCueDeckAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><input type="hidden" name="decision" value="discard" /><button className="rounded-full border border-slate-300 px-4 py-2 text-xs font-black text-slate-700">Discard</button></form>
+                      <GatedForm viewer={viewer} action="manage_cue_cards" formAction={approveSpeakerCueDeckAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><input type="hidden" name="decision" value="approve" /><button className="rounded-full bg-emerald-700 px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid={`approve-cue-deck-${speaker.guestId}`}>Approve · make it live</button></GatedForm>
+                      <GatedForm viewer={viewer} action="manage_cue_cards" formAction={approveSpeakerCueDeckAction}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} /><input type="hidden" name="decision" value="discard" /><button className="rounded-full border border-slate-300 px-4 py-2 text-xs font-black text-slate-700 disabled:cursor-not-allowed disabled:opacity-40">Discard</button></GatedForm>
                     </div>
                   </div>
                 ) : null}
-                <form action={saveProducerCueDeckAction} className="mt-3 grid gap-2">
+                <GatedForm viewer={viewer} action="manage_cue_cards" formAction={saveProducerCueDeckAction} className="mt-3 grid gap-2">
                   <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} />
                   <label className="grid gap-1 text-xs font-bold text-slate-700">Cue cards · one per line · Title | body<textarea name="cards" defaultValue={lines.cards} className="min-h-24 rounded-xl border border-slate-300 px-3 py-2 font-mono text-sm" placeholder={"Open | Thank the host, 20 seconds\nStory | The night the servers went down\nClose | Invite Q&A"} data-testid={`cue-cards-input-${speaker.guestId}`} /></label>
                   <label className="grid gap-1 text-xs font-bold text-slate-700">Talking points · one per line<textarea name="talkingPoints" defaultValue={lines.talkingPoints} className="min-h-16 rounded-xl border border-slate-300 px-3 py-2 text-sm" /></label>
                   <label className="grid gap-1 text-xs font-bold text-slate-700">Script (optional)<textarea name="script" defaultValue={lines.script} className="min-h-16 rounded-xl border border-slate-300 px-3 py-2 text-sm" /></label>
-                  <div><button className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white" data-testid={`save-cue-deck-${speaker.guestId}`}>Save as live version</button>{deck?.approved ? <span className="ml-3 text-xs text-slate-500">Currently v{deck.approved.versionNumber} · {deck.approved.cards.length} cards · approved {when(deck.approved.approvedAt)}</span> : null}</div>
-                </form>
-                <form action={pushLiveCueAction} className="mt-3 flex flex-wrap items-center gap-2">
+                  <div><button className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid={`save-cue-deck-${speaker.guestId}`}>Save as live version</button>{deck?.approved ? <span className="ml-3 text-xs text-slate-500">Currently v{deck.approved.versionNumber} · {deck.approved.cards.length} cards · approved {when(deck.approved.approvedAt)}</span> : null}</div>
+                </GatedForm>
+                <GatedForm viewer={viewer} action="manage_cue_cards" formAction={pushLiveCueAction} className="mt-3 flex flex-wrap items-center gap-2">
                   <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="speakerId" value={speaker.guestId} />
                   <input name="cue" placeholder="Live cue: wrap in 2 min · next question" className="min-h-10 flex-1 rounded-full border border-slate-300 px-4 text-sm" data-testid={`live-cue-input-${speaker.guestId}`} />
-                  <button className="rounded-full bg-brand-orange px-4 py-2 text-xs font-black text-white" data-testid={`push-live-cue-${speaker.guestId}`}>Push cue</button>
+                  <button className="rounded-full bg-brand-orange px-4 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid={`push-live-cue-${speaker.guestId}`}>Push cue</button>
                   <span className="text-xs text-slate-500">Empty + Push clears it.</span>
-                </form>
+                </GatedForm>
               </details>
             </article>
           );
@@ -94,17 +99,17 @@ export async function SpeakerRosterPanel({ eventId }: { eventId: string }) {
       </div>
 
       <div className="mt-4 grid gap-4 md:grid-cols-2">
-        <form action={saveProducerNotesAction} className="rounded-2xl bg-slate-50 p-4" data-testid="producer-notes-form">
+        <GatedForm viewer={viewer} action="manage_cue_cards" formAction={saveProducerNotesAction} className="rounded-2xl bg-slate-50 p-4" testId="producer-notes-form">
           <input type="hidden" name="eventId" value={eventId} />
           <p className="text-sm font-black text-slate-950">Producer notes to speakers</p>
           <p className="text-xs text-slate-600">Shown in every speaker&rsquo;s green room.</p>
           <textarea name="notes" defaultValue={notes?.text || ""} className="mt-2 min-h-20 w-full rounded-xl border border-slate-300 px-3 py-2 text-sm" placeholder="Join the green room 15 minutes before your slot. Keep the sponsor mention before Q&A." />
-          <button className="mt-2 rounded-full border border-slate-300 px-4 py-2 text-xs font-black">Save notes</button>
-        </form>
+          <button className="mt-2 rounded-full border border-slate-300 px-4 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-40" data-testid="save-producer-notes">Save notes</button>
+        </GatedForm>
         <div className="rounded-2xl bg-slate-50 p-4" data-testid="vip-room-control" data-open={vipRoom.open ? "true" : "false"}>
           <p className="text-sm font-black text-slate-950">VIP lounge</p>
           <p className="text-xs text-slate-600">{vipRoom.open ? `Open · VIPs see it in the lobby · by ${vipRoom.updatedBy}` : "Closed · VIPs see only their badge"} · {vips.length} VIP{vips.length === 1 ? "" : "s"} named</p>
-          <form action={setVipRoomAction} className="mt-2"><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="open" value={vipRoom.open ? "false" : "true"} /><button className={`rounded-full px-4 py-2 text-xs font-black ${vipRoom.open ? "border border-rose-300 text-rose-800" : "bg-slate-950 text-white"}`} data-testid="vip-room-toggle">{vipRoom.open ? "Close the VIP lounge" : "Open the VIP lounge"}</button></form>
+          <GatedForm viewer={viewer} action="manage_stage_access" formAction={setVipRoomAction} className="mt-2"><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="open" value={vipRoom.open ? "false" : "true"} /><button className={`rounded-full px-4 py-2 text-xs font-black disabled:cursor-not-allowed disabled:opacity-40 ${vipRoom.open ? "border border-rose-300 text-rose-800" : "bg-slate-950 text-white"}`} data-testid="vip-room-toggle">{vipRoom.open ? "Close the VIP lounge" : "Open the VIP lounge"}</button></GatedForm>
         </div>
       </div>
     </section>
