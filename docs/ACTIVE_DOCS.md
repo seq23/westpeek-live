@@ -18,6 +18,7 @@ Purpose: single operator entrypoint that prevents doc sprawl. If a document is n
 - `docs/ACTIVE_DOCS.md`
 - `docs/AGENCY_EVENT_OS_DAY1_OPERATOR_PACKET.md`
 - `docs/BRANDING_ROLLOUT_CHECKLIST.md`
+- `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md`
 - `docs/BRAND_SYSTEM_WEST_PEEK_LIVE.md`
 - `docs/CHAT_HANDOFF_DEPLOYMENT_PARITY_RULES.md`
 - `docs/DAILY_AUTOMATIC_FALLBACK.md`
