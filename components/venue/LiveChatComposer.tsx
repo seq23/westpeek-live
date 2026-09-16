@@ -58,7 +58,7 @@ export function LiveChatComposer({ action, eventId, roomKind, roomId, identityLi
         <p className="mt-2 text-xs font-bold text-amber-800" data-testid="chat-slow-mode-countdown" data-seconds-left={secondsLeft}>{waiting ? `Slow mode: ${secondsLeft} second${secondsLeft === 1 ? "" : "s"} until you can post again.` : `Slow mode is on: ${slowModeSeconds} seconds between messages.`}</p>
       ) : null}
       {exempt && slowModeSeconds ? <p className="mt-2 text-xs text-slate-500" data-testid="chat-slow-mode-exempt">Slow mode ({slowModeSeconds}s) is on for attendees. You are exempt.</p> : null}
-      <p className="mt-2 text-xs text-slate-500">Room-scoped chat: {roomKind}/{roomId}. Crew can hide messages, silence an attendee, slow the room, or lock it.</p>
+      <p className="mt-2 text-xs text-slate-500">Everyone watching sees this. The crew can hide a message, mute someone, slow the chat down, or pause it.</p>
     </form>
   );
 }
