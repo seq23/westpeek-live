@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
-import { setEventAccessCode } from "@/services/events/accessCodeService";
+import { adoptReadableCodes, setEventAccessCode } from "@/services/events/accessCodeService";
 import { createAuditLog } from "@/services/audit";
 import type { AccessCodeField } from "@/lib/access/accessCodes";
 
@@ -28,4 +28,24 @@ export async function setEventAccessCodeAction(formData: FormData): Promise<void
   for (const path of [base, `/app/events/${eventId}`, `/crew/events/${eventId}`, `/venue/${eventId}/lobby`, "/app/events"]) revalidatePath(path);
   // A changed join code changes the event's public address; the row's id (slug) does not.
   redirect(`${base}?codeSaved=${field}`);
+}
+
+
+/**
+ * "Adopt the readable scheme" / "Rotate the whole stem". One action, two intentions: adopt leaves a
+ * hand-set code alone, rotate-everything replaces all six and warns first in the UI.
+ */
+export async function adoptReadableCodesAction(formData: FormData): Promise<void> {
+  const eventId = String(formData.get("eventId") || "").trim();
+  if (!eventId) return;
+  const auth = await requireLiveEventControlAccessForRequest(eventId, "manage_access_codes");
+  if (!auth.ok) throw new Error(auth.error);
+  const actor = auth.actorRole === "crew" ? `crew:${auth.crewRole}` : auth.actorRole;
+  const includeCustom = String(formData.get("includeCustom") || "") === "true";
+  const newStem = String(formData.get("newStem") || "") === "true";
+  const result = await adoptReadableCodes(eventId, actor, { includeCustom, newStem });
+  await createAuditLog({ agencyId: "west-peek", eventId, actorUserId: actor, actorRole: actor, action: "access_code_rotated", resourceType: "event", resourceId: `${eventId}:scheme`, visibility: "internal_agency" }).catch(() => undefined);
+  for (const path of [`/app/events/${eventId}/access`, `/app/events/${eventId}`, "/app/owner", "/app/events"]) revalidatePath(path);
+  if (!result.ok) redirect(`/app/events/${eventId}/access?codeError=${encodeURIComponent(result.reason || "The codes could not be changed.")}`);
+  redirect(`/app/events/${eventId}/access?codeSaved=scheme`);
 }

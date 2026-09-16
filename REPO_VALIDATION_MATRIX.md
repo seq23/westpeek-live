@@ -300,3 +300,11 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Validator: `npm run validate:access-codes-vault-contract` (rewritten)
 - Purpose: behind the owner gate the vault shows the real `OWNER_MASTER_ACCESS_PASSWORD`, `OPERATOR_LAUNCHPAD_PASSWORD` and `CREW_ACCESS_PASSWORD` (masked until Reveal, Copy, rotation command); `OWNER_MASTER_ACCESS_PASSWORD_2` stays set/not-set and its value never reaches the page; nothing outside the owner-gated vault renders any of them; `/app/owner` is `no-store`; Reveal/Copy audit rows name the key, never the value.
 - Proof behind it: `tests/e2e/access-codes-vault.spec.ts`.
+
+## Readable access codes — 2026-09-16
+
+- Validator: `npm run validate:readable-access-codes`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: every code for an event is `WPL-[ROLE-]STEM` — `WPL-45MINU`, `WPL-CREW-45MINU`, `WPL-SPEAKER-45MINU`, `WPL-SPONSOR-45MINU`, `WPL-CLIENT-45MINU`, `WPL-VIP-45MINU` — where the stem is the first six letters/digits of the event's name (padded from a stable hash of the event id when the name is shorter, and disambiguated `SEQUOI2`, `SEQUOI3` when another live event already holds it). One stem per event, the role written into the code, no random tail. Renaming an event does not mutate its codes; "Adopt the readable codes" is an explicit action that keeps hand-set codes and replaces the old generated shapes; each role code still rotates alone.
+- Because the codes are derivable from a public event name by design, the protection is at the gate: the crew and special-guest gates allow six wrong codes a minute from one place and event, then a two-minute cooldown with a plain message, a correct code clears the record, and every failure is logged with the role, the event, the time and a hashed IP — never the value typed.
+- Proof behind it: `tests/unit/readableAccessCodes.test.ts`, `tests/unit/gateAttemptLimiter.test.ts`, `tests/e2e/access-codes-and-links.spec.ts`.

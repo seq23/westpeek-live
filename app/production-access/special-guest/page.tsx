@@ -39,7 +39,7 @@ async function enterGuest(formData: FormData) {
 }
 
 /** `?event=<code>&code=<role code>` PREFILLS the form (a guest link the crew copied); the guest still presses Continue. */
-export default async function SpecialGuestAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string; event?: string; code?: string }> }) {
+export default async function SpecialGuestAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; retry?: string; next?: string; event?: string; code?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const prefilledEvent = String(resolvedSearchParams?.event || "").trim().slice(0, 80);
   const prefilledCode = String(resolvedSearchParams?.code || "").trim().slice(0, 120);
@@ -72,7 +72,7 @@ export default async function SpecialGuestAccessPage({ searchParams }: { searchP
           </div>
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Continue to assigned portal</button>
         </form>
-        {resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="guest-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
+        {resolvedSearchParams?.error === "too_many" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="gate-too-many">Too many wrong codes from here. Wait about {resolvedSearchParams?.retry || "60"} seconds and try again — the invitation link fills the code in for you.</p> : resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="guest-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
       </section>
       </main>
       <LegalFooter variant="compact" />

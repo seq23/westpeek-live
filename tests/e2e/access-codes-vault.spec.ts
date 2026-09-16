@@ -24,7 +24,7 @@ async function createNowEvent(page: Page, name: string) {
 }
 
 test("owner sees every code masked-until-reveal, finds an event by a code, rotates one; an operator gets no vault and no secret values", async ({ page, browser }) => {
-  test.setTimeout(180_000);
+  test.setTimeout(240_000);
   const eventId = await createNowEvent(page, `Vault Room ${Date.now()}`);
 
   // The operator's console redirect means the fold is not theirs; the vault section itself refuses.
@@ -66,6 +66,9 @@ test("owner sees every code masked-until-reveal, finds an event by a code, rotat
   const consoleResponse = await owner.request.get("/app/owner");
   expect(consoleResponse.headers()["cache-control"] || "").toContain("no-store");
 
+  // Live events are open; ended and archived sit in their own collapsed groups.
+  await expect(owner.getByTestId("vault-group-current")).toHaveAttribute("data-open", "true");
+
   // Per-event codes: masked until Reveal.
   const speaker = owner.getByTestId(`vault-code-${eventId}-speaker`);
   await expect(speaker).toHaveAttribute("data-revealed", "false");
@@ -95,5 +98,39 @@ test("owner sees every code masked-until-reveal, finds an event by a code, rotat
   await expect(guest.locator("body")).toContainText(/did not match a speaker, sponsor, client, or VIP access group/i);
 
   await guestContext.close();
+  await ownerContext.close();
+});
+
+test("archiving from the console moves the event, and its codes stay findable in the collapsed Archived group", async ({ page, browser }) => {
+  test.setTimeout(300_000);
+  const eventId = await createNowEvent(page, `Vault Archive ${Date.now()}`);
+  const ownerContext = await browser.newContext();
+  const owner = await ownerContext.newPage();
+  await gotoAndAssert(owner, "/production-access/owner?next=/app/owner");
+  await owner.getByLabel(/owner master password/i).fill(ownerPassword());
+  await owner.getByRole("button", { name: /enter owner workspace/i }).click();
+  await expect(owner).toHaveURL(/\/app\/owner$/);
+
+  // Archive it from the console itself — the action the console was missing.
+  await expect(owner.getByTestId("console-section-events")).toHaveAttribute("data-hydrated", "true");
+  await owner.getByTestId("console-section-events-toggle").click();
+  owner.once("dialog", (dialog) => { expect(dialog.message()).toContain("restore"); void dialog.accept(); });
+  await owner.getByTestId(`console-archive-${eventId}`).click();
+  await expect(owner).toHaveURL(/archived=/);
+
+  // Its codes are still there, in the Archived group, which is collapsed until asked for.
+  await expect(owner.getByTestId("console-section-access-codes")).toHaveAttribute("data-hydrated", "true");
+  await owner.getByTestId("console-section-access-codes-toggle").click();
+  await expect(owner.getByTestId("vault-group-current")).toHaveAttribute("data-open", "true");
+  await expect(owner.getByTestId("vault-group-archived")).toHaveAttribute("data-open", "false");
+  await expect(owner.getByTestId(`vault-event-${eventId}`)).toHaveCount(0);
+  await owner.getByTestId("vault-search").fill(eventId.slice(0, 8));
+  await expect(owner.getByTestId(`vault-event-${eventId}`)).toBeVisible();
+  await owner.getByTestId("vault-search").fill("");
+  await owner.getByTestId("vault-group-toggle-archived").click();
+  await expect(owner.getByTestId(`vault-event-${eventId}`)).toBeVisible();
+
+  // Restore is proven at the service level in tests/unit/consoleArchiveRestore.test.ts — this
+  // spec stays inside one console session so it does not outrun the runner.
   await ownerContext.close();
 });

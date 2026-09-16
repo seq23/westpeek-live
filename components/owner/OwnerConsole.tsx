@@ -8,6 +8,7 @@ import { HostPanel } from "@/components/events/HostPanel";
 import { GuestPreviewList } from "@/components/guests/GuestPreviewLinks";
 import { ContactsAcrossEvents } from "@/components/people/ContactsAcrossEvents";
 import { AccessCodesVault } from "@/components/owner/AccessCodesVault";
+import { EventArchiveControl } from "@/components/owner/EventArchiveControl";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { displayCode, guestGatePath } from "@/lib/access/accessCodes";
 import { CURRENT_BUILD_ID } from "@/lib/runtime/buildVersion";
@@ -138,7 +139,8 @@ async function NetworkingRow({ event }: { event: RuntimeEventRecord }) {
 }
 
 export async function OwnerConsole() {
-  const events = (await listEventRecords().catch(() => [])).filter((event) => event.source !== "seed");
+  // Archived events belong here too: the console is where an event is tidied away and brought back.
+  const events = (await listEventRecords({ includeArchived: true }).catch(() => [])).filter((event) => event.source !== "seed");
   const live = events.filter(isLive);
   const upcoming = events.filter(isUpcoming);
   const drafts = events.filter(isDraft);
@@ -183,10 +185,10 @@ export async function OwnerConsole() {
       </ConsoleSection>
 
       <ConsoleSection id="events" title="Events" count={events.length} blurb="Upcoming, drafts, ended, archived. Open one, hand out its codes, or start a new one.">
-        {[["Upcoming", upcoming], ["Drafts", drafts], ["Ended", ended], ["Archived", archived]].map(([label, list]) => (
+        {[["Live", live], ["Upcoming", upcoming], ["Drafts", drafts], ["Ended", ended], ["Archived", archived]].map(([label, list]) => (
           <details key={String(label)} className="mb-2 rounded-2xl bg-brand-ash p-3" open={String(label) !== "Archived" && (list as RuntimeEventRecord[]).length > 0} data-testid={`console-events-${String(label).toLowerCase()}`}>
             <summary className="cursor-pointer text-sm font-black">{String(label)} · {(list as RuntimeEventRecord[]).length}</summary>
-            {(list as RuntimeEventRecord[]).length ? <ul className="mt-2 space-y-2">{(list as RuntimeEventRecord[]).map((event) => <EventRow key={event.id} event={event}><CopyButton value={`${base}${hostLinkPath(event)}`} label="Copy host link" className="!px-3 !py-1 !text-xs" /></EventRow>)}</ul> : <p className="mt-2 text-xs text-brand-muted">None.</p>}
+            {(list as RuntimeEventRecord[]).length ? <ul className="mt-2 space-y-2">{(list as RuntimeEventRecord[]).map((event) => <EventRow key={event.id} event={event}><CopyButton value={`${base}${hostLinkPath(event)}`} label="Copy host link" className="!px-3 !py-1 !text-xs" /><EventArchiveControl eventId={event.id} eventName={event.name} archived={event.status === "archived"} /></EventRow>)}</ul> : <p className="mt-2 text-xs text-brand-muted">None.</p>}
           </details>
         ))}
       </ConsoleSection>
