@@ -575,38 +575,38 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async upsertSpeedNetworkingEntry(entry: SpeedNetworkingQueueEntry) {
-    const { error } = await this.client.from("speed_networking_entries").upsert({ id: entry.id, event_id: entry.eventId, attendee_id: entry.attendeeId, display_name: entry.displayName, company: entry.company, title: entry.title, status: entry.status, joined_at: entry.joinedAt, matched_at: entry.matchedAt ?? null, match_id: entry.matchId ?? null, matches_completed: entry.matchesCompleted, updated_at: entry.updatedAt }, { onConflict: "id" });
-    if (error) failOrSchemaMissing("speed_networking_entries", error);
+    const { error } = await this.client.from("networking_queue_entries").upsert({ id: entry.id, event_id: entry.eventId, attendee_id: entry.attendeeId, display_name: entry.displayName, company: entry.company, title: entry.title, status: entry.status, joined_at: entry.joinedAt, matched_at: entry.matchedAt ?? null, match_id: entry.matchId ?? null, matches_completed: entry.matchesCompleted, updated_at: entry.updatedAt }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("networking_queue_entries", error);
     return entry;
   }
 
   async getSpeedNetworkingEntry(eventId: string, attendeeId: string) {
-    const { data, error } = await this.client.from("speed_networking_entries").select("*").eq("event_id", eventId).eq("attendee_id", attendeeId).maybeSingle();
-    if (error) failOrSchemaMissing("speed_networking_entries", error);
+    const { data, error } = await this.client.from("networking_queue_entries").select("*").eq("event_id", eventId).eq("attendee_id", attendeeId).maybeSingle();
+    if (error) failOrSchemaMissing("networking_queue_entries", error);
     return data ? mapSpeedNetworkingEntry(data as Record<string, unknown>) : undefined;
   }
 
   async listSpeedNetworkingEntries(eventId: string) {
-    const { data, error } = await this.client.from("speed_networking_entries").select("*").eq("event_id", eventId).order("joined_at", { ascending: true });
-    if (error) failOrSchemaMissing("speed_networking_entries", error);
+    const { data, error } = await this.client.from("networking_queue_entries").select("*").eq("event_id", eventId).order("joined_at", { ascending: true });
+    if (error) failOrSchemaMissing("networking_queue_entries", error);
     return ((data || []) as Record<string, unknown>[]).map(mapSpeedNetworkingEntry);
   }
 
   async upsertSpeedNetworkingMatch(match: SpeedNetworkingMatchRecord) {
-    const { error } = await this.client.from("speed_networking_matches").upsert({ id: match.id, event_id: match.eventId, attendee_a_id: match.attendeeAId, attendee_b_id: match.attendeeBId, normalized_pair_key: match.normalizedPairKey, room_name: match.roomName, status: match.status, starts_at: match.startsAt, expires_at: match.expiresAt, ended_at: match.endedAt ?? null, ended_reason: match.endedReason ?? null }, { onConflict: "id" });
-    if (error) failOrSchemaMissing("speed_networking_matches", error);
+    const { error } = await this.client.from("networking_queue_matches").upsert({ id: match.id, event_id: match.eventId, attendee_a_id: match.attendeeAId, attendee_b_id: match.attendeeBId, normalized_pair_key: match.normalizedPairKey, room_name: match.roomName, status: match.status, starts_at: match.startsAt, expires_at: match.expiresAt, ended_at: match.endedAt ?? null, ended_reason: match.endedReason ?? null }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("networking_queue_matches", error);
     return match;
   }
 
   async getSpeedNetworkingMatch(eventId: string, matchId: string) {
-    const { data, error } = await this.client.from("speed_networking_matches").select("*").eq("event_id", eventId).eq("id", matchId).maybeSingle();
-    if (error) failOrSchemaMissing("speed_networking_matches", error);
+    const { data, error } = await this.client.from("networking_queue_matches").select("*").eq("event_id", eventId).eq("id", matchId).maybeSingle();
+    if (error) failOrSchemaMissing("networking_queue_matches", error);
     return data ? mapSpeedNetworkingMatch(data as Record<string, unknown>) : undefined;
   }
 
   async listSpeedNetworkingMatches(eventId: string) {
-    const { data, error } = await this.client.from("speed_networking_matches").select("*").eq("event_id", eventId).order("starts_at", { ascending: false });
-    if (error) failOrSchemaMissing("speed_networking_matches", error);
+    const { data, error } = await this.client.from("networking_queue_matches").select("*").eq("event_id", eventId).order("starts_at", { ascending: false });
+    if (error) failOrSchemaMissing("networking_queue_matches", error);
     return ((data || []) as Record<string, unknown>[]).map(mapSpeedNetworkingMatch);
   }
 
@@ -696,8 +696,8 @@ export class SupabaseRuntimeStore implements RuntimeStore {
       selectAll<Record<string, unknown>>(this.client, "live_chat_moderation_states", "*", "updated_at").catch(tolerateMissingTable),
       selectAll<Record<string, unknown>>(this.client, "special_guest_profiles", "*", "created_at").catch(tolerateMissingTable),
       selectAll<Record<string, unknown>>(this.client, "event_guest_states", "*", "updated_at").catch(tolerateMissingTable),
-      selectAll<Record<string, unknown>>(this.client, "speed_networking_entries", "*", "updated_at").catch(tolerateMissingTable),
-      selectAll<Record<string, unknown>>(this.client, "speed_networking_matches", "*", "starts_at").catch(tolerateMissingTable),
+      selectAll<Record<string, unknown>>(this.client, "networking_queue_entries", "*", "updated_at").catch(tolerateMissingTable),
+      selectAll<Record<string, unknown>>(this.client, "networking_queue_matches", "*", "starts_at").catch(tolerateMissingTable),
     ]);
 
     snapshot.auditLogs = auditLogs.map((row) => ({

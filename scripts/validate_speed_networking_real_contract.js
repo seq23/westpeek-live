@@ -13,10 +13,17 @@ const canonical = "db/migrations/0027_speed_networking.sql";
 const mirror = "supabase/migrations/20260916140000_speed_networking.sql";
 if (read(canonical) !== read(mirror)) throw new Error(`${mirror} must be byte-identical to ${canonical}`);
 examined += 2;
-check(canonical, ["create table if not exists public.speed_networking_entries", "create table if not exists public.speed_networking_matches", "unique (event_id, attendee_id)", "normalized_pair_key"]);
-check("types/runtimeEvent.ts", ['SPEED_NETWORKING_MIGRATION_FILE = "db/migrations/0027_speed_networking.sql"', "speed_networking_entries: SPEED_NETWORKING_MIGRATION_FILE", "speed_networking_matches: SPEED_NETWORKING_MIGRATION_FILE"]);
-check("services/events/eventRepository.ts", ['["speed_networking_entries", () => store.listSpeedNetworkingEntries("__schema_probe__")]', '["speed_networking_matches", () => store.listSpeedNetworkingMatches("__schema_probe__")]']);
-check("scripts/validate_supabase_schema_parity.js", ["speed_networking_entries:", "speed_networking_matches:"]);
+// The live project carries legacy speed_networking_* tables (0010: uuid ids, foreign keys). A new table
+// must never reuse those names: "create table if not exists" would silently keep the old shape.
+for (const legacy of ["speed_networking_entries", "speed_networking_matches", "speed_networking_queues", "speed_networking_reports", "speed_networking_skips"]) {
+  for (const file of [canonical, "services/runtime/supabaseRuntimeStore.ts", "scripts/validate_supabase_schema_parity.js", "services/events/eventRepository.ts"]) {
+    if (read(file).includes(legacy)) throw new Error(`${file} must not touch the legacy table ${legacy}; the runtime queue lives in networking_queue_*.`);
+  }
+}
+check(canonical, ["create table if not exists public.networking_queue_entries", "create table if not exists public.networking_queue_matches", "unique (event_id, attendee_id)", "normalized_pair_key"]);
+check("types/runtimeEvent.ts", ['SPEED_NETWORKING_MIGRATION_FILE = "db/migrations/0027_speed_networking.sql"', "networking_queue_entries: SPEED_NETWORKING_MIGRATION_FILE", "networking_queue_matches: SPEED_NETWORKING_MIGRATION_FILE"]);
+check("services/events/eventRepository.ts", ['["networking_queue_entries", () => store.listSpeedNetworkingEntries("__schema_probe__")]', '["networking_queue_matches", () => store.listSpeedNetworkingMatches("__schema_probe__")]']);
+check("scripts/validate_supabase_schema_parity.js", ["networking_queue_entries:", "networking_queue_matches:"]);
 for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) check(store, ["upsertSpeedNetworkingEntry", "getSpeedNetworkingEntry", "listSpeedNetworkingEntries", "upsertSpeedNetworkingMatch", "getSpeedNetworkingMatch", "listSpeedNetworkingMatches"]);
 check("services/runtime/runtimeStore.ts", ["speedNetworkingEntries: SpeedNetworkingQueueEntry[]", "speedNetworkingMatches: SpeedNetworkingMatchRecord[]"]);
 check("services/speed-networking/speedNetworkingService.ts", ["selectNextSpeedNetworkingPair(entries.map(toEngineEntry), [], history)", "export async function runNetworkingMatcher", 'await endMatch(eventId, match.id, "expired")', "speedNetworkingRoomName(eventId, matchId)", "settings.matchMinutes * 60_000", "export function tokenAllowedForRoom", "match.attendeeAId === attendeeId || match.attendeeBId === attendeeId", "export async function getMyNetworkingState"]);

@@ -2,11 +2,15 @@
 --
 -- Until now "Join queue" only recorded an analytics event; the pure matcher
 -- (services/speed-networking/speedNetworkingEngine.ts) was never called and no 1:1 room existed.
--- This migration adds the two rows the runtime store keeps:
+-- This migration adds the two rows the runtime store keeps. The names are networking_queue_*
+-- because the live project still carries the legacy speed_networking_* tables from 0010 (uuid
+-- ids with foreign keys into agencies / events); "create table if not exists" against those was
+-- a no-op and the store's writes then failed on the wrong columns (16 Sep 2026). The legacy
+-- tables are left alone.
 --
---   * speed_networking_entries — one row per registered attendee per event who joined the
+--   * networking_queue_entries — one row per registered attendee per event who joined the
 --     queue (waiting / matched / done / left), with when they joined and their current match;
---   * speed_networking_matches — one row per 1:1 match: the two attendees, the normalized pair
+--   * networking_queue_matches — one row per 1:1 match: the two attendees, the normalized pair
 --     key (no repeats within an event), the LiveKit room name <eventId>-net-<matchId>, the
 --     4-minute (crew-configurable) window, and how it ended.
 --
@@ -18,7 +22,7 @@
 -- the Supabase GitHub integration applies it on merge to main (guarded by
 -- validate:speed-networking-real-contract).
 
-create table if not exists public.speed_networking_entries (
+create table if not exists public.networking_queue_entries (
   id text primary key,
   event_id text not null,
   attendee_id text not null,
@@ -34,9 +38,9 @@ create table if not exists public.speed_networking_entries (
   unique (event_id, attendee_id)
 );
 
-create index if not exists speed_networking_entries_event_status_idx on public.speed_networking_entries (event_id, status, joined_at);
+create index if not exists networking_queue_entries_event_status_idx on public.networking_queue_entries (event_id, status, joined_at);
 
-create table if not exists public.speed_networking_matches (
+create table if not exists public.networking_queue_matches (
   id text primary key,
   event_id text not null,
   attendee_a_id text not null,
@@ -50,5 +54,5 @@ create table if not exists public.speed_networking_matches (
   ended_reason text
 );
 
-create index if not exists speed_networking_matches_event_status_idx on public.speed_networking_matches (event_id, status, starts_at desc);
-create index if not exists speed_networking_matches_pair_idx on public.speed_networking_matches (event_id, normalized_pair_key);
+create index if not exists networking_queue_matches_event_status_idx on public.networking_queue_matches (event_id, status, starts_at desc);
+create index if not exists networking_queue_matches_pair_idx on public.networking_queue_matches (event_id, normalized_pair_key);
