@@ -202,3 +202,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: `?viewAs=<guestId>` opens a special guest's real pages for an owner / operator / producer cookie only (`lib/auth/viewAsGuard.ts`, shared by the middleware and `resolveViewAs`); the banner and the disabled guest actions on every guest surface; the open-as links on the deck and the Access page; the special-guest gate's owner override landing on `/production-access/special-guest/preview`, registered in every route ledger.
 - Proof behind it: `tests/unit/viewAsGuard.test.ts`, `tests/e2e/view-as-and-preview.spec.ts`.
+
+## Venue follows event state — 2026-09-16
+
+- Validator: `npm run validate:venue-follows-event-state`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: one pure gate (`services/venue/venueStateGate.ts`) applied by `VenuePageShell`, which every `app/venue/[eventId]/*` page renders through: ended / replay_available (or the stage marked ENDED) → the ended state with the replay center; archived → the archived notice; draft → not open unless the host previews. `VenueStatePoller` refreshes an open page when the gate changes (End the show reaches an open attendee tab within one poll).
+- Proof behind it: `tests/unit/venueStateGate.test.ts`, `tests/e2e/venue-follows-event-state.spec.ts`.
