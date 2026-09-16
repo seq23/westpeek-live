@@ -1,8 +1,32 @@
 import { cookies } from "next/headers";
-import { readV5AccessCookie } from "@/lib/auth/productionAccess";
+import { readV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/productionAccess";
+import { crewDeniedReason, roleAllows, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
+import type { V4CrewRole } from "@/types/v4";
 
-export async function requireLiveEventControlAccessForRequest(eventId?: string) {
+export type LiveControlAuthorization =
+  | { ok: true; actorRole: "owner" | "operator" | "crew"; crewRole?: V4CrewRole; payload: V5AccessCookiePayload }
+  | { ok: false; error: string };
+
+/**
+ * Pure decision: which of the three cookies opens live control of this event, and — when the
+ * caller names an action — whether the crew role on the cookie may perform it. Owner and operator
+ * bypass the role table; a crew cookie is refused with the same sentence the deck shows on the
+ * disabled control, so the UI and the server never disagree.
+ */
+export function authorizeLiveControl(input: { owner?: V5AccessCookiePayload; operator?: V5AccessCookiePayload; crew?: V5AccessCookiePayload }, eventId?: string, action?: CrewAction): LiveControlAuthorization {
+  const { owner, operator, crew } = input;
+  if (owner?.kind === "owner") return { ok: true, actorRole: "owner", payload: owner };
+  if (operator?.kind === "operator" && (!operator.eventId || !eventId || operator.eventId === eventId)) return { ok: true, actorRole: "operator", payload: operator };
+  if (crew?.kind === "crew" && (!crew.eventId || !eventId || crew.eventId === eventId)) {
+    const crewRole = (crew.role || "crew") as V4CrewRole;
+    if (action && !roleAllows(crewRole, action)) return { ok: false, error: crewDeniedReason(crewRole, action) };
+    return { ok: true, actorRole: "crew", crewRole, payload: crew };
+  }
+  return { ok: false, error: "Owner, showrunner/operator, or crew access required." };
+}
+
+export async function requireLiveEventControlAccessForRequest(eventId?: string, action?: CrewAction): Promise<LiveControlAuthorization> {
   const env = getEnv();
   const names = getV5AccessCookieNames(env);
   const secret = getV5AccessCookieSecret(env);
@@ -12,8 +36,5 @@ export async function requireLiveEventControlAccessForRequest(eventId?: string) 
     readV5AccessCookie(cookieStore.get(names.ownerCookieName)?.value, secret),
     readV5AccessCookie(cookieStore.get(names.crewCookieName)?.value, secret),
   ]);
-  if (owner?.kind === "owner") return { ok: true as const, actorRole: "owner" as const, payload: owner };
-  if (operator?.kind === "operator" && (!operator.eventId || !eventId || operator.eventId === eventId)) return { ok: true as const, actorRole: "operator" as const, payload: operator };
-  if (crew?.kind === "crew" && (!crew.eventId || !eventId || crew.eventId === eventId)) return { ok: true as const, actorRole: "crew" as const, payload: crew };
-  return { ok: false as const, error: "Owner, showrunner/operator, or crew access required." };
+  return authorizeLiveControl({ owner, operator, crew }, eventId, action);
 }

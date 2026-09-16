@@ -1,5 +1,8 @@
 import type { V5AccessCookiePayload } from "@/lib/auth/productionAccess";
 import type { V4CrewRole, V4SpecialGuestRole } from "@/types/v4";
+import { crewActionPermissions, type CrewAction } from "@/lib/auth/crewRolePermissions";
+
+export { crewActionPermissions };
 
 const roleRoutePrefixes: Record<V4SpecialGuestRole, readonly string[]> = {
   client: ["/client/"],
@@ -9,16 +12,6 @@ const roleRoutePrefixes: Record<V4SpecialGuestRole, readonly string[]> = {
   vip: ["/venue/"],
 };
 
-const crewActionPermissions: Record<V4CrewRole, readonly string[]> = {
-  crew: ["view_event", "view_run_of_show"],
-  executive_producer: ["view_event", "publish_event", "deploy_event", "switch_video_fallback", "archive_event", "view_audit"],
-  producer: ["view_event", "publish_event", "view_audit", "log_incident"],
-  technical_director: ["view_event", "switch_video_fallback", "clear_video_fallback", "run_video_health_check"],
-  show_caller: ["view_event", "advance_run_of_show", "delay_segment", "log_incident"],
-  moderator: ["view_event", "moderate_session", "log_incident"],
-  va: ["view_event", "edit_draft_setup", "mark_ready_for_review"],
-  support: ["view_event", "view_support", "log_incident"],
-};
 
 function segments(pathname: string) {
   return pathname.split("?")[0].split("/").filter(Boolean);
@@ -150,7 +143,7 @@ export function canPerformCrewAction(payload: V5AccessCookiePayload | undefined,
   if (!payload || payload.kind !== "crew") return false;
   if (eventId && payload.eventId && !eventIdsMatch(eventId, payload.eventId)) return false;
   const role = (payload.role || "crew") as V4CrewRole;
-  return crewActionPermissions[role]?.includes(action) ?? false;
+  return crewActionPermissions[role]?.includes(action as CrewAction) ?? false;
 }
 
 export function assertCanPerformCrewAction(payload: V5AccessCookiePayload | undefined, action: string, eventId?: string) {

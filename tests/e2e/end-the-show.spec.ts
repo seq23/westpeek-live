@@ -49,7 +49,7 @@ test("order A: End the show on the crew console, then ingress_ended → ENDED, e
 
   const crewContext = await browser.newContext();
   const crew = await crewContext.newPage();
-  await grantCrewAccess(crew, "crew", eventId);
+  await grantCrewAccess(crew, "technical_director", eventId);
   await gotoAndAssert(crew, `/crew/events/${eventId}`);
   const control = crew.getByTestId("end-show-control");
   await expect(control).toHaveAttribute("data-show-ended", "false");

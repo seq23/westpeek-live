@@ -1,4 +1,6 @@
 import { endTheShow } from "@/lib/actions/stageStreamActions";
+import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
+import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getOperatorStageStreamState } from "@/services/video/stageStreamStateService";
 
@@ -8,10 +10,11 @@ import { getOperatorStageStreamState } from "@/services/video/stageStreamStateSe
  * not a Daily failover. Shown on the crew console, the command page, the publish page, and the
  * testing console. Once ended, it reports so instead of offering the button again.
  */
-export async function EndShowControl({ eventId, stageId = "main-stage", compact = false }: { eventId: string; stageId?: string; compact?: boolean }) {
-  const [state, event] = await Promise.all([
+export async function EndShowControl({ eventId, stageId = "main-stage", compact = false, viewer: givenViewer }: { eventId: string; stageId?: string; compact?: boolean; viewer?: CrewViewer }) {
+  const [state, event, viewer] = await Promise.all([
     getOperatorStageStreamState(eventId, stageId),
     findEventRecord(eventId).catch(() => undefined),
+    givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId),
   ]);
   const ended = state.operatorMarkedShowEnded || state.streamStatus === "ENDED";
   const eventEnded = event?.status === "ended" || event?.status === "replay_available" || event?.status === "archived";
@@ -26,12 +29,13 @@ export async function EndShowControl({ eventId, stageId = "main-stage", compact 
         {ended ? (
           <span className="rounded-full bg-slate-200 px-4 py-2 text-sm font-black text-slate-700" data-testid="end-show-ended-badge">ENDED{eventEnded ? " · event ended" : ""}</span>
         ) : (
-          <form action={endTheShow}>
+          <GatedForm viewer={viewer} action="go_live" formAction={endTheShow}>
             <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="stageId" value={stageId} />
-            <button className="rounded-full bg-rose-700 px-5 py-3 text-sm font-black text-white hover:bg-rose-800" data-testid="end-show-button">End the show</button>
-          </form>
+            <button className="rounded-full bg-rose-700 px-5 py-3 text-sm font-black text-white hover:bg-rose-800 disabled:cursor-not-allowed disabled:opacity-40" data-testid="end-show-button">End the show</button>
+          </GatedForm>
         )}
       </div>
+      {!ended ? <DeniedNote viewer={viewer} action="go_live" className="mt-3" /> : null}
     </section>
   );
 }

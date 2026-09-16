@@ -12,13 +12,14 @@ import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { grantOwnerOverrideIfMatched } from "@/lib/auth/ownerAccessOverride";
 import type { V4CrewRole } from "@/types/v4";
+import { CREW_ROLES, crewRoleDescriptions, crewRoleLabels } from "@/lib/auth/crewRolePermissions";
 
 // Day 1 access defaults are registry-managed; do not display or hardcode human passwords here.
-const allowedCrewRoles: V4CrewRole[] = ["crew", "technical_director", "show_caller", "moderator", "va", "support"];
-
-function normalizeCrewRole(value: FormDataEntryValue | null): V4CrewRole {
+// Every role in the permission map can be chosen here: crew, executive_producer (the host), producer,
+// technical_director, show_caller, moderator, va, support — each described under the select.
+function normalizeCrewRole(value: FormDataEntryValue | null | undefined): V4CrewRole {
   const role = String(value || "crew");
-  if (allowedCrewRoles.includes(role as V4CrewRole)) return role as V4CrewRole;
+  if (CREW_ROLES.includes(role as V4CrewRole)) return role as V4CrewRole;
   return "crew";
 }
 
@@ -47,8 +48,16 @@ async function enterCrew(formData: FormData) {
   redirect(access.destination || `/crew/events/${access.eventId || "demo"}`);
 }
 
-export default async function CrewAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string }> }) {
+/**
+ * The gate accepts `?event=<code>&role=<crew role>&code=<crew code>` to PREFILL the form — a host link
+ * the owner generated, or the "Switch role" link on a crew page. Nothing is submitted until the person
+ * presses Enter crew workspace; the prefilled crew code is the event's own code, never the global password.
+ */
+export default async function CrewAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string; event?: string; role?: string; code?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const prefilledRole = normalizeCrewRole(resolvedSearchParams?.role);
+  const prefilledEvent = String(resolvedSearchParams?.event || "").trim().slice(0, 80);
+  const prefilledCode = String(resolvedSearchParams?.code || "").trim().slice(0, 120);
   const missing = missingAccessEnv();
   if (missing.length) return <BrandedSetupError title="Crew access is not configured yet." message="Crew login needs explicit access variables. This page now fails safely with setup instructions instead of throwing a server digest page." missingVariables={missing} defaultValues={accessDefaultLines()} />;
   return (
@@ -64,24 +73,28 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
           <div>
             <label htmlFor="crew-password" className="text-sm font-black">Crew password <span className="text-brand-orange">*</span></label>
             <p className="mt-1 text-xs text-brand-muted">Use the internal crew password. In production, this comes from CREW_ACCESS_PASSWORD.</p>
-            <input id="crew-password" name="password" type="password" required className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
+            <input id="crew-password" name="password" type="password" required defaultValue={prefilledCode} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" data-prefilled={prefilledCode ? "true" : "false"} />
+            {prefilledCode ? <p className="mt-1 text-xs font-bold text-emerald-800" data-testid="crew-code-prefilled">This event&rsquo;s crew code is filled in from your link. Press Enter crew workspace.</p> : null}
           </div>
           <div>
             <label htmlFor="crew-event-code" className="text-sm font-black">Event code</label>
             <p className="mt-1 text-xs text-brand-muted">Optional. Leave blank for the demo crew workspace, or enter an event code for event-specific crew routing.</p>
-            <input id="crew-event-code" name="eventCode" className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
+            <input id="crew-event-code" name="eventCode" defaultValue={prefilledEvent} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
           </div>
           <div>
             <label htmlFor="crew-role" className="text-sm font-black">Production role <span className="text-brand-orange">*</span></label>
             <p className="mt-1 text-xs text-brand-muted">Choose the role you are operating as today so permissions and UI guidance match your responsibilities.</p>
-            <select id="crew-role" name="crewRole" defaultValue="crew" required className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm">
-              <option value="crew">Crew</option>
-              <option value="technical_director">Technical Director</option>
-              <option value="show_caller">Show Caller</option>
-              <option value="moderator">Moderator</option>
-              <option value="va">VA / Production Assistant</option>
-              <option value="support">Support</option>
+            <select id="crew-role" name="crewRole" defaultValue={prefilledRole} required className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" data-testid="crew-role-select">
+              {CREW_ROLES.map((role) => <option key={role} value={role}>{crewRoleLabels[role]}</option>)}
             </select>
+            <dl className="mt-3 grid gap-2 rounded-2xl bg-brand-ash p-4 text-xs leading-5 sm:grid-cols-2" data-testid="crew-role-descriptions">
+              {CREW_ROLES.map((role) => (
+                <div key={role} data-testid={`crew-role-description-${role}`}>
+                  <dt className="font-black text-brand-black">{crewRoleLabels[role]}</dt>
+                  <dd className="text-brand-muted">{crewRoleDescriptions[role]}</dd>
+                </div>
+              ))}
+            </dl>
           </div>
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Enter crew workspace</button>
         </form>

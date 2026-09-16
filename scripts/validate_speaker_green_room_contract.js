@@ -59,7 +59,8 @@ for (const name of ["bringSpeakerToStageAction", "sendSpeakerBackstageAction", "
   const start = actions.indexOf(`export async function ${name}(`);
   if (start < 0) { failures.push(`speakerStageActions.ts missing ${name}`); continue; }
   const body = actions.slice(start, actions.indexOf("\n}\n", start));
-  if (!body.includes("await requireControl(eventId)")) failures.push(`${name} must call requireControl before mutating`);
+  // The guard now names the crew action it checks the role against (manage_stage_access / manage_cue_cards).
+  if (!/await requireControl\(eventId, "(manage_stage_access|manage_cue_cards)"\)/.test(body)) failures.push(`${name} must call requireControl with its crew action before mutating`);
 }
 requireTokens("lib/actions/speakerStageActions.ts", ["removeLiveKitParticipantFromMainStage({ eventId, stageId: \"main-stage\", attendeeId: speakerId })"]);
 requireTokens("services/guests/guestStateService.ts", ['if (current.status === "backstage") return current;', "export function submitCueDeckVersion", "export function approvePendingCueDeck", 'status: input.author === "producer" ? "approved" : "pending"']);
