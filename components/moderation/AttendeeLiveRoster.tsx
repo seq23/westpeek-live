@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/shared/LocalTime";
 import { decideAttendeeLiveAccess } from "@/lib/actions/attendeeLiveActions";
 import { silenceLiveChatAttendee } from "@/lib/actions/liveChatActions";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
@@ -7,7 +8,7 @@ import type { AttendeeLiveDecision, AttendeeLiveRoomKind } from "@/types/attende
 
 function when(value?: string) {
   if (!value) return "—";
-  return value.includes("T") ? new Date(value).toLocaleString() : value;
+  return value.includes("T") ? <LocalTime iso={value} mode="datetime" /> : value;
 }
 
 function DecisionButton({ eventId, roomKind, roomId, attendeeId, decision, label, tone = "neutral", viewer }: { eventId: string; roomKind: AttendeeLiveRoomKind; roomId: string; attendeeId: string; decision: AttendeeLiveDecision; label: string; tone?: "neutral" | "primary" | "danger" | "restore"; viewer: CrewViewer }) {

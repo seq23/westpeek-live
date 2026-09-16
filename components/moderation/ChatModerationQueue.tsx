@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/shared/LocalTime";
 import { lockLiveChatRoom, moderateLiveChatMessage, silenceLiveChatAttendee } from "@/lib/actions/liveChatActions";
 import { getLiveChatModerationQueue } from "@/services/venue/liveChatService";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
@@ -16,7 +17,7 @@ function roomLabel(message: Pick<LiveChatMessage, "roomKind" | "roomId">) {
 }
 
 function timeLabel(createdAt: string) {
-  return createdAt.includes("T") ? new Date(createdAt).toLocaleTimeString() : createdAt;
+  return createdAt.includes("T") ? <LocalTime iso={createdAt} /> : createdAt;
 }
 
 function LockForm({ eventId, roomKind, roomId, locked, viewer }: { eventId: string; roomKind: LiveChatRoomKind; roomId: string; locked: boolean; viewer: CrewViewer }) {

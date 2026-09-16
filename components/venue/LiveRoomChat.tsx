@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/shared/LocalTime";
 import { sendLiveRoomChatMessage } from "@/lib/actions/liveChatActions";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
@@ -5,7 +6,7 @@ import { getLiveChatAttendeeModeration, getLiveChatRoomModeration, listLiveRoomC
 import { LIVE_CHAT_LOCKED_MESSAGE, LIVE_CHAT_SILENCED_MESSAGE, type LiveChatRoomKind } from "@/types/liveChat";
 
 function timeLabel(createdAt: string) {
-  return createdAt.includes("T") ? new Date(createdAt).toLocaleTimeString() : createdAt;
+  return createdAt.includes("T") ? <LocalTime iso={createdAt} /> : createdAt;
 }
 
 export async function LiveRoomChat({ eventId, roomKind, roomId, title, description }: { eventId: string; roomKind: LiveChatRoomKind; roomId: string; title: string; description: string }) {

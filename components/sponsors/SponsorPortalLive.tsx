@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/shared/LocalTime";
 import { GuestIdentityForm } from "@/components/guests/GuestIdentityForm";
 import { saveSponsorBoothAction } from "@/lib/actions/guestActions";
 import { findEventRecord } from "@/services/events/eventRepository";
@@ -59,7 +60,7 @@ export async function SponsorPortalLive({ eventId, surface, sponsor, saved, erro
           <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" data-testid="sponsor-leads">
             <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-orange">Leads</p>
             <h2 className="mt-2 text-2xl font-black text-slate-950">{leads.length} attendee{leads.length === 1 ? "" : "s"} opted in at your booth</h2>
-            {leads.length ? <ul className="mt-3 space-y-2 text-sm">{leads.map((lead) => <li key={lead.id} className="rounded-2xl bg-slate-50 p-3">Attendee {lead.attendeeId} · shared {lead.allowedFields.join(", ") || "contact"} · {new Date(lead.createdAt).toLocaleString()}</li>)}</ul> : <p className="mt-3 text-sm text-slate-600">No leads yet. They appear here when an attendee chooses to share their details at your booth{booth?.published ? "" : " — name your booth first so it is in the Expo"}.</p>}
+            {leads.length ? <ul className="mt-3 space-y-2 text-sm">{leads.map((lead) => <li key={lead.id} className="rounded-2xl bg-slate-50 p-3">Attendee {lead.attendeeId} · shared {lead.allowedFields.join(", ") || "contact"} · {<LocalTime iso={lead.createdAt} mode="datetime" />}</li>)}</ul> : <p className="mt-3 text-sm text-slate-600">No leads yet. They appear here when an attendee chooses to share their details at your booth{booth?.published ? "" : " — name your booth first so it is in the Expo"}.</p>}
           </section>
         ) : null}
 

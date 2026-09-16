@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/shared/LocalTime";
 import { approveSpeakerCueDeckAction, bringSpeakerToStageAction, pushLiveCueAction, saveProducerCueDeckAction, saveProducerNotesAction, sendSpeakerBackstageAction, setVipRoomAction } from "@/lib/actions/speakerStageActions";
 import { listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
@@ -12,7 +13,7 @@ function deckToLines(version?: CueDeckVersion) {
 }
 
 function when(value?: string) {
-  return value ? new Date(value).toLocaleTimeString() : "—";
+  return value ? <LocalTime iso={value} /> : "—";
 }
 
 /**

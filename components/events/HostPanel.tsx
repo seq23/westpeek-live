@@ -1,3 +1,4 @@
+import { LocalTime } from "@/components/shared/LocalTime";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { mintHostLinkAction, revokeHostLinksAction } from "@/lib/actions/hostActions";
@@ -6,7 +7,7 @@ import { getHostLinkState, hostLinkUrl } from "@/services/events/hostLinkService
 import { findEventRecord } from "@/services/events/eventRepository";
 
 function when(value: string) {
-  return new Date(value).toLocaleString();
+  return <LocalTime iso={value} mode="datetime" />;
 }
 
 /**

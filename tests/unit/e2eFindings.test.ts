@@ -97,3 +97,23 @@ describe("the stage token fetch cannot cancel itself", () => {
     expect(src).not.toMatch(/\[eventId, roomId, displayName, grantWantsPublish, removed, fetchedForGrant\]/);
   });
 });
+
+describe("timestamps render in the viewer's clock, never the Worker's UTC", () => {
+  it("no server component formats a Date with a zone-less toLocale*() call", async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const offenders: string[] = [];
+    const walk = (dir: string) => {
+      for (const name of readdirSync(dir)) {
+        const p = join(dir, name);
+        if (statSync(p).isDirectory()) { walk(p); continue; }
+        if (!/\.tsx$/.test(name) || name === "LocalTime.tsx") continue;
+        const src = readFileSync(p, "utf8");
+        if (/^\s*["']use client["']/.test(src)) continue;
+        if (/\.toLocale(Time|Date)?String\(\)/.test(src)) offenders.push(p);
+      }
+    };
+    for (const root of ["components", "app"]) walk(new URL(`../../${root}`, import.meta.url).pathname);
+    expect(offenders).toEqual([]);
+  });
+});
