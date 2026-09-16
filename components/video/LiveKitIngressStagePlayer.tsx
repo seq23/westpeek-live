@@ -63,9 +63,12 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
       ) : !token || !serverUrl ? (
         <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white"><p>{bufferOpen ? "Stage is getting ready. Live stream will begin shortly." : "Connecting to LiveKit Ingress feed..."}</p></div>
       ) : (
-        <LiveKitRoom token={token} serverUrl={serverUrl} connect audio={!muted} video={false} onConnected={() => setStartedOnce(true)} onDisconnected={() => { if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive("LiveKit disconnected after stream had started."); } }} onError={(e) => { if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive(e.message); } else setError(e.message); }} className="rounded-3xl border border-white/10 bg-black/40 p-4">
+        <LiveKitRoom token={token} serverUrl={serverUrl} connect audio={false} video={false} onConnected={() => setStartedOnce(true)} onDisconnected={() => { if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive("LiveKit disconnected after stream had started."); } }} onError={(e) => { if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive(e.message); } else setError(e.message); }} className="rounded-3xl border border-white/10 bg-black/40 p-4">
           <IngressTrackView />
-          <RoomAudioRenderer />
+          {/* `audio` on LiveKitRoom means PUBLISH the local microphone — so "sound on" used to open an
+              approved attendee's mic to the room the moment they connected (found 16 Sep 2026).
+              Watching never publishes. Playback mute and volume belong to the renderer. */}
+          <RoomAudioRenderer muted={muted} volume={volume} />
           <p className="sr-only">Preferred muted state: {muted ? "muted" : "sound on"}; preferred volume: {volume}</p>
         </LiveKitRoom>
       )}
