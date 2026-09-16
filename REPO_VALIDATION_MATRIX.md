@@ -327,3 +327,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: the owner's rule — "someone cannot be VIP unless they have a code or someone official makes them one, and Make VIP should require a code". There are three ways in and they are the same underneath: the person types the event's VIP code (special-guest gate, or the lobby's "Have a VIP code?" card once registered), the crew issues it ("Make VIP" records who issued it and hands the crew the code to send), or their address was on the event's VIP invite list and registration issues it. One writer creates every grant and stamps the event's **current VIP code version** onto it, so rotating the VIP code revokes everyone admitted under the old one — crew grants included — and re-entering the new code restores it. "Remove VIP" revokes. The crew roster and the Owner Console show, per VIP, how they became one and which version they hold.
 - Proof behind it: `tests/unit/vipCodeBound.test.ts`.
+
+## Email is real, per event — 2026-09-16
+
+- Validator: `npm run validate:event-email-real`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: `components/email/EmailWorkflowMatrix.tsx` printed "Live-send capable through Resend." under eleven workflow names and knew nothing. It is gone. Every send now writes an `email_send_logs` row (migration 0032) with the recipient, the provider actually used, the status, the failure reason and the role that pressed Send. `/app/events/{id}/communications` reads that log — per workflow, when it last went out and to whom, or "Never sent for this event" — and offers **Send now** for the workflows a person sends by hand, refusing an empty recipient list in words. `/app/email` is the cross-event record. The banner reads the real environment: with Resend unconfigured the rows say `mock` rather than implying delivery, and nothing in the app mails anyone on a timer.
+- Proof behind it: `tests/unit/eventEmail.test.ts`, `tests/e2e/event-email.spec.ts`.

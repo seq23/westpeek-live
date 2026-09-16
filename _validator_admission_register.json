@@ -4780,6 +4780,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:event-email-real",
+      "command": "node scripts/validate_event_email_real.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Email is real and honest: every send writes an email_send_logs row (migration 0032) naming the recipient, the provider actually used, the status and the role that pressed Send; the event's Communications page reads that log for the last-send per workflow and the whole history instead of printing a slogan; /app/email is the cross-event record; a send with no recipients and a workflow no person sends by hand are both refused; and nothing sends on a timer.",
+      "whatItDoesNotProve": "Static contract; sending, refusal and logging are proven by tests/unit/eventEmail.test.ts and tests/e2e/event-email.spec.ts. Real delivery depends on RESEND_API_KEY; without it the rows say mock.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only with the email surface.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

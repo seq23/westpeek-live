@@ -12,6 +12,7 @@ import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } fro
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { ContactRecord, RegistrationQuestion } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { EmailSendLog } from "@/types/emailProduction";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 
@@ -54,6 +55,28 @@ function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord
 
 function mapAttendeeProfile(row: Record<string, unknown>): AttendeeProfile {
   return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), email: row.email ? String(row.email) : undefined, extraAnswers: (row.extra_answers && typeof row.extra_answers === "object" ? (row.extra_answers as Record<string, string>) : {}), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingOptIn: Boolean(row.networking_opt_in), hiddenFromDirectory: Boolean(row.hidden_from_directory), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+}
+
+function mapEmailSendLog(row: Record<string, unknown>): EmailSendLog & { sentBy?: string } {
+  return {
+    id: String(row.id),
+    eventId: row.event_id ? String(row.event_id) : undefined,
+    agencyId: row.agency_id ? String(row.agency_id) : undefined,
+    clientId: row.client_id ? String(row.client_id) : undefined,
+    workflowType: row.workflow_type as EmailSendLog["workflowType"],
+    recipientEmail: String(row.recipient_email || ""),
+    recipientName: row.recipient_name ? String(row.recipient_name) : undefined,
+    subject: String(row.subject || ""),
+    provider: (row.provider as EmailSendLog["provider"]) || "resend",
+    providerMessageId: row.provider_message_id ? String(row.provider_message_id) : undefined,
+    status: (row.status as EmailSendLog["status"]) || "queued",
+    actionUrl: row.action_url ? String(row.action_url) : undefined,
+    failureReason: row.failure_reason ? String(row.failure_reason) : undefined,
+    sentBy: row.sent_by ? String(row.sent_by) : undefined,
+    queuedAt: String(row.queued_at || ""),
+    sentAt: row.sent_at ? String(row.sent_at) : undefined,
+    failedAt: row.failed_at ? String(row.failed_at) : undefined,
+  };
 }
 
 function mapEventAsset(row: Record<string, unknown>): EventAssetRecord {
@@ -666,6 +689,30 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     const { data, error } = await query.order("created_at", { ascending: false }).limit(2000);
     if (error) failOrSchemaMissing("event_assets", error);
     return ((data || []) as Record<string, unknown>[]).map(mapEventAsset);
+  }
+
+  async appendEmailSendLog(log: EmailSendLog & { sentBy?: string }) {
+    const { error } = await this.client.from("runtime_email_sends").upsert({
+      id: log.id, event_id: log.eventId ?? null, agency_id: log.agencyId ?? null, client_id: log.clientId ?? null,
+      workflow_type: log.workflowType, recipient_email: log.recipientEmail, recipient_name: log.recipientName ?? null,
+      subject: log.subject, provider: log.provider, provider_message_id: log.providerMessageId ?? null, status: log.status,
+      action_url: log.actionUrl ?? null, failure_reason: log.failureReason ?? null, sent_by: log.sentBy ?? null,
+      queued_at: log.queuedAt, sent_at: log.sentAt ?? null, failed_at: log.failedAt ?? null,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("runtime_email_sends", error);
+    return log;
+  }
+
+  async listEmailSendLogs(eventId: string, limit = 200) {
+    const { data, error } = await this.client.from("runtime_email_sends").select("*").eq("event_id", eventId).order("queued_at", { ascending: false }).limit(limit);
+    if (error) failOrSchemaMissing("runtime_email_sends", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEmailSendLog);
+  }
+
+  async listAllEmailSendLogs(limit = 500) {
+    const { data, error } = await this.client.from("runtime_email_sends").select("*").order("queued_at", { ascending: false }).limit(limit);
+    if (error) failOrSchemaMissing("runtime_email_sends", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEmailSendLog);
   }
 
   async probeContactsArchiveColumn() {

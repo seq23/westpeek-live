@@ -9,6 +9,7 @@ import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } fr
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { EmailSendLog } from "@/types/emailProduction";
 import type { ContactRecord } from "@/types/attendeeRegistration";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
@@ -459,6 +460,27 @@ export class FileRuntimeStore implements RuntimeStore {
     return (this.read().eventAssets || [])
       .filter((item: EventAssetRecord) => includeArchived || !item.archivedAt)
       .sort((a: EventAssetRecord, b: EventAssetRecord) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async appendEmailSendLog(log: EmailSendLog & { sentBy?: string }) {
+    const snapshot = this.read();
+    snapshot.emailSendLogs = [...(snapshot.emailSendLogs || []).filter((item: EmailSendLog) => item.id !== log.id), log];
+    this.write(snapshot);
+    return log;
+  }
+
+  async listEmailSendLogs(eventId: string, limit = 200) {
+    return (this.read().emailSendLogs || [])
+      .filter((item: EmailSendLog) => item.eventId === eventId)
+      .sort((a: EmailSendLog, b: EmailSendLog) => b.queuedAt.localeCompare(a.queuedAt))
+      .slice(0, limit);
+  }
+
+  async listAllEmailSendLogs(limit = 500) {
+    return (this.read().emailSendLogs || [])
+      .slice()
+      .sort((a: EmailSendLog, b: EmailSendLog) => b.queuedAt.localeCompare(a.queuedAt))
+      .slice(0, limit);
   }
 
   async probeContactsArchiveColumn() {

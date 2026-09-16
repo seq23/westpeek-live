@@ -5,6 +5,7 @@ import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat"
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { EmailSendLog } from "@/types/emailProduction";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
@@ -118,6 +119,7 @@ export interface V6RuntimeSnapshot {
   speedNetworkingMatches: SpeedNetworkingMatchRecord[];
   contacts: ContactRecord[];
   eventAssets: EventAssetRecord[];
+  emailSendLogs: EmailSendLog[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
@@ -157,6 +159,10 @@ export interface RuntimeStore {
   getEventAsset(id: string): Promise<EventAssetRecord | undefined>;
   listEventAssets(eventId: string, includeArchived?: boolean): Promise<EventAssetRecord[]>;
   listAllEventAssets(includeArchived?: boolean): Promise<EventAssetRecord[]>;
+  // The email send log (migration 0032): one row per message the app actually sent.
+  appendEmailSendLog(log: EmailSendLog & { sentBy?: string }): Promise<EmailSendLog>;
+  listEmailSendLogs(eventId: string, limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
+  listAllEmailSendLogs(limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
   upsertAttendeeSession(session: AttendeeSession): Promise<AttendeeSession>;
   getAttendeeSession(eventId: string, sessionId: string): Promise<AttendeeSession | undefined>;
   upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent): Promise<AttendeeAgendaIntent>;
@@ -240,6 +246,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     speedNetworkingMatches: [],
     contacts: [],
     eventAssets: [],
+    emailSendLogs: [],
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],
