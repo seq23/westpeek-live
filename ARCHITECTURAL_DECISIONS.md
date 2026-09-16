@@ -134,3 +134,23 @@ Risks Accepted: Registering the webhook in LiveKit Cloud is a manual step; the c
 Validation Impact: `tests/unit/endShowOrdering.test.ts` (7), `tests/e2e/end-the-show.spec.ts` (3), `scripts/validate_end_show_contract.js`.
 
 Future Reversal Conditions: If LiveKit ingress gains a "stopped by producer" reason in its state, prefer it over the event status as the second signal.
+
+## Decision ID: ADM-2026-09-16-SPECIAL-GUESTS
+
+Status: Accepted
+
+Context: The special-guest gate (event code + role code) was real; everything behind it was mock. `app/speaker/events/[id]/*` rendered `services/speaker-ops/mockSpeakerOpsService.ts` with the speaker hard-coded as `speaker-drake`, a fixed checklist, and the demo summit's run of show; no LiveKit token was ever issued to a speaker; the materials form queued to a JSON file the Worker cannot write; sponsor / VIP / client portals were the same pattern.
+
+Decision: A role code carries the event and the role, not the person, so the person is recorded once (`special_guest_profiles`, bound to the browser by `wpl_guest_identity`, the way an attendee session binds an attendee). Every standing decision or document for a guest is one keyed row in `event_guest_states` (`event:kind[:guest]`): stage state (backstage / invited / on stage), recorded tech check, cue deck (approved + pending versions), live cue, producer notes, sponsor booth, VIP room. Migration `db/migrations/0026_special_guest_identity_and_state.sql`, mirrored for the GitHub integration and probed by `/api/runtime/health`. One pure rule, `decideGuestVideoGrant`, decides LiveKit tokens and is what `/api/video/livekit-token` calls: a speaker gets the green room (`<eventId>-green-room`, crew + speakers only) always and the main stage only while invited / on stage; an attendee never gets a green-room token. Bring to stage / Send backstage live on the crew deck (crew console, command page, testing console); Send backstage also drops the participant from the stage room. Cue cards: producer saves are the approved version; speaker pastes are pending until approved; the teleprompter polls `/api/speaker/cue-deck` every ~5s (own deck only) and shows "producer pushed a change" and live-cue banners. Sponsor booths named in the portal appear in the Expo; VIPs see a badge and the lounge when the crew opens it; clients get a read-only overview of their runtime event. The speaker material form now feeds the pending cue deck, and the producer's approval queue lists pending speaker versions. Seed-only paths (`/submit/[code]/*`) keep the mock service; no speaker route does.
+
+Alternatives Considered: A table per state kind (seven small tables and fourteen store methods for rows that are read and written whole); putting the person on the special-guest cookie (a second signed payload per role, re-issued on every edit); file upload for speaker notes (no asset store is wired for runtime events, so paste is offered and the page says so).
+
+Reasoning: The keyed-JSON-state shape is the one this repo already uses for attendee capability, control, and chat moderation; a pure grant rule keeps the token route testable without cookies or LiveKit.
+
+Tradeoffs: `event_guest_states` is not queryable by field; the roster reads all states for the event (bounded by guests). The speaker's stage tile for attendees is proved by the grant rule and the live check, not by the local Playwright run (mock provider).
+
+Risks Accepted: Same migration path as 0024 / 0025.
+
+Validation Impact: `tests/unit/speakerGreenRoom.test.ts` (7), `tests/e2e/speaker-green-room.spec.ts` (3), `scripts/validate_speaker_green_room_contract.js`; the Day 1 gauntlet's speaker step now lands in the pending cue deck and the approval queue reads it.
+
+Future Reversal Conditions: When runtime events gain a real asset store, add file upload to the speaker paste panel; when speakers get Supabase Auth, the identity row keys off the user instead of the cookie.

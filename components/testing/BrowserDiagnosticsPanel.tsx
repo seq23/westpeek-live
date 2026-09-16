@@ -1,7 +1,7 @@
 "use client";
 
-import { useMemo, useRef, useState } from "react";
-import type { BrowserDiagnosticResult } from "@/types/browserDiagnostics";
+import { useEffect, useMemo, useRef, useState } from "react";
+import type { BrowserDiagnosticResult, BrowserReadinessSummary } from "@/types/browserDiagnostics";
 import {
   buildTestingIncidentDraft,
   createBrowserDiagnosticResult,
@@ -22,7 +22,7 @@ function mapBrowserStatus(status: BrowserDiagnosticResult["status"]) {
   return "skipped";
 }
 
-export function BrowserDiagnosticsPanel({ eventId }: { eventId: string }) {
+export function BrowserDiagnosticsPanel({ eventId, onResultsChange }: { eventId: string; onResultsChange?: (summary: BrowserReadinessSummary, results: BrowserDiagnosticResult[]) => void }) {
   const videoRef = useRef<HTMLVideoElement | null>(null);
   const audioContextRef = useRef<AudioContext | null>(null);
   const micStreamRef = useRef<MediaStream | null>(null);
@@ -32,6 +32,8 @@ export function BrowserDiagnosticsPanel({ eventId }: { eventId: string }) {
   const [speakerToneActive, setSpeakerToneActive] = useState(false);
 
   const summary = useMemo(() => summarizeBrowserReadiness(results), [results]);
+  // The speaker tech check records this snapshot on the roster row; the testing console ignores it.
+  useEffect(() => { if (onResultsChange && results.length) onResultsChange(summary, results); }, [onResultsChange, summary, results]);
   const incidentDrafts = useMemo(
     () => results.filter((result) => ["fail", "blocked", "warn"].includes(result.status)).map((result) => buildTestingIncidentDraft({ eventId, result })),
     [eventId, results],

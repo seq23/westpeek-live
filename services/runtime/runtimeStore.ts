@@ -6,6 +6,7 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 
 export interface V5AccessAttemptRuntimeEvent {
   id: string;
@@ -109,6 +110,8 @@ export interface V6RuntimeSnapshot {
   liveChatModerationStates: LiveChatModerationState[];
   attendeeLiveCapabilities: AttendeeLiveCapability[];
   attendeeLiveControlStates: AttendeeLiveControlState[];
+  specialGuestProfiles: SpecialGuestProfile[];
+  eventGuestStates: EventGuestStateRecord[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
@@ -159,6 +162,13 @@ export interface RuntimeStore {
   listAttendeeLiveCapabilities(eventId: string): Promise<AttendeeLiveCapability[]>;
   setAttendeeLiveControlState(key: string, state: AttendeeLiveControlState): Promise<AttendeeLiveControlState>;
   getAttendeeLiveControlState(key: string): Promise<AttendeeLiveControlState | undefined>;
+  // Special guests (migration 0026): identity from the role code, and event-scoped guest state.
+  upsertSpecialGuestProfile(profile: SpecialGuestProfile): Promise<SpecialGuestProfile>;
+  getSpecialGuestProfile(eventId: string, guestId: string): Promise<SpecialGuestProfile | undefined>;
+  listSpecialGuestProfiles(eventId: string, role?: SpecialGuestRole): Promise<SpecialGuestProfile[]>;
+  setEventGuestState(record: EventGuestStateRecord): Promise<EventGuestStateRecord>;
+  getEventGuestState(key: string): Promise<EventGuestStateRecord | undefined>;
+  listEventGuestStates(eventId: string, kind?: string): Promise<EventGuestStateRecord[]>;
   readSnapshot(): Promise<V6RuntimeSnapshot>;
   // Runtime-created events, clients, and agency settings (migration 0024).
   upsertRuntimeEvent(event: RuntimeEventRecord): Promise<RuntimeEventRecord>;
@@ -193,6 +203,8 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     liveChatModerationStates: [],
     attendeeLiveCapabilities: [],
     attendeeLiveControlStates: [],
+    specialGuestProfiles: [],
+    eventGuestStates: [],
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],

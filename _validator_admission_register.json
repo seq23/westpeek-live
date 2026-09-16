@@ -4360,6 +4360,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:speaker-green-room-contract",
+      "command": "node scripts/validate_speaker_green_room_contract.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Real special-guest flow: 0026 migration mirror parity and health probe; both stores implement guest identity and state; identity comes from the role code with no mock speaker on any speaker route; one pure LiveKit grant rule used by the token route (speaker: green room always, stage only when brought up; attendee never the green room); crew actions guarded and send-backstage drops the participant; speaker reads only their own deck; cue-card versioning (producer approved on save, speaker pending until approved); sponsor booth \u2192 Expo, VIP badge + lounge, client read-only overview; unit and Playwright proofs.",
+      "whatItDoesNotProve": "Does not prove the 0026 migration has been applied to the live Supabase project (read from /api/runtime/health), nor that a speaker's tile renders for attendees on the live stage (needs a real LiveKit room; the local run uses the mock provider).",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only if the special-guest gate itself is retired.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",
