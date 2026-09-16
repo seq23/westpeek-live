@@ -1,8 +1,9 @@
 import { randomId } from "@/lib/security/portableCrypto";
-import { selectNextSpeedNetworkingPair } from "@/services/speed-networking/speedNetworkingEngine";
+import { planSpeedNetworkingRound, selectSpeedNetworkingTier, type SpeedNetworkingCandidate, type SpeedNetworkingTier } from "@/services/speed-networking/speedNetworkingTiers";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
+import { deleteLiveKitRoom } from "@/services/video/livekitRoomAdmin";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
-import type { SpeedNetworkingEntry, SpeedNetworkingPairHistory } from "@/types/speedNetworkingEngine";
+import type { SpeedNetworkingPairHistory } from "@/types/speedNetworkingEngine";
 import { SPEED_NETWORKING_DEFAULT_MINUTES, speedNetworkingRoomName, type SpeedNetworkingMatchRecord, type SpeedNetworkingQueueEntry, type SpeedNetworkingSettings } from "@/types/speedNetworking";
 
 /**
@@ -33,6 +34,47 @@ export async function setNetworkingSettings(eventId: string, input: { open: bool
   const record: EventGuestStateRecord<SpeedNetworkingSettings> = { key: eventGuestStateKey(eventId, "networking_settings"), eventId, kind: "networking_settings", state, updatedAt: state.updatedAt };
   await getRuntimeStore().setEventGuestState(record);
   return state;
+}
+
+/**
+ * What the last round left behind: who was the odd one out (they lead the next round and are told
+ * "you are next"), who has met everyone here, and who has said they would rather meet somebody
+ * again than keep waiting. Kept in the event guest-state row, so no new table.
+ */
+export interface SpeedNetworkingRoundState {
+  priorityAttendeeIds: string[];
+  metEveryoneAttendeeIds: string[];
+  repeatOptInAttendeeIds: string[];
+  lastTier: SpeedNetworkingTier;
+  lastRoundAt: string;
+}
+
+const EMPTY_ROUND_STATE: SpeedNetworkingRoundState = { priorityAttendeeIds: [], metEveryoneAttendeeIds: [], repeatOptInAttendeeIds: [], lastTier: "fifo", lastRoundAt: "" };
+
+export async function getNetworkingRoundState(eventId: string): Promise<SpeedNetworkingRoundState> {
+  const record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "networking_round_state")).catch(() => undefined);
+  const state = record?.state as Partial<SpeedNetworkingRoundState> | undefined;
+  return {
+    priorityAttendeeIds: state?.priorityAttendeeIds || [],
+    metEveryoneAttendeeIds: state?.metEveryoneAttendeeIds || [],
+    repeatOptInAttendeeIds: state?.repeatOptInAttendeeIds || [],
+    lastTier: state?.lastTier || EMPTY_ROUND_STATE.lastTier,
+    lastRoundAt: state?.lastRoundAt || "",
+  };
+}
+
+async function setNetworkingRoundState(eventId: string, state: SpeedNetworkingRoundState) {
+  const record: EventGuestStateRecord<SpeedNetworkingRoundState> = { key: eventGuestStateKey(eventId, "networking_round_state"), eventId, kind: "networking_round_state", state, updatedAt: state.lastRoundAt || now() };
+  await getRuntimeStore().setEventGuestState(record);
+  return state;
+}
+
+/** "Meet someone again": the only way out of a queue that has nobody new left in it. */
+export async function allowRepeatNetworkingMatch(eventId: string, attendeeId: string) {
+  const state = await getNetworkingRoundState(eventId);
+  if (!state.repeatOptInAttendeeIds.includes(attendeeId)) state.repeatOptInAttendeeIds = [...state.repeatOptInAttendeeIds, attendeeId];
+  await setNetworkingRoundState(eventId, { ...state, lastRoundAt: now() });
+  return getMyNetworkingState(eventId, attendeeId);
 }
 
 // ---- queue ---------------------------------------------------------------------------
@@ -71,12 +113,19 @@ export async function leaveNetworkingQueue(eventId: string, attendeeId: string, 
 
 // ---- matches -------------------------------------------------------------------------
 
-function toEngineEntry(entry: SpeedNetworkingQueueEntry): SpeedNetworkingEntry {
-  return { id: entry.id, agencyId: "west-peek", eventId: entry.eventId, queueId: `${entry.eventId}-queue`, attendeeId: entry.attendeeId, displayName: entry.displayName, status: entry.status === "waiting" ? "waiting" : entry.status === "matched" ? "matched" : "left", joinedQueueAt: entry.joinedAt, lastMatchedAt: entry.matchedAt };
-}
-
 function toPairHistory(match: SpeedNetworkingMatchRecord): SpeedNetworkingPairHistory {
   return { eventId: match.eventId, normalizedPairKey: match.normalizedPairKey, attendeeAId: match.attendeeAId, attendeeBId: match.attendeeBId, firstMatchedAt: match.startsAt, matchId: match.id };
+}
+
+/**
+ * Match over: delete the LiveKit room outright. Removing participants one at a time races a client
+ * that is still reconnecting; deleting the room disconnects everyone, so the next match — or a
+ * rejoin into a room of the same name — starts empty instead of inheriting the last call's ghosts.
+ * Best effort on purpose: the match must still end when LiveKit is unreachable or unconfigured.
+ */
+export async function purgeSpeedNetworkingRoom(roomName: string) {
+  const deleted = await deleteLiveKitRoom(roomName).catch(() => ({ configured: false as const }));
+  return { roomName, cleaned: deleted.configured && deleted.deleted };
 }
 
 /** Ends one match and returns both attendees to the queue (waiting again, with the match counted). */
@@ -86,6 +135,7 @@ export async function endMatch(eventId: string, matchId: string, reason: string,
   if (!match || match.status !== "active") return match;
   const ended: SpeedNetworkingMatchRecord = { ...match, status: reason === "expired" ? "expired" : "ended", endedAt: now(), endedReason: reason };
   await store.upsertSpeedNetworkingMatch(ended);
+  await purgeSpeedNetworkingRoom(match.roomName);
   for (const attendeeId of [match.attendeeAId, match.attendeeBId]) {
     const entry = await store.getSpeedNetworkingEntry(eventId, attendeeId);
     if (!entry || entry.matchId !== matchId) continue;
@@ -96,11 +146,40 @@ export async function endMatch(eventId: string, matchId: string, reason: string,
 }
 
 /**
- * The matcher. Runs on every queue read: expires matches past their window (both attendees back
- * to waiting), then pairs the two longest-waiting compatible attendees, repeatedly, using the pure
- * engine and the event's match history so a pair never meets twice. Idempotent and cheap.
+ * The waiting queue as the tiered matcher sees it: the queue row plus whatever the attendee's own
+ * profile says about what they came for. Profiles are read at match time rather than copied onto
+ * the queue row, so an attendee who fills in their topics mid-event is scored on the new answer.
  */
-export async function runNetworkingMatcher(eventId: string) {
+async function buildRoundCandidates(eventId: string, entries: SpeedNetworkingQueueEntry[], priorityAttendeeIds: string[]): Promise<SpeedNetworkingCandidate[]> {
+  const waiting = entries.filter((entry) => entry.status === "waiting");
+  if (!waiting.length) return [];
+  const profiles = await getRuntimeStore().listAttendeeProfiles(eventId).catch(() => []);
+  const byAttendee = new Map(profiles.map((profile) => [profile.attendeeId, profile]));
+  return waiting.map((entry) => {
+    const profile = byAttendee.get(entry.attendeeId);
+    return {
+      attendeeId: entry.attendeeId,
+      displayName: entry.displayName,
+      company: entry.company || profile?.company,
+      title: entry.title || profile?.title,
+      topicsOfInterest: profile?.topicsOfInterest || [],
+      networkingGoals: profile?.networkingGoals,
+      joinedAt: entry.joinedAt,
+      priority: priorityAttendeeIds.includes(entry.attendeeId),
+    };
+  });
+}
+
+/**
+ * The matcher. Runs on every queue read: expires matches past their window (both attendees back to
+ * waiting), then forms the whole next round in ONE batch tick — not pair by pair as people poll,
+ * so whoever refreshes first does not take the best partner. How the pairs are chosen depends on
+ * how many are waiting (see SPEED_NETWORKING_MATCHING_CONFIG): longest-waiting first for a small
+ * room, weighted random inside the longest-waiting half for a medium one, scored on shared topics,
+ * complementary goals, different companies and a wait time that eventually outweighs all of it for
+ * a large one. A pair still never meets twice. Idempotent and cheap.
+ */
+export async function runNetworkingMatcher(eventId: string, options: { random?: () => number } = {}) {
   const store = getRuntimeStore();
   const settings = await getNetworkingSettings(eventId);
   const matches = await store.listSpeedNetworkingMatches(eventId);
@@ -108,23 +187,23 @@ export async function runNetworkingMatcher(eventId: string) {
   for (const match of matches) {
     if (match.status === "active" && new Date(match.expiresAt).getTime() <= nowMs) await endMatch(eventId, match.id, "expired");
   }
-  if (!settings.open) return { created: [] as SpeedNetworkingMatchRecord[], settings };
-  const created: SpeedNetworkingMatchRecord[] = [];
+  const roundState = await getNetworkingRoundState(eventId);
+  if (!settings.open) return { created: [] as SpeedNetworkingMatchRecord[], settings, roundState };
   const history = (await store.listSpeedNetworkingMatches(eventId)).map(toPairHistory);
-  // Loop until no compatible pair remains; each iteration re-reads the queue so status changes stick.
-  for (let guard = 0; guard < 50; guard += 1) {
-    const entries = await store.listSpeedNetworkingEntries(eventId);
-    const pair = selectNextSpeedNetworkingPair(entries.map(toEngineEntry), [], history);
-    if (!pair) break;
-    const [first, second] = pair;
+  const entries = await store.listSpeedNetworkingEntries(eventId);
+  const candidates = await buildRoundCandidates(eventId, entries, roundState.priorityAttendeeIds);
+  const plan = planSpeedNetworkingRound({ eventId, waiting: candidates, pairHistory: history, repeatOptIn: roundState.repeatOptInAttendeeIds, nowMs, random: options.random });
+
+  const created: SpeedNetworkingMatchRecord[] = [];
+  for (const pair of plan.pairs) {
     const matchId = randomId("match");
     const startsAt = new Date();
     const match: SpeedNetworkingMatchRecord = {
       id: matchId,
       eventId,
-      attendeeAId: first.attendeeId!,
-      attendeeBId: second.attendeeId!,
-      normalizedPairKey: `${eventId}::${[first.attendeeId!, second.attendeeId!].sort().join("::")}`,
+      attendeeAId: pair.first.attendeeId,
+      attendeeBId: pair.second.attendeeId,
+      normalizedPairKey: `${eventId}::${[pair.first.attendeeId, pair.second.attendeeId].sort().join("::")}`,
       roomName: speedNetworkingRoomName(eventId, matchId),
       status: "active",
       startsAt: startsAt.toISOString(),
@@ -135,10 +214,20 @@ export async function runNetworkingMatcher(eventId: string) {
       const entry = entries.find((item) => item.attendeeId === attendeeId)!;
       await store.upsertSpeedNetworkingEntry({ ...entry, status: "matched", matchId, matchedAt: match.startsAt, updatedAt: now() });
     }
-    history.push(toPairHistory(match));
     created.push(match);
   }
-  return { created, settings };
+
+  // The odd one out leads the next round, and a repeat opt-in is spent once it has been honoured.
+  const stillNeedsARepeat = roundState.repeatOptInAttendeeIds.filter((attendeeId) => !created.some((match) => match.attendeeAId === attendeeId || match.attendeeBId === attendeeId));
+  const nextRoundState: SpeedNetworkingRoundState = {
+    priorityAttendeeIds: plan.oddOneOut ? [plan.oddOneOut.attendeeId] : [],
+    metEveryoneAttendeeIds: plan.metEveryone.map((candidate) => candidate.attendeeId),
+    repeatOptInAttendeeIds: stillNeedsARepeat,
+    lastTier: plan.tier,
+    lastRoundAt: now(),
+  };
+  await setNetworkingRoundState(eventId, nextRoundState);
+  return { created, settings, roundState: nextRoundState, plan };
 }
 
 // ---- what one attendee sees ------------------------------------------------------------
@@ -149,16 +238,33 @@ export interface MyNetworkingState {
   matchesInProgress: number;
   matchMinutes: number;
   open: boolean;
+  /** How this event is currently matching — it changes with the size of the queue. */
+  tier: SpeedNetworkingTier;
+  /** Left over from the last round: first in line next time, and told so rather than left guessing. */
+  nextUp: boolean;
+  /** Nobody new left in the queue for this attendee; waiting alone will never resolve. */
+  metEveryone: boolean;
+  /** They have asked to be paired with someone they already met. */
+  repeatRequested: boolean;
   match?: { id: string; roomName: string; partner: { attendeeId: string; name: string; company: string; title: string }; startsAt: string; expiresAt: string; secondsLeft: number };
 }
 
 export async function getMyNetworkingState(eventId: string, attendeeId: string | undefined): Promise<MyNetworkingState> {
-  const { settings } = await runNetworkingMatcher(eventId);
+  const { settings, roundState } = await runNetworkingMatcher(eventId);
   const store = getRuntimeStore();
   const entries = await store.listSpeedNetworkingEntries(eventId);
   const queueSize = entries.filter((entry) => entry.status === "waiting").length;
   const matchesInProgress = (await store.listSpeedNetworkingMatches(eventId)).filter((match) => match.status === "active").length;
-  const base = { queueSize, matchesInProgress, matchMinutes: settings.matchMinutes, open: settings.open };
+  const base = {
+    queueSize,
+    matchesInProgress,
+    matchMinutes: settings.matchMinutes,
+    open: settings.open,
+    tier: roundState.lastTier,
+    nextUp: Boolean(attendeeId && roundState.priorityAttendeeIds.includes(attendeeId)),
+    metEveryone: Boolean(attendeeId && roundState.metEveryoneAttendeeIds.includes(attendeeId)),
+    repeatRequested: Boolean(attendeeId && roundState.repeatOptInAttendeeIds.includes(attendeeId)),
+  };
   if (!attendeeId) return { status: settings.open ? "idle" : "closed", ...base };
   const mine = entries.find((entry) => entry.attendeeId === attendeeId);
   if (!mine || mine.status === "left" || mine.status === "done") return { status: settings.open ? "idle" : "closed", ...base };
@@ -194,9 +300,9 @@ export async function findActiveMatchForRoom(eventId: string, roomName: string) 
 }
 
 export async function crewNetworkingSummary(eventId: string) {
-  const { settings } = await runNetworkingMatcher(eventId);
+  const { settings, roundState } = await runNetworkingMatcher(eventId);
   const store = getRuntimeStore();
   const entries = await store.listSpeedNetworkingEntries(eventId);
   const matches = await store.listSpeedNetworkingMatches(eventId);
-  return { settings, queueSize: entries.filter((entry) => entry.status === "waiting").length, matchesInProgress: matches.filter((match) => match.status === "active").length, matchesTotal: matches.length, waiting: entries.filter((entry) => entry.status === "waiting"), active: matches.filter((match) => match.status === "active").map((match) => ({ ...match, a: entries.find((entry) => entry.attendeeId === match.attendeeAId)?.displayName || match.attendeeAId, b: entries.find((entry) => entry.attendeeId === match.attendeeBId)?.displayName || match.attendeeBId })) };
+  return { settings, tier: roundState.lastTier, nextUpAttendeeIds: roundState.priorityAttendeeIds, metEveryoneAttendeeIds: roundState.metEveryoneAttendeeIds, queueSize: entries.filter((entry) => entry.status === "waiting").length, matchesInProgress: matches.filter((match) => match.status === "active").length, matchesTotal: matches.length, waiting: entries.filter((entry) => entry.status === "waiting"), active: matches.filter((match) => match.status === "active").map((match) => ({ ...match, a: entries.find((entry) => entry.attendeeId === match.attendeeAId)?.displayName || match.attendeeAId, b: entries.find((entry) => entry.attendeeId === match.attendeeBId)?.displayName || match.attendeeBId })) };
 }

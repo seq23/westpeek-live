@@ -25,10 +25,12 @@ export function createLiveKitAccessToken(input: {
 
   const now = Math.floor(Date.now() / 1000);
   const expiresAt = now + input.request.expiresInSeconds;
-  const identity =
-    input.request.profileId ??
-    input.request.displayName.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "") ??
-    randomUUID();
+  // The identity is the room's primary key for a person: LiveKit disconnects whoever already holds
+  // it. A slugified display name is not unique — two attendees called "Ada" displaced each other
+  // and left a video-less ghost tile in a 1:1 (16 Sep 2026) — so it is never derived from the name.
+  // Callers pass a stable per-person id (attendeeId, guestId); anything without one gets a fresh
+  // random identity, which is unique and can therefore only ever displace itself.
+  const identity = input.request.profileId?.trim() || `anon-${randomUUID()}`;
 
   const header = {
     alg: "HS256",

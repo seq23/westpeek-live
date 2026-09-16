@@ -1,5 +1,5 @@
 import { SpeedNetworkingLive } from "@/components/venue/SpeedNetworkingLive";
-import { joinSpeedNetworkingQueueAction, leaveSpeedNetworkingQueueAction, nextSpeedNetworkingMatchAction } from "@/lib/actions/networkingActions";
+import { allowRepeatSpeedNetworkingMatchAction, joinSpeedNetworkingQueueAction, leaveSpeedNetworkingQueueAction, nextSpeedNetworkingMatchAction } from "@/lib/actions/networkingActions";
 import { getCurrentAttendeeIdentity, getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
 import { getMyNetworkingState } from "@/services/speed-networking/speedNetworkingService";
 
@@ -44,7 +44,7 @@ export async function SpeedNetworkingQueuePanel({ eventId }: { eventId: string }
           <button type="submit" className="mt-4 min-h-12 rounded-full bg-slate-950 px-6 text-base font-black text-white" data-testid="networking-join">Join queue</button>
         </form>
       ) : null}
-      <SpeedNetworkingLive eventId={eventId} initial={{ ...state, registered: Boolean(identity), attendeeId: identity?.attendeeId || null }} serverJoinForm={showJoinForm} joinAction={joinSpeedNetworkingQueueAction} nextAction={nextSpeedNetworkingMatchAction} leaveAction={leaveSpeedNetworkingQueueAction} />
+      <SpeedNetworkingLive eventId={eventId} initial={{ ...state, registered: Boolean(identity), attendeeId: identity?.attendeeId || null }} serverJoinForm={showJoinForm} joinAction={joinSpeedNetworkingQueueAction} nextAction={nextSpeedNetworkingMatchAction} leaveAction={leaveSpeedNetworkingQueueAction} repeatAction={allowRepeatSpeedNetworkingMatchAction} />
     </section>
   );
 }

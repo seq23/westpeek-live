@@ -8,7 +8,8 @@ import type { LiveKitJoinRequest } from "@/types/livekitRoomUi";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
 import { getSpeakerStageState } from "@/services/guests/guestStateService";
 import { decideGuestVideoGrant } from "@/services/guests/guestVideoGrants";
-import { findActiveMatchForRoom, tokenAllowedForRoom } from "@/services/speed-networking/speedNetworkingService";
+import { findActiveMatchForRoom } from "@/services/speed-networking/speedNetworkingService";
+import { prepareSpeedNetworkingRoomForJoin } from "@/services/speed-networking/speedNetworkingRoomGuard";
 
 export async function POST(request: Request) {
   const body = (await request.json()) as Partial<LiveKitJoinRequest>;
@@ -22,6 +23,18 @@ export async function POST(request: Request) {
 
   const auth = await authorizeVideoTokenRequest({ role: body.role, eventId: body.eventId });
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 403 });
+
+  // A speed-networking roomId names the LiveKit room directly (<eventId>-net-<matchId>), so this
+  // branch has to be closed before any role-specific handling: an observer or a crew role reaching
+  // it could otherwise name ANY room in the project and be handed a token for it. Only the two
+  // attendees of that one active match ever get in, and nobody else is left in the room with them.
+  let networkingAdmission: Awaited<ReturnType<typeof prepareSpeedNetworkingRoomForJoin>> | undefined;
+  if (body.roomType === "speed_networking") {
+    const attendee = (auth as any).identity || (body.role === "attendee" ? await getCurrentAttendeeIdentity(body.eventId) : undefined);
+    const match = await findActiveMatchForRoom(body.eventId, body.roomId).catch(() => undefined);
+    networkingAdmission = await prepareSpeedNetworkingRoomForJoin({ match, roomName: body.roomId, attendeeId: attendee?.attendeeId || "", role: body.role });
+    if (!networkingAdmission.ok) return NextResponse.json({ ok: false, error: networkingAdmission.reason }, { status: 403 });
+  }
 
   let displayName = body.displayName;
   let profileId = body.profileId;
@@ -48,10 +61,9 @@ export async function POST(request: Request) {
     if (!identity) return NextResponse.json({ ok: false, error: "Registered attendee session required for attendee video token." }, { status: 403 });
     displayName = identity.displayName;
     profileId = identity.attendeeId;
-    // A speed-networking room: only the two attendees of THAT active match, camera and mic on (both opted in).
+    // A speed-networking room: already admitted above (only the two attendees of THAT active match);
+    // camera and mic on, because both opted in by joining the queue.
     if (body.roomType === "speed_networking") {
-      const match = await findActiveMatchForRoom(body.eventId, body.roomId).catch(() => undefined);
-      if (!tokenAllowedForRoom(match, body.roomId, identity.attendeeId)) return NextResponse.json({ ok: false, error: "This networking room is not yours: tokens go only to the two matched attendees while the match is active." }, { status: 403 });
       publishPermission = { canPublishAudio: true, canPublishVideo: true, canShareScreen: false, reason: "Matched for speed networking." };
     } else {
     const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
@@ -78,5 +90,5 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: error instanceof Error ? error.message : "Video provider is not ready.", providerFailure: true }, { status: 503 });
   }
 
-  return NextResponse.json({ ok: true, result, permissions: publishPermission ? { canPublishAudio: publishPermission.canPublishAudio, canPublishVideo: publishPermission.canPublishVideo, canShareScreen: publishPermission.canShareScreen } : undefined });
+  return NextResponse.json({ ok: true, result, roomOccupancy: networkingAdmission ? { capacity: 2, allowedIdentities: networkingAdmission.allowedIdentities, purged: networkingAdmission.purged, livekitReachable: networkingAdmission.livekitReachable } : undefined, permissions: publishPermission ? { canPublishAudio: publishPermission.canPublishAudio, canPublishVideo: publishPermission.canPublishVideo, canShareScreen: publishPermission.canShareScreen } : undefined });
 }

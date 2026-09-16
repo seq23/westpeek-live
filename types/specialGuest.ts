@@ -20,7 +20,7 @@ export interface SpecialGuestProfile {
   updatedAt: string;
 }
 
-export type EventGuestStateKind = "speaker_stage" | "speaker_tech_check" | "speaker_cue_deck" | "speaker_live_cue" | "producer_notes" | "sponsor_booth" | "vip_room" | "host_links" | "networking_settings" | "access_code_versions" | "vip_grant" | "vip_invites";
+export type EventGuestStateKind = "speaker_stage" | "speaker_tech_check" | "speaker_cue_deck" | "speaker_live_cue" | "producer_notes" | "sponsor_booth" | "vip_room" | "host_links" | "networking_settings" | "networking_round_state" | "access_code_versions" | "vip_grant" | "vip_invites";
 
 /** One row per standing decision or document, keyed eventId:kind[:guestId]. */
 export interface EventGuestStateRecord<T = unknown> {
