@@ -1,8 +1,10 @@
-import { ProductionCommandCenter } from "@/components/production/ProductionCommandCenter";
-import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
+import { redirect } from "next/navigation";
 
-export default async function ProducerPage({ params }: { params: Promise<{ eventId: string }> }) {
-  const resolvedParams = await params;
-  await ensureRuntimeEvent(resolvedParams.eventId);
-  return <ProductionCommandCenter eventId={resolvedParams.eventId} />;
+/**
+ * One page, one address. /producer rendered exactly what the event's own page renders, so it
+ * redirects there now; the link kept working for anyone who had it (16 Sep 2026).
+ */
+export default async function RedirectedEventPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = await params;
+  redirect(`/app/events/${eventId}`);
 }

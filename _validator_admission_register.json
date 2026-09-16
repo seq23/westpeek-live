@@ -4633,6 +4633,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:event-workspace-spine",
+      "command": "node scripts/validate_event_workspace_spine.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Every page an event has is reachable from the left spine exactly once: the filesystem walk of app/app/events/[eventId] matches lib/navigation/eventWorkspaceSpine.ts, duplicate pages are redirect stubs pointing at a page that IS in the spine, no entry is listed twice, the spine is mounted fail-soft in the event layout, and every declared readiness dot is actually measured.",
+      "whatItDoesNotProve": "Static contract; the rendering, the remembered folds and the mobile drawer are proven by tests/e2e/workspace-spine.spec.ts.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only with the event workspace.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

@@ -6,8 +6,8 @@ import { useEffect, useState, type ReactNode } from "react";
  * "what you do here", and the open/closed state remembered per section in localStorage.
  * Collapsed by default except where the console says otherwise ("Live now").
  */
-export function ConsoleSection({ id, title, count, blurb, defaultOpen = false, children }: { id: string; title: string; count?: number | string; blurb: string; defaultOpen?: boolean; children: ReactNode }) {
-  const key = `wpl-owner-console-${id}`;
+export function ConsoleSection({ id, title, count, blurb, defaultOpen = false, storagePrefix = "wpl-owner-console", children }: { id: string; title: string; count?: number | string; blurb: string; defaultOpen?: boolean; storagePrefix?: string; children: ReactNode }) {
+  const key = `${storagePrefix}-${id}`;
   const [open, setOpen] = useState(defaultOpen);
   const [hydrated, setHydrated] = useState(false);
   useEffect(() => {

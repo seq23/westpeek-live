@@ -172,16 +172,16 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
   let createdEventUrl = new RegExp(`/events/${createdEventSlug}`);
   let createdVenueUrl = new RegExp(`/venue/${createdEventSlug}/lobby`);
 
+  // The launchpad leads with the operator's own events and folds the rest (16 Sep 2026 reorg).
   const launchpad = operator.locator("body");
-  await expect(launchpad).toContainText(/Create Event in Admin Workspace/i);
-  await expect(launchpad).toContainText(/Preview Demo Venue/i);
-  await expect(launchpad).toContainText(/Crew Briefing & Instructions/i);
-  await expect(launchpad).toContainText(/Run of Show/i);
-  await expect(launchpad).toContainText(/Video Health/i);
-  await expect(launchpad).toContainText(/Crew Gate|Test Crew Login/i);
-  await expect(launchpad).not.toContainText(/Coming soon|TODO|placeholder|lorem ipsum/i);
+  await expect(operator.getByTestId("operator-launchpad")).toBeVisible();
+  await expect(launchpad).toContainText(/Your events/i);
+  await expect(launchpad).toContainText(/Run a show/i);
+  await expect(launchpad).toContainText(/Diagnostics/i);
+  await expect(launchpad).toContainText(/Demo & training/i);
+  await expect(launchpad).not.toContainText(/Coming soon|TODO|lorem ipsum/i);
 
-  await operator.getByRole("link", { name: /Create Event in Admin Workspace/i }).first().click();
+  await operator.getByRole("link", { name: /^New event$/i }).first().click();
   await expect(operator).toHaveURL(/\/app\/events\/new/);
   await assertUsefulPage(operator, /Start a Room now, or plan an event for later/i);
   await expect(operator.locator("body")).toContainText(/Basics.*Branding.*Attendee Flow.*Venue.*Agenda.*Access.*Communications.*Preview.*Publish/i);
