@@ -61,8 +61,10 @@ export async function StreamYardIngressPanel({ eventId = "event-summit" }: { eve
   const state = await getOperatorStageStreamState(eventId, "main-stage");
   const webhookUrl = await livekitWebhookUrl();
   const pollingOnly = !state.lastWebhookEvent && Boolean(state.lastHealthCheckAt);
-  const runtime = await getRuntimeStore().readSnapshot().catch(() => undefined);
-  const events = (runtime?.stageStreamEvents || []).filter((event) => event.eventId === eventId).slice(-8).reverse();
+  // Filtered at the store, newest first. Reading the whole snapshot and filtering here showed
+  // "No stage stream events recorded yet" for a runtime event whose state had already recorded
+  // generate_credentials and two webhooks (16 Sep 2026): the unfiltered read is row-capped.
+  const events = await getRuntimeStore().listStageStreamEvents(eventId, "main-stage", 8).catch(() => []);
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="streamyard-ingress-panel"><span className="sr-only">Click to Copy RTMP URL Click to Copy Stream Key LiveKit Cloudflare Stream Daily Zoom Google Meet move back up ladder owner showrunner crew logs keep StreamYard running Switch attendees to Daily</span>
       <div className="flex items-start justify-between gap-4">

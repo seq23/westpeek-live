@@ -1,6 +1,6 @@
 import { GuestRoomVideo } from "@/components/video/GuestRoomVideo";
 import { goOnStageAction } from "@/lib/actions/guestActions";
-import { getRunOfShowForEvent } from "@/lib/runtime/getRuntimeData";
+import { getEvent, getRunOfShowForEvent } from "@/lib/runtime/getRuntimeData";
 import { formatEventDate } from "@/lib/utils/format";
 import { getProducerNotes, getSpeakerCueDeck, getSpeakerLiveCue, getSpeakerStageState, getSpeakerTechCheck } from "@/services/guests/guestStateService";
 import { GREEN_ROOM_ID, type SpecialGuestProfile } from "@/types/specialGuest";
@@ -19,6 +19,7 @@ export async function SpeakerGreenRoomLive({ eventId, speaker, error }: { eventI
     getSpeakerCueDeck(eventId, speaker.guestId),
     getSpeakerLiveCue(eventId, speaker.guestId),
   ]);
+  const event = getEvent(eventId);
   const segments = getRunOfShowForEvent(eventId);
   const needle = speaker.name.toLowerCase();
   const mine = segments.filter((segment) => segment.speakerId === speaker.guestId || (needle && (segment.segmentTitle.toLowerCase().includes(needle) || segment.publicTitle.toLowerCase().includes(needle))));
@@ -64,7 +65,7 @@ export async function SpeakerGreenRoomLive({ eventId, speaker, error }: { eventI
           <ol className="mt-3 space-y-2">
             {segments.map((segment) => {
               const isMine = mine.some((item) => item.id === segment.id);
-              return <li key={segment.id} className={`rounded-2xl p-3 text-sm ${isMine ? "border border-brand-orange bg-brand-orangeSoft" : "bg-slate-50"}`} data-testid={isMine ? "speaker-slot" : undefined}><span className="font-black">{formatEventDate(segment.startAt)}</span> · {segment.publicTitle} · {segment.room}{isMine ? <span className="ml-2 rounded-full bg-brand-orange px-2 py-0.5 text-[11px] font-black uppercase text-white">You</span> : null}</li>;
+              return <li key={segment.id} className={`rounded-2xl p-3 text-sm ${isMine ? "border border-brand-orange bg-brand-orangeSoft" : "bg-slate-50"}`} data-testid={isMine ? "speaker-slot" : undefined}><span className="font-black">{formatEventDate(segment.startAt, event.timezone)}</span> · {segment.publicTitle} · {segment.room}{isMine ? <span className="ml-2 rounded-full bg-brand-orange px-2 py-0.5 text-[11px] font-black uppercase text-white">You</span> : null}</li>;
             })}
           </ol>
         ) : <p className="mt-3 text-sm text-slate-600">No run of show yet for this event. The producer builds it on the command page.</p>}

@@ -280,6 +280,13 @@ export class FileRuntimeStore implements RuntimeStore {
     return event;
   }
 
+  async listStageStreamEvents(eventId: string, stageId: string, limit: number) {
+    return this.read().stageStreamEvents
+      .filter((item: StageStreamEvent) => item.eventId === eventId && item.stageId === stageId)
+      .sort((a: StageStreamEvent, b: StageStreamEvent) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, Math.max(1, limit));
+  }
+
   async appendLiveChatMessage(message: LiveChatMessage) {
     const snapshot = this.read();
     snapshot.liveChatMessages.push(message);

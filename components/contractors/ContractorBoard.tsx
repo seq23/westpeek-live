@@ -42,7 +42,7 @@ export function EventCrewBoard({ eventId }: { eventId: string }) {
               <div className="flex items-start justify-between">
                 <div>
                   <p className="font-semibold">{contractor?.name}</p>
-                  <p className="text-sm text-slate-500">{assignment.role} · call time {formatEventDate(assignment.callTimeAt)}</p>
+                  <p className="text-sm text-slate-500">{assignment.role} · call time {formatEventDate(assignment.callTimeAt, event.timezone)}</p>
                 </div>
                 <StatusBadge status={assignment.status} tone={assignment.status === "confirmed" ? "good" : "warn"} />
               </div>
@@ -70,7 +70,7 @@ export function ContractorPortalDashboard() {
       </div>
       <SectionCard title="Your call sheet">
         <p className="text-sm text-slate-600">Role: {assignment.role}</p>
-        <p className="text-sm text-slate-600">Call time: {formatEventDate(assignment.callTimeAt)}</p>
+        <p className="text-sm text-slate-600">Call time: {formatEventDate(assignment.callTimeAt, event?.timezone)}</p>
         <p className="mt-3 rounded-xl bg-slate-50 p-3 text-sm">{assignment.sharedNotes}</p>
       </SectionCard>
       <SectionCard title="Assigned tasks">

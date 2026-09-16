@@ -25,7 +25,7 @@ export async function ProductionCommandCenter({ eventId, rosterSearch = "" }: { 
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <MetricCard label="Current segment" value={current?.publicTitle ?? "None"} note={current ? formatEventDate(current.startAt) : undefined} />
+        <MetricCard label="Current segment" value={current?.publicTitle ?? "None"} note={current ? formatEventDate(current.startAt, event.timezone) : undefined} />
         <MetricCard label="Speakers" value={`${speakers.filter((s) => s.readinessStatus === "ready").length}/${speakers.length}`} note="ready" />
         <MetricCard label="Crew confirmed" value={`${crew.filter((c) => c.status === "confirmed").length}/${crew.length}`} />
         <MetricCard label="Vendors" value={`${vendors.filter((v) => ["confirmed", "complete"].includes(v.status)).length}/${vendors.length}`} />
@@ -38,7 +38,7 @@ export async function ProductionCommandCenter({ eventId, rosterSearch = "" }: { 
               <div className="rounded-2xl border border-slate-200 p-5">
                 <div className="flex items-start justify-between gap-4">
                   <div>
-                    <p className="text-sm text-slate-500">{formatEventDate(current.startAt)} · {current.room}</p>
+                    <p className="text-sm text-slate-500">{formatEventDate(current.startAt, event.timezone)} · {current.room}</p>
                     <h2 className="mt-1 text-2xl font-semibold">{current.publicTitle}</h2>
                     <p className="mt-2 text-slate-600">{current.clientFacingDescription}</p>
                   </div>
@@ -65,7 +65,7 @@ export async function ProductionCommandCenter({ eventId, rosterSearch = "" }: { 
           <div className="space-y-3">
             {next.map((segment) => (
               <div key={segment.id} className="rounded-2xl bg-slate-50 p-4">
-                <p className="text-sm text-slate-500">{formatEventDate(segment.startAt)}</p>
+                <p className="text-sm text-slate-500">{formatEventDate(segment.startAt, event.timezone)}</p>
                 <p className="font-semibold">{segment.publicTitle}</p>
                 <p className="text-sm text-slate-600">{segment.technicalCues}</p>
               </div>

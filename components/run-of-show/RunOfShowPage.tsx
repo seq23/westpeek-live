@@ -27,7 +27,7 @@ export function RunOfShowPage({ eventId }: { eventId: string }) {
                 <div key={segment.id} className="rounded-2xl border border-slate-200 p-4">
                   <div className="flex items-start justify-between gap-4">
                     <div>
-                      <p className="text-sm text-slate-500">{formatEventDate(segment.startAt)} · {segment.durationMinutes} min · {segment.room}</p>
+                      <p className="text-sm text-slate-500">{formatEventDate(segment.startAt, event.timezone)} · {segment.durationMinutes} min · {segment.room}</p>
                       <h3 className="mt-1 text-lg font-semibold">{segment.publicTitle}</h3>
                       <p className="mt-1 text-sm text-slate-600">{segment.clientFacingDescription}</p>
                     </div>

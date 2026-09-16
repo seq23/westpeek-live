@@ -147,6 +147,8 @@ export interface RuntimeStore {
   getStageStreamState(key: string): Promise<StageStreamState | undefined>;
   setStageStreamState(key: string, state: StageStreamState): Promise<StageStreamState>;
   appendStageStreamEvent(event: StageStreamEvent): Promise<StageStreamEvent>;
+  /** Newest first, this event and stage only, capped: the fallback event log on the testing console. */
+  listStageStreamEvents(eventId: string, stageId: string, limit: number): Promise<StageStreamEvent[]>;
   appendLiveChatMessage(message: LiveChatMessage): Promise<LiveChatMessage>;
   /** Attendee listing by default (hidden messages excluded); crew surfaces pass includeHidden. */
   listLiveChatMessages(eventId: string, roomKind: string, roomId: string, options?: { includeHidden?: boolean }): Promise<LiveChatMessage[]>;
