@@ -611,6 +611,12 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return ((data || []) as Record<string, unknown>[]).map(mapContact);
   }
 
+  async probeContactsArchiveColumn() {
+    const { error } = await this.client.from("contacts").select("archived_at").limit(1);
+    if (error) fail(`contacts.archived_at read: ${error.message} — apply supabase/migrations/20260916190000_contact_archive.sql`);
+    return { ok: true as const };
+  }
+
   async upsertSpeedNetworkingEntry(entry: SpeedNetworkingQueueEntry) {
     const { error } = await this.client.from("networking_queue_entries").upsert({ id: entry.id, event_id: entry.eventId, attendee_id: entry.attendeeId, display_name: entry.displayName, company: entry.company, title: entry.title, status: entry.status, joined_at: entry.joinedAt, matched_at: entry.matchedAt ?? null, match_id: entry.matchId ?? null, matches_completed: entry.matchesCompleted, updated_at: entry.updatedAt }, { onConflict: "id" });
     if (error) failOrSchemaMissing("networking_queue_entries", error);

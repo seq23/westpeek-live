@@ -28,6 +28,10 @@ export async function probeCrewPageReads(): Promise<CrewPageReadsProbe> {
     ["stage_stream_events", () => store.listStageStreamEvents(event.id, "main-stage", 3)],
     ["networking_queue_entries", () => store.listSpeedNetworkingEntries(event.id)],
     ["networking_queue_matches", () => store.listSpeedNetworkingMatches(event.id)],
+    // contacts.archived_at (migration 0030): a COLUMN, not a table. A read of just that column
+    // fails by name when the Supabase mirror has not been applied — which is how "Archive test
+    // rows" came to press against a column that was not there.
+    ["contacts_archived_at", () => store.probeContactsArchiveColumn()],
   ];
   const results: CrewPageReadsProbe["reads"] = [];
   for (const [name, read] of reads) {

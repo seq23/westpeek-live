@@ -102,6 +102,30 @@ requireTokens("scripts/post_deploy_smoke_test.js", ["/api/runtime/health"]);
   if (names.length < 20) failures.push(`only ${names.length} migrations examined; expected the full history`);
 }
 
+// 8. Every migration from 0025 on must have a byte-identical mirror in supabase/migrations: the
+//    Supabase GitHub integration applies THAT directory on merge to main, so a canonical file
+//    without a mirror never reaches production. 0030 (contacts.archived_at) shipped without one on
+//    16 Sep 2026 and "Archive test rows" silently no-opped against the live database.
+{
+  const canonicalDir = "db/migrations";
+  const names = fs.existsSync(canonicalDir) ? fs.readdirSync(canonicalDir).filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort() : [];
+  const mirrorFiles = fs.existsSync(mirrorDir) ? fs.readdirSync(mirrorDir).filter((name) => name.endsWith(".sql")) : [];
+  let mirrored = 0;
+  for (const name of names) {
+    if (Number(name.slice(0, 4)) < 25) continue;
+    const suffix = name.replace(/^\d{4}_/, "");
+    const mirror = mirrorFiles.find((file) => file.endsWith(`_${suffix}`));
+    examined += 1;
+    if (!mirror) {
+      failures.push(`${canonicalDir}/${name} has no mirror in ${mirrorDir}/*_${suffix}; the Supabase integration applies the mirror directory, so this migration would never run in production`);
+      continue;
+    }
+    mirrored += 1;
+    if (read(path.join(mirrorDir, mirror)) !== read(path.join(canonicalDir, name))) failures.push(`${mirrorDir}/${mirror} drifted from ${canonicalDir}/${name}; copy the canonical file over it`);
+  }
+  if (!mirrored) failures.push("no migration mirrors examined; the parity rule would pass on an empty loop");
+}
+
 if (examined === 0) failures.push("validate_runtime_events_contract examined zero files");
 if (failures.length) {
   console.error("validate_runtime_events_contract: FAIL");
