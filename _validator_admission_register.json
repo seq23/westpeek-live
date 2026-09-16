@@ -4971,6 +4971,27 @@
       "simplificationDisposition": "KEEP"
     },
     {
+      "script": "validate:venue-chrome-stack",
+      "command": "node scripts/validate_venue_chrome_stack.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "The venue chrome is one stack: exactly one element in the event chrome is sticky and it is the shared EventChromeStack, the command bar sits above the venue nav as its sub-bar, the stream credentials scroll below the pin instead of inside it, the event name and the live claim are each owned by one component, the nav carries an overflow affordance rather than clipping in silence, and every control on the bar is sized from the one chip recipe that keeps the stack under the 96px phone budget.",
+      "whatItDoesNotProve": "Static contract only. The measured heights, the absence of overlap at a given viewport and the menu sheets landing on screen are proven in the browser by tests/e2e/venue-chrome-stack.spec.ts.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only if the venue chrome is replaced by a single component that cannot regrow a second pinned bar.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
+    },
+    {
       "script": "validate:contractors-and-vendors-real",
       "command": "node scripts/validate_contractors_and_vendors_real.js",
       "status": "ACTIVE",

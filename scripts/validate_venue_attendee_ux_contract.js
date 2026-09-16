@@ -86,7 +86,11 @@ for (const guard of ['activity.boothCount > 0', 'activity.breakoutsOpen > 0', 'a
   if (!activity.includes(guard)) fail(`navMarkerFor must gate its marker on ${guard}`);
 }
 examined += 1;
-if (!read("components/venue/VenuePageShell.tsx").includes("getVenueActivity(model).catch(() => EMPTY_VENUE_ACTIVITY)")) fail("The shell must read venue activity fail-soft: a dead read costs the markers, never the page.");
+// The activity read moved to the per-request chrome cache when the command bar and the nav were
+// put into one sticky stack (work/venue-chrome). Same guarantee, one owner: the layout renders the
+// nav and the shell reads the same cached answer, and a dead read still costs the markers only.
+if (!read("services/venue/venueChromeData.ts").includes("getVenueActivity(model).catch(() => EMPTY_VENUE_ACTIVITY)")) fail("The chrome data read must take venue activity fail-soft: a dead read costs the markers, never the page.");
+if (!read("components/venue/VenuePageShell.tsx").includes("venueChromeData(model.eventId)")) fail("The shell must reach venue activity through the one cached chrome read, or the probe runs twice per page.");
 
 // ---- 4. the run of show opens without leaving the page ------------------------------------------
 examined += 1;
