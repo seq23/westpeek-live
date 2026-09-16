@@ -400,8 +400,8 @@ export async function getRuntimeSchemaStatus(): Promise<RuntimeSchemaStatus> {
     ["special_guest_profiles", () => store.listSpecialGuestProfiles("__schema_probe__")],
     ["event_guest_states", () => store.listEventGuestStates("__schema_probe__")],
     // Migration 0027: speed networking queue and matches.
-    ["speed_networking_entries", () => store.listSpeedNetworkingEntries("__schema_probe__")],
-    ["speed_networking_matches", () => store.listSpeedNetworkingMatches("__schema_probe__")],
+    ["networking_queue_entries", () => store.listSpeedNetworkingEntries("__schema_probe__")],
+    ["networking_queue_matches", () => store.listSpeedNetworkingMatches("__schema_probe__")],
   ];
   for (const [table, probe] of probes) {
     try {

@@ -109,6 +109,6 @@ export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
   "live_chat_messages.moderated_by": LIVE_CHAT_MODERATION_MIGRATION_FILE,
   special_guest_profiles: SPECIAL_GUEST_MIGRATION_FILE,
   event_guest_states: SPECIAL_GUEST_MIGRATION_FILE,
-  speed_networking_entries: SPEED_NETWORKING_MIGRATION_FILE,
-  speed_networking_matches: SPEED_NETWORKING_MIGRATION_FILE,
+  networking_queue_entries: SPEED_NETWORKING_MIGRATION_FILE,
+  networking_queue_matches: SPEED_NETWORKING_MIGRATION_FILE,
 };
