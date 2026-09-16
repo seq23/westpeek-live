@@ -64,8 +64,16 @@ export async function archiveTestPeople(actorLabel: string) {
   const archivedContacts: string[] = [];
   for (const contact of contacts) {
     if (!contactIsTestRow(contact, context)) continue;
-    await store.upsertContact({ ...contact, archivedAt: now, updatedAt: now }).catch(() => undefined);
+    // No swallowing: if contacts.archived_at is missing (migration 0030 not applied) the owner must
+    // see it, not press a button that does nothing.
+    await store.upsertContact({ ...contact, archivedAt: now, updatedAt: now });
     archivedContacts.push(contact.email);
+  }
+  // Read back: an upsert that "succeeded" against a table without the column archives nothing.
+  const readBack = await listContacts(true).catch(() => [] as ContactRecord[]);
+  const stillActive = archivedContacts.filter((email) => readBack.some((row) => row.email === email && !row.archivedAt));
+  if (archivedContacts.length && stillActive.length === archivedContacts.length) {
+    throw new Error("The archive did not stick: contacts.archived_at is missing. Apply db/migrations/0030_contact_archive.sql (mirrored at supabase/migrations/20260916190000_contact_archive.sql) and try again.");
   }
   // The hash is deterministic, so every attendee row for an archived contact is reachable without
   // scanning: archive the test ones, and never touch a row that belongs to a real event.

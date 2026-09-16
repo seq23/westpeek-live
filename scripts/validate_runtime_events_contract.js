@@ -102,6 +102,10 @@ requireTokens("scripts/post_deploy_smoke_test.js", ["/api/runtime/health"]);
   if (names.length < 20) failures.push(`only ${names.length} migrations examined; expected the full history`);
 }
 
+// 8. Mirror parity for every migration lives in scripts/validate_migration_mirror_parity.js
+//    (generic, floor 0024, hard-fails on an empty loop). This file keeps only the 0024 identity
+//    check above, because the runtime-events tables are what it is about.
+
 if (examined === 0) failures.push("validate_runtime_events_contract examined zero files");
 if (failures.length) {
   console.error("validate_runtime_events_contract: FAIL");

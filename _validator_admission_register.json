@@ -4612,6 +4612,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:migration-mirror-parity",
+      "command": "node scripts/validate_migration_mirror_parity.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Every migration from 0024 on (the floor is a named constant: 0001-0023 predate the Supabase GitHub integration) has exactly one byte-identical mirror in supabase/migrations, and the mirrors sort in the same order as the canonical files. The integration applies only that directory, so a canonical migration without a mirror never runs in production - which is how 0030 (contacts.archived_at) shipped unapplied on 16 Sep 2026. Hard-fails when it examines zero migrations.",
+      "whatItDoesNotProve": "Static parity; whether the mirror has actually been applied to the live database is read from /api/runtime/health (contacts_archived_at probe).",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only if the Supabase GitHub integration stops applying supabase/migrations.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

@@ -36,17 +36,35 @@ const crewPage = read("app/production-access/crew/page.tsx");
 if (!crewPage.includes('name="crewRole"') || !crewPage.includes('technical_director')) fail("Crew access must allow explicit crew role selection so capability-gated actions are reachable.");
 const accessResolver = read("services/access/eventAccessResolver.ts");
 if (!accessResolver.includes("crewRole") || !accessResolver.includes("role: crewRole")) fail("Crew resolver must preserve selected crew role in the access payload.");
+// The mock-provider guard lives where the provider is chosen (it moved out of lib/env.ts when the
+// registry was introduced; this validator went on asserting the old home and had been failing —
+// and therefore unwired — ever since. Assert the guard where it actually is, and keep lib/env.ts
+// defaulting production to a real provider.
+const registry = read("services/video/videoProviderRegistry.ts");
+if (!registry.includes("ALLOW_MOCK_VIDEO_PROVIDER_IN_PRODUCTION") || !registry.includes("VIDEO_PROVIDER=mock is not allowed in production")) fail("Production must refuse VIDEO_PROVIDER=mock unless ALLOW_MOCK_VIDEO_PROVIDER_IN_PRODUCTION=true (guard belongs in services/video/videoProviderRegistry.ts).");
 const env = read("lib/env.ts");
-if (!env.includes("ALLOW_MOCK_VIDEO_PROVIDER_IN_PRODUCTION") || !env.includes("VIDEO_PROVIDER=mock is not allowed in production")) fail("Production env must fail loudly when VIDEO_PROVIDER=mock without explicit override.");
+if (!env.includes('isProduction ? "livekit" : "mock"')) fail("lib/env.ts must default production to a real video provider.");
 
 const smoke = read("scripts/post_deploy_smoke_test.js");
 if (smoke.includes("visible404") || smoke.includes("status < 500")) fail("Smoke test must not accept broad non-500 statuses.");
-for (const forbidden of ["TODO", "placeholder", "coming soon"]){
+// Anti-theater: no unfinished copy shipped to a user. The old rule matched the bare word
+// "placeholder" anywhere in a component, which flagged seventeen honest `placeholder=` input hints,
+// Tailwind `placeholder:` classes, LiveKit's `withPlaceholder` prop and a comment saying NO
+// PLACEHOLDERS — that noise is why this validator sat unwired and failing. What is forbidden is
+// unfinished COPY: a TODO, or filler text a viewer can read.
+{
+  const forbiddenCopy = ["todo", "coming soon", "lorem ipsum", "placeholder text", "placeholder copy", "tbd —", "to be decided"];
   const offenders = [];
   for (const file of fs.readdirSync("components", { recursive: true }).filter((name) => /\.(tsx|ts)$/.test(name))) {
-    const body = read(`components/${file}`);
-    if (body.toLowerCase().replace(/withplaceholder/g, "").includes(forbidden.toLowerCase())) offenders.push(`components/${file}`);
+    const body = read(`components/${file}`)
+      .split("\n")
+      .map((line) => line.replace(/\/\/.*$/, ""))
+      .join("\n")
+      .replace(/\/\*[\s\S]*?\*\//g, "")
+      .toLowerCase();
+    const hit = forbiddenCopy.find((word) => body.includes(word));
+    if (hit) offenders.push(`components/${file} (${hit})`);
   }
-  if (offenders.length) fail(`Anti-theater keyword ${forbidden} found in ${offenders.join(", ")}`);
+  if (offenders.length) fail(`Anti-theater: unfinished copy in ${offenders.join(", ")}`);
 }
 console.log("validate_v6_hard_fail: PASS");

@@ -436,6 +436,11 @@ export class FileRuntimeStore implements RuntimeStore {
     return this.read().contacts.slice().sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
   }
 
+  async probeContactsArchiveColumn() {
+    // The file store has no schema: the field is part of the record shape.
+    return { ok: true as const };
+  }
+
   async upsertSpeedNetworkingEntry(entry: SpeedNetworkingQueueEntry) {
     const snapshot = this.read();
     snapshot.speedNetworkingEntries = snapshot.speedNetworkingEntries.filter((item) => !(item.eventId === entry.eventId && item.attendeeId === entry.attendeeId));

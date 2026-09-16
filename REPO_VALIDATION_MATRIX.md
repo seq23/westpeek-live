@@ -264,3 +264,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: the owner asked for one place to look codes up, replacing the v2 manual that printed them in a document. The Owner Console's "Access codes" fold is owner-only (`components/owner/AccessCodesVault.tsx` refuses any other actor), lists every code for every event masked until Reveal with Copy, "Copy all codes for this event", a search across events by code or name, and Rotate (confirmed, and it warns that every link and session handed out with the old code stops working). Reveal and Copy write an audit row (`access_code_revealed` / `access_code_copied`) that never carries the value. The four global gates render SET / NOT SET with `npx wrangler secret put …`; the validator walks `app/`, `components/` and `lib/actions` and fails if any file renders the VALUE of `OWNER_MASTER_ACCESS_PASSWORD`, `OPERATOR_LAUNCHPAD_PASSWORD` or `CREW_ACCESS_PASSWORD`.
 - Proof behind it: `tests/e2e/access-codes-vault.spec.ts` (operator refused, reveal, search by a handed-over code, rotate → the old code fails the gate, and the response body never contains a gate password).
+
+## Migration mirror parity — 2026-09-16
+
+- Validator: `npm run validate:migration-mirror-parity`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: the Supabase GitHub integration applies `supabase/migrations/` only. Every mirror check in the repo used to name one migration by hand, so a new migration with no mirror passed everything — which is how `0030_contact_archive.sql` shipped unapplied and "Archive test rows" silently did nothing. From `MIRROR_FLOOR = 24` on (0001–0023 predate the integration), every canonical migration must have exactly one byte-identical mirror, and the mirror filenames must sort in canonical order. Hard-fails on zero migrations examined.
+- Proof behind it: negative proof on 16 Sep 2026 (removing the 0030 mirror fails by name); `tests/unit/migrationMirrorAndWatchdog.test.ts`.

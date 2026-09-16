@@ -148,6 +148,8 @@ export interface RuntimeStore {
   upsertContact(contact: ContactRecord): Promise<ContactRecord>;
   getContact(email: string): Promise<ContactRecord | undefined>;
   listContacts(): Promise<ContactRecord[]>;
+  /** Reads contacts.archived_at alone (migration 0030). Throws when the column is missing, so the health probe names it. */
+  probeContactsArchiveColumn(): Promise<{ ok: true }>;
   upsertAttendeeSession(session: AttendeeSession): Promise<AttendeeSession>;
   getAttendeeSession(eventId: string, sessionId: string): Promise<AttendeeSession | undefined>;
   upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent): Promise<AttendeeAgendaIntent>;
