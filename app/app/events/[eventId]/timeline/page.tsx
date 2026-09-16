@@ -1,8 +1,10 @@
-import { TaskBoard } from "@/components/tasks/TaskBoard";
-import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
+import { redirect } from "next/navigation";
 
-export default async function TimelineRoute({ params }: { params: Promise<{ eventId: string }> }) {
-  const resolvedParams = await params;
-  await ensureRuntimeEvent(resolvedParams.eventId);
-  return <TaskBoard eventId={resolvedParams.eventId} />;
+/**
+ * One page, one address. /timeline rendered exactly what tasks renders, so it
+ * redirects there now; the link kept working for anyone who had it (16 Sep 2026).
+ */
+export default async function RedirectedEventPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = await params;
+  redirect(`/app/events/${eventId}/tasks`);
 }

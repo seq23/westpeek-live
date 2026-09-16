@@ -1,5 +1,10 @@
-import { ApprovalQueue } from "@/components/approvals/ApprovalQueue";
-import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
-export default async function ApprovalsPage({ params }: { params: Promise<{ eventId: string }> }) {
-  const resolvedParams = await params;
-  await ensureRuntimeEvent(resolvedParams.eventId); return <ApprovalQueue eventId={resolvedParams.eventId} />; }
+import { redirect } from "next/navigation";
+
+/**
+ * One page, one address. /approvals rendered exactly what approval-queue renders, so it
+ * redirects there now; the link kept working for anyone who had it (16 Sep 2026).
+ */
+export default async function RedirectedEventPage({ params }: { params: Promise<{ eventId: string }> }) {
+  const { eventId } = await params;
+  redirect(`/app/events/${eventId}/approval-queue`);
+}

@@ -271,3 +271,11 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: the Supabase GitHub integration applies `supabase/migrations/` only. Every mirror check in the repo used to name one migration by hand, so a new migration with no mirror passed everything — which is how `0030_contact_archive.sql` shipped unapplied and "Archive test rows" silently did nothing. From `MIRROR_FLOOR = 24` on (0001–0023 predate the integration), every canonical migration must have exactly one byte-identical mirror, and the mirror filenames must sort in canonical order. Hard-fails on zero migrations examined.
 - Proof behind it: negative proof on 16 Sep 2026 (removing the 0030 mirror fails by name); `tests/unit/migrationMirrorAndWatchdog.test.ts`.
+
+## Production workspace spine — 2026-09-16
+
+- Validators: `npm run validate:event-workspace-spine`, `npm run validate:v7-operator-launchpad`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: the operator launchpad leads with the operator's real events and one collapsible section per job (Your events / Run a show / Set up an event / People & data / Diagnostics — exactly two cards / Demo & training, collapsed by default), with no two cards sharing an href and no hard-coded demo event id. Every event page is reachable from the left spine exactly once (`lib/navigation/eventWorkspaceSpine.ts` versus a filesystem walk), the pages that existed twice (`/producer`, `/timeline`, `/approvals`) are redirect stubs, readiness dots exist only where the store can really answer (speakers named, sessions planned, published), and the spine is mounted fail-soft in the event layout with a mobile drawer.
+- Note: `validate_v7_operator_launchpad` previously asserted the page's exact card titles and demo links — client-facing prose that froze the launchpad in the shape the owner asked us to fix. It now asserts structure and behaviour.
+- Proof behind it: `tests/e2e/workspace-spine.spec.ts`, `tests/unit/eventWorkspaceSpine.test.ts`.
