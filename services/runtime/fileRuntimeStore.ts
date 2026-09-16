@@ -8,6 +8,7 @@ import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, Sponsor
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
+import type { EventAssetRecord } from "@/types/eventAssets";
 import type { ContactRecord } from "@/types/attendeeRegistration";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
@@ -434,6 +435,30 @@ export class FileRuntimeStore implements RuntimeStore {
 
   async listContacts() {
     return this.read().contacts.slice().sort((a, b) => b.lastSeenAt.localeCompare(a.lastSeenAt));
+  }
+
+  async upsertEventAsset(asset: EventAssetRecord) {
+    const snapshot = this.read();
+    snapshot.eventAssets = (snapshot.eventAssets || []).filter((item: EventAssetRecord) => item.id !== asset.id);
+    snapshot.eventAssets.push(asset);
+    this.write(snapshot);
+    return asset;
+  }
+
+  async getEventAsset(id: string) {
+    return (this.read().eventAssets || []).find((item: EventAssetRecord) => item.id === id);
+  }
+
+  async listEventAssets(eventId: string, includeArchived = false) {
+    return (this.read().eventAssets || [])
+      .filter((item: EventAssetRecord) => item.eventId === eventId && (includeArchived || !item.archivedAt))
+      .sort((a: EventAssetRecord, b: EventAssetRecord) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async listAllEventAssets(includeArchived = false) {
+    return (this.read().eventAssets || [])
+      .filter((item: EventAssetRecord) => includeArchived || !item.archivedAt)
+      .sort((a: EventAssetRecord, b: EventAssetRecord) => b.createdAt.localeCompare(a.createdAt));
   }
 
   async probeContactsArchiveColumn() {

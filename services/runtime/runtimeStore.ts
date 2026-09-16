@@ -4,6 +4,7 @@ import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
 import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
+import type { EventAssetRecord } from "@/types/eventAssets";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
@@ -116,6 +117,7 @@ export interface V6RuntimeSnapshot {
   speedNetworkingEntries: SpeedNetworkingQueueEntry[];
   speedNetworkingMatches: SpeedNetworkingMatchRecord[];
   contacts: ContactRecord[];
+  eventAssets: EventAssetRecord[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
@@ -150,6 +152,11 @@ export interface RuntimeStore {
   listContacts(): Promise<ContactRecord[]>;
   /** Reads contacts.archived_at alone (migration 0030). Throws when the column is missing, so the health probe names it. */
   probeContactsArchiveColumn(): Promise<{ ok: true }>;
+  // Event assets (migration 0031): a real file in Supabase Storage, or a pasted link.
+  upsertEventAsset(asset: EventAssetRecord): Promise<EventAssetRecord>;
+  getEventAsset(id: string): Promise<EventAssetRecord | undefined>;
+  listEventAssets(eventId: string, includeArchived?: boolean): Promise<EventAssetRecord[]>;
+  listAllEventAssets(includeArchived?: boolean): Promise<EventAssetRecord[]>;
   upsertAttendeeSession(session: AttendeeSession): Promise<AttendeeSession>;
   getAttendeeSession(eventId: string, sessionId: string): Promise<AttendeeSession | undefined>;
   upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent): Promise<AttendeeAgendaIntent>;
@@ -232,6 +239,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     speedNetworkingEntries: [],
     speedNetworkingMatches: [],
     contacts: [],
+    eventAssets: [],
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],

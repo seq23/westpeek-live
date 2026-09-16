@@ -27,6 +27,8 @@ const EXPECTED: Record<CrewAction, V4CrewRole[]> = {
   moderate_chat: ["executive_producer", "producer", "show_caller", "moderator"],
   manage_stage_access: ["executive_producer", "producer", "show_caller", "moderator"],
   manage_cue_cards: ["executive_producer", "producer", "show_caller"],
+  // The asset library: the people who run the event, plus the VA who prepares it.
+  manage_assets: ["executive_producer", "producer", "va"],
   advance_run_of_show: ["executive_producer", "producer", "show_caller"],
   manage_host: ["executive_producer"],
   manage_access_codes: ["executive_producer", "producer"],

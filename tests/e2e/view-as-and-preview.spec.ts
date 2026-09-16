@@ -43,7 +43,8 @@ async function ownerPage(browser: Browser) {
   await gotoAndAssert(page, "/production-access/owner");
   await page.getByLabel(/owner master password/i).fill(process.env.E2E_OWNER_PASSWORD || process.env.OWNER_MASTER_ACCESS_PASSWORD || requiredDay1Default("OWNER_MASTER_ACCESS_PASSWORD"));
   await page.getByRole("button", { name: /enter owner workspace/i }).click();
-  await expect(page).toHaveURL(/\/app$/);
+  // The owner gate lands on the Owner Console since #36.
+  await expect(page).toHaveURL(/\/app\/owner$/);
   return { context, page };
 }
 
