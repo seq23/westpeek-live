@@ -131,15 +131,91 @@ export async function provisionStreamYardLiveKitIngress(input: { eventId: string
     }
 
     await ensureLiveKitRoom(livekit.livekitUrl, token, roomName);
-    const ingress = await createLiveKitRtmpIngress(livekit.livekitUrl, token, { eventId: input.eventId, stageId, roomName });
+    let ingress: LiveKitIngressInfo;
+    try {
+      ingress = await createLiveKitRtmpIngress(livekit.livekitUrl, token, { eventId: input.eventId, stageId, roomName });
+    } catch (error) {
+      // LIVEKIT CAPS THE NUMBER OF INGRESS OBJECTS ON THE PROJECT. On 16 Sep 2026 a fresh Room could
+      // not get credentials: every earlier event — the demos, an archived throwaway, a planned draft —
+      // still held its ingress, because nothing ever deleted one. Reclaim what no live show is using
+      // and try once more; the console shows the reason if that is still not enough.
+      if (!/429|resource_exhausted|ingress object limit/i.test(String((error as Error)?.message))) throw error;
+      const reclaimed = await reclaimStaleIngresses(livekit.livekitUrl, token, { keepRoomName: roomName });
+      if (reclaimed.deleted.length === 0) throw new Error(`${(error as Error).message} — nothing stale to reclaim: every ingress belongs to a live or upcoming event.`);
+      ingress = await createLiveKitRtmpIngress(livekit.livekitUrl, token, { eventId: input.eventId, stageId, roomName });
+    }
     if (!ingress.ingress_id || !ingress.url || !ingress.stream_key) throw new Error("LiveKit did not return ingress_id, url, and stream_key.");
     const updated = await applyStageStreamSignal({ eventId: input.eventId, stageId, signal: "generate_credentials", reason: "LiveKit RTMP ingress created for StreamYard production." });
-    const state = { ...updated, livekitRoomName: roomName, livekitIngressId: ingress.ingress_id, livekitIngressUrl: ingress.url, livekitStreamKey: ingress.stream_key, updatedAt: new Date().toISOString() };
+    const state = { ...updated, lastProvisionError: undefined, livekitRoomName: roomName, livekitIngressId: ingress.ingress_id, livekitIngressUrl: ingress.url, livekitStreamKey: ingress.stream_key, updatedAt: new Date().toISOString() };
     await getRuntimeStore().setStageStreamState(stageStreamKey(input.eventId, stageId), state);
     return { ok: true, eventId: input.eventId, stageId, roomName, ingressId: ingress.ingress_id, rtmpUrl: ingress.url, streamKey: ingress.stream_key, status: "READY_FOR_STREAMYARD", message: "Ready for StreamYard Connection. Paste the RTMP URL and Stream Key into StreamYard Custom RTMP." };
   } catch (error) {
-    return { ok: false, eventId: input.eventId, stageId, roomName, status: "ERROR_SAFE", message: error instanceof Error ? error.message : "LiveKit ingress provisioning failed safely." };
+    const message = error instanceof Error ? error.message : "LiveKit ingress provisioning failed safely.";
+    try {
+      const failed = { ...(await getOrCreateStageStreamState(input.eventId, stageId)), lastProvisionError: message, updatedAt: new Date().toISOString() };
+      await getRuntimeStore().setStageStreamState(stageStreamKey(input.eventId, stageId), failed);
+    } catch {
+      // the message still returns to the caller
+    }
+    return { ok: false, eventId: input.eventId, stageId, roomName, status: "ERROR_SAFE", message };
   }
+}
+
+interface LiveKitIngressListed extends LiveKitIngressInfo { name?: string }
+
+/** Which runtime events may keep their ingress: anything that is live or about to be. */
+const KEEP_STATUSES = new Set(["live", "registration_open", "pre_event", "published"]);
+
+/**
+ * Delete every ingress that no live or upcoming event needs: ended, archived and draft runtime
+ * events, seed demos, and rooms nothing in the store knows about. An ingress that is publishing
+ * right now is never touched, whatever its event says. Returns what went, for the log.
+ */
+export async function reclaimStaleIngresses(livekitUrl: string, token: string, input: { keepRoomName?: string } = {}): Promise<{ deleted: string[]; kept: string[] }> {
+  const listed = await livekitTwirp<{ items?: LiveKitIngressListed[]; ingress?: LiveKitIngressListed[] }>({ livekitUrl, token, method: "Ingress/ListIngress", body: {} });
+  const items = listed.items || listed.ingress || [];
+  const events = await getRuntimeStore().listRuntimeEvents().catch(() => []);
+  const statusByRoom = new Map<string, string>();
+  for (const event of events) statusByRoom.set(normalizeLiveKitRoomName(event.id, "main-stage"), event.status);
+  const deleted: string[] = [];
+  const kept: string[] = [];
+  for (const item of items) {
+    if (!item.ingress_id) continue;
+    const room = item.room_name || "";
+    const publishing = PUBLISHING_STATES.has(String(item.state?.status ?? ""));
+    const status = statusByRoom.get(room);
+    const keep = publishing || room === input.keepRoomName || (status !== undefined && KEEP_STATUSES.has(status));
+    if (keep) { kept.push(item.ingress_id); continue; }
+    try {
+      await livekitTwirp<unknown>({ livekitUrl, token, method: "Ingress/DeleteIngress", body: { ingress_id: item.ingress_id } });
+      deleted.push(item.ingress_id);
+    } catch {
+      kept.push(item.ingress_id);
+    }
+  }
+  return { deleted, kept };
+}
+
+/**
+ * Give an event's ingress back when the show is over or the event is put away, and forget the
+ * credentials so a Restore mints fresh ones. Safe to call when there is nothing to release.
+ */
+export async function releaseIngressForEvent(eventId: string, stageId = "main-stage"): Promise<{ released: boolean; reason: string }> {
+  const state = await getOrCreateStageStreamState(eventId, stageId);
+  if (!state.livekitIngressId) return { released: false, reason: "no ingress on record" };
+  const livekit = getLiveKitEnv();
+  if (!livekit.livekitUrl || !livekit.livekitApiKey || !livekit.livekitApiSecret) return { released: false, reason: "LiveKit credentials missing" };
+  const roomName = normalizeLiveKitRoomName(eventId, stageId);
+  try {
+    const token = createLiveKitServerToken({ apiKey: livekit.livekitApiKey, apiSecret: livekit.livekitApiSecret, roomName });
+    await livekitTwirp<unknown>({ livekitUrl: livekit.livekitUrl, token, method: "Ingress/DeleteIngress", body: { ingress_id: state.livekitIngressId } });
+  } catch (error) {
+    // An ingress LiveKit no longer has is already released; anything else is reported, not hidden.
+    if (!/not_found|404|does not exist/i.test(String((error as Error)?.message))) return { released: false, reason: (error as Error).message };
+  }
+  const cleared = { ...state, livekitIngressId: undefined, livekitIngressUrl: undefined, livekitStreamKey: undefined, lastProvisionError: undefined, updatedAt: new Date().toISOString() };
+  await getRuntimeStore().setStageStreamState(stageStreamKey(eventId, stageId), cleared);
+  return { released: true, reason: "ingress deleted and credentials forgotten" };
 }
 
 

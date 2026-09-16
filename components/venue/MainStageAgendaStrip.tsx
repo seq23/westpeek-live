@@ -1,3 +1,4 @@
+import { formatSessionWindow } from "@/lib/utils/format";
 import type { VirtualVenueSession } from "@/types/virtualVenue";
 
 function labelFor(session: VirtualVenueSession) {
@@ -21,7 +22,7 @@ export function MainStageAgendaStrip({ sessions, eventId }: { sessions: VirtualV
           <a key={session.id} href={session.roomHref} className="min-w-[16rem] rounded-2xl border border-slate-200 bg-slate-50 p-4 transition hover:border-brand-orange hover:bg-white">
             <span className={`inline-flex rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-[0.16em] ${session.status === "live" ? "bg-brand-orange text-white" : session.status === "completed" ? "bg-slate-200 text-slate-600" : "bg-white text-slate-700"}`}>{labelFor(session)}</span>
             <p className="mt-3 text-sm font-black text-slate-950">{session.title}</p>
-            <p className="mt-1 text-xs text-slate-500">{session.startsAt || "Time TBA"} {session.endsAt ? `– ${session.endsAt}` : ""}</p>
+            <p className="mt-1 text-xs text-slate-500">{formatSessionWindow(session.startsAt, session.endsAt)}</p>
           </a>
         ))}
       </div>

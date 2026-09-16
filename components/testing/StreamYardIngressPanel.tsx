@@ -95,6 +95,7 @@ export async function StreamYardIngressPanel({ eventId = "event-summit" }: { eve
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-black">Backend alert / recommendation</p>
           <p className="mt-1">{state.fallbackRecommendation || "Primary path healthy. Keep all fallback providers warm."}</p>
+          {state.lastProvisionError ? <p className="mt-2 rounded-xl border border-red-200 bg-red-50 p-3 text-sm font-bold text-red-800" data-testid="ingress-provision-error">LiveKit refused to mint credentials: {state.lastProvisionError}</p> : null}
           <p className="mt-2 font-bold">Current reason: {state.fallbackReason || "No active fallback reason."}</p>
         </div>
       </div>
