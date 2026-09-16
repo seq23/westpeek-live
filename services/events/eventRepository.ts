@@ -1,3 +1,4 @@
+import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { findEventIndexRecord, getAttendeeConfig, getEventConfig, getEventConfigPackage, getEventIndex } from "@/services/events/eventConfigRepository";
 import { createAuditLog } from "@/services/audit";
@@ -291,6 +292,8 @@ export async function archiveEventRecord(id: string, actor: WorkspaceActor) {
   if (event.status === "archived") return event;
   const updated: RuntimeEventRecord = { ...event, status: "archived", statusBeforeArchive: event.status, archivedAt: new Date().toISOString(), updatedAt: new Date().toISOString() };
   await getRuntimeStore().upsertRuntimeEvent(updated);
+  // A put-away event gives its LiveKit ingress back; Restore mints a fresh one on demand.
+  await releaseIngressForEvent(updated.id).catch(() => undefined);
   await createAuditLog({ agencyId: "west-peek", clientId: updated.clientId, eventId: updated.id, actorUserId: actor.id, actorRole: actor.role, action: "event_archived", resourceType: "event", resourceId: updated.id, visibility: "internal_agency" }).catch(() => undefined);
   return updated;
 }

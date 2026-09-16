@@ -1,3 +1,4 @@
+import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 import { findEventRecord, setEventStatus } from "@/services/events/eventRepository";
 import { applyStageStreamSignal } from "@/services/video/stageStreamStateService";
@@ -21,6 +22,8 @@ function actorFor(role: "owner" | "operator" | "crew"): WorkspaceActor {
 export async function endShowForEvent(input: { eventId: string; stageId?: string; actorRole: "owner" | "operator" | "crew" }): Promise<EndShowOutcome> {
   const stageId = input.stageId || "main-stage";
   await applyStageStreamSignal({ eventId: input.eventId, stageId, signal: "operator_mark_show_ended", reason: `${input.actorRole} ended the show. A feed that stops now is the end of the show, not a dropped feed.` });
+  // The ingress goes back to LiveKit with the show: the project caps how many exist (16 Sep 2026).
+  await releaseIngressForEvent(input.eventId, stageId).catch(() => undefined);
   const event = await findEventRecord(input.eventId).catch(() => undefined);
   if (!event || event.source === "seed") return { stage: "ENDED", eventStatus: "seed_unchanged" };
   if (event.status === "ended" || event.status === "replay_available" || event.status === "archived") return { stage: "ENDED", eventStatus: "already_ended" };

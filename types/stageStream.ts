@@ -69,6 +69,8 @@ export interface StageStreamState {
   lastWebhookEvent?: string;
   lastWebhookAt?: string;
   lastHealthCheckAt?: string;
+  /** The last reason LiveKit refused to mint credentials, so the console can say it instead of spinning. */
+  lastProvisionError?: string;
   fallbackReason?: string;
   fallbackRecommendation?: string;
   fallbackActivatedAt?: string;
@@ -119,6 +121,8 @@ export interface OperatorStageStreamState extends PublicStageStreamState {
   lastWebhookEvent?: string;
   lastWebhookAt?: string;
   lastHealthCheckAt?: string;
+  /** The last reason LiveKit refused to mint credentials, so the console can say it instead of spinning. */
+  lastProvisionError?: string;
   operatorMarkedShowEnded: boolean;
   manualFallbackDisabled: boolean;
 }
@@ -158,6 +162,7 @@ export function toOperatorStageStreamState(state: StageStreamState): OperatorSta
     lastWebhookEvent: state.lastWebhookEvent,
     lastWebhookAt: state.lastWebhookAt,
     lastHealthCheckAt: state.lastHealthCheckAt,
+    lastProvisionError: state.lastProvisionError,
     operatorMarkedShowEnded: state.operatorMarkedShowEnded,
     manualFallbackDisabled: state.manualFallbackDisabled,
   };
