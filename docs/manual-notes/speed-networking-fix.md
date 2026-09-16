@@ -131,20 +131,32 @@ on the other person's device: either attendee's own poll runs the matcher for th
 *Why not the combined `/api/venue/tick`?* It is **owner and operator only** and answers an attendee
 `403`, so it cannot carry an attendee's cycle at all.
 
-**3. Requeue fairness was genuinely broken.** `endMatch` sends both people to the back of the queue,
-which is the right rotation — but with an odd number the person at the back sat out, got priority,
-was paired, went to the back, and sat out again. **Measured: with 7 waiting, one person sat out 3
-rounds out of 7.** One round of priority does not pay a sit-out.
+**3. Requeue fairness — checked, and hardened for the case that breaks it.** `endMatch` sends both
+people to the back of the queue. Measured end to end through the real matcher with 7 people over a
+full round robin and the clock advancing between rounds, **the existing rotation was already
+correct** — the "you are next" flag plus the requeue spread the sit-outs, and removing the new code
+changes nothing in that scenario. That is stated plainly because it was initially reported here as
+a production bug and it is not one.
 
-Fixed by tracking a **sit-out debt** (`satOutCounts` in the round state, `timesSatOut` in the
-planner): the most-sat-out lead the queue until the count is level, and the debt is cleared the
-moment they are matched. Measured after the fix:
+It **does** break in one real case: when a roomful joins at the same moment — the crew opens
+networking and everyone presses Join — every `joinedAt` is effectively identical, there is nothing
+to sort on, and the same person is left out again and again. **Measured on a simultaneous-join
+queue: one person sat out 3 rounds of 7.**
+
+So the rotation now carries a **sit-out debt** (`satOutCounts` in the round state, `timesSatOut` in
+the planner): whoever has sat out most leads the queue until the count is level, and the debt is
+cleared the moment they are matched. It makes fairness independent of the tie-break rather than
+dependent on lucky timestamps. Measured on the simultaneous-join queue after the fix:
 
 | Waiting | Rounds | Who sat out | Matches each |
 | --- | --- | --- | --- |
 | 3 | 3 | each person exactly once | 2, 2, 2 |
 | 5 | 5 | each person exactly once | 4, 4, 4, 4, 4 |
 | 7 | 7 | never the same person twice running | 6, 6, 6, 5, 6, 5, 6 |
+
+The guard for this lives in `tests/unit/speedNetworkingTiers.test.ts` (identical join times, which
+is the failing case); `tests/unit/speedNetworkingReal.test.ts` covers the ordinary staggered-join
+rotation end to end through the store.
 
 **The countdown is honest.** It was a client interval decrementing by one a second, which drifts
 whenever a tab is throttled or a phone sleeps. It now turns the server's `secondsLeft` into a

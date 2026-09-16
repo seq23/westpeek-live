@@ -199,23 +199,38 @@ describe("the networking cycle", () => {
   });
 
   it("rotates who sits out through the real matcher, not just in the planner", async () => {
-    for (const who of [A, B, C]) await joinNetworkingQueue(EVENT, who);
+    /**
+     * SEVEN people over a full round robin, with the clock advancing a match-length between
+     * rounds — the ordinary case, where people joined at different moments and finish at different
+     * moments. This asserts the end-to-end rotation through the real matcher and store; the
+     * simultaneous-join case, which is what the sit-out debt exists for, is covered in
+     * tests/unit/speedNetworkingTiers.test.ts where the join times are deliberately identical.
+     */
+    vi.useFakeTimers();
+    vi.setSystemTime(new Date("2026-09-16T20:00:00.000Z"));
+    const seven = [A, B, C,
+      { attendeeId: "att-d", displayName: "Dorothy", company: "Compilers", title: "Rear Admiral" },
+      { attendeeId: "att-e", displayName: "Edsger", company: "Algorithms", title: "Professor" },
+      { attendeeId: "att-f", displayName: "Frances", company: "Fortran", title: "Engineer" },
+      { attendeeId: "att-g", displayName: "Gordon", company: "Systems", title: "Architect" }];
+    for (const who of seven) { await joinNetworkingQueue(EVENT, who); vi.advanceTimersByTime(1_000); }
     const store = getRuntimeStore();
     const satOut: string[] = [];
-    for (let round = 0; round < 3; round += 1) {
+    for (let round = 0; round < 7; round += 1) {
       await runNetworkingMatcher(EVENT);
-      const entries = await store.listSpeedNetworkingEntries(EVENT);
-      const waiting = entries.filter((entry) => entry.status === "waiting");
+      const waiting = (await store.listSpeedNetworkingEntries(EVENT)).filter((entry) => entry.status === "waiting");
       if (waiting.length === 1) satOut.push(waiting[0].attendeeId);
-      // The debt is persisted, not recomputed from the queue order — that is what makes it rotate.
-      const roundState = await getNetworkingRoundState(EVENT);
-      expect(Object.keys(roundState.satOutCounts).length).toBeLessThanOrEqual(1);
-      for (const match of await store.listSpeedNetworkingMatches(EVENT)) {
-        if (match.status === "active") await store.upsertSpeedNetworkingMatch({ ...match, expiresAt: new Date(Date.now() - 1_000).toISOString() });
-      }
+      // The debt is persisted between rounds rather than recomputed from queue order — that is what rotates it.
+      expect(Object.keys((await getNetworkingRoundState(EVENT)).satOutCounts).length).toBeLessThanOrEqual(1);
+      vi.advanceTimersByTime(SPEED_NETWORKING_DEFAULT_MINUTES * 60_000 + 30_000);
     }
-    expect(satOut).toHaveLength(3);
-    expect(new Set(satOut).size, `the same person sat out more than once: ${satOut.join(", ")}`).toBe(3);
+    expect(satOut.length).toBeGreaterThanOrEqual(6);
+    for (let index = 1; index < satOut.length; index += 1) {
+      expect(satOut[index], `the same person sat out twice running: ${satOut.join(", ")}`).not.toBe(satOut[index - 1]);
+    }
+    // Nobody carries the whole burden: over a full rotation no one sits out more than twice.
+    const worst = Math.max(...satOut.map((id) => satOut.filter((other) => other === id).length));
+    expect(worst, `sit-outs were not spread: ${satOut.join(", ")}`).toBeLessThanOrEqual(2);
   });
 
   it("rolls straight into the next person when the timer runs out, with a fresh beat and a new partner", async () => {

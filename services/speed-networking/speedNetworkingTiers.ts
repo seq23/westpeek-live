@@ -90,11 +90,13 @@ export interface SpeedNetworkingCandidate {
   /** Left over from the last round, or told "you are next": they lead the queue this round. */
   priority?: boolean;
   /**
-   * How many rounds this person has been the odd one out. One round of priority is not enough on
-   * its own: whoever is paired goes to the back of the queue, so with an odd number the newest
-   * person oscillates between sitting out and being matched and ends up sitting out far more than
-   * anyone else (measured: 3 of 7 rounds with 7 waiting). Sit-outs lead the queue until the count
-   * is level again, which is what actually spreads them.
+   * How many rounds this person has been the odd one out. Sit-outs are mostly rotated by
+   * "you are next" plus the requeue putting the pair at the back — but only while the queue has
+   * distinct join times to sort on. When a roomful joins together (the crew opens networking and
+   * everyone presses Join) every joinedAt is effectively identical, the sort falls back to a
+   * stable tie-break, and the same person is left out over and over: measured 3 sit-outs in 7
+   * rounds with 7 people who joined at the same instant. The debt makes the rotation independent
+   * of the tie-break — most sat out lead the queue until the count is level.
    */
   timesSatOut?: number;
 }

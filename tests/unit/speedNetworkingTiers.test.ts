@@ -201,9 +201,13 @@ describe("speed networking tiers", () => {
 /**
  * The rotation (16 Sep 2026, the owner: "it should continually keep u in a 4 min cycle of talking
  * to new people"). Finishing a match puts both people at the back of the queue; the person an odd
- * round could not seat keeps their place and leads the next one. Replayed here round after round
- * with 3, 5 and 7 people, because "goes to the back" and "nobody starves" are easy to get wrong
- * together — the naive version sits the same person out every single round.
+ * round could not seat keeps their place and leads the next one.
+ *
+ * These fixtures give everyone the SAME join time on purpose: that is a roomful pressing Join the
+ * moment the crew opens networking, and it is the case where "goes to the back" and "nobody
+ * starves" pull against each other. With nothing to sort on, the priority flag alone leaves the
+ * same person out repeatedly — 3 of 7 rounds before the sit-out debt was tracked. With distinct
+ * join times the pre-existing rotation already held; the debt is what makes it hold either way.
  */
 describe("the rotation over many rounds", () => {
   /** One round: pair everybody it can, then requeue exactly the way the service does. */
@@ -235,11 +239,11 @@ describe("the rotation over many rounds", () => {
   }
 
   /**
-   * Measured with these fixtures once the sit-out debt leads the queue:
+   * Measured with these simultaneous-join fixtures once the sit-out debt leads the queue:
    *   3 waiting, 3 rounds — sat out att-02, att-01, att-00; everyone matched twice.
    *   5 waiting, 5 rounds — every person sits out exactly once; everyone matched four times.
    *   7 waiting, 7 rounds — matched 6,6,6,5,6,5,6; nobody sits out twice running.
-   * Before the debt was tracked, 7 waiting sat the same person out 3 rounds of 7.
+   * Without the debt the 7-person case sits one person out 3 rounds of 7 (this test catches it).
    */
   for (const people of [3, 5, 7]) {
     it(`rotates the person left over with ${people} waiting: never the same one twice running, and everyone gets matched`, () => {

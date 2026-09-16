@@ -59,10 +59,13 @@ export async function setNetworkingSettings(eventId: string, input: { open: bool
 export interface SpeedNetworkingRoundState {
   priorityAttendeeIds: string[];
   /**
-   * How many rounds each attendee has been the odd one out. One round of priority is not enough:
-   * whoever was paired goes to the back of the queue, so with an odd number the newest person
-   * oscillates and sits out far more than anyone else (measured: 3 of 7 rounds with 7 waiting).
-   * The debt leads the queue until it is level, which is what actually spreads the sit-outs.
+   * How many rounds each attendee has been the odd one out. Sit-outs are mostly rotated by
+   * "you are next" plus the requeue putting the pair at the back — but only while the queue has
+   * distinct join times to sort on. When a roomful joins together (the crew opens networking and
+   * everyone presses Join) every joinedAt is effectively identical, the sort falls back to a
+   * stable tie-break, and the same person is left out over and over: measured 3 sit-outs in 7
+   * rounds with 7 people who joined at the same instant. The debt makes the rotation independent
+   * of the tie-break — most sat out lead the queue until the count is level.
    */
   satOutCounts: Record<string, number>;
   metEveryoneAttendeeIds: string[];
