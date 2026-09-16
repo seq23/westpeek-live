@@ -26,9 +26,12 @@ check("services/events/eventRepository.ts", ['["networking_queue_entries", () =>
 check("scripts/validate_supabase_schema_parity.js", ["networking_queue_entries:", "networking_queue_matches:"]);
 for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) check(store, ["upsertSpeedNetworkingEntry", "getSpeedNetworkingEntry", "listSpeedNetworkingEntries", "upsertSpeedNetworkingMatch", "getSpeedNetworkingMatch", "listSpeedNetworkingMatches"]);
 check("services/runtime/runtimeStore.ts", ["speedNetworkingEntries: SpeedNetworkingQueueEntry[]", "speedNetworkingMatches: SpeedNetworkingMatchRecord[]"]);
-check("services/speed-networking/speedNetworkingService.ts", ["selectNextSpeedNetworkingPair(entries.map(toEngineEntry), [], history)", "export async function runNetworkingMatcher", 'await endMatch(eventId, match.id, "expired")', "speedNetworkingRoomName(eventId, matchId)", "settings.matchMinutes * 60_000", "export function tokenAllowedForRoom", "match.attendeeAId === attendeeId || match.attendeeBId === attendeeId", "export async function getMyNetworkingState"]);
+check("services/speed-networking/speedNetworkingService.ts", ["planSpeedNetworkingRound({ eventId, waiting: candidates", "export async function runNetworkingMatcher", 'await endMatch(eventId, match.id, "expired")', "speedNetworkingRoomName(eventId, matchId)", "settings.matchMinutes * 60_000", "export function tokenAllowedForRoom", "match.attendeeAId === attendeeId || match.attendeeBId === attendeeId", "export async function getMyNetworkingState"]);
 check("types/speedNetworking.ts", ["SPEED_NETWORKING_DEFAULT_MINUTES = 4", "-net-"]);
-check("app/api/video/livekit-token/route.ts", ['body.roomType === "speed_networking"', "tokenAllowedForRoom(match, body.roomId, identity.attendeeId)", "status: 403"]);
+// The grant moved ahead of the role branches (16 Sep 2026) so no non-attendee role can name a 1:1
+// room; tokenAllowedForRoom is still the rule, now called through the room guard.
+check("app/api/video/livekit-token/route.ts", ['body.roomType === "speed_networking"', "prepareSpeedNetworkingRoomForJoin", "status: 403"]);
+check("services/speed-networking/speedNetworkingRoomGuard.ts", ["tokenAllowedForRoom(input.match, input.roomName, input.attendeeId)"]);
 check("app/api/networking/mine/route.ts", ["getCurrentAttendeeIdentity(eventId)", "getMyNetworkingState(eventId, identity?.attendeeId)"]);
 if (read("app/api/networking/mine/route.ts").includes('searchParams.get("attendeeId")')) throw new Error("/api/networking/mine must read only the caller's own state.");
 check("lib/actions/networkingActions.ts", ["joinNetworkingQueue(eventId, {", "export async function nextSpeedNetworkingMatchAction", "export async function leaveSpeedNetworkingQueueAction", 'requireLiveEventControlAccessForRequest(eventId, "manage_stage_access")', "setNetworkingSettings("]);

@@ -2,6 +2,7 @@ import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
 import { OWNER_ACTOR_LABEL, type WorkspaceActor } from "@/lib/auth/workspaceActor";
 import { findEventRecord, setEventStatus } from "@/services/events/eventRepository";
 import { applyStageStreamSignal } from "@/services/video/stageStreamStateService";
+import { closeNetworkingForEndedEvent } from "@/services/speed-networking/speedNetworkingService";
 
 export type EndShowOutcome = { stage: "ENDED"; eventStatus: "ended" | "seed_unchanged" | "already_ended" };
 
@@ -25,6 +26,10 @@ export async function endShowForEvent(input: { eventId: string; stageId?: string
   await applyStageStreamSignal({ eventId: input.eventId, stageId, signal: "operator_mark_show_ended", reason: `${input.actorRole} ended the show. A feed that stops now is the end of the show, not a dropped feed.` });
   // The ingress goes back to LiveKit with the show: the project caps how many exist (16 Sep 2026).
   await releaseIngressForEvent(input.eventId, stageId).catch(() => undefined);
+  // And networking closes with it: active 1:1 rooms are deleted, the queue is emptied, and the
+  // venue nav has no open queue left to advertise. A seed event never reaches setEventStatus
+  // below, so this runs before that branch or the queue would outlive the show.
+  await closeNetworkingForEndedEvent(input.eventId).catch(() => undefined);
   const event = await findEventRecord(input.eventId).catch(() => undefined);
   if (!event || event.source === "seed") return { stage: "ENDED", eventStatus: "seed_unchanged" };
   if (event.status === "ended" || event.status === "replay_available" || event.status === "archived") return { stage: "ENDED", eventStatus: "already_ended" };

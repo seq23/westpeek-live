@@ -90,10 +90,13 @@ describe("real speed networking", () => {
 
   it("closed networking stops pairing; leaving ends the match for both", async () => {
     await setNetworkingSettings(EVENT, { open: false, matchMinutes: 2 }, "owner");
-    await joinNetworkingQueue(EVENT, A);
-    await joinNetworkingQueue(EVENT, B);
+    // Closed takes no joins at all (16 Sep 2026): the queue an ended event leaves behind is what
+    // kept the venue nav advertising "Networking OPEN" after the show.
+    expect(await joinNetworkingQueue(EVENT, A)).toBeUndefined();
     expect((await getMyNetworkingState(EVENT, A.attendeeId)).status).toBe("closed");
     await setNetworkingSettings(EVENT, { open: true, matchMinutes: 2 }, "owner");
+    await joinNetworkingQueue(EVENT, A);
+    await joinNetworkingQueue(EVENT, B);
     const a = await getMyNetworkingState(EVENT, A.attendeeId);
     expect(a.status).toBe("matched");
     expect(new Date(a.match!.expiresAt).getTime() - new Date(a.match!.startsAt).getTime()).toBe(2 * 60_000);
