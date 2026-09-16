@@ -105,7 +105,9 @@ async function createLiveKitRtmpIngress(livekitUrl: string, token: string, input
       name: `StreamYard ${input.eventId} ${input.stageId}`,
       room_name: input.roomName,
       participant_identity: `streamyard-${input.eventId}-${input.stageId}`.replace(/[^a-zA-Z0-9_-]+/g, "-").toLowerCase(),
-      participant_name: "StreamYard Production Feed",
+      // Blank on purpose: the attendee player labels tiles by participant name, and "StreamYard
+      // Production Feed" is not a thing the audience should read across the host's picture.
+      participant_name: "",
       enable_transcoding: true,
     },
   });

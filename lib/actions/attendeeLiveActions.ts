@@ -83,7 +83,10 @@ export async function decideAttendeeLiveAccess(formData: FormData) {
   const auth = await requireControl(eventId);
   const reason = String(formData.get("reason") || "").trim() || undefined;
   await applyAttendeeLiveDecision({ eventId, roomKind, roomId, attendeeId, decision, actorRole: auth.actorRole, reason });
-  const livekitParticipantRemoval = decision === "revoke" && roomKind === "main_stage" ? await removeLiveKitParticipantFromMainStage({ eventId, stageId: roomId, attendeeId }).catch(() => ({ status: "failed" as const })) : undefined;
+  // Any decision that takes publishing away drops them from the stage room — Reset used to clear
+  // the record and leave the tile on the stage (Scooter's workshop, 16 Sep 2026).
+  const dropsFromStage = decision === "revoke" || decision === "reset" || decision === "decline";
+  const livekitParticipantRemoval = dropsFromStage && roomKind === "main_stage" ? await removeLiveKitParticipantFromMainStage({ eventId, stageId: roomId, attendeeId }).catch(() => ({ status: "failed" as const })) : undefined;
   await recordAttendeeLiveDecision({ eventId, roomId, actorRole: auth.actorRole, action: DECISION_LABEL[decision], attendeeId, reason: decision === "revoke" ? `${reason || "Crew revoked live-event access."} LiveKit removal: ${livekitParticipantRemoval?.status || "not_needed"}` : reason });
   revalidateLiveSurfaces(eventId);
 }

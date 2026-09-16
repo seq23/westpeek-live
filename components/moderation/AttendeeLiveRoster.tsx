@@ -1,3 +1,4 @@
+import { getAttendeeLiveControlState } from "@/services/venue/attendeeLivePermissionService";
 import { LocalTime } from "@/components/shared/LocalTime";
 import { decideAttendeeLiveAccess } from "@/lib/actions/attendeeLiveActions";
 import { silenceLiveChatAttendee } from "@/lib/actions/liveChatActions";
@@ -26,11 +27,13 @@ function StatusPill({ row }: { row: AttendeeRosterRow }) {
   return <span className={`rounded-full px-3 py-1 text-[11px] font-black uppercase tracking-wide ${tone}`} data-testid={`roster-status-${row.attendeeId}`} data-live-status={row.liveStatus}>{liveStatusLabel(row.liveStatus)}</span>;
 }
 
-function RowActions({ eventId, roomKind, roomId, row, viewer }: { eventId: string; roomKind: AttendeeLiveRoomKind; roomId: string; row: AttendeeRosterRow; viewer: CrewViewer }) {
+function RowActions({ eventId, roomKind, roomId, row, viewer, joinRequiresApproval }: { eventId: string; roomKind: AttendeeLiveRoomKind; roomId: string; row: AttendeeRosterRow; viewer: CrewViewer; joinRequiresApproval: boolean }) {
   const base = { eventId, roomKind, roomId, attendeeId: row.attendeeId, viewer };
   return (
     <div className="flex flex-wrap items-center gap-2">
-      {row.liveStatus !== "permitted" && row.liveStatus !== "approved_to_publish" ? <DecisionButton {...base} decision="permit" label="Permit to watch" tone={row.liveStatus === "revoked" ? "restore" : "neutral"} /> : null}
+      {/* Watching is open to everyone unless the crew switched "require permit" on; a Permit button
+          on every row read as if each person needed one (owner, 16 Sep 2026). */}
+      {(joinRequiresApproval || row.liveStatus === "revoked") && row.liveStatus !== "permitted" && row.liveStatus !== "approved_to_publish" ? <DecisionButton {...base} decision="permit" label={row.liveStatus === "revoked" ? "Restore watching" : "Permit to watch"} tone={row.liveStatus === "revoked" ? "restore" : "neutral"} /> : null}
       {row.liveStatus !== "approved_to_publish" ? <DecisionButton {...base} decision="approve_publish" label="Approve to publish" tone="primary" /> : null}
       {row.liveStatus !== "revoked" ? <DecisionButton {...base} decision="revoke" label="Revoke" tone="danger" /> : null}
       {row.liveStatus === "requested" ? <DecisionButton {...base} decision="decline" label="Decline" tone="danger" /> : null}
@@ -50,7 +53,8 @@ function RowActions({ eventId, roomKind, roomId, row, viewer }: { eventId: strin
  * page, and the testing console. Every button is a guarded server action.
  */
 export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roomId = "main-stage", search = "", searchAction, viewer: givenViewer }: { eventId: string; roomKind?: AttendeeLiveRoomKind; roomId?: string; search?: string; searchAction: string; viewer?: CrewViewer }) {
-  const [roster, viewer] = await Promise.all([getAttendeeRoster({ eventId, roomKind, roomId, search }), givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId)]);
+  const [roster, viewer, control] = await Promise.all([getAttendeeRoster({ eventId, roomKind, roomId, search }), givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId), getAttendeeLiveControlState(eventId, roomKind, roomId).catch(() => undefined)]);
+  const joinRequiresApproval = Boolean(control?.attendeeJoinRequiresApproval);
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="attendee-live-roster">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Attendee roster · {roomKind === "main_stage" ? "main stage" : `${roomKind} ${roomId}`}</p>
@@ -98,7 +102,7 @@ export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roo
                 <td className="py-3 pr-3 text-xs text-slate-600">{when(row.registeredAt)}</td>
                 <td className="py-3 pr-3"><StatusPill row={row} />{row.capability?.revokedReason && row.liveStatus === "revoked" ? <p className="mt-1 text-xs text-slate-500">{row.capability.revokedReason}</p> : null}</td>
                 <td className="py-3 pr-3 text-xs text-slate-600">{row.silenced ? <span className="font-black text-rose-800">Silenced</span> : "Open"}<p>Last: {when(row.lastChatAt)}</p></td>
-                <td className="py-3"><RowActions eventId={eventId} roomKind={roomKind} roomId={roomId} row={row} viewer={viewer} /></td>
+                <td className="py-3"><RowActions eventId={eventId} roomKind={roomKind} roomId={roomId} row={row} viewer={viewer} joinRequiresApproval={joinRequiresApproval} /></td>
               </tr>
             )) : <tr><td colSpan={5} className="py-4 text-sm text-slate-500">{search ? `No registered attendee matches "${search}".` : "No registered attendees yet. Rows appear as people register with the join code."}</td></tr>}
           </tbody>
