@@ -15,6 +15,7 @@ Machine-readable authority: `config/deployed-route-manifest.json`.
 | `app-clients-clientid` | `/app/clients/[clientId]` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `app-clients` | `/app/clients` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `app-people` | `/app/people` | role-specific | authorized-event-role | standard | desktop + mobile | none |
+| `manual` | `/manual` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `app-owner` | `/app/owner` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `app-contractors` | `/app/contractors` | role-specific | authorized-event-role | standard | desktop + mobile | none |
 | `app-email` | `/app/email` | role-specific | authorized-event-role | standard | desktop + mobile | none |

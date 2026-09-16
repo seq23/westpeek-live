@@ -1775,6 +1775,22 @@
       ],
       "status": "UNPROVEN",
       "evidence": []
+    },
+    {
+      "id": "manual",
+      "path": "/manual",
+      "persona": "operator",
+      "required_states": [
+        "empty",
+        "populated",
+        "error"
+      ],
+      "status": "UNPROVEN",
+      "evidence": [],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/manual"
+      }
     }
   ]
 }

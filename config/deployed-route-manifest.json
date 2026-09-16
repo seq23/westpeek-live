@@ -2733,6 +2733,28 @@
       "persistenceRequired": false,
       "cleanupPolicy": "exact-run",
       "role": "attendee"
+    },
+    {
+      "id": "manual",
+      "path": "/manual",
+      "authMode": "role-specific",
+      "persona": "operator",
+      "criticality": "standard",
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/manual"
+      },
+      "safeActions": [
+        "navigate"
+      ],
+      "fixtureRequirements": [],
+      "persistenceRequired": false,
+      "cleanupPolicy": "none",
+      "role": "operator"
     }
   ],
   "allowedHttpFailures": []

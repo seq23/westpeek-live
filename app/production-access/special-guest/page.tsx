@@ -1,4 +1,5 @@
 import { LegalFooter } from "@/components/legal/LegalFooter";
+import { GateExit } from "@/components/access/GateExit";
 export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
@@ -73,6 +74,7 @@ export default async function SpecialGuestAccessPage({ searchParams }: { searchP
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Continue to assigned portal</button>
         </form>
         {resolvedSearchParams?.error === "too_many" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="gate-too-many">Too many wrong codes from here. Wait about {resolvedSearchParams?.retry || "60"} seconds and try again — the invitation link fills the code in for you.</p> : resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="guest-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
+        <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>
       <LegalFooter variant="compact" />

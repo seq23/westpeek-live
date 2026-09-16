@@ -3,10 +3,15 @@ import { useEffect } from "react";
 import { notifyServerBuildId } from "@/components/system/BuildVersionWatchdog";
 
 /**
- * Pages outside the venue have no other poll to carry the build id, so this one asks for it —
- * once a minute, one tiny JSON answer, and only while the tab is visible.
+ * Pages outside the venue have no other poll to carry the build id, so this one asks for it.
+ *
+ * It asks every 30 seconds while the tab is visible AND the moment the tab comes back — the case
+ * the owner hit on 16 Sep 2026 was a console left open across a deploy: a tab that has been in the
+ * background all along should not wait another half minute after she returns to it, and a page
+ * opened before this poller existed could not ask at all (which is why nothing happened for her).
+ * One tiny JSON answer, no store read.
  */
-export function BuildVersionPoller({ intervalMs = 60_000 }: { intervalMs?: number }) {
+export function BuildVersionPoller({ intervalMs = 30_000 }: { intervalMs?: number }) {
   useEffect(() => {
     let cancelled = false;
     const ask = async () => {
@@ -18,8 +23,18 @@ export function BuildVersionPoller({ intervalMs = 60_000 }: { intervalMs?: numbe
       } catch { /* offline or mid-deploy: the next tick asks again */ }
     };
     const timer = window.setInterval(ask, intervalMs);
+    const wake = () => { void ask(); };
+    window.addEventListener("focus", wake);
+    window.addEventListener("pageshow", wake);
+    document.addEventListener("visibilitychange", wake);
     void ask();
-    return () => { cancelled = true; window.clearInterval(timer); };
+    return () => {
+      cancelled = true;
+      window.clearInterval(timer);
+      window.removeEventListener("focus", wake);
+      window.removeEventListener("pageshow", wake);
+      document.removeEventListener("visibilitychange", wake);
+    };
   }, [intervalMs]);
   return null;
 }

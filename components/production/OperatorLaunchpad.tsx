@@ -99,9 +99,10 @@ async function LaunchpadBody() {
         </div>
       </ConsoleSection>
 
-      <ConsoleSection storagePrefix="wpl-launchpad" id="diagnostics" title="Diagnostics" count={2} blurb="Two doors, not nine: the testing console for everything scoped to an event, and the live health of the deployment.">
-        <div className="grid gap-4 md:grid-cols-2">
+      <ConsoleSection storagePrefix="wpl-launchpad" id="diagnostics" title="Diagnostics" count={2} blurb="The testing console for everything scoped to an event, the live health of the deployment, and the manual.">
+        <div className="grid gap-4 md:grid-cols-3">
           <LaunchpadCard title="Testing console" href="/admin/testing">Routes, access gates, runtime tables, email, video providers — pick the event inside.</LaunchpadCard>
+          <LaunchpadCard title="The manual" href="/manual">Every door, every role, every step — the owner/operator/crew manual, inside the app.</LaunchpadCard>
           <LaunchpadCard title="Runtime health" href="/api/runtime/health">The deployed truth: store, schema, and the reads every crew page makes.</LaunchpadCard>
         </div>
       </ConsoleSection>

@@ -308,3 +308,15 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Purpose: every code for an event is `WPL-[ROLE-]STEM` — `WPL-45MINU`, `WPL-CREW-45MINU`, `WPL-SPEAKER-45MINU`, `WPL-SPONSOR-45MINU`, `WPL-CLIENT-45MINU`, `WPL-VIP-45MINU` — where the stem is the first six letters/digits of the event's name (padded from a stable hash of the event id when the name is shorter, and disambiguated `SEQUOI2`, `SEQUOI3` when another live event already holds it). One stem per event, the role written into the code, no random tail. Renaming an event does not mutate its codes; "Adopt the readable codes" is an explicit action that keeps hand-set codes and replaces the old generated shapes; each role code still rotates alone.
 - Because the codes are derivable from a public event name by design, the protection is at the gate: the crew and special-guest gates allow six wrong codes a minute from one place and event, then a two-minute cooldown with a plain message, a correct code clears the record, and every failure is logged with the role, the event, the time and a hashed IP — never the value typed.
 - Proof behind it: `tests/unit/readableAccessCodes.test.ts`, `tests/unit/gateAttemptLimiter.test.ts`, `tests/e2e/access-codes-and-links.spec.ts`.
+
+## The manual lives in the app — 2026-09-16
+
+- Validator: `npm run validate:manual-in-app`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md` stays the one source of truth; `scripts/build_manual_assets.js` (run by `npm run build`) copies it into a generated module and its screenshots into `public/manual/images/`, and `/manual` renders it behind the owner+operator gate with a section spine. The validator rebuilds and fails if the generated copy had drifted, fails if the file or the rendered copy carries anything code-shaped or a password value, fails if the manual names a route that is not in `config/deployed-route-manifest.json`, and fails if the Owner Console's codes fold, the operator launchpad or the crew deck stops linking to it.
+- Proof behind it: `tests/e2e/manual-and-gate-exits.spec.ts`.
+
+## A gate always has a way out — 2026-09-16
+
+- Every access gate (owner, operator, crew, special guest) renders `components/access/GateExit.tsx`: "Back to where you were" (from a safe `?next=`), the Owner Console, all the doors, and the front page. A gate is reached by redirect, so the browser's back button lands on the page that redirected and bounces straight back — the owner was trapped there on 16 Sep 2026.
+- The build watchdog now also asks on focus, page-show and visibility change (not only every 30 s), so a tab left open across a deploy reloads when it is next looked at instead of serving the old bundle; the banner gets a beat to be read before the reload.
