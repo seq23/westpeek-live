@@ -1,3 +1,4 @@
+import { codeKey } from "@/lib/access/accessCodes";
 import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
 import { applyStageStreamSignal, getOrCreateStageStreamState } from "@/services/video/stageStreamStateService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -158,6 +159,13 @@ export async function findEventRecord(codeOrSlugOrId: string | undefined): Promi
       if (candidate === key) continue;
       const runtime = await getRuntimeStore().getRuntimeEvent(candidate);
       if (runtime) return runtime;
+    }
+    // A custom join code ("summit-one") typed in any case, with spaces or without the hyphen: match on
+    // the code's letters and digits alone. Only reached on a miss.
+    const wanted = codeKey(key);
+    if (wanted.length >= 4) {
+      const byKey = (await getRuntimeStore().listRuntimeEvents()).find((event) => codeKey(event.joinCode) === wanted);
+      if (byKey) return byKey;
     }
   } catch (error) {
     if (!(error instanceof RuntimeSchemaMissingError)) throw error;

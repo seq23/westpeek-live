@@ -55,7 +55,7 @@ export async function SpeakerGreenRoomLive({ eventId, speaker, error, viewAs }: 
           </section>
           <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="speaker-tech-check-summary" data-status={techCheck?.status || "none"}>
             <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Tech check</p>
-            <p className="mt-2 text-sm text-slate-700">{techCheck ? `${techCheck.status.replaceAll("_", " ")} · ${techCheck.score}/100 · recorded ${<LocalTime iso={techCheck.recordedAt} mode="datetime" />}` : "Not recorded yet."}</p>
+            <p className="mt-2 text-sm text-slate-700">{techCheck ? <>{techCheck.status.replaceAll("_", " ")} · {techCheck.score}/100 · recorded <LocalTime iso={techCheck.recordedAt} mode="datetime" /></> : "Not recorded yet."}</p>
             {readOnly ? <span className="mt-3 inline-block cursor-not-allowed rounded-full border border-slate-200 px-4 py-2 text-xs font-black text-slate-400" title="Disabled while viewing as this speaker." data-testid="run-tech-check-disabled">{techCheck ? "Run it again" : "Run the tech check"}</span> : <a href={`/speaker/events/${eventId}/tech-check`} className="mt-3 inline-block rounded-full border border-slate-300 px-4 py-2 text-xs font-black">{techCheck ? "Run it again" : "Run the tech check"}</a>}
           </section>
         </div>

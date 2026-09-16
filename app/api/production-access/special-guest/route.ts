@@ -6,6 +6,7 @@ import { ownerOverrideResponseIfMatched, redirectTo } from "@/lib/auth/accessGat
 import { resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import type { V4SpecialGuestRole } from "@/types/v4";
+import { getAccessCodeVersions } from "@/services/events/accessCodeService";
 
 export const dynamic = "force-dynamic";
 
@@ -29,7 +30,8 @@ export async function POST(request: NextRequest) {
   const { specialGuestCookieName } = getV5AccessCookieNames(env);
   const role = access.role as V4SpecialGuestRole;
   await logAccessAttempt({ status: "access_granted", accessKind: "special_guest", eventId: access.eventId, role, route: access.destination });
-  const cookie = await createV5AccessCookie({ kind: "special_guest", eventId: access.eventId, clientSlug: access.clientSlug, role, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 12 }, getV5AccessCookieSecret(env));
+  const codeVersion = role === "crew_lite" ? undefined : (await getAccessCodeVersions(access.eventId))[role];
+  const cookie = await createV5AccessCookie({ kind: "special_guest", eventId: access.eventId, clientSlug: access.clientSlug, role, codeVersion, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 12 }, getV5AccessCookieSecret(env));
   const response = redirectTo(request, access.destination);
   response.cookies.set(specialGuestCookieName, cookie, getV5CookieOptions(60 * 60 * 12));
   return response;

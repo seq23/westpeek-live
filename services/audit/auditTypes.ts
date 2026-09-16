@@ -65,7 +65,9 @@ export type AuditAction =
   | "chat_room_unlocked"
   // Host links: the executive_producer crew role handed out (or revoked, rotating the crew code) for one event.
   | "host_link_minted"
-  | "host_link_revoked";
+  | "host_link_revoked"
+  // An access code (join or a role code) set by hand or regenerated: a rotation.
+  | "access_code_rotated";
 
 export interface CreateAuditLogInput {
   agencyId: string;

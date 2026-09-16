@@ -4,6 +4,10 @@ import { listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { GuestPreviewLinkRow } from "@/components/guests/GuestPreviewLinks";
+import { CopyButton } from "@/components/shared/CopyButton";
+import { guestGatePath } from "@/lib/access/accessCodes";
+import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
+import { findEventRecord } from "@/services/events/eventRepository";
 import { getProducerNotes, getVipRoom, listSpeakerCueDecks, listSpeakerStageStates, listSpeakerTechChecks } from "@/services/guests/guestStateService";
 import type { CueDeckVersion } from "@/types/specialGuest";
 
@@ -32,6 +36,8 @@ export async function SpeakerRosterPanel({ eventId, viewer: givenViewer }: { eve
     listGuestProfiles(eventId, "vip").catch(() => []),
     givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId),
   ]);
+  const event = await findEventRecord(eventId).catch(() => undefined);
+  const speakerLink = event && event.source !== "seed" ? `${await appBaseUrl()}${guestGatePath(event, "speaker")}` : undefined;
   const stageOf = new Map(stages.map((item) => [item.guestId, item.state]));
   const techOf = new Map(techChecks.map((item) => [item.guestId, item.state]));
   const deckOf = new Map(decks.map((item) => [item.guestId, item.state]));
@@ -43,6 +49,7 @@ export async function SpeakerRosterPanel({ eventId, viewer: givenViewer }: { eve
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Speakers</p>
       <h2 className="mt-2 text-xl font-black text-slate-950">{speakers.length} speaker{speakers.length === 1 ? "" : "s"} · {onStage} on stage</h2>
       <p className="mt-2 text-sm text-slate-600">Speakers enter with the speaker code and give their name once. Bring to stage grants camera + mic on the main stage and shows them &ldquo;Go on stage&rdquo;; Send backstage revokes it and drops them from the stage room. Cue cards you save here are live on their teleprompter within ~5s.</p>
+      {speakerLink ? <div className="mt-3 flex flex-wrap items-center gap-2" data-testid="speaker-invite-link"><span className="text-xs font-bold text-slate-600">Invite a speaker: the gate prefilled, they press Continue.</span><CopyButton value={speakerLink} label="Copy speaker link" testId="copy-speaker-link" /></div> : null}
       <DeniedNote viewer={viewer} action="manage_stage_access" className="mt-3" />
       <DeniedNote viewer={viewer} action="manage_cue_cards" className="mt-2" />
 

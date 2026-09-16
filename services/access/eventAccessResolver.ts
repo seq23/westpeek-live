@@ -2,6 +2,7 @@ import { destinationForRole, findEventIndexRecord, getEventAccessConfig, getEven
 import { ensureRuntimeEvent, peekOverlayEvent } from "@/services/events/runtimeEventOverlay";
 import { getCrewAccessPassword } from "@/lib/env";
 import type { V4AccessResolution, V4CrewRole } from "@/types/v4";
+import { codesMatch } from "@/lib/access/accessCodes";
 
 function readEnvCode(envKey: string) {
   return process.env[envKey]?.trim();
@@ -13,8 +14,9 @@ export async function resolveSpecialGuestAccess(eventCode: string | undefined, r
     return { ok: false, accessKind: "special_guest", reason: "missing_code", message: "Enter both the event code and your role access code." };
   }
 
-  await ensureRuntimeEvent(eventCode);
-  const eventRecord = findEventIndexRecord(eventCode);
+  // The join code typed in any case, with a space for the dash: the runtime resolver forgives it; look the index up by the resolved id.
+  const hydrated = await ensureRuntimeEvent(eventCode);
+  const eventRecord = findEventIndexRecord(hydrated?.id || eventCode);
   if (!eventRecord) return { ok: false, accessKind: "special_guest", reason: "invalid_event", message: "We could not match that event code." };
 
   const accessConfig = getEventAccessConfig(eventRecord.slug);
@@ -26,7 +28,8 @@ export async function resolveSpecialGuestAccess(eventCode: string | undefined, r
   const runtimeEvent = peekOverlayEvent(eventRecord.slug);
   const matchingRole = accessConfig.specialGuestCodes.find((item) => {
     const expected = runtimeEvent ? getGeneratedEventRoleCode(eventRecord.slug, item.role) : readEnvCode(item.envKey);
-    return Boolean(expected && expected === normalizedRoleCode);
+    // Case-insensitive, spaces and dashes ignored: a code typed from a phone still opens the door.
+    return Boolean(expected && codesMatch(expected, normalizedRoleCode));
   });
 
   if (!matchingRole) {
@@ -57,13 +60,13 @@ export async function resolveCrewAccess(eventCode: string | undefined, crewRole:
     }
     return { ok: true, accessKind: "crew", role: crewRole, destination: "/crew/events/demo", message: "Crew access granted." };
   }
-  await ensureRuntimeEvent(eventCode);
-  const eventRecord = findEventIndexRecord(eventCode);
+  const hydrated = await ensureRuntimeEvent(eventCode);
+  const eventRecord = findEventIndexRecord(hydrated?.id || eventCode);
   if (password !== undefined) {
     const runtimeEvent = eventRecord ? peekOverlayEvent(eventRecord.slug) : undefined;
     const eventCrewCode = runtimeEvent?.accessCodes.crew;
     const matchesGlobal = Boolean(globalPassword && password === globalPassword);
-    const matchesEvent = Boolean(eventCrewCode && password === eventCrewCode);
+    const matchesEvent = Boolean(eventCrewCode && codesMatch(eventCrewCode, password));
     if (!matchesGlobal && !matchesEvent) {
       return { ok: false, accessKind: "crew", eventId: eventRecord?.eventId, reason: "invalid_password", message: "That crew password or event crew code did not match." };
     }

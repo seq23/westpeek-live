@@ -67,7 +67,7 @@ check("app/production-access/crew/page.tsx", ["CREW_ROLES.map((role) =>", 'data-
 check("app/api/production-access/crew/route.ts", ["CREW_ROLES.includes(role as V4CrewRole)"]);
 
 // Host = the executive_producer crew role for one event; host links; revocation rotates the crew code.
-check("services/events/hostLinkService.ts", ["export function hostLinkPath", "role=executive_producer&code=", "export async function revokeHostLinks", "crew: mintAccessCodes().crew", "codeVersion: state.codeVersion + 1", "export function crewCookieCurrent"]);
+check("services/events/hostLinkService.ts", ["export function hostLinkPath", "role=executive_producer&code=", "export async function revokeHostLinks", "crew: newCode || mintAccessCodes().crew", "codeVersion: state.codeVersion + 1", "export function crewCookieCurrent"]);
 check("lib/auth/liveControlRequestGuard.ts", ["crewCookieCurrent(crew.codeVersion, currentCodeVersion)", "REVOKED_HOST_LINK_ERROR"]);
 check("lib/auth/crewViewer.ts", ["crewCookieCurrent(crew.codeVersion, currentCodeVersion)"]);
 check("app/production-access/crew/page.tsx", ["codeVersion, issuedAt"]);

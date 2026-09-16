@@ -1,41 +1,76 @@
 import { CopyButton } from "@/components/shared/CopyButton";
 import { joinLinkFor } from "@/components/events/EventJoinCodePanel";
+import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
+import { displayCode, guestGatePath, type AccessCodeField } from "@/lib/access/accessCodes";
+import { setEventAccessCodeAction } from "@/lib/actions/accessCodeActions";
+import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
+import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
-const roleRows: Array<{ key: keyof RuntimeEventRecord["accessCodes"]; testId: string; label: string; gate: string; lands: (event: RuntimeEventRecord) => string }> = [
-  { key: "crew", testId: "generated-crew-lite-code", label: "Crew", gate: "/production-access/crew (event code + this code, or the global crew password)", lands: (event) => `/crew/events/${event.id}` },
-  { key: "speaker", testId: "generated-speaker-code", label: "Speaker", gate: "/production-access/special-guest", lands: (event) => `/speaker/events/${event.id}` },
-  { key: "sponsor", testId: "generated-sponsor-code", label: "Sponsor", gate: "/production-access/special-guest", lands: (event) => `/sponsor/events/${event.id}` },
-  { key: "vip", testId: "generated-vip-code", label: "VIP", gate: "/production-access/special-guest", lands: (event) => `/venue/${event.id}/lobby` },
-  { key: "client", testId: "generated-client-code", label: "Client", gate: "/production-access/special-guest", lands: (event) => `/client/${event.clientSlug}/events/${event.id}` },
+const roleRows: Array<{ key: Exclude<AccessCodeField, "join">; testId: string; label: string; who: string; lands: (event: RuntimeEventRecord) => string }> = [
+  { key: "crew", testId: "generated-crew-lite-code", label: "Crew", who: "People hired for the day; they pick their role at the gate.", lands: (event) => `/crew/events/${event.id}` },
+  { key: "speaker", testId: "generated-speaker-code", label: "Speaker", who: "Green room, tech check, cue cards.", lands: (event) => `/speaker/events/${event.id}` },
+  { key: "sponsor", testId: "generated-sponsor-code", label: "Sponsor", who: "Booth setup and leads.", lands: (event) => `/sponsor/events/${event.id}` },
+  { key: "vip", testId: "generated-vip-code", label: "VIP", who: "The lobby badge and the VIP lounge.", lands: (event) => `/venue/${event.id}/lobby` },
+  { key: "client", testId: "generated-client-code", label: "Client", who: "Read-only overview.", lands: (event) => `/client/${event.clientSlug}/events/${event.id}` },
 ];
 
-/** Per-event codes minted at creation and stored on the event row. Shown to workspace actors only. */
-export async function EventAccessCodesPanel({ event }: { event: RuntimeEventRecord }) {
-  const joinLink = await joinLinkFor(event);
+function CodeEditor({ eventId, field, viewer, current }: { eventId: string; field: AccessCodeField; viewer: CrewViewer; current: string }) {
+  return (
+    <div className="mt-3 flex flex-wrap items-center gap-2" data-testid={`code-editor-${field}`}>
+      <GatedForm viewer={viewer} action="manage_access_codes" formAction={setEventAccessCodeAction} className="flex flex-wrap items-center gap-2">
+        <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="field" value={field} />
+        <input name="value" defaultValue={displayCode(current)} pattern="[A-Za-z0-9-]{4,24}" title="4–24 letters, digits, or hyphens" className="min-h-9 w-44 rounded-full border border-brand-line px-3 font-mono text-xs uppercase" data-testid={`code-input-${field}`} />
+        <button className="rounded-full border border-slate-300 px-3 py-1 text-xs font-black disabled:cursor-not-allowed disabled:opacity-40" data-testid={`code-save-${field}`}>Set code</button>
+      </GatedForm>
+      <GatedForm viewer={viewer} action="manage_access_codes" formAction={setEventAccessCodeAction} className="inline">
+        <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="field" value={field} /><input type="hidden" name="regenerate" value="true" />
+        <button className="rounded-full border border-slate-300 px-3 py-1 text-xs font-black disabled:cursor-not-allowed disabled:opacity-40" data-testid={`code-regenerate-${field}`}>Regenerate</button>
+      </GatedForm>
+    </div>
+  );
+}
+
+/**
+ * Per-event codes, shown UPPERCASE, each with Copy code and Copy link — the link opens the right
+ * gate with both fields prefilled so the person only presses Continue. The owner, operator, and
+ * producers can set any code by hand (4–24 letters / digits / hyphens; unique) or regenerate it;
+ * a change rotates the old code out at once.
+ */
+export async function EventAccessCodesPanel({ event, notice }: { event: RuntimeEventRecord; notice?: { saved?: string; error?: string; field?: string } }) {
+  const [joinLink, base, viewer] = await Promise.all([joinLinkFor(event), appBaseUrl(), getCrewViewer(event.id)]);
   return (
     <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm" data-testid="generated-event-role-codes">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Access codes for {event.name}</p>
-      <p className="mt-2 text-sm text-brand-muted">Minted when the event was created and stored with it. Attendees use the join code; everyone else enters the event code <strong>{event.joinCode}</strong> plus their role code at the gate below.</p>
-      <div className="mt-4 rounded-2xl bg-brand-ash p-4">
+      <p className="mt-2 text-sm text-brand-muted">Codes are shown in capitals and accepted in any case, with or without the dash. Send the link and the person only presses Continue; or read them the event code <strong>{displayCode(event.joinCode)}</strong> plus their role code.</p>
+      {notice?.saved ? <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-900" data-testid="code-saved-notice">The {notice.saved === "join" ? "join" : notice.saved} code is set. The old one stopped working{notice.saved === "crew" ? "; every crew link and crew session minted with it is over" : notice.saved === "join" ? "" : "; anyone who entered with it is sent back to the gate"}.</p> : null}
+      {notice?.error ? <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-900" data-testid="code-error-notice">{notice.field ? `${notice.field} code: ` : ""}{notice.error}</p> : null}
+      <DeniedNote viewer={viewer} action="manage_access_codes" className="mt-3" />
+      <div className="mt-4 rounded-2xl bg-brand-ash p-4" data-testid="access-code-row-join">
         <p className="text-xs font-black uppercase tracking-wide text-brand-muted">Attendee join</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <span className="text-xl font-black" data-testid="access-join-code">{event.joinCode}</span>
-          <CopyButton value={event.joinCode} label="Copy code" />
-          <CopyButton value={joinLink} label="Copy join link" />
+          <span className="text-xl font-black" data-testid="access-join-code">{displayCode(event.joinCode)}</span>
+          <CopyButton value={displayCode(event.joinCode)} label="Copy code" />
+          <CopyButton value={joinLink} label="Copy join link" testId="copy-join-link" />
         </div>
+        <CodeEditor eventId={event.id} field="join" viewer={viewer} current={event.joinCode} />
       </div>
       <dl className="mt-4 grid gap-3 md:grid-cols-2">
-        {roleRows.map((row) => (
-          <div key={row.key} className="rounded-2xl border border-brand-line p-4">
-            <dt className="text-xs font-black uppercase tracking-wide text-brand-muted">{row.label}</dt>
-            <dd className="mt-2 flex flex-wrap items-center gap-3">
-              <code className="rounded bg-brand-ash px-2 py-1 font-mono text-sm font-bold" data-testid={row.testId}>{event.accessCodes[row.key]}</code>
-              <CopyButton value={event.accessCodes[row.key]} label="Copy" testId={`copy-${row.key}-code`} />
-            </dd>
-            <p className="mt-2 text-xs text-brand-muted">Gate: {row.gate} → lands on {row.lands(event)}</p>
-          </div>
-        ))}
+        {roleRows.map((row) => {
+          const link = `${base}${guestGatePath(event, row.key)}`;
+          return (
+            <div key={row.key} className="rounded-2xl border border-brand-line p-4" data-testid={`access-code-row-${row.key}`}>
+              <dt className="text-xs font-black uppercase tracking-wide text-brand-muted">{row.label}</dt>
+              <dd className="mt-2 flex flex-wrap items-center gap-3">
+                <code className="rounded bg-brand-ash px-2 py-1 font-mono text-sm font-bold" data-testid={row.testId}>{displayCode(event.accessCodes[row.key])}</code>
+                <CopyButton value={displayCode(event.accessCodes[row.key])} label="Copy" testId={`copy-${row.key}-code`} />
+                <CopyButton value={link} label="Copy link" testId={`copy-${row.key}-link`} />
+              </dd>
+              <p className="mt-2 text-xs text-brand-muted">{row.who} The link opens the gate prefilled → lands on {row.lands(event)}.</p>
+              <CodeEditor eventId={event.id} field={row.key} viewer={viewer} current={event.accessCodes[row.key]} />
+            </div>
+          );
+        })}
       </dl>
     </section>
   );
