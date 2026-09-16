@@ -5,5 +5,6 @@ const svc=read('services/venue/attendeeLivePermissionService.ts');
 assert(svc.includes('Main stage publishing requires crew approval'), 'Main stage attendee publishing must require approval.');
 assert(svc.includes('emergencyPublishingDisabled'), 'Crew emergency publishing disable must exist.');
 assert(read('app/api/video/livekit-token/route.ts').includes('canAttendeePublishLive'), 'LiveKit token endpoint must be permission-aware.');
-assert(read('components/testing/AttendeeLiveControlPanel.tsx').includes('Revoke') && read('components/testing/AttendeeLiveControlPanel.tsx').includes('Emergency disable all publishing'), 'Crew panel must expose revoke and kill switch.');
+// The kill switch lives in the shared room-control forms (crew console, command page, testing console); the panel renders them and the roster's Revoke.
+assert(read('components/testing/AttendeeLiveControlPanel.tsx').includes('Revoke') && read('components/testing/AttendeeLiveControlPanel.tsx').includes('<LiveRoomControlForms eventId=') && read('components/moderation/LiveRoomControlForms.tsx').includes('Emergency disable all publishing'), 'Crew panel must expose revoke and kill switch.');
 console.log('validate_attendee_live_controls_contract: PASS');

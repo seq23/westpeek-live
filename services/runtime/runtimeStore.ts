@@ -155,6 +155,8 @@ export interface RuntimeStore {
   listLiveChatModerationStates(eventId: string): Promise<LiveChatModerationState[]>;
   setAttendeeLiveCapability(key: string, capability: AttendeeLiveCapability): Promise<AttendeeLiveCapability>;
   getAttendeeLiveCapability(key: string): Promise<AttendeeLiveCapability | undefined>;
+  /** Every capability row of the event (all rooms): the roster's live status and the pending-request queue. */
+  listAttendeeLiveCapabilities(eventId: string): Promise<AttendeeLiveCapability[]>;
   setAttendeeLiveControlState(key: string, state: AttendeeLiveControlState): Promise<AttendeeLiveControlState>;
   getAttendeeLiveControlState(key: string): Promise<AttendeeLiveControlState | undefined>;
   readSnapshot(): Promise<V6RuntimeSnapshot>;

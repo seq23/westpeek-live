@@ -197,7 +197,7 @@ export class FileRuntimeStore implements RuntimeStore {
 
   async listAttendeeProfiles(eventId: string, limit = 100) {
     const snapshot = this.read();
-    return snapshot.attendeeProfiles.filter((item: AttendeeProfile) => item.eventId === eventId && item.status === "active").slice(0, limit);
+    return snapshot.attendeeProfiles.filter((item: AttendeeProfile) => item.eventId === eventId && item.status === "active").sort((a: AttendeeProfile, b: AttendeeProfile) => String(b.updatedAt || "").localeCompare(String(a.updatedAt || ""))).slice(0, limit);
   }
 
   async upsertAttendeeSession(session: AttendeeSession) {
@@ -338,6 +338,10 @@ export class FileRuntimeStore implements RuntimeStore {
   async getAttendeeLiveCapability(key: string) {
     const snapshot = this.read();
     return snapshot.attendeeLiveCapabilities.find((item: AttendeeLiveCapability) => `${item.eventId}:${item.roomKind}:${item.roomId}:${item.attendeeId}` === key);
+  }
+
+  async listAttendeeLiveCapabilities(eventId: string) {
+    return this.read().attendeeLiveCapabilities.filter((item: AttendeeLiveCapability) => item.eventId === eventId);
   }
 
   async setAttendeeLiveControlState(key: string, state: AttendeeLiveControlState) {

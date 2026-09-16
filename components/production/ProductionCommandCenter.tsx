@@ -3,9 +3,9 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { formatEventDate } from "@/lib/utils/format";
-import { ChatModerationQueue } from "@/components/moderation/ChatModerationQueue";
+import { CrewLiveModerationDeck } from "@/components/moderation/CrewLiveModerationDeck";
 
-export async function ProductionCommandCenter({ eventId }: { eventId: string }) {
+export async function ProductionCommandCenter({ eventId, rosterSearch = "" }: { eventId: string; rosterSearch?: string }) {
   const event = getEvent(eventId);
   const segments = getRunOfShowForEvent(event.id);
   const current = segments[0];
@@ -113,7 +113,7 @@ export async function ProductionCommandCenter({ eventId }: { eventId: string }) 
         </SectionCard>
       </div>
 
-      <ChatModerationQueue eventId={event.id} />
+      <CrewLiveModerationDeck eventId={event.id} search={rosterSearch} searchAction={`/app/events/${eventId}`} />
 
       <div className="grid gap-4 sm:gap-6 lg:grid-cols-2">
         <SectionCard title="Q&A queue">

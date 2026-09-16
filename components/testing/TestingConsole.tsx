@@ -18,7 +18,7 @@ import { AttendeeLiveControlPanel } from "./AttendeeLiveControlPanel";
 import { ChatModerationQueue } from "@/components/moderation/ChatModerationQueue";
 import { getTestingConsoleSnapshot } from "@/services/testing";
 
-export async function TestingConsole({ eventId = "event-summit" }: { eventId?: string }) {
+export async function TestingConsole({ eventId = "event-summit", rosterSearch = "" }: { eventId?: string; rosterSearch?: string }) {
   const event = getEvent(eventId);
   const runtime = await getRuntimeStore().readSnapshot();
   const testingSnapshot = getTestingConsoleSnapshot(event.id);
@@ -53,7 +53,7 @@ export async function TestingConsole({ eventId = "event-summit" }: { eventId?: s
         </div>
         <ShowtimeReadinessPanel snapshot={testingSnapshot} />
         <StreamYardIngressPanel eventId={event.id} />
-        <AttendeeLiveControlPanel eventId={event.id} />
+        <AttendeeLiveControlPanel eventId={event.id} search={rosterSearch} searchAction={`/admin/testing/${eventId}`} />
         <ChatModerationQueue eventId={event.id} />
         <BrowserDiagnosticsPanel eventId={event.id} />
         <section className="rounded-3xl border border-slate-200 bg-white p-5 text-sm text-slate-600 shadow-sm"><strong>Live deployment smoke diagnostics</strong><span className="sr-only"> {smokeDiagnosticsTerms.join(" ")}</span></section>

@@ -2,7 +2,7 @@ import { NextResponse } from "next/server";
 import { randomId } from "@/lib/security/portableCrypto";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
-import { getAttendeeLiveCapability, getAttendeeLiveControlState, setAttendeeLiveCapability } from "@/services/venue/attendeeLivePermissionService";
+import { applyAttendeeLiveDecision, getAttendeeLiveCapability, getAttendeeLiveControlState, setAttendeeLiveCapability } from "@/services/venue/attendeeLivePermissionService";
 import type { AttendeeLiveRoomKind } from "@/types/attendeeLive";
 import { removeLiveKitParticipantFromMainStage } from "@/services/video/livekitParticipantAdmin";
 
@@ -57,6 +57,12 @@ export async function POST(request: Request) {
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 401 });
   const revoke = action === "revoke" || bool(body.revoked);
   const permit = action === "permit" || action === "repermit" || action === "approve";
+  // One-click roster decisions share the server-action rules exactly.
+  if (action === "approve_publish" || action === "decline") {
+    const capability = await applyAttendeeLiveDecision({ eventId, roomKind, roomId, attendeeId, decision: action, actorRole: auth.actorRole, reason: body.reason ? String(body.reason) : undefined });
+    await recordDecision({ eventId, roomId, attendeeId, actorRole: auth.actorRole, action: action === "approve_publish" ? "approved stage publishing (camera + mic) for" : "declined the stage request of" });
+    return NextResponse.json({ ok: true, capability });
+  }
   const existing = await getAttendeeLiveCapability(eventId, roomKind, roomId, attendeeId).catch(() => undefined);
   const capability = await setAttendeeLiveCapability({
     eventId,
@@ -70,6 +76,9 @@ export async function POST(request: Request) {
     approvedForStage: permit && !revoke ? bool(body.approvedForStage ?? existing?.approvedForStage) : false,
     revoked: revoke,
     revokedReason: revoke ? String(body.revokedReason || "Live-event access revoked by crew.") : undefined,
+    requestStatus: existing?.requestStatus === "requested" ? (revoke ? "declined" : bool(body.approvedForStage ?? existing?.approvedForStage) ? "approved" : existing.requestStatus) : existing?.requestStatus,
+    requestedAt: existing?.requestedAt,
+    decidedAt: existing?.requestStatus === "requested" && (revoke || bool(body.approvedForStage ?? existing?.approvedForStage)) ? new Date().toISOString() : existing?.decidedAt,
     updatedBy: auth.actorRole,
     updatedAt: new Date().toISOString(),
   });

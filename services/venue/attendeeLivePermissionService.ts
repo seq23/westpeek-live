@@ -1,5 +1,5 @@
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
-import type { AttendeeLiveCapability, AttendeeLiveControlState, AttendeeLiveRoomKind } from "@/types/attendeeLive";
+import type { AttendeeLiveCapability, AttendeeLiveControlState, AttendeeLiveDecision, AttendeeLiveRoomKind } from "@/types/attendeeLive";
 
 export function attendeeLiveCapabilityKey(eventId: string, roomKind: AttendeeLiveRoomKind, roomId: string, attendeeId: string) {
   return `${eventId}:${roomKind}:${roomId}:${attendeeId}`;
@@ -85,4 +85,57 @@ export async function canAttendeePublishLive(input: { eventId: string; roomKind:
     canShareScreen: control.globalScreenShareEnabled && Boolean(capability?.canShareScreen),
     reason: "Publishing allowed by crew controls.",
   };
+}
+
+// ---- One-click crew decisions ------------------------------------------------
+
+function emptyCapability(eventId: string, roomKind: AttendeeLiveRoomKind, roomId: string, attendeeId: string): AttendeeLiveCapability {
+  return { eventId, roomKind, roomId, attendeeId, canJoinLiveStream: false, canPublishCamera: false, canPublishMicrophone: false, canShareScreen: false, approvedForStage: false, revoked: false, updatedAt: new Date().toISOString() };
+}
+
+/**
+ * The attendee asked to join the stage. Records the request without granting anything;
+ * a previous decline is superseded by the new request.
+ */
+export function requestedCapability(previous: AttendeeLiveCapability | undefined, base: { eventId: string; roomKind: AttendeeLiveRoomKind; roomId: string; attendeeId: string }): AttendeeLiveCapability {
+  const current = previous || emptyCapability(base.eventId, base.roomKind, base.roomId, base.attendeeId);
+  return { ...current, requestStatus: "requested", requestedAt: new Date().toISOString(), decidedAt: undefined, updatedAt: new Date().toISOString() };
+}
+
+/**
+ * Pure: the next capability for a crew decision. Exported so the ordering rules are unit-testable
+ * without a store.
+ *   permit           → may watch the live stage (join); publishing untouched; un-revokes.
+ *   approve_publish  → may watch AND publish camera + mic on the stage; closes a pending request as approved.
+ *   revoke           → nothing; revoked with reason; a pending request is closed as declined.
+ *   decline          → the request is closed as declined; nothing else changes.
+ *   reset            → back to "registered, no decision": no grants, not revoked, no request.
+ */
+export function decideCapability(previous: AttendeeLiveCapability | undefined, input: { eventId: string; roomKind: AttendeeLiveRoomKind; roomId: string; attendeeId: string; decision: AttendeeLiveDecision; actorRole: string; reason?: string }): AttendeeLiveCapability {
+  const now = new Date().toISOString();
+  const current = previous || emptyCapability(input.eventId, input.roomKind, input.roomId, input.attendeeId);
+  const closeRequest = (status: "approved" | "declined") => (current.requestStatus === "requested" ? { requestStatus: status, decidedAt: now } : {});
+  if (input.decision === "permit") {
+    return { ...current, canJoinLiveStream: true, revoked: false, revokedReason: undefined, updatedBy: input.actorRole, updatedAt: now };
+  }
+  if (input.decision === "approve_publish") {
+    return { ...current, canJoinLiveStream: true, canPublishCamera: true, canPublishMicrophone: true, approvedForStage: true, revoked: false, revokedReason: undefined, requestStatus: "approved", decidedAt: now, updatedBy: input.actorRole, updatedAt: now };
+  }
+  if (input.decision === "reset") {
+    return { ...emptyCapability(input.eventId, input.roomKind, input.roomId, input.attendeeId), updatedBy: input.actorRole, updatedAt: now };
+  }
+  if (input.decision === "decline") {
+    return { ...current, ...closeRequest("declined"), requestStatus: "declined", decidedAt: now, updatedBy: input.actorRole, updatedAt: now };
+  }
+  return { ...current, canJoinLiveStream: false, canPublishCamera: false, canPublishMicrophone: false, canShareScreen: false, approvedForStage: false, revoked: true, revokedReason: input.reason || "Crew revoked live-event access.", ...closeRequest("declined"), updatedBy: input.actorRole, updatedAt: now };
+}
+
+export async function applyAttendeeLiveDecision(input: { eventId: string; roomKind: AttendeeLiveRoomKind; roomId: string; attendeeId: string; decision: AttendeeLiveDecision; actorRole: string; reason?: string }) {
+  const previous = await getAttendeeLiveCapability(input.eventId, input.roomKind, input.roomId, input.attendeeId).catch(() => undefined);
+  return setAttendeeLiveCapability(decideCapability(previous, input));
+}
+
+export async function recordAttendeeStageRequest(input: { eventId: string; roomKind: AttendeeLiveRoomKind; roomId: string; attendeeId: string }) {
+  const previous = await getAttendeeLiveCapability(input.eventId, input.roomKind, input.roomId, input.attendeeId).catch(() => undefined);
+  return setAttendeeLiveCapability(requestedCapability(previous, input));
 }

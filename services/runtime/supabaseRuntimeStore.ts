@@ -481,6 +481,12 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return data?.capability as AttendeeLiveCapability | undefined;
   }
 
+  async listAttendeeLiveCapabilities(eventId: string) {
+    const { data, error } = await this.client.from("attendee_live_capabilities").select("capability").eq("event_id", eventId).order("updated_at", { ascending: false });
+    if (error) fail(`attendee_live_capabilities list: ${error.message}`);
+    return ((data || []) as Record<string, unknown>[]).map((row) => row.capability as AttendeeLiveCapability).filter(Boolean);
+  }
+
   async setAttendeeLiveControlState(key: string, state: AttendeeLiveControlState) {
     const { error } = await this.client.from("attendee_live_control_states").upsert({ key, event_id: state.eventId, room_kind: state.roomKind, room_id: state.roomId, state, updated_at: state.updatedAt });
     if (error) fail(`attendee_live_control_states upsert: ${error.message}`);

@@ -4318,6 +4318,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:attendee-roster-contract",
+      "command": "node scripts/validate_attendee_roster_contract.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Attendee roster and pending stage requests: both stores list capabilities; the roster joins profiles, capability, silence, and last chat and is bounded to 200; the attendee's request records requestStatus 'requested'; one-click permit/approve/revoke/decline/reset are pure, guarded, and shared with the API route; the deck renders on the crew console and the command page; unit and Playwright proofs exist.",
+      "whatItDoesNotProve": "Does not prove the deployed pages against the live Supabase store; that is the post-deploy load of the crew console and command page.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only if attendee live participation itself is retired.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

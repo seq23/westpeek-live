@@ -94,3 +94,23 @@ Risks Accepted: Same migration path as ADM-2026-09-15-RUNTIME-EVENTS; guarded by
 Validation Impact: `tests/unit/liveChatModeration.test.ts`, `tests/e2e/crew-chat-moderation.spec.ts`, `scripts/validate_live_chat_moderation_contract.js`, `scripts/validate_supabase_schema_parity.js` (new columns and table).
 
 Future Reversal Conditions: If chat moves to a real-time provider with its own moderation, keep the decision table as the source of truth and mirror it outward.
+
+## Decision ID: ADM-2026-09-16-ATTENDEE-ROSTER
+
+Status: Accepted
+
+Context: Permit and revoke lived only on `/admin/testing/[id]` and needed an attendee id typed by hand, copied out of the fallback event log. A stage request from an attendee was recorded as a capability row with every flag false — indistinguishable from "revoked then re-permitted with nothing" — so there was no queue to work.
+
+Decision: `AttendeeLiveCapability` carries `requestStatus` (`requested` | `approved` | `declined`) with `requestedAt`/`decidedAt`; "Request to Join Stage" records `requested` and grants nothing. One pure function, `decideCapability`, defines the five one-click decisions (permit, approve_publish, revoke, decline, reset) and is shared by the server action and the `/api/attendee-live/access` route. `services/venue/attendeeRosterService.ts` joins the latest 200 registered profiles with their capability, chat silence, and last chat time, and surfaces pending requests oldest first. One deck (`components/moderation/CrewLiveModerationDeck.tsx` = roster + chat queue + room controls) renders on `/crew/events/[id]`, `/app/events/[id]`, and the testing console; the by-id form stays folded away on the testing console as the fallback for someone not on the roster.
+
+Alternatives Considered: Deriving "pending" from all-false flags (ambiguous); a separate requests table (a second source of truth for the same attendee/room); a new crew route for moderation (adds a route to every ledger for no user gain — the crew home is where the crew already is).
+
+Reasoning: The capability row is already keyed event/room/attendee and read by the token route; adding the request status to it means the token path, the roster, and the attendee's own stage page all read one record.
+
+Tradeoffs: The legacy permit/revoke paths (manual form, API route) must carry `requestStatus` through their overwrite; both do, and the unit tests pin it.
+
+Risks Accepted: The roster reads the latest 500 chat messages to compute "last chat at"; at larger events that becomes a per-attendee column. Search is server-rendered via `?roster=`.
+
+Validation Impact: `tests/unit/attendeeLiveRoster.test.ts`, `tests/e2e/crew-attendee-roster.spec.ts`, `scripts/validate_attendee_roster_contract.js`.
+
+Future Reversal Conditions: If attendees get a real-time presence channel, the roster should read presence from it and keep this decision record as the authority.
