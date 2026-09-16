@@ -61,6 +61,7 @@ Purpose: safe env contract for local, CI, Cloudflare Worker, postdeploy, and pro
 | `LIVEKIT_URL` | Required production/Cloudflare secret or env value. |
 | `LIVEKIT_WEBHOOK_SECRET` | Required production/Cloudflare secret or env value. |
 | `NEXT_PUBLIC_APP_URL` | Required production/Cloudflare secret or env value. |
+| `NEXT_PUBLIC_BUILD_ID` | Build-time stamp set by `next.config.js` (never a secret, never set by hand): `WORKERS_CI_COMMIT_SHA` on Workers Builds, else the git head, else the clock; `dev` under `next dev`. Inlined into the client bundle and the Worker so the venue polls can tell a stale page a new version is live and reload it (build-version watchdog). |
 | `NEXT_PUBLIC_SELF_SERVE_ENABLED` | Required production/Cloudflare secret or env value. |
 | `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Required production/Cloudflare secret or env value. |
 | `NEXT_PUBLIC_SUPABASE_URL` | Required production/Cloudflare secret or env value. |

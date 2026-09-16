@@ -17,7 +17,7 @@ export default async function ReplayPage({ params }: { params: Promise<{ eventId
   });
 
   return (
-    <VenuePageShell model={model}>
+    <VenuePageShell model={model} surface="replay">
       <div className="space-y-6">
         <ReplayCenter eventId={model.eventId} replays={model.replays} />
         <ReplayRecordingStatusPanel jobs={[recordingJob]} />

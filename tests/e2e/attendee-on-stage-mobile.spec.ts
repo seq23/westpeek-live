@@ -1,6 +1,8 @@
-import { expect, test, type Browser, type Page } from "@playwright/test";
+import { createHmac } from "node:crypto";
+import { expect, test, type APIRequestContext, type Browser, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { asRegisteredAttendee } from "./helpers/persona";
+import { day1Default } from "./helpers/day1AccessDefaults";
 import { grantCrewAccess, isDeployedBrowserRun } from "./helpers/roleJourney";
 
 /**
@@ -20,6 +22,18 @@ const EVENT = "event-summit";
 const ATTENDEE_ID = `e2e-attendee-${EVENT}`;
 const STAGE = `/venue/${EVENT}/stage`;
 const CREW = `/crew/events/${EVENT}`;
+
+function sign(body: string) {
+  const secret = process.env.LIVEKIT_WEBHOOK_SECRET || day1Default("LIVEKIT_WEBHOOK_SECRET", "local-playwright-livekit-webhook-secret-1234567890");
+  return createHmac("sha256", secret).update(body).digest("hex");
+}
+
+/** Marks the seed stage live through the real webhook route, so the LiveKit player (not the pre-stream card) mounts. */
+async function stageLive(request: APIRequestContext) {
+  const body = JSON.stringify({ event: "ingress_started", eventId: EVENT, stageId: "main-stage", ingressInfo: { roomName: `${EVENT}-main-stage` } });
+  const response = await request.post("/api/video/livekit-webhook", { data: Buffer.from(body), headers: { "content-type": "application/json", "x-livekit-signature": sign(body) } });
+  expect(response.ok()).toBeTruthy();
+}
 
 async function attendeePage(browser: Browser) {
   const context = await browser.newContext({ permissions: ["camera", "microphone"] });
@@ -57,14 +71,24 @@ async function resetAttendee(page: Page) {
   if (await reset.count()) { await reset.click(); await expectRosterStatus(page, "open"); }
 }
 
-test("approve → toggles appear → camera captured and previewed → revoke → stopped, on a phone", async ({ browser }) => {
+test("approve → toggles appear → camera captured and previewed → revoke → stopped, on a phone", async ({ browser, request }) => {
   test.setTimeout(150_000);
   const crew = await crewPage(browser);
   await resetAttendee(crew.page);
   await openRequests(crew.page);
+  await stageLive(request);
 
   const attendee = await attendeePage(browser);
+  // No LiveKit server in this run: the token route answers with a stub so the CLIENT path is
+  // proven — the player mounts, its token fetch completes, and the room surface reaches
+  // token-issued within 10s (the self-cancelling effect of 16 Sep 2026 left it on "loading"
+  // for good). A real media element with videoWidth > 0 needs the deployed LiveKit room.
+  await attendee.page.route("**/api/video/livekit-token", async (route) => {
+    await route.fulfill({ status: 200, contentType: "application/json", body: JSON.stringify({ ok: true, result: { token: { token: "stub-attendee-token" }, livekitUrl: "wss://stub.livekit.invalid" }, permissions: { canPublishAudio: false, canPublishVideo: false, canShareScreen: false } }) });
+  });
   await gotoAndAssert(attendee.page, STAGE);
+  await expect(attendee.page.getByTestId("attendee-livekit-room-surface")).toHaveAttribute("data-livekit-consumption-state", "token-issued", { timeout: 10_000 });
+  await attendee.page.unroute("**/api/video/livekit-token");
 
   // First visit: the coach strip, dismissed once.
   const coach = attendee.page.getByTestId("coach-strip-stage");
