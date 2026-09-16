@@ -61,6 +61,8 @@ export interface ContactRecord {
   firstSeenAt: string;
   lastSeenAt: string;
   updatedAt: string;
+  /** Set when the owner archives one of our own test rows (migration 0030). Archived rows are never deleted, only left out. */
+  archivedAt?: string;
 }
 
 /** A per-event "Tell us more" question. */

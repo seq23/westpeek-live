@@ -30,7 +30,7 @@ function seedHashOnlyRows(eventIds: string[], emailHash: string) {
   snapshot.attendeeProfiles = snapshot.attendeeProfiles || [];
   eventIds.forEach((eventId, index) => {
     const createdAt = `2026-09-1${index}T10:00:00.000Z`;
-    snapshot.attendeeProfiles.push({ attendeeId: `legacy-${eventId}`, eventId, emailHash, emailMasked: "ca***@example.com", name: "Cal Legacy", company: "Legacy Co", title: index ? "Producer" : "", socialLinks: [], topicsOfInterest: [], networkingOptIn: true, role: "attendee", status: "active", createdAt, updatedAt: createdAt });
+    snapshot.attendeeProfiles.push({ attendeeId: `legacy-${eventId}`, eventId, emailHash, emailMasked: "ca***@legacyco.io", name: "Cal Legacy", company: "Legacy Co", title: index ? "Producer" : "", socialLinks: [], topicsOfInterest: [], networkingOptIn: true, role: "attendee", status: "active", createdAt, updatedAt: createdAt });
   });
   fs.writeFileSync(runtimePath(), `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
 }
@@ -38,7 +38,7 @@ function seedHashOnlyRows(eventIds: string[], emailHash: string) {
 test("hash-only people are listed and counted, exported with a blank email, then healed by a matching registration", async ({ page, browser }) => {
   test.setTimeout(150_000);
   const stamp = Date.now();
-  const email = `cal-${stamp}@example.com`;
+  const email = `cal-${stamp}@legacyco.io`;
   const emailHash = createHash("sha256").update(email).digest("hex");
   const oldOne = await createNowEvent(page, `Old one ${stamp}`);
   const oldTwo = await createNowEvent(page, `Old two ${stamp}`);
@@ -55,7 +55,7 @@ test("hash-only people are listed and counted, exported with a blank email, then
   const rowId = `hash-only-row-${emailHash.slice(0, 12)}`;
   const row = owner.getByTestId(rowId);
   await expect(row).toContainText("Cal Legacy");
-  await expect(row).toContainText("ca***@example.com");
+  await expect(row).toContainText("ca***@legacyco.io");
   await expect(row).toContainText("not captured — registered before 16 Sep 2026");
   await expect(row).toHaveAttribute("data-events", "2");
   await expect(row).toContainText(`Old one ${stamp}`);
