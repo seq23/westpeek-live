@@ -13,6 +13,8 @@ import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { grantOwnerOverrideIfMatched } from "@/lib/auth/ownerAccessOverride";
 import type { V4CrewRole } from "@/types/v4";
 import { CREW_ROLES, crewRoleDescriptions, crewRoleLabels } from "@/lib/auth/crewRolePermissions";
+import { getHostLinkState } from "@/services/events/hostLinkService";
+import { getCrewAccessPassword } from "@/lib/env";
 
 // Day 1 access defaults are registry-managed; do not display or hardcode human passwords here.
 // Every role in the permission map can be chosen here: crew, executive_producer (the host), producer,
@@ -43,7 +45,10 @@ async function enterCrew(formData: FormData) {
   }
   await logAccessAttempt({ status: "access_granted", accessKind: "crew", eventId: access.eventId, role: access.role || crewRole, route: access.destination });
   const { crewCookieName } = getV5AccessCookieNames(env);
-  const cookie = await createV5AccessCookie({ kind: "crew", eventId: access.eventId, role: crewRole, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 8 }, getV5AccessCookieSecret(env));
+  // Entered with the event's own crew code (a host link): the cookie remembers the code version so revoking the link ends it.
+  const viaEventCode = Boolean(access.eventId) && password !== (getCrewAccessPassword()?.trim() || "\u0000");
+  const codeVersion = viaEventCode && access.eventId ? (await getHostLinkState(access.eventId)).codeVersion : undefined;
+  const cookie = await createV5AccessCookie({ kind: "crew", eventId: access.eventId, role: crewRole, codeVersion, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 8 }, getV5AccessCookieSecret(env));
   (await cookies()).set(crewCookieName, cookie, getV5CookieOptions(60 * 60 * 8));
   redirect(access.destination || `/crew/events/${access.eventId || "demo"}`);
 }

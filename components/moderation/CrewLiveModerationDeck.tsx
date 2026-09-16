@@ -5,6 +5,7 @@ import { StreamYardIngressPanel } from "@/components/testing/StreamYardIngressPa
 import { LiveRoomControlForms } from "@/components/moderation/LiveRoomControlForms";
 import { SpeakerRosterPanel } from "@/components/moderation/SpeakerRosterPanel";
 import { getCrewViewer } from "@/lib/auth/crewViewer";
+import { HostPanel } from "@/components/events/HostPanel";
 
 /**
  * Where the crew is: the pending requests + roster, the chat moderation queue, and the room-wide
@@ -28,6 +29,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, in
           <StreamYardIngressPanel eventId={eventId} viewer={viewer} includeEndShow={false} />
         </section>
       ) : null}
+      <HostPanel eventId={eventId} viewer={viewer} />
       <EndShowControl eventId={eventId} viewer={viewer} />
       <SpeakerRosterPanel eventId={eventId} viewer={viewer} />
       <AttendeeLiveRoster eventId={eventId} search={search} searchAction={searchAction} viewer={viewer} />

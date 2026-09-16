@@ -2,6 +2,7 @@ import { EventSetupShell } from "@/components/events/setup/EventSetupShell";
 import { AccessSetupPanel } from "@/components/events/setup/SetupPanels";
 import { EventAccessCodesPanel } from "@/components/events/EventAccessCodesPanel";
 import { GuestPreviewList } from "@/components/guests/GuestPreviewLinks";
+import { HostPanel } from "@/components/events/HostPanel";
 import { getEventAccessConfig, getEventConfigPackage } from "@/services/events/eventConfigRepository";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
@@ -16,7 +17,7 @@ export default async function EventSetupSubroutePage({ params }: { params: Promi
   return (
     <EventSetupShell eventId={resolvedParams.eventId} active="access" eyebrow="Setup · Access" title="Access setup">
       {runtime && runtime.source !== "seed" ? (
-        <div className="mb-6"><EventAccessCodesPanel event={runtime} /></div>
+        <div className="mb-6 space-y-6"><HostPanel eventId={runtime.id} /><EventAccessCodesPanel event={runtime} /></div>
       ) : (
         <p className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">This is a compiled demo/seed event. Its crew password and role codes are Cloudflare secrets named by the env keys below; they are never shown here.</p>
       )}

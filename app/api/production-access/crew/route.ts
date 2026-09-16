@@ -7,6 +7,8 @@ import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import type { V4CrewRole } from "@/types/v4";
 import { CREW_ROLES } from "@/lib/auth/crewRolePermissions";
+import { getHostLinkState } from "@/services/events/hostLinkService";
+import { getCrewAccessPassword } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
 
@@ -38,7 +40,9 @@ export async function POST(request: NextRequest) {
 
   await logAccessAttempt({ status: "access_granted", accessKind: "crew", eventId: access.eventId, role: access.role || crewRole, route: access.destination });
   const { crewCookieName } = getV5AccessCookieNames(env);
-  const cookie = await createV5AccessCookie({ kind: "crew", eventId: access.eventId, role: crewRole, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 8 }, getV5AccessCookieSecret(env));
+  const viaEventCode = Boolean(access.eventId) && password !== (getCrewAccessPassword()?.trim() || "\u0000");
+  const codeVersion = viaEventCode && access.eventId ? (await getHostLinkState(access.eventId)).codeVersion : undefined;
+  const cookie = await createV5AccessCookie({ kind: "crew", eventId: access.eventId, role: crewRole, codeVersion, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 8 }, getV5AccessCookieSecret(env));
   const response = redirectTo(request, access.destination || `/crew/events/${access.eventId || "demo"}`);
   response.cookies.set(crewCookieName, cookie, getV5CookieOptions(60 * 60 * 8));
   return response;

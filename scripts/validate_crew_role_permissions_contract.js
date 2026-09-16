@@ -66,9 +66,28 @@ check("components/crew/CrewInstructionShell.tsx", ["export function CrewRoleBadg
 check("app/production-access/crew/page.tsx", ["CREW_ROLES.map((role) =>", 'data-testid="crew-role-descriptions"', "crewRoleDescriptions[role]", "defaultValue={prefilledRole}", "defaultValue={prefilledEvent}", "defaultValue={prefilledCode}"]);
 check("app/api/production-access/crew/route.ts", ["CREW_ROLES.includes(role as V4CrewRole)"]);
 
+// Host = the executive_producer crew role for one event; host links; revocation rotates the crew code.
+check("services/events/hostLinkService.ts", ["export function hostLinkPath", "role=executive_producer&code=", "export async function revokeHostLinks", "crew: mintAccessCodes().crew", "codeVersion: state.codeVersion + 1", "export function crewCookieCurrent"]);
+check("lib/auth/liveControlRequestGuard.ts", ["crewCookieCurrent(crew.codeVersion, currentCodeVersion)", "REVOKED_HOST_LINK_ERROR"]);
+check("lib/auth/crewViewer.ts", ["crewCookieCurrent(crew.codeVersion, currentCodeVersion)"]);
+check("app/production-access/crew/page.tsx", ["codeVersion, issuedAt"]);
+check("app/api/production-access/crew/route.ts", ["codeVersion, issuedAt"]);
+check("lib/actions/hostActions.ts", ['requireLiveEventControlAccessForRequest(eventId, "manage_host")', "mintHostLink(", "revokeHostLinks("]);
+if (!/manage_host: \["executive_producer"\]/.test(read("tests/unit/crewRolePermissions.test.ts"))) throw new Error("manage_host must belong to the executive producer only (plus owner/operator).");
+check("components/events/HostPanel.tsx", ["Make someone the host", "Send this to whoever is running the show. They get the host banner, go-live, end-the-show and every control for this event only.", "Revoke host link", 'testId="copy-host-link"', "You are hosting"]);
+check("components/moderation/CrewLiveModerationDeck.tsx", ["<HostPanel"]);
+check("app/app/events/[eventId]/access/page.tsx", ["<HostPanel"]);
+check("app/venue/[eventId]/lobby/page.tsx", ["(await getCrewViewer(resolvedParams.eventId)).isHost", "crewHost={crewHost}"]);
+// The four production-access cards explain themselves.
+check("app/production-access/page.tsx", ["Sequoia and Scooter. The master password opens everything", "Separate operator password.", "People hired for the day", "Speakers, sponsors, VIPs, clients", "read-only overview for clients"]);
+if (read("app/production-access/page.tsx").includes("Conference Special Guest")) throw new Error("The special-guest card must be named for the people it is for.");
+check("scripts/post_deploy_role_flow_audit.js", ['"Speakers, sponsors, VIPs, clients"']);
+check("tests/unit/hostLinks.test.ts", ["an executive_producer crew cookie is the host with every deck permission; plain crew is not", "revoke rotates the code and ends old cookies"]);
+check("tests/e2e/host-link.spec.ts", ["mint a host link → the link prefills the gate → the host runs the show → revoke ends it", "the production-access cards explain the four doors"]);
+
 // Proofs.
 check("tests/unit/crewRolePermissions.test.ts", ["moderator cannot end the show; TD can", "executive_producer crew cookie is the host"]);
 check("tests/unit/crewServerActionsByRole.test.ts", ["endTheShow(form({ eventId }))).rejects.toThrow(\"Moderator can't move the stream", "moderateLiveChatMessage(form("]);
 check("tests/e2e/crew-roles-mean-something.spec.ts", ["expectDisabledWithReason(moderator.page, \"end-show-button\"", "technical director: can generate credentials and end the show", "crew-role-descriptions"]);
-if (examined < 20) throw new Error(`validate_crew_role_permissions_contract examined only ${examined} files`);
+if (examined < 35) throw new Error(`validate_crew_role_permissions_contract examined only ${examined} files`);
 console.log(`validate_crew_role_permissions_contract: PASS — ${examined} files examined; static contract, the role refusal itself is proven by tests/unit/crewServerActionsByRole.test.ts.`);

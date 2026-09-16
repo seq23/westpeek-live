@@ -8,6 +8,7 @@ import { VipLobbyPanel } from "@/components/venue/VipLobbyPanel";
 import { getCurrentSpecialGuestAccess } from "@/services/guests/guestIdentityService";
 import { resolveViewAs } from "@/lib/auth/viewAs";
 import { ViewAsBanner } from "@/components/guests/ViewAsBanner";
+import { getCrewViewer } from "@/lib/auth/crewViewer";
 
 export const dynamic = "force-dynamic";
 
@@ -18,13 +19,16 @@ export default async function LobbyPage({ params, searchParams }: { params: Prom
   const model = buildVirtualVenueModel(resolvedParams.eventId);
   // Only a workspace actor (owner cookie, operator cookie, or staff session) sees the host panel; attendees never do.
   const actor = runtimeEvent && runtimeEvent.source !== "seed" ? await getWorkspaceActor() : null;
+  // The host is also the executive_producer crew role for this event (a host link), not only owner / operator.
+  const crewHost = runtimeEvent && runtimeEvent.source !== "seed" && !actor ? (await getCrewViewer(resolvedParams.eventId)).isHost : false;
+  const isHost = Boolean(actor) || crewHost;
   const guest = await getCurrentSpecialGuestAccess(resolvedParams.eventId);
   // "View as" a VIP: an owner / operator / producer sees the VIP panel as that person, read-mostly.
   const viewAs = await resolveViewAs(resolvedParams.eventId, resolvedSearchParams?.viewAs, "vip");
   return (
     <VenuePageShell model={model}>
       {viewAs ? <ViewAsBanner viewAs={viewAs} backHref={`/crew/events/${resolvedParams.eventId}`} /> : null}
-      {actor && runtimeEvent && !viewAs ? <HostJoinCodeBanner event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} /> : null}
+      {isHost && runtimeEvent && !viewAs ? <HostJoinCodeBanner event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} crewHost={crewHost} /> : null}
       {guest?.role === "vip" || viewAs ? <VipLobbyPanel eventId={resolvedParams.eventId} error={resolvedSearchParams?.error} viewAs={viewAs} /> : null}
       <VenueLobbyDashboard model={model} />
     </VenuePageShell>
