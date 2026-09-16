@@ -257,3 +257,10 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: the owner opened `/app/people` and found 40 people of whom 34 were our Playwright and Tier-4 fixtures. Test rows are now computed (`services/attendees/testRowClassifier.ts`: reserved test domains, seed and automation events — never a hard-coded name list), counted apart, hidden behind a remembered "Show test rows" toggle, left out of the CSV unless `?includeTest=1`, and archived — never hard-deleted — by an owner-only action that cannot touch a row from a real event (migration 0030 adds `contacts.archived_at`; attendee rows use the existing `status = 'revoked'`).
 - Proof behind it: `tests/unit/peopleTestRows.test.ts`, `tests/e2e/people-test-rows.spec.ts`.
+
+## Access codes vault — 2026-09-16
+
+- Validator: `npm run validate:access-codes-vault-contract`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: the owner asked for one place to look codes up, replacing the v2 manual that printed them in a document. The Owner Console's "Access codes" fold is owner-only (`components/owner/AccessCodesVault.tsx` refuses any other actor), lists every code for every event masked until Reveal with Copy, "Copy all codes for this event", a search across events by code or name, and Rotate (confirmed, and it warns that every link and session handed out with the old code stops working). Reveal and Copy write an audit row (`access_code_revealed` / `access_code_copied`) that never carries the value. The four global gates render SET / NOT SET with `npx wrangler secret put …`; the validator walks `app/`, `components/` and `lib/actions` and fails if any file renders the VALUE of `OWNER_MASTER_ACCESS_PASSWORD`, `OPERATOR_LAUNCHPAD_PASSWORD` or `CREW_ACCESS_PASSWORD`.
+- Proof behind it: `tests/e2e/access-codes-vault.spec.ts` (operator refused, reveal, search by a handed-over code, rotate → the old code fails the gate, and the response body never contains a gate password).
