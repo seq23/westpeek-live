@@ -113,6 +113,8 @@ export function canOperatorAccessPath(pathname: string, payload?: V5AccessCookie
   if (parts[0] === "app" && parts[1] === "events" && parts[2] && parts[3]) {
     return operatorEventSurfaceSuffixes.has(parts[3]);
   }
+  // The per-event command center (no suffix) is where "Create" lands an operator after a planned event is created.
+  if (parts[0] === "app" && parts[1] === "events" && parts[2] && parts.length === 3) return true;
   return false;
 }
 

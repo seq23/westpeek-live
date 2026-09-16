@@ -5,6 +5,7 @@ import type { LiveChatMessage } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
+import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 
 export interface V5AccessAttemptRuntimeEvent {
   id: string;
@@ -107,6 +108,9 @@ export interface V6RuntimeSnapshot {
   liveChatMessages: LiveChatMessage[];
   attendeeLiveCapabilities: AttendeeLiveCapability[];
   attendeeLiveControlStates: AttendeeLiveControlState[];
+  runtimeEvents: RuntimeEventRecord[];
+  runtimeClients: RuntimeClientRecord[];
+  agencySettings: AgencySettingsRecord[];
 }
 
 export interface RuntimeStore {
@@ -142,6 +146,14 @@ export interface RuntimeStore {
   setAttendeeLiveControlState(key: string, state: AttendeeLiveControlState): Promise<AttendeeLiveControlState>;
   getAttendeeLiveControlState(key: string): Promise<AttendeeLiveControlState | undefined>;
   readSnapshot(): Promise<V6RuntimeSnapshot>;
+  // Runtime-created events, clients, and agency settings (migration 0024).
+  upsertRuntimeEvent(event: RuntimeEventRecord): Promise<RuntimeEventRecord>;
+  getRuntimeEvent(idOrSlugOrJoinCode: string): Promise<RuntimeEventRecord | undefined>;
+  listRuntimeEvents(): Promise<RuntimeEventRecord[]>;
+  upsertRuntimeClient(client: RuntimeClientRecord): Promise<RuntimeClientRecord>;
+  listRuntimeClients(): Promise<RuntimeClientRecord[]>;
+  getAgencySettings(id: string): Promise<AgencySettingsRecord | undefined>;
+  setAgencySettings(settings: AgencySettingsRecord): Promise<AgencySettingsRecord>;
 }
 
 export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
@@ -166,5 +178,8 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     liveChatMessages: [],
     attendeeLiveCapabilities: [],
     attendeeLiveControlStates: [],
+    runtimeEvents: [],
+    runtimeClients: [],
+    agencySettings: [],
   };
 }

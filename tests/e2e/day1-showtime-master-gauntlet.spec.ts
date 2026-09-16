@@ -169,9 +169,10 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
   const operatorContext = await browser.newContext();
   const operator = await isolatedPage(operatorContext);
   await loginOperator(operator);
-  const createdEventSlug = "playwright-day1-showtime-master";
-  const createdEventUrl = new RegExp(`/events/${createdEventSlug}`);
-  const createdVenueUrl = new RegExp(`/venue/${createdEventSlug}/lobby`);
+  // The slug is derived from the name by the repository; read it back from the URL after creation.
+  let createdEventSlug = "playwright-day-1-showtime-master-event";
+  let createdEventUrl = new RegExp(`/events/${createdEventSlug}`);
+  let createdVenueUrl = new RegExp(`/venue/${createdEventSlug}/lobby`);
 
   const launchpad = operator.locator("body");
   await expect(launchpad).toContainText(/Create Event in Admin Workspace/i);
@@ -184,25 +185,33 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
 
   await operator.getByRole("link", { name: /Create Event in Admin Workspace/i }).first().click();
   await expect(operator).toHaveURL(/\/app\/events\/new/);
-  await assertUsefulPage(operator, /Start a guided event setup/i);
+  await assertUsefulPage(operator, /Start a Room now, or plan an event for later/i);
   await expect(operator.locator("body")).toContainText(/Basics.*Branding.*Attendee Flow.*Venue.*Agenda.*Access.*Communications.*Preview.*Publish/i);
+  // The Day 1 video model is a default of every event, not a per-event form field.
+  await expect(operator.locator("body")).toContainText(/Production feed \/ source: StreamYard/i);
+  await expect(operator.locator("body")).toContainText(/Primary embedded distribution: LiveKit/i);
+  await expect(operator.locator("body")).toContainText(/Cloudflare Stream, then Daily, then Zoom \+ Google Meet/i);
 
+  await operator.getByTestId("when-later").check();
   await operator.getByLabel(/^Event name/i).fill("Playwright Day 1 Showtime Master Event");
-  await operator.getByLabel(/Event code \/ slug/i).fill("playwright-day1-showtime-master");
-  await operator.getByLabel(/Client or organizer name/i).fill("West Peek Productions");
-  await operator.getByLabel(/Event date/i).fill("2026-06-15");
-  await operator.getByLabel(/Primary audience/i).fill("Operators, attendees, speakers, sponsors, VIPs");
-  await operator.getByLabel(/Event type/i).fill("Virtual summit");
-  await operator.getByLabel(/Production feed \/ source/i).fill("StreamYard");
-  await operator.getByLabel(/Primary embedded distribution/i).fill("LiveKit");
-  await operator.getByLabel(/Fallback video provider/i).fill("Cloudflare Stream, then Daily, then Zoom + Google Meet");
-  await operator.getByRole("button", { name: /Create setup draft and continue/i }).click();
+  await operator.getByLabel(/New client name/i).fill("West Peek Productions");
+  await operator.getByLabel(/^Type/i).selectOption("virtual_summit");
+  await operator.getByTestId("create-event-submit").click();
 
-  await expect(operator).toHaveURL(/\/app\/events\/playwright-day1-showtime-master\/setup\?draftId=draft-playwright-day1-showtime-master-/);
-  await expect(operator.getByTestId("event-setup-draft-summary")).toBeVisible();
+  await expect(operator).toHaveURL(/\/app\/events\/playwright-day-1-showtime-master-event[a-z0-9-]*\?created=1/);
+  createdEventSlug = new URL(operator.url()).pathname.split("/")[3];
+  createdEventUrl = new RegExp(`/events/${createdEventSlug}`);
+  createdVenueUrl = new RegExp(`/venue/${createdEventSlug}/lobby`);
+  await expect(operator.getByTestId("runtime-event-header")).toBeVisible();
   await expect(operator.locator("body")).toContainText("Playwright Day 1 Showtime Master Event");
-  await expect(operator.locator("body")).toContainText(/StreamYard.*LiveKit.*Daily, then Zoom \+ Google Meet/i);
-  const setupUrl = operator.url();
+  // Publish: the draft becomes registration_open on the row itself — no PR, no redeploy.
+  await operator.getByTestId("publish-event").click();
+  await expect(operator).toHaveURL(new RegExp(`/app/events/${createdEventSlug}/publish\\?updated=registration_open`));
+
+  const setupUrl = `/app/events/${createdEventSlug}/setup`;
+  await gotoAndAssert(operator, setupUrl);
+  await expect(operator.getByTestId("event-setup-draft-summary")).toBeVisible();
+  await gotoAndAssert(operator, `/app/events/${createdEventSlug}/access`);
   const generatedCodes = {
     client: (await operator.getByTestId("generated-client-code").innerText()).trim(),
     speaker: (await operator.getByTestId("generated-speaker-code").innerText()).trim(),
@@ -210,7 +219,8 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
     vip: (await operator.getByTestId("generated-vip-code").innerText()).trim(),
     crew_lite: (await operator.getByTestId("generated-crew-lite-code").innerText()).trim(),
   };
-  expect(generatedCodes.speaker).toContain("Playwright-Day1-Showtime-Master-Speaker-2026!");
+  expect(generatedCodes.speaker).toMatch(/^SPK-[A-Z0-9]{6}$/);
+  expect(new Set(Object.values(generatedCodes)).size).toBe(5);
 
   await gotoAndAssert(operator, `/events/${createdEventSlug}`);
   await expect(operator).toHaveURL(createdEventUrl);
@@ -228,7 +238,7 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
   await assertUsefulPage(operator, /Lobby|Attendee venue|West Peek/i);
 
   await operator.goto(setupUrl);
-  await expect(operator.getByTestId("event-scoped-day1-command-links")).toContainText(/Operate this event, not the demo event/i);
+  await expect(operator.getByTestId("event-scoped-day1-command-links")).toContainText(/Event-scoped command links/i);
 
   await operator.getByTestId("event-scoped-day1-command-links").getByRole("link", { name: /Run of Show/i }).click();
   await expect(operator).toHaveURL(new RegExp(`/app/events/${createdEventSlug}/run-of-show`));

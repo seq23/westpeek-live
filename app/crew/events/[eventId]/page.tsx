@@ -1,8 +1,10 @@
 import { CrewBriefingPanel, CrewInstructionShell } from "@/components/crew/CrewInstructionShell";
 import { crewBriefing, crewTasks } from "@/lib/crew/crewBriefing";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export default async function CrewEventHomePage({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId);
   return (
     <CrewInstructionShell eventId={resolvedParams.eventId} active="home" eyebrow="Crew Briefing" title="Crew show-day command">
       <section className="rounded-3xl bg-white p-6 shadow-sm">

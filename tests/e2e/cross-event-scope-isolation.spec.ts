@@ -2,20 +2,21 @@ import { expect, test } from '@playwright/test';
 import { gotoAndAssert } from './helpers/assertNoAppError';
 import { loginAsOperator } from './helpers/roleJourney';
 
-async function createEvent(page: any, slug: string, name: string) {
+async function createEvent(page: any, name: string) {
   await loginAsOperator(page, '/app/events/new');
+  await page.getByTestId('when-later').check();
   await page.getByLabel(/^Event name/i).fill(name);
-  await page.getByLabel(/Event code \/ slug/i).fill(slug);
-  await page.getByLabel(/Client or organizer name/i).fill('West Peek Productions');
-  await page.getByLabel(/Event date/i).fill('2026-06-15');
-  await page.getByLabel(/Primary audience/i).fill('Scope isolation reviewers');
-  await page.getByLabel(/Event type/i).fill('Virtual summit');
-  await page.getByLabel(/Production feed \/ source/i).fill('StreamYard');
-  await page.getByLabel(/Primary embedded distribution/i).fill('LiveKit');
-  await page.getByLabel(/Fallback video provider/i).fill('Daily');
-  await page.getByRole('button', { name: /Create setup draft and continue/i }).click();
-  await expect(page).toHaveURL(new RegExp(`/app/events/${slug}/setup`));
+  await page.getByLabel(/New client name/i).fill('West Peek Productions');
+  await page.getByLabel(/^Type/i).selectOption('virtual_summit');
+  await page.getByTestId('create-event-submit').click();
+  await expect(page).toHaveURL(/\/app\/events\/[a-z0-9-]+\?created=1/);
+  const slug = new URL(page.url()).pathname.split('/')[3];
+  // A draft is not public; publish it so the public event page resolves.
+  await page.getByTestId('publish-event').click();
+  await expect(page).toHaveURL(new RegExp(`/app/events/${slug}/publish\\?updated=registration_open`));
+  await gotoAndAssert(page, `/app/events/${slug}/access`);
   const codes = {
+    slug,
     speaker: (await page.getByTestId('generated-speaker-code').innerText()).trim(),
     sponsor: (await page.getByTestId('generated-sponsor-code').innerText()).trim(),
   };
@@ -26,10 +27,11 @@ test('cross-event: two newly-created events keep routes, codes, and scoped porta
   const context = await browser.newContext();
   const page = await context.newPage();
   const suffix = Date.now().toString(36);
-  const eventA = `scope-a-${suffix}`;
-  const eventB = `scope-b-${suffix}`;
-  const codesA = await createEvent(page, eventA, `Scope Isolation A ${suffix}`);
-  const codesB = await createEvent(page, eventB, `Scope Isolation B ${suffix}`);
+  const codesA = await createEvent(page, `Scope Isolation A ${suffix}`);
+  const codesB = await createEvent(page, `Scope Isolation B ${suffix}`);
+  const eventA = codesA.slug;
+  const eventB = codesB.slug;
+  expect(eventA).not.toEqual(eventB);
   expect(codesA.speaker).not.toEqual(codesB.speaker);
   expect(codesA.sponsor).not.toEqual(codesB.sponsor);
 

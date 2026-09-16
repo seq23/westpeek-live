@@ -1,8 +1,10 @@
 import { RunOfShowPage } from "@/components/run-of-show/RunOfShowPage";
 import { LiveRunOfShowDashboard } from "@/components/run-of-show/LiveRunOfShowDashboard";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export default async function RunOfShowRoute({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId);
   return (
     <div className="space-y-6">
       <RunOfShowPage eventId={resolvedParams.eventId} />

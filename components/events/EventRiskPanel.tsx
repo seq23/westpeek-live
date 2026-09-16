@@ -1,7 +1,7 @@
-import { getEventPortfolioCards } from "@/services/events/eventPortfolioService";
+import type { EventPortfolioCard } from "@/services/events/eventPortfolioService";
 
-export async function EventRiskPanel() {
-  const atRisk = (await getEventPortfolioCards()).filter((card) => card.readinessScore < 80 || card.incidentCount > 0 || card.accessReadiness !== "ready");
+export function EventRiskPanel({ cards }: { cards: EventPortfolioCard[] }) {
+  const atRisk = cards.filter((card) => card.status !== "archived" && (card.readinessScore < 80 || card.incidentCount > 0 || card.accessReadiness !== "ready"));
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Risk queue</p>

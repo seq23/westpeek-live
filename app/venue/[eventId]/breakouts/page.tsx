@@ -2,9 +2,11 @@ import { buildVirtualVenueModel, sortBreakouts } from "@/services/venue";
 import { BreakoutRoomCard } from "@/components/venue/BreakoutRoomCard";
 import { BreakoutRoomExperience } from "@/components/venue/BreakoutRoomExperience";
 import { VenuePageShell } from "@/components/venue/VenuePageShell";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export default async function BreakoutsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId);
   const model = buildVirtualVenueModel(resolvedParams.eventId);
   const rooms = sortBreakouts(model.breakouts);
   const activeRoomId = rooms[0]?.id || "general-breakout";

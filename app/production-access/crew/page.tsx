@@ -6,7 +6,7 @@ import { redirect } from "next/navigation";
 import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
 import { BrandedSetupError } from "@/components/system/BrandedSetupError";
 import { accessDefaultLines, missingAccessEnv } from "@/lib/env/safeEnv";
-import { getCrewAccessPassword, getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
+import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
@@ -34,15 +34,11 @@ async function enterCrew(formData: FormData) {
 
   await grantOwnerOverrideIfMatched({ password, route: "/production-access/crew", next: safeNext || (eventCode ? `/crew/events/${eventCode}` : "/crew/events/demo") });
 
-  if (!password || password !== getCrewAccessPassword(env)) {
-    await logAccessAttempt({ status: "access_denied", accessKind: "crew", role: crewRole, reason: "invalid_password", route: "/production-access/crew" });
-    redirect("/production-access/crew?error=invalid");
-  }
-
-  const access = resolveCrewAccess(eventCode || undefined, crewRole);
+  // The global crew password still opens every event; a runtime-created event's own crew code opens just that event.
+  const access = await resolveCrewAccess(eventCode || undefined, crewRole, password || "");
   if (!access.ok) {
-    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId, role: crewRole, reason: access.reason, route: "/production-access/crew" });
-    redirect("/production-access/crew?error=invalid_event");
+    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId, role: crewRole, reason: access.reason || "invalid_password", route: "/production-access/crew" });
+    redirect(access.reason === "invalid_password" || !password ? "/production-access/crew?error=invalid" : "/production-access/crew?error=invalid_event");
   }
   await logAccessAttempt({ status: "access_granted", accessKind: "crew", eventId: access.eventId, role: access.role || crewRole, route: access.destination });
   const { crewCookieName } = getV5AccessCookieNames(env);

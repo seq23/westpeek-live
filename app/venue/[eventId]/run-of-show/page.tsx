@@ -1,9 +1,11 @@
 import { buildVirtualVenueModel } from "@/services/venue";
 import { VenuePageShell } from "@/components/venue/VenuePageShell";
 import { LiveRunOfShowDashboard } from "@/components/run-of-show/LiveRunOfShowDashboard";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export default async function VenueRunOfShowRoute({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId);
   const model = buildVirtualVenueModel(resolvedParams.eventId);
   return (
     <VenuePageShell model={model}>

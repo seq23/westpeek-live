@@ -54,3 +54,23 @@ Future Reversal Conditions: Replace manual StreamYard step with controlled RTMP 
 * **Risks Accepted:** Deployed Cloudflare behavior and live provider behavior remain local-validation and postdeploy gates.
 * **Validation Impact:** Tier 1 build, Tier 2 unit/integration, local OpenNext bundle, then Tier 3/4 post-update proof.
 * **Future Reversal Conditions:** Reconsider versions only if Cloudflare deployment or authenticated browser proof identifies a concrete incompatibility.
+
+## Decision ID: ADM-2026-09-15-RUNTIME-EVENTS
+Date: 2026-09-15  
+Status: Accepted
+
+Context: Every event the app could serve was compiled JSON under `data/events/*`; creating one meant a PR and a redeploy. `/app/events/new` wrote a 30-minute cookie draft through a filesystem write that cannot work on the Worker, a second "Create event" form on `/app/events` required a Supabase Auth session the owner never has, and per-event crew/speaker/sponsor/VIP/client codes were Cloudflare secrets per seed event — impossible for events created after deploy.
+
+Decision: One runtime-first event repository (`services/events/eventRepository.ts`) reads the runtime store first (Supabase `runtime_events` via migration `db/migrations/0024_runtime_events.sql` in production, the file store locally/e2e) and the compiled seed JSON second. `/app/events/new` is the single create page (NOW → live Room with a join code; LATER → draft with a guided spine). The owner cookie is the actor for every workspace mutation (`lib/auth/workspaceActor.ts`); a Supabase session is still accepted for future staff. Access codes are minted at creation and stored on the row; the crew/special-guest gates check them alongside the legacy env secrets for seed events. Seed events stay in JSON, are marked `source: "seed"`, and are hidden from the owner's lists behind "Show demo events". Sync read-model helpers see runtime events through a request-time overlay (`runtimeEventOverlay.ts`) that every event-scoped page hydrates first.
+
+Alternatives Considered: Converting every sync consumer to async (large ripple for no behavioural gain); reusing the 0001 `events` table (UUID ids with FKs to agencies/clients/profiles that require Supabase Auth users the owner's path never creates); keeping the cookie draft and adding a file write (cannot persist on Workers).
+
+Reasoning: Text ids matching the existing `event_id text` runtime tables keep the whole v5/v6 runtime layer working for created events without a second identity scheme. The overlay keeps ~60 pages unchanged in shape while making them runtime-first.
+
+Tradeoffs: The overlay is process-local; a page that renders an event must hydrate it (`ensureRuntimeEvent`) first. Two event vocabularies coexist (compiled seed packages and runtime rows) until the seeds are retired.
+
+Risks Accepted: The migration must be applied to the live Supabase project by a human with SQL-editor access; until then the workspace shows a named stop (`RuntimeSchemaStop`) instead of failing silently, and seed events keep resolving.
+
+Validation Impact: `tests/unit/eventRepository.test.ts`, `tests/e2e/owner-real-events-journey.spec.ts`; `validate_v7_frontdoor_labels.js` now asserts real persistence and refuses the draft store; `validate_access_boundary_contract.js` follows the crew password into the resolver that also honours per-event crew codes.
+
+Future Reversal Conditions: When the five seed events are recreated as runtime rows, delete `data/events/*`, the config-package PR flow, and the overlay.

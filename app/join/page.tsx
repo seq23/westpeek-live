@@ -1,9 +1,11 @@
 import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
 import { resolveEventJoinCode } from "@/services/events/eventStateResolver";
 
+export const dynamic = "force-dynamic";
+
 export default async function JoinEventPage({ searchParams }: { searchParams?: Promise<{ code?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  const resolution = resolveEventJoinCode(resolvedSearchParams?.code);
+  const resolution = await resolveEventJoinCode(resolvedSearchParams?.code);
   return (
     <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
       <section className="mx-auto max-w-3xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">

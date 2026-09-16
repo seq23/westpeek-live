@@ -87,6 +87,7 @@ it("allows operator to run Day 1 event operations without owner-only escalation"
     expect(canOperatorAccessPath(`/app/events/event-1/${surface}`, operator), surface).toBe(true);
   }
 
+  expect(canOperatorAccessPath("/app/events/event-1", operator)).toBe(true);
   expect(canOperatorAccessPath("/admin/testing/event-1", operator)).toBe(true);
   expect(canOperatorAccessPath("/crew/events/event-1", operator)).toBe(true);
   expect(canOperatorAccessPath("/billing", operator)).toBe(false);

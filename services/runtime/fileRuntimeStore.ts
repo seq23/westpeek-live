@@ -5,6 +5,7 @@ import type { LiveChatMessage } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
+import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 declare const require: undefined | ((moduleName: string) => unknown);
@@ -70,6 +71,9 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     attendeePermissions: Array.isArray(parsed.attendeePermissions) ? parsed.attendeePermissions : [],
     attendeeLiveCapabilities: Array.isArray(parsed.attendeeLiveCapabilities) ? parsed.attendeeLiveCapabilities : [],
     attendeeLiveControlStates: Array.isArray(parsed.attendeeLiveControlStates) ? parsed.attendeeLiveControlStates : [],
+    runtimeEvents: Array.isArray(parsed.runtimeEvents) ? parsed.runtimeEvents : [],
+    runtimeClients: Array.isArray(parsed.runtimeClients) ? parsed.runtimeClients : [],
+    agencySettings: Array.isArray(parsed.agencySettings) ? parsed.agencySettings : [],
   };
 }
 
@@ -307,6 +311,48 @@ export class FileRuntimeStore implements RuntimeStore {
   async getAttendeeLiveControlState(key: string) {
     const snapshot = this.read();
     return snapshot.attendeeLiveControlStates.find((item: AttendeeLiveControlState) => `${item.eventId}:${item.roomKind}:${item.roomId}` === key);
+  }
+
+  async upsertRuntimeEvent(event: RuntimeEventRecord) {
+    const snapshot = this.read();
+    snapshot.runtimeEvents = snapshot.runtimeEvents.filter((item) => item.id !== event.id);
+    snapshot.runtimeEvents.push(event);
+    this.write(snapshot);
+    return event;
+  }
+
+  async getRuntimeEvent(idOrSlugOrJoinCode: string) {
+    const key = idOrSlugOrJoinCode.trim().toLowerCase();
+    if (!key) return undefined;
+    return this.read().runtimeEvents.find((item) => item.id.toLowerCase() === key || item.slug.toLowerCase() === key || item.joinCode.toLowerCase() === key);
+  }
+
+  async listRuntimeEvents() {
+    return this.read().runtimeEvents.slice().sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async upsertRuntimeClient(client: RuntimeClientRecord) {
+    const snapshot = this.read();
+    snapshot.runtimeClients = snapshot.runtimeClients.filter((item) => item.id !== client.id);
+    snapshot.runtimeClients.push(client);
+    this.write(snapshot);
+    return client;
+  }
+
+  async listRuntimeClients() {
+    return this.read().runtimeClients.slice().sort((a, b) => a.name.localeCompare(b.name));
+  }
+
+  async getAgencySettings(id: string) {
+    return this.read().agencySettings.find((item) => item.id === id);
+  }
+
+  async setAgencySettings(settings: AgencySettingsRecord) {
+    const snapshot = this.read();
+    snapshot.agencySettings = snapshot.agencySettings.filter((item) => item.id !== settings.id);
+    snapshot.agencySettings.push(settings);
+    this.write(snapshot);
+    return settings;
   }
 
   async readSnapshot() {

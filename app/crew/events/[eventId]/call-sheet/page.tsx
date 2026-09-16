@@ -1,5 +1,6 @@
 import { CrewInstructionShell } from "@/components/crew/CrewInstructionShell";
 import { crewBriefing } from "@/lib/crew/crewBriefing";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 const assignments = [
   ["Crew Lead", "Own crew check-in, escalation, and show-day readiness confirmation."],
@@ -10,6 +11,7 @@ const assignments = [
 
 export default async function CrewCallSheetPage({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId);
   return (
     <CrewInstructionShell eventId={resolvedParams.eventId} active="call-sheet" eyebrow="Crew Call Sheet" title="Call sheet and assignments">
       <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="crew-call-sheet">

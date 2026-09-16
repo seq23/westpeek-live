@@ -1,8 +1,10 @@
 import { CrewInstructionShell } from "@/components/crew/CrewInstructionShell";
 import { crewRunOfShow } from "@/lib/crew/crewBriefing";
+import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export default async function CrewRunOfShowPage({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
+  await ensureRuntimeEvent(resolvedParams.eventId);
   return (
     <CrewInstructionShell eventId={resolvedParams.eventId} active="run-of-show" eyebrow="Crew Run of Show" title="Crew run of show">
       <section className="rounded-3xl bg-white p-6 shadow-sm" data-testid="crew-run-of-show">

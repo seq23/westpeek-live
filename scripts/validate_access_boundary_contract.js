@@ -15,7 +15,11 @@ if (!envTs.includes("V5_OWNER_COOKIE_NAME")) fail("env missing V5_OWNER_COOKIE_N
 if (!envTs.includes("assertSeparatedProductionPasswords")) fail("env must hard-fail matching crew/operator passwords");
 if (!productionAccess.includes('kind: "operator"')) fail("V5 access cookie payload must include operator kind");
 if (!productionAccess.includes('kind: "owner"')) fail("V5 access cookie payload must include owner kind");
-if (!crew.includes("getCrewAccessPassword") || crew.includes('redirect("/production-access/launchpad")')) fail("crew gate must use crew password and must not redirect directly to launchpad");
+// The crew gate checks the global crew password (and, for runtime-created events, that event's own crew code)
+// through resolveCrewAccess, which is where getCrewAccessPassword is read.
+const crewResolver = read("services/access/eventAccessResolver.ts");
+const crewUsesPassword = crew.includes("getCrewAccessPassword") || (crew.includes("resolveCrewAccess") && crewResolver.includes("getCrewAccessPassword") && crewResolver.includes("accessCodes.crew"));
+if (!crewUsesPassword || crew.includes('redirect("/production-access/launchpad")')) fail("crew gate must use crew password (global or per-event crew code) and must not redirect directly to launchpad");
 if (!operator.includes("getOperatorLaunchpadPassword") || !operator.includes('kind: "operator"')) fail("operator gate must use operator password and set operator cookie");
 if (!owner.includes("getOwnerMasterPassword") || !owner.includes('kind: "owner"')) fail("owner gate must use owner password and set owner cookie");
 if (!launchpad.includes('operatorPayload?.kind === "operator"')) fail("launchpad must accept operator cookie");
