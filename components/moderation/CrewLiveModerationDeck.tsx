@@ -20,7 +20,7 @@ import { StageRequestsToggle } from "@/components/moderation/StageRequestsToggle
  * where its role is allowed by `crewActionPermissions` — every section still renders for every
  * role, with the controls the role may not use disabled and the reason on them.
  */
-export async function CrewLiveModerationDeck({ eventId, search, searchAction, includeRoomControls = true, includeStreamConsole = true }: { eventId: string; search?: string; searchAction: string; includeStreamConsole?: boolean; includeRoomControls?: boolean }) {
+export async function CrewLiveModerationDeck({ eventId, search, searchAction, diagnose, includeRoomControls = true, includeStreamConsole = true }: { eventId: string; search?: string; searchAction: string; diagnose?: string; includeStreamConsole?: boolean; includeRoomControls?: boolean }) {
   const viewer = await getCrewViewer(eventId);
   return (
     <div className="space-y-6" data-testid="crew-live-moderation-deck" data-viewer-kind={viewer.kind} data-viewer-role={viewer.role || viewer.kind}>
@@ -40,7 +40,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, in
       <SafeSection label="Host" render={() => HostPanel({ eventId, viewer })} />
       <SafeSection label="End of show" render={() => EndShowControl({ eventId, viewer })} />
       <SafeSection label="Speakers" render={() => SpeakerRosterPanel({ eventId, viewer })} />
-      <SafeSection label="Attendee roster" render={() => AttendeeLiveRoster({ eventId, search, searchAction, viewer })} />
+      <SafeSection label="Attendee roster" render={() => AttendeeLiveRoster({ eventId, search, searchAction, viewer, diagnose })} />
       <SafeSection label="Chat moderation" render={() => ChatModerationQueue({ eventId, viewer })} />
       <SafeSection label="Networking" render={() => NetworkingCrewCard({ eventId, viewer })} />
       {includeRoomControls ? (

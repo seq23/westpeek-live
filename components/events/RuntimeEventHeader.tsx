@@ -1,6 +1,7 @@
-import Link from "next/link";
 import { EventJoinCodePanel } from "@/components/events/EventJoinCodePanel";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { EnterTheRoomMenu } from "@/components/preview/EnterTheRoomMenu";
+import { SafeSection } from "@/components/system/SafeSection";
 import { archiveEventAction, publishEventAction, restoreEventAction } from "@/lib/actions/eventWorkspaceActions";
 import { formatEventDate } from "@/lib/utils/format";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
@@ -60,7 +61,9 @@ export function RuntimeEventHeader({ event, justCreated, error, returnTo }: { ev
               <button type="submit" className="rounded-full border border-brand-line px-4 py-2 text-sm font-bold text-brand-muted hover:border-red-300 hover:text-red-700" data-testid="archive-event">Archive</button>
             </form>
           )}
-          <Link href={`/venue/${event.id}/lobby`} className="rounded-full border border-brand-line px-4 py-2 text-sm font-bold hover:border-brand-orange hover:text-brand-orange">Open lobby</Link>
+          {/* "Myself (host)" is the default here: the owner cookie already authorises /venue/**,
+              there was simply never a link, so checking your own room meant typing the URL. */}
+          <SafeSection label="Enter the room" compact render={() => EnterTheRoomMenu({ eventId: event.id, clientSlug: event.clientSlug, returnTo: returnTo })} />
         </div>
       </div>
       {!archived ? <EventJoinCodePanel event={event} /> : null}
