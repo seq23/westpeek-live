@@ -62,7 +62,10 @@ export type AuditAction =
   | "chat_attendee_silenced"
   | "chat_attendee_unsilenced"
   | "chat_room_locked"
-  | "chat_room_unlocked";
+  | "chat_room_unlocked"
+  // Host links: the executive_producer crew role handed out (or revoked, rotating the crew code) for one event.
+  | "host_link_minted"
+  | "host_link_revoked";
 
 export interface CreateAuditLogInput {
   agencyId: string;

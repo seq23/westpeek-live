@@ -15,7 +15,7 @@ test("production access surfaces load with explicit access forms", async ({ page
 test("production access offers the Owner Access card and the owner gate lands on the workspace without a second prompt", async ({ page }) => {
   await gotoAndAssert(page, "/production-access");
   await expect(page.getByTestId("owner-access-card")).toContainText(/Owner Access/);
-  await expect(page.getByTestId("owner-access-card")).toContainText(/owner master password/i);
+  await expect(page.getByTestId("owner-access-card")).toContainText(/master password opens everything/i);
   await page.getByTestId("owner-access-card").click();
   await expect(page).toHaveURL(/\/production-access\/owner/);
 

@@ -28,6 +28,7 @@ const EXPECTED: Record<CrewAction, V4CrewRole[]> = {
   manage_stage_access: ["executive_producer", "producer", "show_caller", "moderator"],
   manage_cue_cards: ["executive_producer", "producer", "show_caller"],
   advance_run_of_show: ["executive_producer", "producer", "show_caller"],
+  manage_host: ["executive_producer"],
   delay_segment: ["executive_producer", "show_caller"],
   log_incident: ["executive_producer", "producer", "show_caller", "moderator", "support"],
   view_support: ["executive_producer", "support"],

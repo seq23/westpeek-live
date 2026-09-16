@@ -3,6 +3,7 @@ import { readV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/produ
 import { crewActionPermissions, crewDeniedReason, crewRoleDescriptions, crewRoleLabels, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import type { V4CrewRole } from "@/types/v4";
+import { crewCookieCurrent, getHostLinkState } from "@/services/events/hostLinkService";
 
 /**
  * Who is looking at a crew surface, as plain data the deck and the role badge can render:
@@ -27,11 +28,12 @@ function eventMatches(cookieEventId: string | undefined, eventId: string | undef
   return (cookieEventId === "demo" && eventId === "event-summit") || (cookieEventId === "event-summit" && eventId === "demo");
 }
 
-export function crewViewerFromPayloads(input: { owner?: V5AccessCookiePayload; operator?: V5AccessCookiePayload; crew?: V5AccessCookiePayload }, eventId?: string): CrewViewer {
+export function crewViewerFromPayloads(input: { owner?: V5AccessCookiePayload; operator?: V5AccessCookiePayload; crew?: V5AccessCookiePayload }, eventId?: string, currentCodeVersion = 0): CrewViewer {
   const { owner, operator, crew } = input;
   if (owner?.kind === "owner") return { kind: "owner", label: "Owner", description: "The master password. Every control on every event, and every guest's view.", allowed: "all", isHost: true };
   if (operator?.kind === "operator" && eventMatches(operator.eventId, eventId)) return { kind: "operator", label: "Operator", description: "West Peek's control room. Every control on this event.", allowed: "all", eventId: operator.eventId, isHost: true };
   if (crew?.kind === "crew" && eventMatches(crew.eventId, eventId)) {
+    if (!crewCookieCurrent(crew.codeVersion, currentCodeVersion)) return { kind: "none", label: "Crew link revoked", description: "Your crew link for this event was revoked. Ask the host or the owner for a new link.", allowed: [], isHost: false };
     const role = (crew.role || "crew") as V4CrewRole;
     return { kind: "crew", role, label: crewRoleLabels[role] || "Crew", description: crewRoleDescriptions[role] || crewRoleDescriptions.crew, allowed: crewActionPermissions[role] || crewActionPermissions.crew, eventId: crew.eventId, isHost: role === "executive_producer" };
   }
@@ -60,7 +62,8 @@ export async function getCrewViewer(eventId?: string): Promise<CrewViewer> {
       readV5AccessCookie(cookieStore.get(names.ownerCookieName)?.value, secret),
       readV5AccessCookie(cookieStore.get(names.crewCookieName)?.value, secret),
     ]);
-    return crewViewerFromPayloads({ owner, operator, crew }, eventId);
+    const codeVersion = crew?.kind === "crew" && crew.codeVersion !== undefined && eventId ? (await getHostLinkState(eventId)).codeVersion : 0;
+    return crewViewerFromPayloads({ owner, operator, crew }, eventId, codeVersion);
   } catch {
     return crewViewerFromPayloads({}, eventId);
   }

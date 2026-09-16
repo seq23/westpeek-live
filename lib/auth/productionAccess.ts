@@ -13,7 +13,8 @@ interface V5AccessCookieBase {
 }
 
 export type V5AccessCookiePayload =
-  | (V5AccessCookieBase & { kind: "crew"; eventId?: string; role?: V4CrewRole })
+  /** `codeVersion`: set when the crew entered with the EVENT's crew code (a host link); revoking host links rotates the code and bumps the version, and a cookie behind it is refused. */
+  | (V5AccessCookieBase & { kind: "crew"; eventId?: string; role?: V4CrewRole; codeVersion?: number })
   | (V5AccessCookieBase & { kind: "operator"; eventId?: string; role?: V4CrewRole })
   | (V5AccessCookieBase & { kind: "owner"; role?: "owner"; ownerKey?: "primary" | "secondary" })
   | (V5AccessCookieBase & { kind: "special_guest"; eventId: string; role: V4SpecialGuestRole; clientSlug?: string });
