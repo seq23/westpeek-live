@@ -2,6 +2,7 @@ import type { VirtualVenueBooth } from "@/types/virtualVenue";
 import { AnalyticsBeacon } from "@/components/analytics/AnalyticsBeacon";
 import { LiveKitVideoSurface } from "./LiveKitVideoSurface";
 import { SponsorLeadCaptureForm } from "./SponsorLeadCaptureForm";
+import { SafeSection } from "@/components/system/SafeSection";
 
 export function SponsorBoothExperience({ eventId, booth }: { eventId: string; booth: VirtualVenueBooth }) {
   return (
@@ -12,7 +13,7 @@ export function SponsorBoothExperience({ eventId, booth }: { eventId: string; bo
         <h2 className="mt-5 text-2xl font-semibold">{booth.name}</h2>
         <p className="mt-2 text-slate-600">{booth.description}</p>
       </section>
-      <SponsorLeadCaptureForm eventId={eventId} boothId={booth.id} />
+      <SafeSection label="Lead capture" render={() => SponsorLeadCaptureForm({ eventId: eventId, boothId: booth.id })} />
     </div>
   );
 }

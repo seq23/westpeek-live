@@ -35,7 +35,7 @@ check("lib/actions/networkingActions.ts", ["joinNetworkingQueue(eventId, {", "ex
 check("components/venue/SpeedNetworkingLive.tsx", ["Looking for your match…", 'roomType: "speed_networking"', "<LiveKitRoom", "connect audio video", "<ControlBar", "networking-partner-name", "networking-timer", "Next match", "End networking", "The crew has closed networking for now", "networking-register-link"]);
 check("components/venue/SpeedNetworkingQueuePanel.tsx", ["joinSpeedNetworkingQueueAction", 'type="submit"', "<SpeedNetworkingLive"]);
 check("components/moderation/NetworkingCrewCard.tsx", ["crewNetworkingSummary(eventId)", "networking-toggle-open", "networking-minutes-input", 'action="manage_stage_access"']);
-check("components/moderation/CrewLiveModerationDeck.tsx", ["<NetworkingCrewCard"]);
+check("components/moderation/CrewLiveModerationDeck.tsx", ["=> NetworkingCrewCard({ eventId"]);
 check("lib/actions/registrationActions.ts", ["await ensureRuntimeEvent(eventId);\n  const event = getEventConfig(eventId);"]);
 check("tests/unit/speedNetworkingReal.test.ts", ["a pair never meets twice", "a room token goes only to the two matched attendees of that active match", "closed networking stops pairing"]);
 check("tests/e2e/speed-networking-real.spec.ts", ["matched within 10s", 'toMatch(/only to the two matched attendees/)', "networking-toggle-open"]);

@@ -5,6 +5,7 @@ import { getOperatorStageStreamState } from "@/services/video/stageStreamStateSe
 import type { StageStreamSignal } from "@/types/stageStream";
 import { CopyToClipboardButton } from "@/components/testing/CopyToClipboardButton";
 import { EndShowControl } from "@/components/moderation/EndShowControl";
+import { SafeSection } from "@/components/system/SafeSection";
 import { livekitWebhookUrl } from "@/lib/runtime/appBaseUrl";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
@@ -96,7 +97,7 @@ export async function StreamYardIngressPanel({ eventId = "event-summit", viewer:
         <code className="mt-2 block break-all rounded-xl bg-white p-3 text-xs text-slate-900" data-testid="livekit-webhook-url">{webhookUrl}</code>
         <CopyToClipboardButton value={webhookUrl} label="Webhook URL" />
       </div>
-      {includeEndShow ? <div className="mt-4"><EndShowControl eventId={eventId} compact viewer={viewer} /></div> : null}
+      {includeEndShow ? <div className="mt-4"><SafeSection label="End of show" compact render={() => EndShowControl({ eventId, compact: true, viewer })} /></div> : null}
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
         <ProviderLadderCard activeSource={state.activeStreamSource} />
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">

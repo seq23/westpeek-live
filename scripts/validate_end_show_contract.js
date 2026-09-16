@@ -43,9 +43,9 @@ requireTokens("lib/actions/stageStreamActions.ts", ["requireLiveEventControlAcce
 
 // 3. Where the crew is.
 requireTokens("components/moderation/EndShowControl.tsx", ["end-show-control", "end-show-button", "end-show-ended-badge", "endTheShow", "Press before you stop the feed"]);
-requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["<EndShowControl eventId="]);
-requireTokens("components/events/EventPublishPanel.tsx", ["<EndShowControl eventId="]);
-requireTokens("components/testing/StreamYardIngressPanel.tsx", ["<EndShowControl eventId=", "livekit-webhook-help", "livekit-webhook-url", "Settings → Webhooks", "None yet — polling is carrying the state (every ~10s)", "LIVEKIT_API_SECRET", "LIVEKIT_WEBHOOK_SECRET"]);
+requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["=> EndShowControl({ eventId"]);
+requireTokens("components/events/EventPublishPanel.tsx", ["=> EndShowControl({ eventId"]);
+requireTokens("components/testing/StreamYardIngressPanel.tsx", ["=> EndShowControl({ eventId", "livekit-webhook-help", "livekit-webhook-url", "Settings → Webhooks", "None yet — polling is carrying the state (every ~10s)", "LIVEKIT_API_SECRET", "LIVEKIT_WEBHOOK_SECRET"]);
 requireTokens("lib/runtime/appBaseUrl.ts", ['LIVEKIT_WEBHOOK_PATH = "/api/video/livekit-webhook"', "export async function livekitWebhookUrl"]);
 requireTokens("components/events/EventJoinCodePanel.tsx", ['from "@/lib/runtime/appBaseUrl"']);
 

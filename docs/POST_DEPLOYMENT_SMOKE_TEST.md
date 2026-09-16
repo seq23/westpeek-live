@@ -101,3 +101,12 @@ Operational rules:
 - If `DAILY_FALLBACK_ENABLED=false`, the resolver skips Daily and falls through to Zoom, then Google Meet.
 - Testing Console must show LiveKit + StreamYard, Cloudflare Stream, Daily, Zoom, Google Meet, Resend, Supabase, route, OpenNext, and browser-console smoke status before production events.
 
+
+
+## Runtime-event live check (required after every deploy — 16 Sep 2026)
+
+The local file store cannot see Supabase schema drift: migration 0027's `create table if not exists` was a no-op against a legacy table of the same name and every crew page 500'd during a live workshop while unit and Playwright were green.
+
+1. `curl -s https://westpeek.live/api/runtime/health` — `ok` must be `true`; `crewPageReads` lists each read the crew deck and the networking page make against the newest real runtime event, and names any that failed. `npm run postdeploy:smoke` turns a failure into a named stop.
+2. In a browser with an owner or operator cookie, load `/crew/events/<a runtime event>` and `/venue/<the same event>/networking`. Every deck section renders (a section that cannot read renders an amber "… is unavailable right now" card instead of a 500 — that is a named stop, not a pass).
+3. Archive the throwaway event afterwards.

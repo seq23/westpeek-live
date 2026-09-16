@@ -6,7 +6,7 @@ assert(svc.includes('Main stage publishing requires crew approval'), 'Main stage
 assert(svc.includes('emergencyPublishingDisabled'), 'Crew emergency publishing disable must exist.');
 assert(read('app/api/video/livekit-token/route.ts').includes('canAttendeePublishLive'), 'LiveKit token endpoint must be permission-aware.');
 // The kill switch lives in the shared room-control forms (crew console, command page, testing console); the panel renders them and the roster's Revoke.
-assert(read('components/testing/AttendeeLiveControlPanel.tsx').includes('Revoke') && read('components/testing/AttendeeLiveControlPanel.tsx').includes('<LiveRoomControlForms eventId=') && read('components/moderation/LiveRoomControlForms.tsx').includes('Emergency disable all publishing'), 'Crew panel must expose revoke and kill switch.');
+assert(read('components/testing/AttendeeLiveControlPanel.tsx').includes('Revoke') && read('components/testing/AttendeeLiveControlPanel.tsx').includes('=> LiveRoomControlForms({ eventId') && read('components/moderation/LiveRoomControlForms.tsx').includes('Emergency disable all publishing'), 'Crew panel must expose revoke and kill switch.');
 // Attendee on-stage controls (16 Sep 2026): an approved attendee gets Turn on camera / Turn on
 // microphone / Leave the stage; nothing auto-publishes; a Room allows requests by default with
 // approval required; the state line under the player never goes silent.

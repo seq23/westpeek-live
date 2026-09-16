@@ -78,7 +78,7 @@ requireTokens("components/speakers/SpeakerGreenRoomLive.tsx", ["speaker-green-ro
 requireTokens("components/speakers/SpeakerTeleprompterLive.tsx", ["/api/speaker/cue-deck", "5_000", "deck-changed-banner", "live-cue-banner", "teleprompter-next", "teleprompter-prev"]);
 requireTokens("components/speakers/SpeakerTechCheckLive.tsx", ["<BrowserDiagnosticsPanel", "recordSpeakerTechCheckAction", "record-tech-check"]);
 requireTokens("components/moderation/SpeakerRosterPanel.tsx", ["bring-to-stage-", "send-backstage-", "save-cue-deck-", "approve-cue-deck-", "push-live-cue-", "producer-notes-form", "vip-room-toggle"]);
-requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["<SpeakerRosterPanel eventId="]);
+requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["=> SpeakerRosterPanel({ eventId"]);
 requireTokens("components/sponsors/SponsorPortalLive.tsx", ["sponsor-booth-editor", "saveSponsorBoothAction", "Sponsor portal", "Booth setup"]);
 requireTokens("services/guests/runtimeBooths.ts", ["export async function withRuntimeBooths"]);
 requireTokens("app/venue/[eventId]/expo/page.tsx", ["withRuntimeBooths("]);

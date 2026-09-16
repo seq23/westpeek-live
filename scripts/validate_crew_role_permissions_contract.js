@@ -61,7 +61,7 @@ for (const panel of ["components/moderation/EndShowControl.tsx", "components/mod
   void body;
 }
 check("components/moderation/GatedForm.tsx", ["fieldset disabled", "viewerDenied(viewer, permission)", "data-crew-denied"]);
-check("components/moderation/CrewLiveModerationDeck.tsx", ["const viewer = await getCrewViewer(eventId)", "data-viewer-role", "includeEndShow={false}"]);
+check("components/moderation/CrewLiveModerationDeck.tsx", ["const viewer = await getCrewViewer(eventId)", "data-viewer-role", "includeEndShow: false"]);
 check("components/crew/CrewInstructionShell.tsx", ["export function CrewRoleBadge", "You are in as {viewer.label}", 'data-testid="crew-switch-role"', "crew-role-description", "/production-access/crew?event="]);
 check("app/production-access/crew/page.tsx", ["CREW_ROLES.map((role) =>", 'data-testid="crew-role-descriptions"', "crewRoleDescriptions[role]", "defaultValue={prefilledRole}", "defaultValue={prefilledEvent}", "defaultValue={prefilledCode}"]);
 check("app/api/production-access/crew/route.ts", ["CREW_ROLES.includes(role as V4CrewRole)"]);
@@ -75,8 +75,8 @@ check("app/api/production-access/crew/route.ts", ["codeVersion, issuedAt"]);
 check("lib/actions/hostActions.ts", ['requireLiveEventControlAccessForRequest(eventId, "manage_host")', "mintHostLink(", "revokeHostLinks("]);
 if (!/manage_host: \["executive_producer"\]/.test(read("tests/unit/crewRolePermissions.test.ts"))) throw new Error("manage_host must belong to the executive producer only (plus owner/operator).");
 check("components/events/HostPanel.tsx", ["Make someone the host", "Send this to whoever is running the show. They get the host banner, go-live, end-the-show and every control for this event only.", "Revoke host link", 'testId="copy-host-link"', "You are hosting"]);
-check("components/moderation/CrewLiveModerationDeck.tsx", ["<HostPanel"]);
-check("app/app/events/[eventId]/access/page.tsx", ["<HostPanel"]);
+check("components/moderation/CrewLiveModerationDeck.tsx", ["=> HostPanel({ eventId"]);
+check("app/app/events/[eventId]/access/page.tsx", ["=> HostPanel({ eventId"]);
 check("app/venue/[eventId]/lobby/page.tsx", ["(await getCrewViewer(resolvedParams.eventId)).isHost", "crewHost={crewHost}"]);
 // The four production-access cards explain themselves.
 check("app/production-access/page.tsx", ["Sequoia and Scooter. The master password opens everything", "Separate operator password.", "People hired for the day", "Speakers, sponsors, VIPs, clients", "read-only overview for clients"]);

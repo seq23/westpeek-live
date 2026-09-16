@@ -3,6 +3,7 @@ import { BreakoutRoomCard } from "@/components/venue/BreakoutRoomCard";
 import { BreakoutRoomExperience } from "@/components/venue/BreakoutRoomExperience";
 import { VenuePageShell } from "@/components/venue/VenuePageShell";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
+import { SafeSection } from "@/components/system/SafeSection";
 
 export default async function BreakoutsPage({ params }: { params: Promise<{ eventId: string }> }) {
   const resolvedParams = await params;
@@ -17,7 +18,7 @@ export default async function BreakoutsPage({ params }: { params: Promise<{ even
           <h2 className="mb-4 text-2xl font-semibold">Breakout rooms</h2>
           <div className="grid gap-4 md:grid-cols-3">{rooms.map((room) => <BreakoutRoomCard key={room.id} room={room} />)}</div>
         </div>
-        <BreakoutRoomExperience model={model} roomId={activeRoomId} />
+        <SafeSection label="Breakout room" render={() => BreakoutRoomExperience({ model: model, roomId: activeRoomId })} />
       </section>
     </VenuePageShell>
   );

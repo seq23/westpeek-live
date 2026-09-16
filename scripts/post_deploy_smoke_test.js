@@ -45,6 +45,8 @@ async function run() {
       else if (health.store !== "supabase") failures.push(`${check.path} store is ${health.store}; production must run the supabase runtime store`);
       else if (!health.runtimeEvents?.ready) failures.push(`${check.path} NAMED STOP — runtime tables missing (${(health.runtimeEvents?.missingTables || []).join(", ") || health.runtimeEvents?.detail || "unknown"}); run ${health.runtimeEvents?.migrationFile} in the Supabase SQL editor`);
       else if (health.seedEvents !== 5) failures.push(`${check.path} expected 5 compiled seed events got ${health.seedEvents}`);
+      // The crew deck's and networking page's reads against a REAL runtime event: a mis-shaped table (16 Sep 2026) fails here by name.
+      else if (health.crewPageReads && !health.crewPageReads.ok) failures.push(`${check.path} NAMED STOP — crew page reads failed on ${health.crewPageReads.eventId || "runtime event"}: ${(health.crewPageReads.reads || []).filter((r) => !r.ok).map((r) => `${r.name}: ${r.detail || "failed"}`).join("; ")}`);
     }
   }
   if (failures.length) {

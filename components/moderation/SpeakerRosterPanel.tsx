@@ -4,7 +4,6 @@ import { listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { GuestPreviewLinkRow } from "@/components/guests/GuestPreviewLinks";
-import { viewerCan } from "@/lib/auth/crewViewer";
 import { getProducerNotes, getVipRoom, listSpeakerCueDecks, listSpeakerStageStates, listSpeakerTechChecks } from "@/services/guests/guestStateService";
 import type { CueDeckVersion } from "@/types/specialGuest";
 
