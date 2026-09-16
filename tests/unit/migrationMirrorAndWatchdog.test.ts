@@ -36,7 +36,7 @@ describe("the build watchdog covers the workspace and the crew deck, not only th
     for (const file of ["components/layout/AppShell.tsx", "app/crew/events/[eventId]/layout.tsx"]) {
       expect(fs.readFileSync(file, "utf8"), file).toContain("BuildVersionPoller");
     }
-    const route = fs.readFileSync("app/api/runtime/build/route.ts", "utf8");
+    const route = fs.readFileSync("app/api/runtime/build-id/route.ts", "utf8");
     expect(route).toContain("CURRENT_BUILD_ID");
     expect(route).toContain('"cache-control": "no-store"');
   });

@@ -12,7 +12,7 @@ export function BuildVersionPoller({ intervalMs = 60_000 }: { intervalMs?: numbe
     const ask = async () => {
       if (document.visibilityState !== "visible") return;
       try {
-        const response = await fetch("/api/runtime/build", { cache: "no-store" });
+        const response = await fetch("/api/runtime/build-id", { cache: "no-store" });
         const payload = (await response.json()) as { buildId?: string };
         if (!cancelled) notifyServerBuildId(payload?.buildId);
       } catch { /* offline or mid-deploy: the next tick asks again */ }
