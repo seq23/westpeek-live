@@ -6,6 +6,8 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventRequestRecord } from "@/types/eventRequest";
+import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { EventAssetRecord } from "@/types/eventAssets";
@@ -93,6 +95,8 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     runtimeEvents: Array.isArray(parsed.runtimeEvents) ? parsed.runtimeEvents : [],
     runtimeClients: Array.isArray(parsed.runtimeClients) ? parsed.runtimeClients : [],
     agencySettings: Array.isArray(parsed.agencySettings) ? parsed.agencySettings : [],
+    eventRequests: Array.isArray(parsed.eventRequests) ? parsed.eventRequests : [],
+    howItWorksPages: Array.isArray(parsed.howItWorksPages) ? parsed.howItWorksPages : [],
   };
 }
 
@@ -560,6 +564,44 @@ export class FileRuntimeStore implements RuntimeStore {
     snapshot.agencySettings.push(settings);
     this.write(snapshot);
     return settings;
+  }
+
+  async upsertEventRequest(request: EventRequestRecord) {
+    const snapshot = this.read();
+    snapshot.eventRequests = [...(snapshot.eventRequests || []).filter((item: EventRequestRecord) => item.id !== request.id), request];
+    this.write(snapshot);
+    return request;
+  }
+
+  async getEventRequest(id: string) {
+    return (this.read().eventRequests || []).find((item: EventRequestRecord) => item.id === id);
+  }
+
+  async getEventRequestByConfirmToken(token: string) {
+    if (!token) return undefined;
+    return (this.read().eventRequests || []).find((item: EventRequestRecord) => item.confirmToken === token);
+  }
+
+  async listEventRequests(limit = 500) {
+    return (this.read().eventRequests || [])
+      .slice()
+      .sort((a: EventRequestRecord, b: EventRequestRecord) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  async getHowItWorksPage(slug: HowItWorksAudience) {
+    return (this.read().howItWorksPages || []).find((item: HowItWorksPageRecord) => item.slug === slug);
+  }
+
+  async listHowItWorksPages() {
+    return (this.read().howItWorksPages || []).slice();
+  }
+
+  async setHowItWorksPage(page: HowItWorksPageRecord) {
+    const snapshot = this.read();
+    snapshot.howItWorksPages = [...(snapshot.howItWorksPages || []).filter((item: HowItWorksPageRecord) => item.slug !== page.slug), page];
+    this.write(snapshot);
+    return page;
   }
 
   async readSnapshot() {

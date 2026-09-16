@@ -70,7 +70,15 @@ export type AuditAction =
   | "access_code_rotated"
   // The owner looked up a code in the console's vault, or copied it for a producer. The value is never in the row.
   | "access_code_revealed"
-  | "access_code_copied";
+  | "access_code_copied"
+  // The plan-an-event path (migration 0034). Money and instructions both hang off these four, so
+  // every one of them is a person's decision with a row behind it.
+  | "event_request_approved"
+  | "event_request_declined"
+  | "event_request_confirmed"
+  | "event_request_paid"
+  // An instruction page was edited from the workspace. Everyone holding the link reads the change.
+  | "how_it_works_page_edited";
 
 export interface CreateAuditLogInput {
   agencyId: string;

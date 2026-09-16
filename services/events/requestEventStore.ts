@@ -1,5 +1,4 @@
 import { isSupabaseAdminConfigured } from "@/lib/env";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 
 /**
  * Public event-request intake.
@@ -28,10 +27,19 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
  *
  * The contract this file now keeps: a caller can always tell whether the
  * request was stored. Nothing here reports success it did not observe.
+ *
+ * Since 16 Sep 2026 the row it writes is the FIRST state of a request that runs
+ * all the way to paid (migration 0034), so the write itself goes through the
+ * runtime store like every other runtime row. This file stays the public front
+ * door's own adapter: it keeps the never-throw contract, the machine-readable
+ * reason, and the "is there anywhere durable to put this" guard, all of which
+ * the intake action's receipt decision depends on.
  */
 
-declare const process: { env: Record<string, string | undefined> };
+import { submitEventRequest, listEventRequests } from "@/services/event-intake/eventRequestPipeline";
+import type { EventRequestRecord } from "@/types/eventRequest";
 
+/** The public form's shape. The stored row carries more (state, price, tokens); this is what arrives. */
 export interface RequestEventRecord {
   id: string;
   name: string;
@@ -46,6 +54,8 @@ export interface RequestEventRecord {
   speakerCount?: string;
   supportLevel?: string;
   notes?: string;
+  /** The band the visitor picked. Required on the form; a request without one is not scopable. */
+  budgetRange?: string;
   createdAt: string;
 }
 
@@ -58,85 +68,15 @@ export type RequestEventPersistResult =
   | { ok: true; record: RequestEventRecord }
   | { ok: false; record: RequestEventRecord; reason: string };
 
-const TABLE = "request_event_intake";
-
-type RequestEventRow = {
-  id: string;
-  name: string;
-  email: string;
-  company: string | null;
-  event_type: string | null;
-  event_date: string | null;
-  audience_size: string | null;
-  livestream_needs: string | null;
-  networking_needs: string | null;
-  sponsor_expo_needs: string | null;
-  speaker_count: string | null;
-  support_level: string | null;
-  notes: string | null;
-  created_at: string;
-};
-
-/** Empty strings are what the form sends for untouched optional fields. */
-const orNull = (value: string | undefined) => (value && value.trim() ? value.trim() : null);
-
-function toRow(record: RequestEventRecord): RequestEventRow {
-  return {
-    id: record.id,
-    name: record.name,
-    email: record.email,
-    company: orNull(record.company),
-    event_type: orNull(record.eventType),
-    event_date: orNull(record.eventDate),
-    audience_size: orNull(record.audienceSize),
-    livestream_needs: orNull(record.livestreamNeeds),
-    networking_needs: orNull(record.networkingNeeds),
-    sponsor_expo_needs: orNull(record.sponsorExpoNeeds),
-    speaker_count: orNull(record.speakerCount),
-    support_level: orNull(record.supportLevel),
-    notes: orNull(record.notes),
-    created_at: record.createdAt,
-  };
-}
-
-function fromRow(row: RequestEventRow): RequestEventRecord {
-  return {
-    id: row.id,
-    name: row.name,
-    email: row.email,
-    company: row.company ?? undefined,
-    eventType: row.event_type ?? undefined,
-    eventDate: row.event_date ?? undefined,
-    audienceSize: row.audience_size ?? undefined,
-    livestreamNeeds: row.livestream_needs ?? undefined,
-    networkingNeeds: row.networking_needs ?? undefined,
-    sponsorExpoNeeds: row.sponsor_expo_needs ?? undefined,
-    speakerCount: row.speaker_count ?? undefined,
-    supportLevel: row.support_level ?? undefined,
-    notes: row.notes ?? undefined,
-    createdAt: row.created_at,
-  };
-}
-
-const errorMessage = (error: unknown) => (error instanceof Error ? error.message : String(error));
-
 /**
  * Read intake records back. Previously this always returned `[]` on the Worker,
  * because unenv's `existsSync` is hardcoded to false — and it was called from
  * inside the append path, so a working filesystem would have caused an append to
  * truncate every earlier record. Both problems disappear with a real insert.
  */
-export async function readRequestEventRecords(): Promise<RequestEventRecord[]> {
+export async function readRequestEventRecords(): Promise<EventRequestRecord[]> {
   if (!isSupabaseAdminConfigured()) return [];
-
-  const { data, error } = await createSupabaseAdminClient()
-    .from(TABLE)
-    .select("*")
-    .order("created_at", { ascending: true });
-
-  if (error) throw new Error(`Failed to read ${TABLE}: ${error.message}`);
-
-  return ((data ?? []) as RequestEventRow[]).map(fromRow);
+  return listEventRequests();
 }
 
 /**
@@ -152,13 +92,6 @@ export async function appendRequestEventRecord(
     return { ok: false, record, reason: "supabase_not_configured" };
   }
 
-  try {
-    const { error } = await createSupabaseAdminClient().from(TABLE).insert(toRow(record));
-
-    if (error) return { ok: false, record, reason: `insert_failed:${error.message}` };
-
-    return { ok: true, record };
-  } catch (error) {
-    return { ok: false, record, reason: `insert_threw:${errorMessage(error)}` };
-  }
+  const result = await submitEventRequest(record);
+  return result.ok ? { ok: true, record } : { ok: false, record, reason: result.reason };
 }

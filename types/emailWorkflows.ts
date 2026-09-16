@@ -9,7 +9,16 @@ export type EmailWorkflowType =
   | "asset_deadline_reminder"
   | "show_day_reminder"
   | "testing_failure_alert"
-  | "report_ready";
+  | "report_ready"
+  // The plan-an-event path (migration 0034): the approval the client is sent, and the five
+  // instruction emails that go out when the event is paid for. Each instruction carries a link to
+  // an editable /how-it-works page, never a copy of it.
+  | "scope_approved"
+  | "instructions_client"
+  | "instructions_crew"
+  | "instructions_speaker"
+  | "instructions_sponsor"
+  | "instructions_attendee";
 
 export interface EmailWorkflowPayload {
   agencyId?: string;

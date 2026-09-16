@@ -1,5 +1,6 @@
 import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
 import { requestEventProduction } from "@/lib/actions/requestEventActions";
+import { BUDGET_RANGES } from "@/types/eventRequest";
 
 const fields = [
   ["name", "Name", "Your name"],
@@ -31,7 +32,7 @@ export default async function RequestEventPage({ searchParams }: { searchParams?
           request that reached nothing still told the visitor it had arrived.
         */}
         {resolvedSearchParams?.status === "received" ? <p className="mt-5 rounded-2xl bg-emerald-50 p-4 text-sm font-bold text-emerald-800">Request received. West Peek Live can follow up with a production plan.</p> : null}
-        {resolvedSearchParams?.status === "missing" ? <p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Name and a valid email are required.</p> : null}
+        {resolvedSearchParams?.status === "missing" ? <p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Name, a valid email and a budget range are required.</p> : null}
         {resolvedSearchParams?.status === "failed" ? (
           <div className="mt-5 rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-800">
             <p>We could not save your request, so it has not reached us. Nothing was recorded.</p>
@@ -45,6 +46,19 @@ export default async function RequestEventPage({ searchParams }: { searchParams?
               <input id={name} name={name} type={name === "email" ? "email" : "text"} required={name === "name" || name === "email"} placeholder={placeholder} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
             </div>
           ))}
+          {/*
+            Budget is a required BAND, not a number. A visitor asked to type a figure either guesses
+            low or abandons the form, and West Peek cannot price a request it has no band for.
+            "Not sure yet" is a real answer and is one of the options.
+          */}
+          <div>
+            <label htmlFor="budgetRange" className="text-sm font-black">Budget<span className="text-brand-orange"> *</span></label>
+            <select id="budgetRange" name="budgetRange" required defaultValue="" data-testid="request-event-budget" className="mt-2 min-h-12 w-full rounded-full border border-brand-line bg-white px-5 text-sm">
+              <option value="" disabled>Choose a range</option>
+              {BUDGET_RANGES.map((range) => <option key={range.value} value={range.value}>{range.label}</option>)}
+            </select>
+            <p className="mt-2 text-xs text-brand-muted">A range is enough. We come back with a price and a scope before anything is owed.</p>
+          </div>
           <div>
             <label htmlFor="notes" className="text-sm font-black">Notes</label>
             <textarea id="notes" name="notes" rows={5} placeholder="Anything else producers should know before scoping the event." className="mt-2 w-full rounded-3xl border border-brand-line px-5 py-4 text-sm" />

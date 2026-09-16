@@ -103,6 +103,7 @@ export const LIVE_CHAT_MODERATION_MIGRATION_FILE = "db/migrations/0025_live_chat
 export const SPECIAL_GUEST_MIGRATION_FILE = "db/migrations/0026_special_guest_identity_and_state.sql";
 export const SPEED_NETWORKING_MIGRATION_FILE = "db/migrations/0027_speed_networking.sql";
 export const ATTENDEE_VISIBILITY_MIGRATION_FILE = "db/migrations/0029_attendee_profile_visibility.sql";
+export const PLAN_AN_EVENT_MIGRATION_FILE = "db/migrations/0034_plan_an_event_pipeline.sql";
 
 /** Which SQL file creates each runtime table the health probe checks. */
 export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
@@ -117,4 +118,6 @@ export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
   networking_queue_matches: SPEED_NETWORKING_MIGRATION_FILE,
   "attendee_profiles.hidden_from_directory": ATTENDEE_VISIBILITY_MIGRATION_FILE,
   contacts: ATTENDEE_VISIBILITY_MIGRATION_FILE,
+  how_it_works_pages: PLAN_AN_EVENT_MIGRATION_FILE,
+  "request_event_intake.state": PLAN_AN_EVENT_MIGRATION_FILE,
 };

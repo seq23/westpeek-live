@@ -8,6 +8,8 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventRequestRecord } from "@/types/eventRequest";
+import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { ContactRecord, RegistrationQuestion } from "@/types/attendeeRegistration";
@@ -143,6 +145,97 @@ function tolerateMissingTable(error: unknown) {
 function failOrSchemaMissing(table: string, error: PostgrestErrorLike): never {
   if (isMissingTableError(error)) throw new RuntimeSchemaMissingError(table, error.message);
   fail(`${table}: ${error.message}`);
+}
+
+/**
+ * The /request-event row, all the way from arrival to paid. Nulls become undefined so a caller
+ * never has to distinguish "column is null" from "field was not set".
+ */
+function mapEventRequest(row: Record<string, unknown>): EventRequestRecord {
+  const text = (key: string) => (row[key] ? String(row[key]) : undefined);
+  return {
+    id: String(row.id),
+    name: String(row.name || ""),
+    email: String(row.email || ""),
+    company: text("company"),
+    eventType: text("event_type"),
+    eventDate: text("event_date"),
+    audienceSize: text("audience_size"),
+    livestreamNeeds: text("livestream_needs"),
+    networkingNeeds: text("networking_needs"),
+    sponsorExpoNeeds: text("sponsor_expo_needs"),
+    speakerCount: text("speaker_count"),
+    supportLevel: text("support_level"),
+    notes: text("notes"),
+    budgetRange: text("budget_range"),
+    state: (row.state as EventRequestRecord["state"]) || "requested",
+    scopeSummary: text("scope_summary"),
+    priceAmountCents: row.price_amount_cents === null || row.price_amount_cents === undefined ? undefined : Number(row.price_amount_cents),
+    priceCurrency: text("price_currency"),
+    confirmToken: text("confirm_token"),
+    eventId: text("event_id"),
+    approvedAt: text("approved_at"),
+    approvedBy: text("approved_by"),
+    confirmedAt: text("confirmed_at"),
+    paidAt: text("paid_at"),
+    paidBy: text("paid_by"),
+    settlementMethod: row.settlement_method ? (String(row.settlement_method) as EventRequestRecord["settlementMethod"]) : undefined,
+    settlementReference: text("settlement_reference"),
+    instructionsSentAt: text("instructions_sent_at"),
+    declinedAt: text("declined_at"),
+    declineReason: text("decline_reason"),
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || row.created_at || ""),
+  };
+}
+
+function eventRequestToRow(request: EventRequestRecord) {
+  return {
+    id: request.id,
+    name: request.name,
+    email: request.email,
+    company: request.company ?? null,
+    event_type: request.eventType ?? null,
+    event_date: request.eventDate ?? null,
+    audience_size: request.audienceSize ?? null,
+    livestream_needs: request.livestreamNeeds ?? null,
+    networking_needs: request.networkingNeeds ?? null,
+    sponsor_expo_needs: request.sponsorExpoNeeds ?? null,
+    speaker_count: request.speakerCount ?? null,
+    support_level: request.supportLevel ?? null,
+    notes: request.notes ?? null,
+    budget_range: request.budgetRange ?? null,
+    state: request.state,
+    scope_summary: request.scopeSummary ?? null,
+    price_amount_cents: request.priceAmountCents ?? null,
+    price_currency: request.priceCurrency ?? null,
+    confirm_token: request.confirmToken ?? null,
+    event_id: request.eventId ?? null,
+    approved_at: request.approvedAt ?? null,
+    approved_by: request.approvedBy ?? null,
+    confirmed_at: request.confirmedAt ?? null,
+    paid_at: request.paidAt ?? null,
+    paid_by: request.paidBy ?? null,
+    settlement_method: request.settlementMethod ?? null,
+    settlement_reference: request.settlementReference ?? null,
+    instructions_sent_at: request.instructionsSentAt ?? null,
+    declined_at: request.declinedAt ?? null,
+    decline_reason: request.declineReason ?? null,
+    created_at: request.createdAt,
+    updated_at: request.updatedAt,
+  };
+}
+
+function mapHowItWorksPage(row: Record<string, unknown>): HowItWorksPageRecord {
+  return {
+    slug: row.slug as HowItWorksPageRecord["slug"],
+    title: String(row.title || ""),
+    intro: String(row.intro || ""),
+    body: String(row.body || ""),
+    updatedBy: String(row.updated_by || ""),
+    updatedByLabel: String(row.updated_by_label || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
 }
 
 function runtimeEventToRow(event: RuntimeEventRecord) {
@@ -813,6 +906,52 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     }, { onConflict: "id" });
     if (error) failOrSchemaMissing("runtime_agency_settings", error);
     return settings;
+  }
+
+  async upsertEventRequest(request: EventRequestRecord) {
+    const { error } = await this.client.from("request_event_intake").upsert(eventRequestToRow(request), { onConflict: "id" });
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    return request;
+  }
+
+  async getEventRequest(id: string) {
+    const { data, error } = await this.client.from("request_event_intake").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    return data ? mapEventRequest(data as Record<string, unknown>) : undefined;
+  }
+
+  async getEventRequestByConfirmToken(token: string) {
+    if (!token) return undefined;
+    const { data, error } = await this.client.from("request_event_intake").select("*").eq("confirm_token", token).maybeSingle();
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    return data ? mapEventRequest(data as Record<string, unknown>) : undefined;
+  }
+
+  async listEventRequests(limit = 500) {
+    const { data, error } = await this.client.from("request_event_intake").select("*").order("created_at", { ascending: false }).limit(limit);
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEventRequest);
+  }
+
+  async getHowItWorksPage(slug: HowItWorksAudience) {
+    const { data, error } = await this.client.from("how_it_works_pages").select("*").eq("slug", slug).maybeSingle();
+    if (error) failOrSchemaMissing("how_it_works_pages", error);
+    return data ? mapHowItWorksPage(data as Record<string, unknown>) : undefined;
+  }
+
+  async listHowItWorksPages() {
+    const { data, error } = await this.client.from("how_it_works_pages").select("*");
+    if (error) failOrSchemaMissing("how_it_works_pages", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapHowItWorksPage);
+  }
+
+  async setHowItWorksPage(page: HowItWorksPageRecord) {
+    const { error } = await this.client.from("how_it_works_pages").upsert({
+      slug: page.slug, title: page.title, intro: page.intro, body: page.body,
+      updated_by: page.updatedBy, updated_by_label: page.updatedByLabel, updated_at: page.updatedAt,
+    }, { onConflict: "slug" });
+    if (error) failOrSchemaMissing("how_it_works_pages", error);
+    return page;
   }
 
   async readSnapshot(): Promise<V6RuntimeSnapshot> {

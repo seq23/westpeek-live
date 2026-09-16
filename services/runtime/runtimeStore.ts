@@ -8,6 +8,8 @@ import type { EventAssetRecord } from "@/types/eventAssets";
 import type { EmailSendLog } from "@/types/emailProduction";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventRequestRecord } from "@/types/eventRequest";
+import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 
@@ -123,6 +125,8 @@ export interface V6RuntimeSnapshot {
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
+  eventRequests: EventRequestRecord[];
+  howItWorksPages: HowItWorksPageRecord[];
 }
 
 export type RuntimeStoreKind = "supabase" | "file";
@@ -215,6 +219,16 @@ export interface RuntimeStore {
   listRuntimeClients(): Promise<RuntimeClientRecord[]>;
   getAgencySettings(id: string): Promise<AgencySettingsRecord | undefined>;
   setAgencySettings(settings: AgencySettingsRecord): Promise<AgencySettingsRecord>;
+  // Event requests (migration 0034): the /request-event row, from arrival to paid.
+  upsertEventRequest(request: EventRequestRecord): Promise<EventRequestRecord>;
+  getEventRequest(id: string): Promise<EventRequestRecord | undefined>;
+  /** The client's own link resolves by token alone; it carries no id a visitor could edit. */
+  getEventRequestByConfirmToken(token: string): Promise<EventRequestRecord | undefined>;
+  listEventRequests(limit?: number): Promise<EventRequestRecord[]>;
+  // The five instruction pages (migration 0034), edited from the workspace, linked from every email.
+  getHowItWorksPage(slug: HowItWorksAudience): Promise<HowItWorksPageRecord | undefined>;
+  listHowItWorksPages(): Promise<HowItWorksPageRecord[]>;
+  setHowItWorksPage(page: HowItWorksPageRecord): Promise<HowItWorksPageRecord>;
 }
 
 export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
@@ -250,5 +264,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],
+    eventRequests: [],
+    howItWorksPages: [],
   };
 }
