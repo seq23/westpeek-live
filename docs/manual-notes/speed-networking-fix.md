@@ -97,6 +97,25 @@ round is deterministic given the queue, the history and the random source.
 round. Somebody who has met — or cannot be paired with — everyone else waiting is told so, and
 offered *"Meet someone again"*; a repeat only happens when **both** people have asked for it.
 
+## An ended event has no queue
+
+`/venue/<event>/stage` on an **ENDED** event showed the body text "Event ended. Replay access is
+available." while the nav still read **Stage `LIVE`** and **Networking `OPEN`**. The marker was the
+symptom; the queue really was still open underneath, and a late arrival could still join it.
+
+- `getNetworkingSettings` now reports **closed** whenever the event's status is `ended`,
+  `replay_available` or `archived`, whatever the crew's switch says. The switch stays the normal
+  control; the event's status overrules it.
+- `joinNetworkingQueue` **refuses while closed**, so a closed queue cannot be joined by any path —
+  the page, the API, or a form replayed after the show.
+- **Ending the show closes networking.** `endShowForEvent` now calls
+  `closeNetworkingForEndedEvent`: every active match ends (deleting its LiveKit room), everyone
+  waiting or matched is marked done, and the crew switch is left off. It runs **before** the
+  seed-event early return, or a seed event's queue would outlive its show.
+- `getVenueActivity` drops **every live-implying marker** for an event that is over — stage, live
+  session title, networking, queue size, breakouts, booths. **Replays and people survive**, because
+  those are the two things a finished event still genuinely has.
+
 ## Guards
 
 - `npm run validate:speed-networking-room-privacy` — the contract above, including that the gate
