@@ -25,9 +25,10 @@ function defaultStartLocal() {
   return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}T${pad(next.getHours())}:00`;
 }
 
-export default async function CreateEventPage({ searchParams }: { searchParams?: Promise<{ when?: string; error?: string }> }) {
+export default async function CreateEventPage({ searchParams }: { searchParams?: Promise<{ when?: string; error?: string; clientId?: string }> }) {
   const resolved = searchParams ? await searchParams : undefined;
-  const initialWhen = resolved?.when === "later" ? "later" : "now";
+  const initialWhen = resolved?.when === "later" || resolved?.clientId ? "later" : "now";
+  const initialClientId = resolved?.clientId || "";
   const [schema, clients] = await Promise.all([getRuntimeSchemaStatus(), listClientRecords()]);
   const error = resolved?.error;
 
@@ -91,7 +92,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
             <div>
               <label htmlFor="clientId" className="text-sm font-black">Client</label>
               <p className="mt-1 text-xs text-brand-muted">Leave as West Peek for your own Rooms. Pick an existing client or type a new one below.</p>
-              <select id="clientId" name="clientId" defaultValue="" className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm">
+              <select id="clientId" name="clientId" defaultValue={initialClientId} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm">
                 <option value="">West Peek (own event)</option>
                 {clients.map((client) => <option key={client.id} value={client.id}>{client.name}</option>)}
               </select>

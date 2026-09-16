@@ -1,3 +1,4 @@
+import Link from "next/link";
 import { WestPeekLiveMark, WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
 
 const nav = [
@@ -9,7 +10,6 @@ const nav = [
   ["Contractors", "/app/contractors"],
   ["Vendors", "/app/vendors"],
   ["Assets", "/app/assets"],
-  ["Reports", "/app/reports"],
   ["Settings", "/app/settings"],
   ["Testing Console", "/admin/testing"],
 ];
@@ -30,6 +30,7 @@ export function Sidebar() {
         </a>
       </div>
       <nav className="mobile-scrollbar flex gap-2 overflow-x-auto px-4 pb-4 lg:block lg:space-y-1 lg:overflow-visible lg:px-5">
+        <Link href="/app/events/new" className="whitespace-nowrap rounded-full bg-brand-orange px-3 py-2 text-sm font-bold text-white lg:mb-2 lg:block lg:rounded-xl" data-testid="sidebar-new-event">New event</Link>
         {nav.map(([label, href]) => (
           <a
             key={href}
@@ -43,7 +44,7 @@ export function Sidebar() {
       <div className="hidden p-5 lg:block">
         <div className="rounded-3xl border border-white/10 bg-white/[0.06] p-4 text-sm text-white/70">
           <p className="font-bold text-white">Live production mode</p>
-          <p className="mt-1">Resend, LiveKit, venue surfaces, replay, reports, and Supabase persistence are wired for production readiness checks.</p>
+          <p className="mt-1">Events, clients, and settings are real rows in the runtime store. Reports live on each event&rsquo;s Reports tab.</p>
         </div>
       </div>
     </aside>

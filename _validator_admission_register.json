@@ -4276,6 +4276,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "Blocks delivery or push when selected.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:runtime-events-contract",
+      "command": "node scripts/validate_runtime_events_contract.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "Runtime-first event source with seed fallback, Supabase migration mirror parity, owner-cookie identity, one create path, and the public runtime health endpoint (ADM-2026-09-15-RUNTIME-EVENTS).",
+      "whatItDoesNotProve": "Does not prove the migration has been applied to the live Supabase project; that is read from /api/runtime/health by the post-deploy smoke.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire when the compiled seed events are retired and the overlay is deleted.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

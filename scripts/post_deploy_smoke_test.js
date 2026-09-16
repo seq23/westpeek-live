@@ -25,6 +25,7 @@ const checks = [
   { path: "/api/video/livekit-token", kind: "api-safe-failure" },
   { path: "/api/video/daily-token", kind: "api-safe-failure" },
   { path: "/api/video/zoom-signature", kind: "api-safe-failure" },
+  { path: "/api/runtime/health", kind: "runtime-health" },
 ];
 
 async function run() {
@@ -36,6 +37,15 @@ async function run() {
     if (check.kind === "protected" && !(response.status >= 300 && response.status < 400)) failures.push(`${check.path} expected redirect guard got ${response.status}`);
     if (check.kind === "api-safe-failure" && ![400, 401, 403, 405].includes(response.status)) failures.push(`${check.path} expected safe auth/config failure got ${response.status}`);
     if (check.mustContain && !body.includes(check.mustContain)) failures.push(`${check.path} missing marker ${check.mustContain}`);
+    if (check.kind === "runtime-health") {
+      // Named stop, not a silent pass: the deployed app must say whether migration 0024 has been applied.
+      let health;
+      try { health = JSON.parse(body); } catch { health = undefined; }
+      if (response.status !== 200 || !health) failures.push(`${check.path} expected JSON runtime health got ${response.status}`);
+      else if (health.store !== "supabase") failures.push(`${check.path} store is ${health.store}; production must run the supabase runtime store`);
+      else if (!health.runtimeEvents?.ready) failures.push(`${check.path} NAMED STOP — runtime tables missing (${(health.runtimeEvents?.missingTables || []).join(", ") || health.runtimeEvents?.detail || "unknown"}); run ${health.runtimeEvents?.migrationFile} in the Supabase SQL editor`);
+      else if (health.seedEvents !== 5) failures.push(`${check.path} expected 5 compiled seed events got ${health.seedEvents}`);
+    }
   }
   if (failures.length) {
     console.error(failures.join("\n"));
