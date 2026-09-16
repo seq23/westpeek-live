@@ -10,7 +10,7 @@ export default async function ExpoPage({ params }: { params: Promise<{ eventId: 
   const model = await withRuntimeBooths(buildVirtualVenueModel(resolvedParams.eventId));
   return (
     <VenuePageShell model={model}>
-      <ExpoDirectory booths={model.booths} />
+      <ExpoDirectory booths={model.booths} eventId={model.eventId} />
     </VenuePageShell>
   );
 }

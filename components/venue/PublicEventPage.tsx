@@ -1,4 +1,4 @@
-import { formatSessionWindow } from "@/lib/utils/format";
+import { LocalTimeWindow } from "@/components/shared/LocalTimeWindow";
 /* eslint-disable @typescript-eslint/no-explicit-any -- boundary adapters normalize legacy/runtime payloads before typed domain use */
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { submitEventRegistration } from "@/lib/actions/registrationActions";
@@ -8,6 +8,8 @@ import { EventEndedState } from "@/components/venue/EventEndedState";
 import { EventNotOpenState } from "@/components/venue/EventNotOpenState";
 import { RegistrationClosedState } from "@/components/venue/RegistrationClosedState";
 import { RegistrationRequiredState } from "@/components/venue/RegistrationRequiredState";
+import { ReturningAttendeeForm } from "@/components/venue/ReturningAttendeeForm";
+import { DEFAULT_ATTENDEE_SESSION_DAYS, attendeeSessionDaysFor, registeredForWords } from "@/services/attendees/attendeeSessionPolicy";
 import { getEventConfigPackage } from "@/services/events/eventConfigRepository";
 import { mapEventStatusToPublicState } from "@/services/events/eventStateResolver";
 
@@ -45,7 +47,7 @@ export function PublicEventPage({ slug }: { slug: string }) {
               {config.agenda.sessions.map((session, index) => (
                 <div key={session.id || String(index)} className="rounded-xl bg-slate-50 p-3">
                   <p className="font-medium">{session.title}</p>
-                  <p className="text-sm text-slate-500">{session.room} · {formatSessionWindow(session.startsAt, session.endsAt)}</p>
+                  <p className="text-sm text-slate-500">{session.room} · <LocalTimeWindow startsAt={session.startsAt} endsAt={session.endsAt} /></p>
                 </div>
               ))}
             </div>
@@ -81,8 +83,21 @@ export function PublicEventPage({ slug }: { slug: string }) {
   );
 }
 
-export function EventRegistration({ slug }: { slug: string }) {
+/**
+ * `prefillEmail` arrives from the return path: an address that did not match an existing
+ * registration comes back here already typed in, and is never told that it did not match. That is
+ * deliberate. Saying "that email is not registered" would confirm who is and is not attending.
+ */
+export async function EventRegistration({ slug, prefillEmail = "", waitSeconds }: { slug: string; prefillEmail?: string; waitSeconds?: number }) {
   const config = getEventConfigPackage(slug);
+  // Fail soft: the lifetime is a sentence, the form is the product. A store hiccup reading the
+  // event's own setting falls back to the platform default rather than taking registration down.
+  let sessionDays = DEFAULT_ATTENDEE_SESSION_DAYS;
+  try {
+    sessionDays = await attendeeSessionDaysFor(config.event.id);
+  } catch {
+    sessionDays = DEFAULT_ATTENDEE_SESSION_DAYS;
+  }
   const publicState = mapEventStatusToPublicState(config.event.state as any);
 
   if (publicState === "draft" || publicState === "archived") {
@@ -99,21 +114,25 @@ export function EventRegistration({ slug }: { slug: string }) {
 
   return (
     <main className="min-h-screen bg-slate-50 p-6">
-      <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
+      <div className="mx-auto mb-4 max-w-2xl">
+        <ReturningAttendeeForm eventId={config.event.id} slug={config.event.slug} defaultEmail={prefillEmail} waitSeconds={waitSeconds} heading="Already registered for this event?" help="Enter the email you used and this device picks your registration up. Nothing else to fill in." />
+      </div>
+      <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6">
         <input type="hidden" name="eventId" value={config.event.id} />
         <input type="hidden" name="slug" value={config.event.slug} />
         <p className="text-sm text-slate-500">Registration</p>
         <h1 className="mt-2 text-3xl font-semibold">{config.event.name}</h1>
-        <p className="mt-2 text-slate-600">Name, email, company — then you are in the venue. You can tell us more about yourself later; it makes the People page and networking work better for you.</p>
+        <p className="mt-2 text-slate-600">Name, email, company, and you are in. You can tell us more about yourself later; it makes the People page and networking work better for you.</p>
         <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Attendee registration does not grant speaker, sponsor, client, crew, operator, admin, VIP, restricted-session, or camera/mic publishing access.</p>
         <div className="mt-6 space-y-4">
           <p className="text-xs text-slate-500">Three fields and you are in. Fields marked <span className="font-black text-brand-orange">*</span> are required; everything else you can add later from &ldquo;Tell us more about you&rdquo; inside the venue.</p>
+          <p className="mt-2 text-xs text-slate-500" data-testid="registration-lifetime-note">{registeredForWords(sessionDays)} Leave and come back on this device and you are still in. On another device, open the same link and enter this email.</p>
           {[
             ["name", "Name", "text", true, "Ada Lovelace"],
-            ["email", "Email", "email", true, "you@company.com"],
+            ["email", "Email", "email", true, "you@company.com", prefillEmail],
             ["company", "Company / affiliation", "text", true, "Analytical Engines"],
             ["title", "Title / role (optional)", "text", false, "Founder"],
-          ].map(([field, label, type, required, placeholder]) => (
+          ].map(([field, label, type, required, placeholder, defaultValue]) => (
             <div key={String(field)}>
               <label htmlFor={String(field)} className="text-sm font-medium text-slate-700">{label}{required ? <span className="ml-1 font-black text-brand-orange" aria-hidden="true">*</span> : null}</label>
               <input id={String(field)} name={String(field)} required={Boolean(required)} aria-required={Boolean(required)} type={String(type)} placeholder={String(placeholder)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />

@@ -19,7 +19,7 @@ export function VipCodeCard({ eventId, registered, result }: { eventId: string; 
           <button className="rounded-full bg-brand-black px-4 py-2 text-sm font-black text-white" data-testid="vip-code-submit">Use the code</button>
         </form>
       ) : (
-        <p className="mt-3 text-sm"><a href={`/events/${eventId}/register?reason=vip`} className="font-black underline" data-testid="vip-code-register">Register first</a> — the VIP code attaches to you, so we need to know who you are.</p>
+        <p className="mt-3 text-sm"><a href={`/events/${eventId}/register?reason=vip`} className="font-black underline" data-testid="vip-code-register">Register first</a>. The VIP code attaches to you, so we need to know who you are.</p>
       )}
     </section>
   );

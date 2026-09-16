@@ -9,7 +9,7 @@ export default async function SessionsPage({ params }: { params: Promise<{ event
   const model = buildVirtualVenueModel(resolvedParams.eventId);
   return (
     <VenuePageShell model={model}>
-      <SessionDirectory sessions={model.sessions} />
+      <SessionDirectory sessions={model.sessions} eventId={model.eventId} />
     </VenuePageShell>
   );
 }

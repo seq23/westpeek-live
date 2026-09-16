@@ -4,6 +4,7 @@ import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireWorkspaceActor, WorkspaceActorRequiredError } from "@/lib/auth/workspaceActor";
 import { parseQuestionLines } from "@/services/attendees/registrationQuestions";
+import { getEventTemplate } from "@/services/events/eventTemplateService";
 import { archiveEventRecord, createClientRecord, createEventRecord, isRuntimeSchemaMissing, restoreEventRecord, setEventStatus, updateEventRecord, type CreateEventInput } from "@/services/events/eventRepository";
 import type { EventStatus } from "@/types/core";
 
@@ -41,6 +42,17 @@ export async function createEventAction(formData: FormData): Promise<void> {
       description: field(formData, "description") || undefined,
       registrationQuestions: formData.has("registrationQuestions") ? parseQuestionLines(field(formData, "registrationQuestions")) : undefined,
     };
+    // "Use this template": the event opens with that template's length and agenda.
+    const templateId = field(formData, "templateId");
+    if (templateId) {
+      const template = await getEventTemplate(templateId);
+      if (template) {
+        input.format = input.format || template.format;
+        input.eventType = input.eventType || template.eventType;
+        input.durationMinutes = template.durationMinutes;
+        input.templateSessions = template.sessions;
+      }
+    }
     const event = await createEventRecord(input, actor);
     revalidatePath("/app");
     revalidatePath("/app/events");

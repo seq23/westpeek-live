@@ -23,6 +23,9 @@ assert(!status.includes('player above') && !read('components/venue/AttendeeStage
 const defaults=svc.slice(svc.indexOf('export function defaultLiveControlState'), svc.indexOf('export async function getAttendeeLiveControlState'));
 assert(defaults.includes('globalCameraEnabled: true') && defaults.includes('globalMicrophoneEnabled: true') && defaults.includes('requestRequired: roomKind === "main_stage"'), 'A new Room must allow attendee camera/mic requests by default, with approval required on the main stage.');
 assert(read('app/api/attendee-live/mine/route.ts').includes('getCurrentAttendeeIdentity(eventId)') && !read('app/api/attendee-live/mine/route.ts').includes('searchParams.get("attendeeId")'), '/api/attendee-live/mine must read only the caller\'s own capability.');
-for (const file of ['components/venue/MainStageExperience.tsx','components/venue/VenueLobbyDashboard.tsx']) assert(read(file).includes('<FirstVisitCoachStrip'), `${file} must carry the first-visit coach strip.`);
+// One welcome, dismissed once per event and never shown again; it replaced the coach strip so
+// there is never a second orientation thing alongside it (the owner: help boxes do not work).
+for (const file of ['components/venue/MainStageExperience.tsx','components/venue/VenueLobbyDashboard.tsx']) assert(read(file).includes('<VenueWelcome'), `${file} must carry the one venue welcome.`);
+assert(!fs.existsSync('components/venue/FirstVisitCoachStrip.tsx'), 'FirstVisitCoachStrip was replaced by VenueWelcome; it must not come back alongside it.');
 assert(fs.existsSync('tests/e2e/attendee-on-stage-mobile.spec.ts') && read('tests/e2e/attendee-on-stage-mobile.spec.ts').includes('stage-camera-toggle') && read('playwright.config.ts').includes('--use-fake-device-for-media-stream'), 'The phone-width on-stage proof must exist with fake media.');
 console.log('validate_attendee_live_controls_contract: PASS');

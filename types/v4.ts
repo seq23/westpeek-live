@@ -54,6 +54,8 @@ export interface V4AnalyticsEvent {
     | "replay_watched"
     | "networking_joined"
     | "registration_submitted"
+    /** A second device restored an existing registration from the email alone (no privilege carried). */
+    | "registration_restored_on_new_device"
     | "question_asked";
   subjectId?: string;
   metadata?: Record<string, string | number | boolean>;

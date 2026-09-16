@@ -3,16 +3,20 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventRequestRecord } from "@/types/eventRequest";
+import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { ContactRecord, RegistrationQuestion } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { SupplierEventLink, SupplierKind, SupplierRateKind, SupplierRecord, SupplierStatus } from "@/types/suppliers";
 import type { EmailSendLog } from "@/types/emailProduction";
+import type { EventTemplateRecord } from "@/types/eventTemplates";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 
@@ -29,6 +33,8 @@ function mapLiveChatMessage(row: Record<string, unknown>): LiveChatMessage {
     moderationStatus: (row.moderation_status as LiveChatMessage["moderationStatus"]) || "visible",
     moderatedBy: row.moderated_by ? String(row.moderated_by) : undefined,
     moderatedAt: row.moderated_at ? String(row.moderated_at) : undefined,
+    archivedAt: row.archived_at ? String(row.archived_at) : undefined,
+    archivedBy: row.archived_by ? String(row.archived_by) : undefined,
     createdAt: String(row.created_at || ""),
   };
 }
@@ -55,6 +61,22 @@ function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord
 
 function mapAttendeeProfile(row: Record<string, unknown>): AttendeeProfile {
   return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), email: row.email ? String(row.email) : undefined, extraAnswers: (row.extra_answers && typeof row.extra_answers === "object" ? (row.extra_answers as Record<string, string>) : {}), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingOptIn: Boolean(row.networking_opt_in), hiddenFromDirectory: Boolean(row.hidden_from_directory), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+}
+
+function mapEventTemplate(row: Record<string, unknown>): EventTemplateRecord {
+  return {
+    id: String(row.id),
+    name: String(row.name || ""),
+    description: String(row.description || ""),
+    format: (row.format as EventTemplateRecord["format"]) || "stage",
+    eventType: String(row.event_type || "webinar"),
+    durationMinutes: Number(row.duration_minutes || 60),
+    sessions: Array.isArray(row.sessions) ? (row.sessions as EventTemplateRecord["sessions"]) : [],
+    registrationQuestions: Array.isArray(row.registration_questions) ? (row.registration_questions as string[]) : [],
+    createdByLabel: String(row.created_by_label || ""),
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
 }
 
 function mapEmailSendLog(row: Record<string, unknown>): EmailSendLog & { sentBy?: string } {
@@ -101,8 +123,31 @@ function mapEventAsset(row: Record<string, unknown>): EventAssetRecord {
   };
 }
 
+function mapSupplier(row: Record<string, unknown>): SupplierRecord {
+  return {
+    id: String(row.id),
+    kind: (row.kind as SupplierKind) || "contractor",
+    name: String(row.name || ""),
+    company: String(row.company || ""),
+    roleOrService: String(row.role_or_service || ""),
+    email: String(row.email || ""),
+    phone: String(row.phone || ""),
+    rateKind: (row.rate_kind as SupplierRateKind) || "day_rate",
+    rateAmount: Number(row.rate_amount || 0),
+    notes: String(row.notes || ""),
+    status: (row.status as SupplierStatus) || "shortlisted",
+    archivedAt: row.archived_at ? String(row.archived_at) : undefined,
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
+}
+
+function mapSupplierEventLink(row: Record<string, unknown>): SupplierEventLink {
+  return { id: String(row.id), supplierId: String(row.supplier_id), eventId: String(row.event_id), note: String(row.note || ""), createdAt: String(row.created_at || "") };
+}
+
 function mapAttendeeSession(row: Record<string, unknown>): AttendeeSession {
-  return { sessionId: String(row.session_id || ""), attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), role: "attendee", status: (row.status as AttendeeSession["status"]) || "active", issuedAt: String(row.issued_at || ""), expiresAt: String(row.expires_at || ""), lastSeenAt: row.last_seen_at ? String(row.last_seen_at) : undefined };
+  return { sessionId: String(row.session_id || ""), attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), role: "attendee", status: (row.status as AttendeeSession["status"]) || "active", issuedAt: String(row.issued_at || ""), expiresAt: String(row.expires_at || ""), lastSeenAt: row.last_seen_at ? String(row.last_seen_at) : undefined, clientBuildId: row.client_build_id ? String(row.client_build_id) : undefined, clientBrowser: row.client_browser ? String(row.client_browser) : undefined, clientConnectionQuality: row.client_connection_quality ? (String(row.client_connection_quality) as AttendeeSession["clientConnectionQuality"]) : undefined, clientSubscribedTracks: row.client_subscribed_tracks === null || row.client_subscribed_tracks === undefined ? undefined : Number(row.client_subscribed_tracks), clientSurface: row.client_surface ? String(row.client_surface) : undefined, lastChatPollAt: row.last_chat_poll_at ? String(row.last_chat_poll_at) : undefined };
 }
 
 function mapAttendeeAgendaIntent(row: Record<string, unknown>): AttendeeAgendaIntent {
@@ -145,6 +190,97 @@ function failOrSchemaMissing(table: string, error: PostgrestErrorLike): never {
   fail(`${table}: ${error.message}`);
 }
 
+/**
+ * The /request-event row, all the way from arrival to paid. Nulls become undefined so a caller
+ * never has to distinguish "column is null" from "field was not set".
+ */
+function mapEventRequest(row: Record<string, unknown>): EventRequestRecord {
+  const text = (key: string) => (row[key] ? String(row[key]) : undefined);
+  return {
+    id: String(row.id),
+    name: String(row.name || ""),
+    email: String(row.email || ""),
+    company: text("company"),
+    eventType: text("event_type"),
+    eventDate: text("event_date"),
+    audienceSize: text("audience_size"),
+    livestreamNeeds: text("livestream_needs"),
+    networkingNeeds: text("networking_needs"),
+    sponsorExpoNeeds: text("sponsor_expo_needs"),
+    speakerCount: text("speaker_count"),
+    supportLevel: text("support_level"),
+    notes: text("notes"),
+    budgetRange: text("budget_range"),
+    state: (row.state as EventRequestRecord["state"]) || "requested",
+    scopeSummary: text("scope_summary"),
+    priceAmountCents: row.price_amount_cents === null || row.price_amount_cents === undefined ? undefined : Number(row.price_amount_cents),
+    priceCurrency: text("price_currency"),
+    confirmToken: text("confirm_token"),
+    eventId: text("event_id"),
+    approvedAt: text("approved_at"),
+    approvedBy: text("approved_by"),
+    confirmedAt: text("confirmed_at"),
+    paidAt: text("paid_at"),
+    paidBy: text("paid_by"),
+    settlementMethod: row.settlement_method ? (String(row.settlement_method) as EventRequestRecord["settlementMethod"]) : undefined,
+    settlementReference: text("settlement_reference"),
+    instructionsSentAt: text("instructions_sent_at"),
+    declinedAt: text("declined_at"),
+    declineReason: text("decline_reason"),
+    createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || row.created_at || ""),
+  };
+}
+
+function eventRequestToRow(request: EventRequestRecord) {
+  return {
+    id: request.id,
+    name: request.name,
+    email: request.email,
+    company: request.company ?? null,
+    event_type: request.eventType ?? null,
+    event_date: request.eventDate ?? null,
+    audience_size: request.audienceSize ?? null,
+    livestream_needs: request.livestreamNeeds ?? null,
+    networking_needs: request.networkingNeeds ?? null,
+    sponsor_expo_needs: request.sponsorExpoNeeds ?? null,
+    speaker_count: request.speakerCount ?? null,
+    support_level: request.supportLevel ?? null,
+    notes: request.notes ?? null,
+    budget_range: request.budgetRange ?? null,
+    state: request.state,
+    scope_summary: request.scopeSummary ?? null,
+    price_amount_cents: request.priceAmountCents ?? null,
+    price_currency: request.priceCurrency ?? null,
+    confirm_token: request.confirmToken ?? null,
+    event_id: request.eventId ?? null,
+    approved_at: request.approvedAt ?? null,
+    approved_by: request.approvedBy ?? null,
+    confirmed_at: request.confirmedAt ?? null,
+    paid_at: request.paidAt ?? null,
+    paid_by: request.paidBy ?? null,
+    settlement_method: request.settlementMethod ?? null,
+    settlement_reference: request.settlementReference ?? null,
+    instructions_sent_at: request.instructionsSentAt ?? null,
+    declined_at: request.declinedAt ?? null,
+    decline_reason: request.declineReason ?? null,
+    created_at: request.createdAt,
+    updated_at: request.updatedAt,
+  };
+}
+
+function mapHowItWorksPage(row: Record<string, unknown>): HowItWorksPageRecord {
+  return {
+    slug: row.slug as HowItWorksPageRecord["slug"],
+    title: String(row.title || ""),
+    intro: String(row.intro || ""),
+    body: String(row.body || ""),
+    updatedBy: String(row.updated_by || ""),
+    updatedByLabel: String(row.updated_by_label || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
+}
+
 function runtimeEventToRow(event: RuntimeEventRecord) {
   return {
     id: event.id,
@@ -169,6 +305,7 @@ function runtimeEventToRow(event: RuntimeEventRecord) {
     client_code: event.accessCodes.client,
     registration_enabled: event.registrationEnabled,
     registration_questions: event.registrationQuestions ?? null,
+    attendee_session_days: event.attendeeSessionDays ?? null,
     branding: event.branding,
     sessions: event.sessions,
     source: event.source === "seed" ? "runtime" : event.source,
@@ -206,6 +343,7 @@ function rowToRuntimeEvent(row: Record<string, unknown>): RuntimeEventRecord {
     },
     registrationEnabled: Boolean(row.registration_enabled),
     registrationQuestions: Array.isArray(row.registration_questions) ? (row.registration_questions as RegistrationQuestion[]) : undefined,
+    attendeeSessionDays: row.attendee_session_days === null || row.attendee_session_days === undefined ? undefined : Number(row.attendee_session_days),
     branding: (row.branding && typeof row.branding === "object" ? row.branding : {}) as RuntimeEventRecord["branding"],
     sessions: Array.isArray(row.sessions) ? (row.sessions as RuntimeEventRecord["sessions"]) : [],
     source: (row.source as RuntimeEventRecord["source"]) || "runtime",
@@ -444,9 +582,19 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async upsertAttendeeSession(session: AttendeeSession) {
-    const { error } = await this.client.from("attendee_sessions").upsert({ session_id: session.sessionId, attendee_id: session.attendeeId, event_id: session.eventId, role: session.role, status: session.status, issued_at: session.issuedAt, expires_at: session.expiresAt, last_seen_at: session.lastSeenAt });
+    const { error } = await this.client.from("attendee_sessions").upsert({ session_id: session.sessionId, attendee_id: session.attendeeId, event_id: session.eventId, role: session.role, status: session.status, issued_at: session.issuedAt, expires_at: session.expiresAt, last_seen_at: session.lastSeenAt, client_build_id: session.clientBuildId ?? null, client_browser: session.clientBrowser ?? null, client_connection_quality: session.clientConnectionQuality ?? null, client_subscribed_tracks: session.clientSubscribedTracks ?? null, client_surface: session.clientSurface ?? null, last_chat_poll_at: session.lastChatPollAt ?? null });
     if (error) fail(`attendee_sessions upsert: ${error.message}`);
     return session;
+  }
+
+  async listAttendeeSessions(eventId: string, limit = 500) {
+    // The 0037 columns are named explicitly, not swept up by `*`, so an unapplied migration is a
+    // NAMED stop on the health probe instead of a Diagnose panel quietly reading "Not reported"
+    // for every attendee (the 0030 lesson: an unapplied mirror that looked like working software).
+    const columns = "session_id, attendee_id, event_id, role, status, issued_at, expires_at, last_seen_at, client_build_id, client_browser, client_connection_quality, client_subscribed_tracks, client_surface, last_chat_poll_at";
+    const { data, error } = await this.client.from("attendee_sessions").select(columns).eq("event_id", eventId).order("last_seen_at", { ascending: false, nullsFirst: false }).limit(limit);
+    if (error) failOrSchemaMissing("attendee_sessions.client_build_id", error);
+    return (data || []).map((row) => mapAttendeeSession(row as Record<string, unknown>));
   }
 
   async getAttendeeSession(eventId: string, sessionId: string) {
@@ -532,16 +680,61 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async listLiveChatMessages(eventId: string, roomKind: string, roomId: string, options?: { includeHidden?: boolean }) {
-    let query = this.client.from("live_chat_messages").select("*").eq("event_id", eventId).eq("room_kind", roomKind).eq("room_id", roomId);
+    // Archived rows (Clear chat) leave every view, crew included; hidden rows only leave the attendee view.
+    let query = this.client.from("live_chat_messages").select("*").eq("event_id", eventId).eq("room_kind", roomKind).eq("room_id", roomId).is("archived_at", null);
     if (!options?.includeHidden) query = query.neq("moderation_status", "hidden");
     const { data, error } = await query.order("created_at", { ascending: true });
-    if (error) fail(`live_chat_messages read: ${error.message}`);
+    if (error) failOrSchemaMissing("live_chat_messages.archived_at", error);
     return ((data || []) as Record<string, unknown>[]).map(mapLiveChatMessage);
   }
 
+  /**
+   * The delta the open pages poll for. One request, three change clocks: a new message
+   * (created_at), a crew hide or restore (moderated_at), a Clear chat (archived_at). PostgREST
+   * has no OR across ranges without `or()`, so the three are expressed as one or-filter.
+   */
+  async listLiveChatMessagesSince(eventId: string, roomKind: string, roomId: string, since: string) {
+    const { data, error } = await this.client
+      .from("live_chat_messages")
+      .select("*")
+      .eq("event_id", eventId)
+      .eq("room_kind", roomKind)
+      .eq("room_id", roomId)
+      .or(`created_at.gt.${since},moderated_at.gt.${since},archived_at.gt.${since}`)
+      .order("created_at", { ascending: true })
+      .limit(200);
+    if (error) failOrSchemaMissing("live_chat_messages.archived_at", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapLiveChatMessage);
+  }
+
+  async archiveLiveChatRoomMessages(input: { eventId: string; roomKind: string; roomId: string; archivedAt: string; archivedBy: string }) {
+    const { data, error } = await this.client
+      .from("live_chat_messages")
+      .update({ archived_at: input.archivedAt, archived_by: input.archivedBy })
+      .eq("event_id", input.eventId)
+      .eq("room_kind", input.roomKind)
+      .eq("room_id", input.roomId)
+      .is("archived_at", null)
+      .select("id");
+    if (error) failOrSchemaMissing("live_chat_messages.archived_at", error);
+    return ((data || []) as Record<string, unknown>[]).length;
+  }
+
+  async getLiveChatRateState(key: string) {
+    const { data, error } = await this.client.from("live_chat_post_rates").select("state").eq("key", key).maybeSingle();
+    if (error) failOrSchemaMissing("live_chat_post_rates", error);
+    return data?.state as LiveChatRateState | undefined;
+  }
+
+  async setLiveChatRateState(state: LiveChatRateState) {
+    const { error } = await this.client.from("live_chat_post_rates").upsert({ key: state.key, event_id: state.eventId, attendee_id: state.attendeeId, state, updated_at: state.updatedAt }, { onConflict: "key" });
+    if (error) failOrSchemaMissing("live_chat_post_rates", error);
+    return state;
+  }
+
   async listRecentLiveChatMessages(eventId: string, limit: number) {
-    const { data, error } = await this.client.from("live_chat_messages").select("*").eq("event_id", eventId).order("created_at", { ascending: false }).limit(Math.max(1, limit));
-    if (error) fail(`live_chat_messages recent read: ${error.message}`);
+    const { data, error } = await this.client.from("live_chat_messages").select("*").eq("event_id", eventId).is("archived_at", null).order("created_at", { ascending: false }).limit(Math.max(1, limit));
+    if (error) failOrSchemaMissing("live_chat_messages.archived_at", error);
     return ((data || []) as Record<string, unknown>[]).map(mapLiveChatMessage);
   }
 
@@ -691,6 +884,52 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return ((data || []) as Record<string, unknown>[]).map(mapEventAsset);
   }
 
+  async upsertSupplier(supplier: SupplierRecord) {
+    const { error } = await this.client.from("suppliers").upsert({
+      id: supplier.id, kind: supplier.kind, name: supplier.name, company: supplier.company, role_or_service: supplier.roleOrService,
+      email: supplier.email, phone: supplier.phone, rate_kind: supplier.rateKind, rate_amount: supplier.rateAmount,
+      notes: supplier.notes, status: supplier.status, archived_at: supplier.archivedAt ?? null,
+      created_at: supplier.createdAt, updated_at: supplier.updatedAt,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("suppliers", error);
+    return supplier;
+  }
+
+  async getSupplier(id: string) {
+    const { data, error } = await this.client.from("suppliers").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("suppliers", error);
+    return data ? mapSupplier(data as Record<string, unknown>) : undefined;
+  }
+
+  async listSuppliers(includeArchived = false) {
+    let query = this.client.from("suppliers").select("*");
+    if (!includeArchived) query = query.is("archived_at", null);
+    const { data, error } = await query.order("created_at", { ascending: false }).limit(2000);
+    if (error) failOrSchemaMissing("suppliers", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapSupplier);
+  }
+
+  async upsertSupplierEventLink(link: SupplierEventLink) {
+    // supplier_id + event_id is unique in 0033: attaching twice updates the one attachment.
+    const { error } = await this.client.from("supplier_event_links").upsert({
+      id: link.id, supplier_id: link.supplierId, event_id: link.eventId, note: link.note, created_at: link.createdAt,
+    }, { onConflict: "supplier_id,event_id" });
+    if (error) failOrSchemaMissing("supplier_event_links", error);
+    return link;
+  }
+
+  /** Detach really removes the link row: the supplier and its other events are untouched. */
+  async deleteSupplierEventLink(supplierId: string, eventId: string) {
+    const { error } = await this.client.from("supplier_event_links").delete().eq("supplier_id", supplierId).eq("event_id", eventId);
+    if (error) failOrSchemaMissing("supplier_event_links", error);
+  }
+
+  async listSupplierEventLinks() {
+    const { data, error } = await this.client.from("supplier_event_links").select("*").order("created_at", { ascending: false }).limit(5000);
+    if (error) failOrSchemaMissing("supplier_event_links", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapSupplierEventLink);
+  }
+
   async appendEmailSendLog(log: EmailSendLog & { sentBy?: string }) {
     const { error } = await this.client.from("runtime_email_sends").upsert({
       id: log.id, event_id: log.eventId ?? null, agency_id: log.agencyId ?? null, client_id: log.clientId ?? null,
@@ -713,6 +952,33 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     const { data, error } = await this.client.from("runtime_email_sends").select("*").order("queued_at", { ascending: false }).limit(limit);
     if (error) failOrSchemaMissing("runtime_email_sends", error);
     return ((data || []) as Record<string, unknown>[]).map(mapEmailSendLog);
+  }
+
+  async upsertEventTemplate(template: EventTemplateRecord) {
+    const { error } = await this.client.from("runtime_event_templates").upsert({
+      id: template.id, name: template.name, description: template.description, format: template.format, event_type: template.eventType,
+      duration_minutes: template.durationMinutes, sessions: template.sessions, registration_questions: template.registrationQuestions,
+      created_by_label: template.createdByLabel, created_at: template.createdAt, updated_at: template.updatedAt,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("runtime_event_templates", error);
+    return template;
+  }
+
+  async getEventTemplate(id: string) {
+    const { data, error } = await this.client.from("runtime_event_templates").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("runtime_event_templates", error);
+    return data ? mapEventTemplate(data as Record<string, unknown>) : undefined;
+  }
+
+  async listEventTemplates() {
+    const { data, error } = await this.client.from("runtime_event_templates").select("*").order("updated_at", { ascending: false }).limit(200);
+    if (error) failOrSchemaMissing("runtime_event_templates", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEventTemplate);
+  }
+
+  async deleteEventTemplate(id: string) {
+    const { error } = await this.client.from("runtime_event_templates").delete().eq("id", id);
+    if (error) failOrSchemaMissing("runtime_event_templates", error);
   }
 
   async probeContactsArchiveColumn() {
@@ -813,6 +1079,52 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     }, { onConflict: "id" });
     if (error) failOrSchemaMissing("runtime_agency_settings", error);
     return settings;
+  }
+
+  async upsertEventRequest(request: EventRequestRecord) {
+    const { error } = await this.client.from("request_event_intake").upsert(eventRequestToRow(request), { onConflict: "id" });
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    return request;
+  }
+
+  async getEventRequest(id: string) {
+    const { data, error } = await this.client.from("request_event_intake").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    return data ? mapEventRequest(data as Record<string, unknown>) : undefined;
+  }
+
+  async getEventRequestByConfirmToken(token: string) {
+    if (!token) return undefined;
+    const { data, error } = await this.client.from("request_event_intake").select("*").eq("confirm_token", token).maybeSingle();
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    return data ? mapEventRequest(data as Record<string, unknown>) : undefined;
+  }
+
+  async listEventRequests(limit = 500) {
+    const { data, error } = await this.client.from("request_event_intake").select("*").order("created_at", { ascending: false }).limit(limit);
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEventRequest);
+  }
+
+  async getHowItWorksPage(slug: HowItWorksAudience) {
+    const { data, error } = await this.client.from("how_it_works_pages").select("*").eq("slug", slug).maybeSingle();
+    if (error) failOrSchemaMissing("how_it_works_pages", error);
+    return data ? mapHowItWorksPage(data as Record<string, unknown>) : undefined;
+  }
+
+  async listHowItWorksPages() {
+    const { data, error } = await this.client.from("how_it_works_pages").select("*");
+    if (error) failOrSchemaMissing("how_it_works_pages", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapHowItWorksPage);
+  }
+
+  async setHowItWorksPage(page: HowItWorksPageRecord) {
+    const { error } = await this.client.from("how_it_works_pages").upsert({
+      slug: page.slug, title: page.title, intro: page.intro, body: page.body,
+      updated_by: page.updatedBy, updated_by_label: page.updatedByLabel, updated_at: page.updatedAt,
+    }, { onConflict: "slug" });
+    if (error) failOrSchemaMissing("how_it_works_pages", error);
+    return page;
   }
 
   async readSnapshot(): Promise<V6RuntimeSnapshot> {

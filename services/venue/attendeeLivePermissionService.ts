@@ -1,4 +1,5 @@
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
+import { refusePreviewWrite } from "@/lib/auth/previewIdentity";
 import type { AttendeeLiveCapability, AttendeeLiveControlState, AttendeeLiveDecision, AttendeeLiveRoomKind } from "@/types/attendeeLive";
 
 export function attendeeLiveCapabilityKey(eventId: string, roomKind: AttendeeLiveRoomKind, roomId: string, attendeeId: string) {
@@ -47,6 +48,7 @@ export async function getAttendeeLiveCapability(eventId: string, roomKind: Atten
 }
 
 export async function setAttendeeLiveCapability(capability: AttendeeLiveCapability) {
+  refusePreviewWrite(capability.attendeeId, "hold a live capability");
   return getRuntimeStore().setAttendeeLiveCapability(attendeeLiveCapabilityKey(capability.eventId, capability.roomKind, capability.roomId, capability.attendeeId), { ...capability, updatedAt: new Date().toISOString() });
 }
 
@@ -143,6 +145,7 @@ export async function applyAttendeeLiveDecision(input: { eventId: string; roomKi
 }
 
 export async function recordAttendeeStageRequest(input: { eventId: string; roomKind: AttendeeLiveRoomKind; roomId: string; attendeeId: string }) {
+  refusePreviewWrite(input.attendeeId, "raise a hand for the stage");
   const previous = await getAttendeeLiveCapability(input.eventId, input.roomKind, input.roomId, input.attendeeId).catch(() => undefined);
   return setAttendeeLiveCapability(requestedCapability(previous, input));
 }

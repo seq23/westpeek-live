@@ -5,7 +5,7 @@ export function BreakoutRoomCard({ room }: { room: VirtualVenueBreakout }) {
   const availability = getBreakoutAvailability(room);
 
   return (
-    <a href={room.href} className="block rounded-3xl border border-slate-200 bg-white p-5 shadow-sm transition hover:border-slate-300">
+    <a href={room.href} className="block rounded-3xl border border-slate-200 bg-white p-5 transition hover:border-slate-300">
       <p className="text-xs font-semibold uppercase tracking-wide text-slate-500">{room.status}</p>
       <h3 className="mt-2 text-lg font-semibold">{room.title}</h3>
       <p className="mt-2 text-sm text-slate-600">{room.description}</p>

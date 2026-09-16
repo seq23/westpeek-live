@@ -166,6 +166,8 @@ Every validation/test/smoke/audit/deploy package script is assigned below. Advis
 | `validate:event-assets-contract` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
 | `validate:event-email-real` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
 | `validate:one-click-go-live` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
+| `validate:event-templates-real` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
+| `validate:preview-personas` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
 | `validate:no-seed-data-on-app-pages` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
 | `validate:manual-in-app` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
 | `validate:cloudflare-stream-fallback-contract` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
@@ -268,3 +270,4 @@ This validator is admitted because it prevents the prior class of failure where 
 - Added best-effort LiveKit participant removal during revocation.
 - Added hostile review artifact: `HOSTILE_CODE_REVIEW_TIER4_ATTENDEE_LIVE_CONSUMPTION_2026-06-12.md`.
 
+- Added `validate:event-command-bar`: the Event Command Bar is owner/operator only, mounted on all five event-scoped areas, every primary owner action reachable from more than one surface, and no health signal green without a probe behind it.

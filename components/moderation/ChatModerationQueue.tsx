@@ -1,9 +1,10 @@
 import { LocalTime } from "@/components/shared/LocalTime";
-import { lockLiveChatRoom, moderateLiveChatMessage, silenceLiveChatAttendee } from "@/lib/actions/liveChatActions";
-import { getLiveChatModerationQueue } from "@/services/venue/liveChatService";
-import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
+import { clearLiveChatRoomAction, lockLiveChatRoom, moderateLiveChatMessage, setLiveChatSlowModeAction, silenceLiveChatAttendee } from "@/lib/actions/liveChatActions";
+import { countLiveChatRoomMessages, getLiveChatModerationQueue, getLiveChatRoomModeration } from "@/services/venue/liveChatService";
+import { getCrewViewer, viewerDenied, type CrewViewer } from "@/lib/auth/crewViewer";
+import { ClearChatControl } from "@/components/moderation/ClearChatControl";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
-import type { LiveChatMessage, LiveChatRoomKind } from "@/types/liveChat";
+import { LIVE_CHAT_SLOW_MODE_OPTIONS, type LiveChatMessage, type LiveChatRoomKind, type LiveChatSlowModeSeconds } from "@/types/liveChat";
 
 const DEFAULT_ROOMS: Array<{ roomKind: LiveChatRoomKind; roomId: string; label: string }> = [
   { roomKind: "main_stage", roomId: "main-stage", label: "Main stage chat" },
@@ -29,7 +30,25 @@ function LockForm({ eventId, roomKind, roomId, locked, viewer }: { eventId: stri
   );
 }
 
-export function SilenceForm({ eventId, roomKind, roomId, attendeeId, silenced, compact = false, viewer }: { eventId: string; roomKind: LiveChatRoomKind; roomId: string; attendeeId: string; silenced: boolean; compact?: boolean; viewer: CrewViewer }) {
+export /**
+ * Slow mode for one room: off, or 5 / 10 / 30 seconds between posts for an ordinary attendee.
+ * Crew, the host, and speakers are exempt, and the line under the control says so — nobody should
+ * have to find that out by watching the show's host wait.
+ */
+function SlowModeForm({ eventId, roomKind, roomId, slowModeSeconds, viewer }: { eventId: string; roomKind: LiveChatRoomKind; roomId: string; slowModeSeconds: LiveChatSlowModeSeconds; viewer: CrewViewer }) {
+  return (
+    <GatedForm viewer={viewer} action="moderate_chat" formAction={setLiveChatSlowModeAction} className="flex items-center gap-2" testId={`chat-slow-mode-${roomKind}-${roomId}`}>
+      <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="roomKind" value={roomKind} /><input type="hidden" name="roomId" value={roomId} />
+      <label className="text-xs font-black uppercase tracking-wide text-slate-500" htmlFor={`slow-mode-${roomKind}-${roomId}`}>Slow mode</label>
+      <select id={`slow-mode-${roomKind}-${roomId}`} name="slowModeSeconds" defaultValue={String(slowModeSeconds)} className="min-h-9 rounded-full border border-slate-200 px-3 text-xs font-bold disabled:opacity-40">
+        {LIVE_CHAT_SLOW_MODE_OPTIONS.map((seconds) => <option key={seconds} value={seconds}>{seconds === 0 ? "Off" : `${seconds}s`}</option>)}
+      </select>
+      <button className="rounded-full bg-slate-950 px-3 py-2 text-xs font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid={`chat-slow-mode-save-${roomKind}-${roomId}`}>Save</button>
+    </GatedForm>
+  );
+}
+
+function SilenceForm({ eventId, roomKind, roomId, attendeeId, silenced, compact = false, viewer }: { eventId: string; roomKind: LiveChatRoomKind; roomId: string; attendeeId: string; silenced: boolean; compact?: boolean; viewer: CrewViewer }) {
   return (
     <GatedForm viewer={viewer} action="moderate_chat" formAction={silenceLiveChatAttendee} className="inline">
       <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="roomKind" value={roomKind} /><input type="hidden" name="roomId" value={roomId} /><input type="hidden" name="attendeeId" value={attendeeId} /><input type="hidden" name="silenced" value={silenced ? "false" : "true"} />
@@ -50,6 +69,12 @@ export async function ChatModerationQueue({ eventId, limit = 30, compact = false
   const lockedKeys = new Set(queue.lockedRooms.map((room) => `${room.roomKind}:${room.roomId}`));
   const rooms = [...DEFAULT_ROOMS];
   for (const locked of queue.lockedRooms) if (!rooms.some((room) => room.roomKind === locked.roomKind && room.roomId === locked.roomId)) rooms.push({ roomKind: locked.roomKind, roomId: locked.roomId, label: roomLabel(locked) });
+  // Slow mode and the message count per room: the pace controls, and the number the Clear chat confirm names.
+  const pace = new Map(await Promise.all(rooms.map(async (room) => [`${room.roomKind}:${room.roomId}`, {
+    slowModeSeconds: (await getLiveChatRoomModeration(eventId, room.roomKind, room.roomId).catch(() => undefined))?.slowModeSeconds ?? (0 as LiveChatSlowModeSeconds),
+    messageCount: await countLiveChatRoomMessages(eventId, room.roomKind, room.roomId).catch(() => 0),
+  }] as const)));
+  const clearDenied = viewerDenied(viewer, "moderate_chat");
   const silencedIn = (message: LiveChatMessage) => queue.silencedAttendees.some((state) => state.attendeeId === message.attendeeId && state.roomKind === message.roomKind && state.roomId === message.roomId);
   const hiddenCount = queue.messages.filter((message) => message.moderationStatus === "hidden").length;
   return (
@@ -58,7 +83,7 @@ export async function ChatModerationQueue({ eventId, limit = 30, compact = false
         <div>
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Chat moderation queue</p>
           <h2 className="mt-2 text-xl font-black text-slate-950">Latest {queue.messages.length} messages · {hiddenCount} hidden · {queue.silencedAttendees.length} silenced · {queue.lockedRooms.length} locked room{queue.lockedRooms.length === 1 ? "" : "s"}</h2>
-          {!compact ? <p className="mt-2 text-sm text-slate-600">Hide removes a message from every attendee view (crew still see it tagged). Silence stops one attendee posting in that room. Lock stops everyone but crew posting. Each is reversible from here.</p> : null}
+          {!compact ? <p className="mt-2 text-sm text-slate-600">Hide removes a message from every attendee view (crew still see it tagged). Silence stops one attendee posting in that room. Lock stops everyone but crew posting. Slow mode paces the room without closing it. Each is reversible from here — Clear chat is not.</p> : null}
         </div>
       </div>
       <DeniedNote viewer={viewer} action="moderate_chat" className="mt-3" />
@@ -67,13 +92,21 @@ export async function ChatModerationQueue({ eventId, limit = 30, compact = false
         {rooms.map((room) => {
           const locked = lockedKeys.has(`${room.roomKind}:${room.roomId}`);
           const state = queue.lockedRooms.find((item) => item.roomKind === room.roomKind && item.roomId === room.roomId);
+          const roomPace = pace.get(`${room.roomKind}:${room.roomId}`) || { slowModeSeconds: 0 as LiveChatSlowModeSeconds, messageCount: 0 };
           return (
-            <div key={`${room.roomKind}:${room.roomId}`} className={`flex items-center justify-between gap-3 rounded-2xl p-4 ${locked ? "border border-amber-200 bg-amber-50" : "bg-slate-50"}`} data-testid={`chat-room-lock-state-${room.roomKind}-${room.roomId}`} data-locked={locked ? "true" : "false"}>
-              <div>
-                <p className="text-sm font-black text-slate-950">{room.label}</p>
-                <p className="text-xs text-slate-600">{locked ? `Locked by ${state?.updatedBy || "crew"} · attendees see "Chat is locked by the crew"` : "Open · attendees can post"}</p>
+            <div key={`${room.roomKind}:${room.roomId}`} className={`rounded-2xl p-4 ${locked ? "border border-amber-200 bg-amber-50" : "bg-slate-50"}`} data-testid={`chat-room-lock-state-${room.roomKind}-${room.roomId}`} data-locked={locked ? "true" : "false"} data-slow-mode={roomPace.slowModeSeconds}>
+              <div className="flex items-center justify-between gap-3">
+                <div>
+                  <p className="text-sm font-black text-slate-950">{room.label}</p>
+                  <p className="text-xs text-slate-600">{locked ? `Locked by ${state?.updatedBy || "crew"} · attendees see "Chat is locked by the crew"` : "Open · attendees can post"}</p>
+                </div>
+                <LockForm eventId={eventId} roomKind={room.roomKind} roomId={room.roomId} locked={locked} viewer={viewer} />
               </div>
-              <LockForm eventId={eventId} roomKind={room.roomKind} roomId={room.roomId} locked={locked} viewer={viewer} />
+              <div className="mt-3 flex flex-wrap items-center gap-3 border-t border-slate-200 pt-3">
+                <SlowModeForm eventId={eventId} roomKind={room.roomKind} roomId={room.roomId} slowModeSeconds={roomPace.slowModeSeconds} viewer={viewer} />
+                <ClearChatControl action={clearLiveChatRoomAction} eventId={eventId} roomKind={room.roomKind} roomId={room.roomId} roomLabel={room.label} messageCount={roomPace.messageCount} deniedReason={clearDenied} />
+              </div>
+              <p className="mt-2 text-xs text-slate-500">{roomPace.slowModeSeconds ? `Slow mode ${roomPace.slowModeSeconds}s — attendees wait between posts; crew, the host, and speakers are exempt.` : "Slow mode off. Every attendee is still held to the per-person flood limit."} Clear chat archives all {roomPace.messageCount} message{roomPace.messageCount === 1 ? "" : "s"} in this room; nothing is deleted.</p>
             </div>
           );
         })}

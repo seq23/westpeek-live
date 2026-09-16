@@ -13,6 +13,12 @@ const labels: Record<EmailWorkflowType, string> = {
   show_day_reminder: "Show day reminder",
   testing_failure_alert: "Testing failure alert",
   report_ready: "Report ready",
+  scope_approved: "Scope and price",
+  instructions_client: "Instructions for the client",
+  instructions_crew: "Instructions for crew",
+  instructions_speaker: "Instructions for speakers",
+  instructions_sponsor: "Instructions for sponsors",
+  instructions_attendee: "Instructions for attendees",
 };
 
 export function buildEmailSubject(payload: EmailWorkflowPayload) {

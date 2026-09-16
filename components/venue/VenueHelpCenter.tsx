@@ -1,13 +1,14 @@
 import type { VirtualVenueModel } from "@/types/virtualVenue";
 import { HelpRequestForm } from "./HelpRequestForm";
 import { SafeSection } from "@/components/system/SafeSection";
+import { VenueSection } from "@/components/venue/VenueSection";
 
 const supportHref =
   "mailto:info@westpeek.ventures?subject=West%20Peek%20Live%20Event%20Help";
 
 function HelpCard({ title, description, href }: { title: string; description: string; href: string }) {
   return (
-    <a href={href} className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm transition hover:-translate-y-0.5 hover:shadow-brand">
+    <a href={href} className="rounded-3xl border border-brand-line bg-white p-5 transition hover:-translate-y-0.5">
       <p className="text-sm font-black text-brand-black">{title}</p>
       <p className="mt-2 text-sm leading-6 text-brand-muted">{description}</p>
     </a>
@@ -42,12 +43,12 @@ export function VenueHelpCenter({ model }: { model: VirtualVenueModel }) {
 
   return (
     <div className="space-y-6">
-      <section className="rounded-3xl bg-white p-6 shadow-sm">
+      <section className="rounded-3xl bg-white p-6">
         <p className="text-xs font-black uppercase tracking-[0.28em] text-brand-orange">Event Help</p>
         <h2 className="mt-3 text-3xl font-black tracking-tight">Need help with this event?</h2>
         <p className="mt-3 max-w-3xl text-sm leading-7 text-brand-muted">
-          Use this page for access, livestream, agenda, networking, sponsor booth, replay, or event navigation issues.
-          Event Help is for in-event rescue. Company support and legal/privacy requests go to info@westpeek.ventures.
+          Something not working, or not sure where to go? Start here. If none of it helps, the last card emails us and
+          somebody reads it. Company and privacy questions also go to info@westpeek.ventures.
         </p>
       </section>
 
@@ -62,19 +63,15 @@ export function VenueHelpCenter({ model }: { model: VirtualVenueModel }) {
       </section>
 
       <div className="grid gap-6 lg:grid-cols-[0.9fr_1.1fr]">
-        <section className="rounded-3xl bg-white p-6 shadow-sm">
-          <h3 className="text-2xl font-black tracking-tight">Troubleshooting</h3>
-          <div className="mt-5 space-y-5">
-            {troubleshooting.map((block) => (
-              <section key={block.title} className="rounded-2xl bg-brand-ash p-4">
-                <h4 className="font-black text-brand-black">{block.title}</h4>
-                <ul className="mt-3 space-y-2 text-sm leading-6 text-brand-muted">
-                  {block.items.map((item) => <li key={item}>• {item}</li>)}
-                </ul>
-              </section>
-            ))}
-          </div>
-        </section>
+        <div className="space-y-3">
+          {troubleshooting.map((block) => (
+            <VenueSection key={block.title} storageKey={`help-${eventId}-${block.title.slice(0, 24)}`} title={block.title} testId="help-troubleshooting-section">
+              <ul className="space-y-2 text-sm leading-6 text-brand-muted">
+                {block.items.map((item) => <li key={item}>· {item}</li>)}
+              </ul>
+            </VenueSection>
+          ))}
+        </div>
 
         <SafeSection label="Help request" render={() => HelpRequestForm({ eventId: eventId, topics: model.helpTopics })} />
       </div>

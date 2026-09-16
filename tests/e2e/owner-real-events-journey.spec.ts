@@ -55,10 +55,10 @@ test.describe("owner real events", () => {
 
     const joiner = await joinFromFreshContext(browser, code);
     try {
-      await expect(joiner.page.locator("body")).toContainText(/Event found/i);
-      await expect(joiner.page.locator("body")).toContainText(name);
-      await joiner.page.getByRole("link", { name: /Continue/i }).click();
+      // A join link is one tap: /join redirects straight to the show, no Resolve/Continue card.
       await expect(joiner.page).toHaveURL(/\/venue\/[a-z0-9-]+\/stage/); // a live Room lands on the stage
+      await expect(joiner.page.getByTestId("join-trouble")).toHaveCount(0);
+      await expect(joiner.page.locator("body")).toContainText(name);
       await expect(joiner.page.locator("body")).toContainText(name);
       // Attendees never see the host panel.
       await expect(joiner.page.getByTestId("host-join-code-banner")).toHaveCount(0);
@@ -97,10 +97,8 @@ test.describe("owner real events", () => {
 
     const open = await joinFromFreshContext(browser, code);
     try {
-      await expect(open.page.locator("body")).toContainText(/Event found/i);
-      await expect(open.page.locator("body")).toContainText(name);
-      await open.page.getByRole("link", { name: /Continue/i }).click();
       await expect(open.page).toHaveURL(/\/events\/[a-z0-9-]+/);
+      await expect(open.page.getByTestId("join-trouble")).toHaveCount(0);
       await expect(open.page.locator("body")).toContainText(name);
       await expect(open.page.locator("body")).not.toContainText(forbidden);
     } finally {
@@ -144,7 +142,7 @@ test.describe("owner real events", () => {
 
     const restored = await joinFromFreshContext(browser, code);
     try {
-      await expect(restored.page.locator("body")).toContainText(/Event found/i);
+      await expect(restored.page.getByTestId("join-trouble")).toHaveCount(0);
     } finally {
       await restored.context.close();
     }
@@ -152,7 +150,7 @@ test.describe("owner real events", () => {
 
   test("(d) the compiled seed demo event still resolves through /join and the lobby", async ({ page }) => {
     await gotoAndAssert(page, "/join?code=demo");
-    await expect(page.locator("body")).toContainText(/Event found/i);
+    await expect(page).not.toHaveURL(/\/join/);
     await expect(page.locator("body")).toContainText(/Nova Founder Summit/i);
     await gotoAndAssert(page, "/venue/demo/lobby");
     await expect(page.locator("body")).toContainText(/Nova Founder Summit/i);

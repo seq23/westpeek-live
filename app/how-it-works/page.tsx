@@ -1,6 +1,8 @@
 import Link from "next/link";
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { HOW_IT_WORKS_DEFAULTS } from "@/services/content/howItWorksDefaults";
+import { HOW_IT_WORKS_AUDIENCES } from "@/types/howItWorks";
 
 export const metadata = {
   title: "How production works | West Peek Live",
@@ -99,6 +101,26 @@ export default function HowItWorksPage() {
               <Link href="/request-event" className="rounded-full bg-brand-black px-5 py-3 text-center text-sm font-bold text-white hover:bg-brand-charcoal">Plan an Event</Link>
               <Link href="/pricing" className="rounded-full border border-brand-black px-5 py-3 text-center text-sm font-bold text-brand-black hover:border-brand-orange hover:text-brand-orange">What it costs</Link>
             </div>
+          </div>
+
+          {/*
+            The instruction pages. Once an event is paid for, everybody involved is emailed a link
+            to one of these, so they live on the public site rather than behind the production
+            gate: a link that only works for the person it was mailed to gets screenshotted and
+            forwarded as a picture, and then it can never be corrected.
+          */}
+          <div className="mt-10 border-t border-brand-line pt-6" data-testid="how-it-works-index">
+            <h2 className="text-xl font-black tracking-tight">Instructions, by who you are</h2>
+            <p className="mt-2 text-sm leading-6 text-brand-muted">
+              When an event is confirmed we send everyone involved the page for their part in it. They are kept current, so read them here rather than from a saved copy.
+            </p>
+            <ul className="mt-4 grid gap-2 text-sm sm:grid-cols-2">
+              {HOW_IT_WORKS_AUDIENCES.map((audience) => (
+                <li key={audience}>
+                  <Link href={`/how-it-works/${audience}`} className="font-bold underline underline-offset-4 hover:text-brand-orange">{HOW_IT_WORKS_DEFAULTS[audience].title}</Link>
+                </li>
+              ))}
+            </ul>
           </div>
 
           <Link href="/" className="mt-8 inline-flex text-sm font-bold text-brand-muted underline-offset-4 hover:text-brand-orange hover:underline">← Back to West Peek Live</Link>

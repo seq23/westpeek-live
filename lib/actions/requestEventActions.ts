@@ -6,6 +6,8 @@ import { appendRequestEventRecord } from "@/services/events/requestEventStore";
 import { createAuditLog } from "@/services/audit/createAuditLog";
 import { sendEmail } from "@/services/email/emailService";
 import { createEventRecord } from "@/services/events/eventRepository";
+import { attachEventToRequest } from "@/services/event-intake/eventRequestPipeline";
+import { budgetRangeLabel, isBudgetRange } from "@/types/eventRequest";
 
 /**
  * Public event-request intake.
@@ -41,7 +43,10 @@ const errorMessage = (error: unknown) => (error instanceof Error ? error.message
 export async function requestEventProduction(formData: FormData) {
   const name = field(formData, "name");
   const email = field(formData, "email");
-  if (!name || !email || !email.includes("@")) redirect("/request-event?status=missing");
+  // Budget joined name and email as required on 16 Sep 2026. It is a band from a fixed list, so an
+  // unrecognised value is a tampered form rather than a typo, and is refused the same way.
+  const budgetRange = field(formData, "budgetRange");
+  if (!name || !email || !email.includes("@") || !isBudgetRange(budgetRange)) redirect("/request-event?status=missing");
 
   const persisted = await appendRequestEventRecord({
     id: `request-${Date.now()}-${Math.random().toString(36).slice(2)}`,
@@ -57,6 +62,7 @@ export async function requestEventProduction(formData: FormData) {
     speakerCount: field(formData, "speakerCount"),
     supportLevel: field(formData, "supportLevel"),
     notes: field(formData, "notes"),
+    budgetRange,
     createdAt: new Date().toISOString(),
   });
 
@@ -78,6 +84,9 @@ export async function requestEventProduction(formData: FormData) {
       source: "request",
     }, { kind: "user", id: `request:${email}`, label: `${name} via /request-event`, role: "public_visitor" });
     draftEventId = draft.id;
+    // Link the draft back to the request, so the instruction emails sent after payment carry THAT
+    // event's codes rather than a second event nobody created. Best effort like the draft itself.
+    await attachEventToRequest(record.id, draft.id).catch(() => undefined);
   } catch (error) {
     console.error(`request-event: draft event not created for ${record.id}: ${errorMessage(error)}`);
   }
@@ -127,7 +136,7 @@ export async function requestEventProduction(formData: FormData) {
         to,
         subject: `New West Peek Live event request: ${name}`,
         replyTo: email,
-        html: `<h1>New event request</h1><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${record.company || ""}</p><p><strong>Event type:</strong> ${record.eventType || ""}</p><p><strong>Date:</strong> ${record.eventDate || ""}</p><p><strong>Audience:</strong> ${record.audienceSize || ""}</p><p><strong>Notes:</strong> ${record.notes || ""}</p>${draftEventId ? `<p><strong>Draft event:</strong> ${getEnv().NEXT_PUBLIC_APP_URL}/app/events/${draftEventId}</p>` : ""}`,
+        html: `<h1>New event request</h1><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${record.company || ""}</p><p><strong>Event type:</strong> ${record.eventType || ""}</p><p><strong>Date:</strong> ${record.eventDate || ""}</p><p><strong>Audience:</strong> ${record.audienceSize || ""}</p><p><strong>Budget:</strong> ${budgetRangeLabel(record.budgetRange)}</p><p><strong>Notes:</strong> ${record.notes || ""}</p>${draftEventId ? `<p><strong>Draft event:</strong> ${getEnv().NEXT_PUBLIC_APP_URL}/app/events/${draftEventId}</p>` : ""}`,
         text: `New event request
 Name: ${name}
 Email: ${email}
@@ -135,6 +144,7 @@ Company: ${record.company || ""}
 Event type: ${record.eventType || ""}
 Date: ${record.eventDate || ""}
 Audience: ${record.audienceSize || ""}
+Budget: ${budgetRangeLabel(record.budgetRange)}
 Notes: ${record.notes || ""}${draftEventId ? `
 Draft event: ${getEnv().NEXT_PUBLIC_APP_URL}/app/events/${draftEventId}` : ""}`,
       });

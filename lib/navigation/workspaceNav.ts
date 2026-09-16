@@ -15,6 +15,7 @@ export interface WorkspaceNavItem {
 export const WORKSPACE_NAV: WorkspaceNavItem[] = [
   { label: "Owner console", href: "/app/owner" },
   { label: "Dashboard", href: "/app", exact: true },
+  { label: "Requests", href: "/app/requests" },
   { label: "Clients", href: "/app/clients" },
   { label: "People", href: "/app/people" },
   { label: "Events", href: "/app/events" },

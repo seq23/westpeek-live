@@ -1,4 +1,5 @@
 import { sha256Hex, randomId } from "@/lib/security/portableCrypto";
+import { refusePreviewWrite } from "@/lib/auth/previewIdentity";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { maskEmail, upsertContactFromProfile } from "@/services/attendees/contactsService";
 import { admitInvitedVip } from "@/services/guests/vipGrantService";
@@ -9,6 +10,8 @@ function normalizeList(input?: string[]) {
 }
 
 export async function registerOrUpdateAttendee(input: AttendeeRegistrationInput): Promise<AttendeeRegistrationResult> {
+  // A persona is already "registered" for rendering purposes; it must never mint a real profile row.
+  refusePreviewWrite(input.previewAs, "register for the event");
   if (!input.eventId) throw new Error("eventId is required.");
   if (!input.name.trim()) throw new Error("Attendee name is required.");
   if (!input.email.includes("@")) throw new Error("Valid attendee email is required.");

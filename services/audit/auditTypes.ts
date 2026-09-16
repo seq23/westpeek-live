@@ -63,6 +63,10 @@ export type AuditAction =
   | "chat_attendee_unsilenced"
   | "chat_room_locked"
   | "chat_room_unlocked"
+  // Rate control: slow mode on / off for a room, and Clear chat (which archives, never deletes).
+  | "chat_slow_mode_on"
+  | "chat_slow_mode_off"
+  | "chat_room_cleared"
   // Host links: the executive_producer crew role handed out (or revoked, rotating the crew code) for one event.
   | "host_link_minted"
   | "host_link_revoked"
@@ -70,7 +74,19 @@ export type AuditAction =
   | "access_code_rotated"
   // The owner looked up a code in the console's vault, or copied it for a producer. The value is never in the row.
   | "access_code_revealed"
-  | "access_code_copied";
+  | "access_code_copied"
+  // The plan-an-event path (migration 0036). Money and instructions both hang off these four, so
+  // every one of them is a person's decision with a row behind it.
+  | "event_request_approved"
+  | "event_request_declined"
+  | "event_request_confirmed"
+  | "event_request_paid"
+  // An instruction page was edited from the workspace. Everyone holding the link reads the change.
+  | "how_it_works_page_edited"
+  // A producer looked at one named attendee: their reported state (Diagnose) or their view
+  // (See their view). The row carries the attendee id and nothing else — never an IP, never a location.
+  | "attendee_diagnosed"
+  | "attendee_view_mirrored";
 
 export interface CreateAuditLogInput {
   agencyId: string;

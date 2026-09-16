@@ -9,6 +9,7 @@ import { GuestPreviewList } from "@/components/guests/GuestPreviewLinks";
 import { ContactsAcrossEvents } from "@/components/people/ContactsAcrossEvents";
 import { AccessCodesVault } from "@/components/owner/AccessCodesVault";
 import { EventArchiveControl } from "@/components/owner/EventArchiveControl";
+import { EnterTheRoomMenu } from "@/components/preview/EnterTheRoomMenu";
 import { GoLiveCard } from "@/components/stage/GoLiveCard";
 import { VipRow } from "@/components/owner/VipRow";
 import { CopyButton } from "@/components/shared/CopyButton";
@@ -64,6 +65,8 @@ function EventRow({ event, children }: { event: RuntimeEventRecord; children?: R
       <div className="flex flex-wrap gap-2 text-xs font-black">
         <Link href={`/app/events/${event.id}`} className="rounded-full border border-brand-black px-3 py-1 hover:border-brand-orange hover:text-brand-orange">Open</Link>
         <Link href={`/app/events/${event.id}/access`} className="rounded-full border border-brand-black px-3 py-1 hover:border-brand-orange hover:text-brand-orange">Access page</Link>
+        {/* Into the room as yourself, or as anybody — no code, no registration, no page hop. */}
+        <SafeSection label="Enter the room" compact render={() => EnterTheRoomMenu({ eventId: event.id, clientSlug: event.clientSlug, returnTo: "/app/owner", compact: true })} />
         {children}
       </div>
     </li>
@@ -91,6 +94,7 @@ async function LiveNowRow({ event }: { event: RuntimeEventRecord }) {
           <Link href={`/crew/events/${event.id}`} className="rounded-full bg-brand-black px-3 py-2 text-white hover:bg-brand-orange" data-testid={`console-open-crew-${event.id}`}>Open crew console</Link>
           <Link href={`/app/events/${event.id}`} className="rounded-full border border-brand-black px-3 py-2 hover:border-brand-orange hover:text-brand-orange">Command page</Link>
           <Link href={`/venue/${event.id}/stage`} className="rounded-full border border-brand-black px-3 py-2 hover:border-brand-orange hover:text-brand-orange">Stage</Link>
+          <SafeSection label="Enter the room" compact render={() => EnterTheRoomMenu({ eventId: event.id, clientSlug: event.clientSlug, returnTo: "/app/owner" })} />
         </div>
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">

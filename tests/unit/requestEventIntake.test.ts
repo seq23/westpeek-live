@@ -49,6 +49,8 @@ function form(overrides: Record<string, string> = {}) {
   const data = new FormData();
   data.set("name", "Ada Lovelace");
   data.set("email", "ada@example.com");
+  // Budget became required on 16 Sep 2026: West Peek cannot price a request with no band on it.
+  data.set("budgetRange", "25k_50k");
   for (const [key, value] of Object.entries(overrides)) data.set(key, value);
   return data;
 }
@@ -142,6 +144,24 @@ describe("request-event intake", () => {
   it("rejects a submission with no valid email before touching any store", async () => {
     expect(await runAction(form({ email: "not-an-address" }))).toBe("/request-event?status=missing");
     expect(appendRequestEventRecord).not.toHaveBeenCalled();
+  });
+
+  it("rejects a submission with no budget, and one with a band nobody offered", async () => {
+    const missing = form();
+    missing.delete("budgetRange");
+    expect(await runAction(missing)).toBe("/request-event?status=missing");
+    // A value outside the list is a tampered form rather than a typo, and is refused the same way.
+    expect(await runAction(form({ budgetRange: "one_million_dollars" }))).toBe("/request-event?status=missing");
+    expect(appendRequestEventRecord).not.toHaveBeenCalled();
+  });
+
+  it("persists the budget band with the request", async () => {
+    appendRequestEventRecord.mockResolvedValue(stored);
+    sendEmail.mockResolvedValue({ id: "e1", provider: "resend", status: "sent" });
+
+    await runAction(form({ budgetRange: "50k_100k" }));
+
+    expect(appendRequestEventRecord).toHaveBeenCalledWith(expect.objectContaining({ budgetRange: "50k_100k" }));
   });
 });
 

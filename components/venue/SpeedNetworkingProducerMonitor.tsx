@@ -2,7 +2,7 @@ import type { SpeedNetworkingProducerSummary } from "@/types/speedNetworkingEngi
 
 export function SpeedNetworkingProducerMonitor({ summary }: { summary: SpeedNetworkingProducerSummary }) {
   return (
-    <section className="rounded-3xl border border-brand-line bg-white p-4 shadow-sm sm:p-6">
+    <section className="rounded-3xl border border-brand-line bg-white p-4 sm:p-6">
       <p className="text-xs font-semibold uppercase tracking-[0.25em] text-slate-500">Speed networking</p>
       <h2 className="mt-2 text-2xl font-semibold text-slate-950">Producer queue monitor</h2>
       <div className="mt-5 grid gap-3 md:grid-cols-3">

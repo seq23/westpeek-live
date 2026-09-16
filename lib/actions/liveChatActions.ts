@@ -3,8 +3,9 @@ import { revalidatePath } from "next/cache";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { createAuditLog, type AuditAction } from "@/services/audit";
 import { getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
-import { liveChatRoomPath, postLiveRoomChatMessage, setLiveChatAttendeeSilence, setLiveChatMessageVisibility, setLiveChatRoomLock } from "@/services/venue/liveChatService";
-import type { LiveChatRoomKind } from "@/types/liveChat";
+import { getLiveChatPosterClass } from "@/lib/auth/liveChatPoster";
+import { clearLiveChatRoom, liveChatRoomPath, postLiveRoomChatMessage, setLiveChatAttendeeSilence, setLiveChatMessageVisibility, setLiveChatRoomLock, setLiveChatSlowMode } from "@/services/venue/liveChatService";
+import { slowModeSecondsOf, type LiveChatRoomKind } from "@/types/liveChat";
 
 function roomKindOf(value: FormDataEntryValue | null): LiveChatRoomKind {
   return value === "breakout" || value === "session" ? value : "main_stage";
@@ -38,9 +39,12 @@ export async function sendLiveRoomChatMessage(formData: FormData) {
   if (!eventId || !roomId || !message) return;
   const identity = await getCurrentAttendeeIdentity(eventId);
   if (!identity) return;
-  await postLiveRoomChatMessage({ eventId, roomKind, roomId, attendeeId: identity.attendeeId, displayName: identity.displayName, company: identity.company, message });
+  // The poster's class comes from the cookies, not the form: slow mode exempts crew, the host, and
+  // speakers, and a hand-made post cannot claim to be one of them.
+  const posterClass = await getLiveChatPosterClass(eventId);
+  await postLiveRoomChatMessage({ eventId, roomKind, roomId, attendeeId: identity.attendeeId, displayName: identity.displayName, company: identity.company, message, posterClass });
   // Accepted or rejected, the room re-renders with the truth: the new message, or the
-  // "silenced" / "locked" notice in place of the input.
+  // "silenced" / "locked" / slow-mode / rate-limit answer in place of the input.
   revalidateChatSurfaces(eventId, roomKind, roomId);
 }
 
@@ -95,5 +99,30 @@ export async function lockLiveChatRoom(formData: FormData) {
   const auth = await requireControl(eventId);
   await setLiveChatRoomLock({ eventId, roomKind, roomId, locked, actorRole: auth.actorRole, reason });
   await recordChatModeration({ eventId, actorRole: auth.actorRole, action: locked ? "chat_room_locked" : "chat_room_unlocked", resourceType: "live_chat_room", resourceId: `${roomKind}/${roomId}` });
+  revalidateChatSurfaces(eventId, roomKind, roomId);
+}
+
+/** slowModeSeconds=0 | 5 | 10 | 30 for one room. */
+export async function setLiveChatSlowModeAction(formData: FormData) {
+  const eventId = field(formData, "eventId");
+  const roomKind = roomKindOf(formData.get("roomKind"));
+  const roomId = field(formData, "roomId") || "main-stage";
+  const slowModeSeconds = slowModeSecondsOf(field(formData, "slowModeSeconds"));
+  if (!eventId) return;
+  const auth = await requireControl(eventId);
+  await setLiveChatSlowMode({ eventId, roomKind, roomId, slowModeSeconds, actorRole: auth.actorRole });
+  await recordChatModeration({ eventId, actorRole: auth.actorRole, action: slowModeSeconds ? "chat_slow_mode_on" : "chat_slow_mode_off", resourceType: "live_chat_room", resourceId: `${roomKind}/${roomId}` });
+  revalidateChatSurfaces(eventId, roomKind, roomId);
+}
+
+/** Clear the room: archive every message in it. Not a delete — the rows keep their audit trail. */
+export async function clearLiveChatRoomAction(formData: FormData) {
+  const eventId = field(formData, "eventId");
+  const roomKind = roomKindOf(formData.get("roomKind"));
+  const roomId = field(formData, "roomId") || "main-stage";
+  if (!eventId) return;
+  const auth = await requireControl(eventId);
+  const { clearedCount } = await clearLiveChatRoom({ eventId, roomKind, roomId, actorRole: auth.actorRole });
+  await recordChatModeration({ eventId, actorRole: auth.actorRole, action: "chat_room_cleared", resourceType: "live_chat_room", resourceId: `${roomKind}/${roomId}:${clearedCount}` });
   revalidateChatSurfaces(eventId, roomKind, roomId);
 }

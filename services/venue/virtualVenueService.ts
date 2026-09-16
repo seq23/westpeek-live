@@ -1,4 +1,5 @@
 import { getEvent, getSessionsForEvent, getSponsorBoothsForEvent, getRuntimeData } from "@/lib/runtime/getRuntimeData";
+import { excludePreviewIdentities } from "@/lib/auth/previewIdentity";
 import type {
   VenueNavItem,
   VirtualVenueBooth,
@@ -95,7 +96,8 @@ export function buildVirtualVenueModel(eventId: string): VirtualVenueModel {
       networkingOptIn: true,
     }));
 
-  const people: VirtualVenuePerson[] = [...speakerPeople, ...sponsorPeople, ...registeredPeople];
+  // Nobody in the room is a preview: not in the directory, not in the lobby strip, not in a count.
+  const people: VirtualVenuePerson[] = excludePreviewIdentities([...speakerPeople, ...sponsorPeople, ...registeredPeople], (person) => person.id);
 
   const breakouts: VirtualVenueBreakout[] = sessions.slice(0, 3).map((session, index) => ({
     id: `breakout-${session.id}`,

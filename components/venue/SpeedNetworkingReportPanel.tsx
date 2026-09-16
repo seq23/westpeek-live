@@ -1,6 +1,6 @@
 export function SpeedNetworkingReportPanel() {
   return (
-    <section className="rounded-3xl bg-white p-5 shadow-sm">
+    <section className="rounded-3xl bg-white p-5">
       <h3 className="text-lg font-semibold">Match controls</h3>
       <div className="mt-4 grid gap-2">
         <button className="rounded-xl border border-slate-300 px-4 py-3 text-sm font-semibold">End match</button>

@@ -4,6 +4,7 @@ import { RuntimeSchemaStop } from "@/components/system/RuntimeSchemaStop";
 import { createEventAction } from "@/lib/actions/eventWorkspaceActions";
 import { getRuntimeSchemaStatus, listClientRecords } from "@/services/events/eventRepository";
 import { questionLines } from "@/services/attendees/registrationQuestions";
+import { getEventTemplate } from "@/services/events/eventTemplateService";
 import { DEFAULT_REGISTRATION_QUESTIONS } from "@/types/attendeeRegistration";
 
 export const dynamic = "force-dynamic";
@@ -27,10 +28,12 @@ function defaultStartLocal() {
   return `${next.getFullYear()}-${pad(next.getMonth() + 1)}-${pad(next.getDate())}T${pad(next.getHours())}:00`;
 }
 
-export default async function CreateEventPage({ searchParams }: { searchParams?: Promise<{ when?: string; error?: string; clientId?: string }> }) {
+export default async function CreateEventPage({ searchParams }: { searchParams?: Promise<{ when?: string; error?: string; clientId?: string; template?: string }> }) {
   const resolved = searchParams ? await searchParams : undefined;
   const initialWhen = resolved?.when === "later" || resolved?.clientId ? "later" : "now";
   const initialClientId = resolved?.clientId || "";
+  // "Use this template" arrives as ?template=…: the form opens already filled in.
+  const template = resolved?.template ? await getEventTemplate(resolved.template) : undefined;
   const [schema, clients] = await Promise.all([getRuntimeSchemaStatus(), listClientRecords()]);
   const error = resolved?.error;
 
@@ -49,7 +52,14 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
         {error === "schema_missing" ? <RuntimeSchemaStop status={schema} /> : null}
         {error && error !== "schema_missing" ? <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800" role="alert">Could not create the event: {error}</p> : null}
 
+        {template ? (
+          <p className="mt-6 rounded-2xl border border-brand-line bg-brand-ash p-4 text-sm" data-testid="create-from-template">
+            Starting from <strong>{template.name}</strong> — {template.format === "room" ? "Room" : "Stage"}, {template.durationMinutes} minutes{template.sessions.length ? `, ${template.sessions.length} session${template.sessions.length === 1 ? "" : "s"}` : ""}. Change anything you like; nothing is locked.
+          </p>
+        ) : null}
+
         <form action={createEventAction} className="mt-8 space-y-8" data-testid="create-event-form">
+          {template ? <input type="hidden" name="templateId" value={template.id} /> : null}
           <fieldset className="rounded-3xl border border-brand-line bg-brand-ash p-5">
             <legend className="px-2 text-sm font-black">When <span className="text-brand-orange">*</span></legend>
             <p className="mt-1 text-xs text-brand-muted">This is the only decision that changes the form. Everything else is defaulted to West Peek branding, one Main stage session, and the LiveKit-first fallback ladder.</p>
@@ -74,12 +84,12 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
           <div className="grid gap-5 md:grid-cols-2">
             <div className="md:col-span-2">
               <label htmlFor="name" className="text-sm font-black">Event name <span className="text-brand-orange">*</span></label>
-              <input id="name" name="name" required maxLength={120} placeholder="Founder office hours" className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
+              <input id="name" name="name" required maxLength={120} defaultValue={template ? `${template.name} — ` : ""} placeholder="Founder office hours" className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" data-testid="create-event-name" />
             </div>
             <div>
               <label htmlFor="format" className="text-sm font-black">Format</label>
               <p className="mt-1 text-xs text-brand-muted">Stage is one-to-many with a LiveKit main stage. Room is a smaller interactive session.</p>
-              <select id="format" name="format" defaultValue="stage" className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm">
+              <select id="format" name="format" defaultValue={template?.format || "stage"} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm">
                 <option value="stage">Stage</option>
                 <option value="room">Room</option>
               </select>
@@ -87,7 +97,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
             <div>
               <label htmlFor="eventType" className="text-sm font-black">Type</label>
               <p className="mt-1 text-xs text-brand-muted">Used for planned client events; Rooms default to community event.</p>
-              <select id="eventType" name="eventType" defaultValue="webinar" className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm">
+              <select id="eventType" name="eventType" defaultValue={template?.eventType || "webinar"} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm">
                 {eventTypes.map(([value, label]) => <option key={value} value={value}>{label}</option>)}
               </select>
             </div>

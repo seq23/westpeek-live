@@ -1,15 +1,19 @@
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventRequestRecord } from "@/types/eventRequest";
+import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { SupplierEventLink, SupplierRecord } from "@/types/suppliers";
 import type { EmailSendLog } from "@/types/emailProduction";
+import type { EventTemplateRecord } from "@/types/eventTemplates";
 import type { ContactRecord } from "@/types/attendeeRegistration";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
@@ -90,9 +94,13 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     speedNetworkingEntries: Array.isArray(parsed.speedNetworkingEntries) ? parsed.speedNetworkingEntries : [],
     speedNetworkingMatches: Array.isArray(parsed.speedNetworkingMatches) ? parsed.speedNetworkingMatches : [],
     contacts: Array.isArray(parsed.contacts) ? parsed.contacts : [],
+    suppliers: Array.isArray(parsed.suppliers) ? parsed.suppliers : [],
+    supplierEventLinks: Array.isArray(parsed.supplierEventLinks) ? parsed.supplierEventLinks : [],
     runtimeEvents: Array.isArray(parsed.runtimeEvents) ? parsed.runtimeEvents : [],
     runtimeClients: Array.isArray(parsed.runtimeClients) ? parsed.runtimeClients : [],
     agencySettings: Array.isArray(parsed.agencySettings) ? parsed.agencySettings : [],
+    eventRequests: Array.isArray(parsed.eventRequests) ? parsed.eventRequests : [],
+    howItWorksPages: Array.isArray(parsed.howItWorksPages) ? parsed.howItWorksPages : [],
   };
 }
 
@@ -239,6 +247,14 @@ export class FileRuntimeStore implements RuntimeStore {
     return snapshot.attendeeSessions.find((item: AttendeeSession) => item.eventId === eventId && item.sessionId === sessionId);
   }
 
+  async listAttendeeSessions(eventId: string, limit = 500) {
+    const snapshot = this.read();
+    return snapshot.attendeeSessions
+      .filter((item: AttendeeSession) => item.eventId === eventId)
+      .sort((a: AttendeeSession, b: AttendeeSession) => String(b.lastSeenAt || b.issuedAt).localeCompare(String(a.lastSeenAt || a.issuedAt)))
+      .slice(0, limit);
+  }
+
   async upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent) {
     const snapshot = this.read();
     snapshot.attendeeAgendaIntents = snapshot.attendeeAgendaIntents.filter((item: AttendeeAgendaIntent) => !(item.eventId === intent.eventId && item.attendeeId === intent.attendeeId));
@@ -319,7 +335,42 @@ export class FileRuntimeStore implements RuntimeStore {
 
   async listLiveChatMessages(eventId: string, roomKind: string, roomId: string, options?: { includeHidden?: boolean }) {
     const snapshot = this.read();
-    return snapshot.liveChatMessages.filter((message: LiveChatMessage) => message.eventId === eventId && message.roomKind === roomKind && message.roomId === roomId && (options?.includeHidden || message.moderationStatus !== "hidden"));
+    // Archived rows (Clear chat) leave every view, crew included; hidden rows only leave the attendee view.
+    return snapshot.liveChatMessages.filter((message: LiveChatMessage) => message.eventId === eventId && message.roomKind === roomKind && message.roomId === roomId && !message.archivedAt && (options?.includeHidden || message.moderationStatus !== "hidden"));
+  }
+
+  async listLiveChatMessagesSince(eventId: string, roomKind: string, roomId: string, since: string) {
+    const sinceMs = Date.parse(since);
+    const changedAt = (message: LiveChatMessage) => Math.max(Date.parse(message.createdAt) || 0, Date.parse(message.moderatedAt || "") || 0, Date.parse(message.archivedAt || "") || 0);
+    return this.read().liveChatMessages
+      .filter((message: LiveChatMessage) => message.eventId === eventId && message.roomKind === roomKind && message.roomId === roomId)
+      .filter((message: LiveChatMessage) => !Number.isFinite(sinceMs) || changedAt(message) > sinceMs)
+      .sort((a: LiveChatMessage, b: LiveChatMessage) => a.createdAt.localeCompare(b.createdAt));
+  }
+
+  async archiveLiveChatRoomMessages(input: { eventId: string; roomKind: string; roomId: string; archivedAt: string; archivedBy: string }) {
+    const snapshot = this.read();
+    let archived = 0;
+    for (const message of snapshot.liveChatMessages as LiveChatMessage[]) {
+      if (message.eventId !== input.eventId || message.roomKind !== input.roomKind || message.roomId !== input.roomId || message.archivedAt) continue;
+      message.archivedAt = input.archivedAt;
+      message.archivedBy = input.archivedBy;
+      archived += 1;
+    }
+    if (archived) this.write(snapshot);
+    return archived;
+  }
+
+  async getLiveChatRateState(key: string) {
+    return (this.read().liveChatRateStates || []).find((item: LiveChatRateState) => item.key === key);
+  }
+
+  async setLiveChatRateState(state: LiveChatRateState) {
+    const snapshot = this.read();
+    snapshot.liveChatRateStates = (snapshot.liveChatRateStates || []).filter((item: LiveChatRateState) => item.key !== state.key);
+    snapshot.liveChatRateStates.push(state);
+    this.write(snapshot);
+    return state;
   }
 
   async listRecentLiveChatMessages(eventId: string, limit: number) {
@@ -327,7 +378,7 @@ export class FileRuntimeStore implements RuntimeStore {
     // Newest first; same-millisecond posts keep insertion order (later insert = newer).
     return snapshot.liveChatMessages
       .map((message: LiveChatMessage, index: number) => ({ message, index }))
-      .filter(({ message }) => message.eventId === eventId)
+      .filter(({ message }) => message.eventId === eventId && !message.archivedAt)
       .sort((a, b) => b.message.createdAt.localeCompare(a.message.createdAt) || b.index - a.index)
       .slice(0, Math.max(1, limit))
       .map(({ message }) => message);
@@ -462,6 +513,41 @@ export class FileRuntimeStore implements RuntimeStore {
       .sort((a: EventAssetRecord, b: EventAssetRecord) => b.createdAt.localeCompare(a.createdAt));
   }
 
+  async upsertSupplier(supplier: SupplierRecord) {
+    const snapshot = this.read();
+    snapshot.suppliers = [...(snapshot.suppliers || []).filter((item: SupplierRecord) => item.id !== supplier.id), supplier];
+    this.write(snapshot);
+    return supplier;
+  }
+
+  async getSupplier(id: string) {
+    return (this.read().suppliers || []).find((item: SupplierRecord) => item.id === id);
+  }
+
+  async listSuppliers(includeArchived = false) {
+    return (this.read().suppliers || [])
+      .filter((item: SupplierRecord) => includeArchived || !item.archivedAt)
+      .sort((a: SupplierRecord, b: SupplierRecord) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async upsertSupplierEventLink(link: SupplierEventLink) {
+    const snapshot = this.read();
+    // The same supplier on the same event is ONE attachment, matching the unique index in 0033.
+    snapshot.supplierEventLinks = [...(snapshot.supplierEventLinks || []).filter((item: SupplierEventLink) => !(item.supplierId === link.supplierId && item.eventId === link.eventId)), link];
+    this.write(snapshot);
+    return link;
+  }
+
+  async deleteSupplierEventLink(supplierId: string, eventId: string) {
+    const snapshot = this.read();
+    snapshot.supplierEventLinks = (snapshot.supplierEventLinks || []).filter((item: SupplierEventLink) => !(item.supplierId === supplierId && item.eventId === eventId));
+    this.write(snapshot);
+  }
+
+  async listSupplierEventLinks() {
+    return (this.read().supplierEventLinks || []).slice().sort((a: SupplierEventLink, b: SupplierEventLink) => b.createdAt.localeCompare(a.createdAt));
+  }
+
   async appendEmailSendLog(log: EmailSendLog & { sentBy?: string }) {
     const snapshot = this.read();
     snapshot.emailSendLogs = [...(snapshot.emailSendLogs || []).filter((item: EmailSendLog) => item.id !== log.id), log];
@@ -481,6 +567,27 @@ export class FileRuntimeStore implements RuntimeStore {
       .slice()
       .sort((a: EmailSendLog, b: EmailSendLog) => b.queuedAt.localeCompare(a.queuedAt))
       .slice(0, limit);
+  }
+
+  async upsertEventTemplate(template: EventTemplateRecord) {
+    const snapshot = this.read();
+    snapshot.eventTemplates = [...(snapshot.eventTemplates || []).filter((item: EventTemplateRecord) => item.id !== template.id), template];
+    this.write(snapshot);
+    return template;
+  }
+
+  async getEventTemplate(id: string) {
+    return (this.read().eventTemplates || []).find((item: EventTemplateRecord) => item.id === id);
+  }
+
+  async listEventTemplates() {
+    return (this.read().eventTemplates || []).slice().sort((a: EventTemplateRecord, b: EventTemplateRecord) => b.updatedAt.localeCompare(a.updatedAt));
+  }
+
+  async deleteEventTemplate(id: string) {
+    const snapshot = this.read();
+    snapshot.eventTemplates = (snapshot.eventTemplates || []).filter((item: EventTemplateRecord) => item.id !== id);
+    this.write(snapshot);
   }
 
   async probeContactsArchiveColumn() {
@@ -560,6 +667,44 @@ export class FileRuntimeStore implements RuntimeStore {
     snapshot.agencySettings.push(settings);
     this.write(snapshot);
     return settings;
+  }
+
+  async upsertEventRequest(request: EventRequestRecord) {
+    const snapshot = this.read();
+    snapshot.eventRequests = [...(snapshot.eventRequests || []).filter((item: EventRequestRecord) => item.id !== request.id), request];
+    this.write(snapshot);
+    return request;
+  }
+
+  async getEventRequest(id: string) {
+    return (this.read().eventRequests || []).find((item: EventRequestRecord) => item.id === id);
+  }
+
+  async getEventRequestByConfirmToken(token: string) {
+    if (!token) return undefined;
+    return (this.read().eventRequests || []).find((item: EventRequestRecord) => item.confirmToken === token);
+  }
+
+  async listEventRequests(limit = 500) {
+    return (this.read().eventRequests || [])
+      .slice()
+      .sort((a: EventRequestRecord, b: EventRequestRecord) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  async getHowItWorksPage(slug: HowItWorksAudience) {
+    return (this.read().howItWorksPages || []).find((item: HowItWorksPageRecord) => item.slug === slug);
+  }
+
+  async listHowItWorksPages() {
+    return (this.read().howItWorksPages || []).slice();
+  }
+
+  async setHowItWorksPage(page: HowItWorksPageRecord) {
+    const snapshot = this.read();
+    snapshot.howItWorksPages = [...(snapshot.howItWorksPages || []).filter((item: HowItWorksPageRecord) => item.slug !== page.slug), page];
+    this.write(snapshot);
+    return page;
   }
 
   async readSnapshot() {

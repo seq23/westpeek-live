@@ -1,13 +1,17 @@
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState, V4VideoProvider } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
-import type { LiveChatMessage, LiveChatModerationState } from "@/types/liveChat";
+import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
+import type { SupplierEventLink, SupplierRecord } from "@/types/suppliers";
 import type { EmailSendLog } from "@/types/emailProduction";
+import type { EventTemplateRecord } from "@/types/eventTemplates";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { EventRequestRecord } from "@/types/eventRequest";
+import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 
@@ -111,6 +115,7 @@ export interface V6RuntimeSnapshot {
   stageStreamEvents: StageStreamEvent[];
   liveChatMessages: LiveChatMessage[];
   liveChatModerationStates: LiveChatModerationState[];
+  liveChatRateStates: LiveChatRateState[];
   attendeeLiveCapabilities: AttendeeLiveCapability[];
   attendeeLiveControlStates: AttendeeLiveControlState[];
   specialGuestProfiles: SpecialGuestProfile[];
@@ -119,10 +124,15 @@ export interface V6RuntimeSnapshot {
   speedNetworkingMatches: SpeedNetworkingMatchRecord[];
   contacts: ContactRecord[];
   eventAssets: EventAssetRecord[];
+  suppliers: SupplierRecord[];
+  supplierEventLinks: SupplierEventLink[];
   emailSendLogs: EmailSendLog[];
+  eventTemplates: EventTemplateRecord[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
+  eventRequests: EventRequestRecord[];
+  howItWorksPages: HowItWorksPageRecord[];
 }
 
 export type RuntimeStoreKind = "supabase" | "file";
@@ -159,12 +169,27 @@ export interface RuntimeStore {
   getEventAsset(id: string): Promise<EventAssetRecord | undefined>;
   listEventAssets(eventId: string, includeArchived?: boolean): Promise<EventAssetRecord[]>;
   listAllEventAssets(includeArchived?: boolean): Promise<EventAssetRecord[]>;
+  // Contractors and vendors (migration 0033): one table, `kind` tells them apart. Suppliers are
+  // global; supplier_event_links is which events each one is on.
+  upsertSupplier(supplier: SupplierRecord): Promise<SupplierRecord>;
+  getSupplier(id: string): Promise<SupplierRecord | undefined>;
+  listSuppliers(includeArchived?: boolean): Promise<SupplierRecord[]>;
+  upsertSupplierEventLink(link: SupplierEventLink): Promise<SupplierEventLink>;
+  deleteSupplierEventLink(supplierId: string, eventId: string): Promise<void>;
+  listSupplierEventLinks(): Promise<SupplierEventLink[]>;
   // The email send log (migration 0032): one row per message the app actually sent.
   appendEmailSendLog(log: EmailSendLog & { sentBy?: string }): Promise<EmailSendLog>;
   listEmailSendLogs(eventId: string, limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
   listAllEmailSendLogs(limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
+  // Event templates (migration 0033): a starting point for an event, saved from a real one.
+  upsertEventTemplate(template: EventTemplateRecord): Promise<EventTemplateRecord>;
+  getEventTemplate(id: string): Promise<EventTemplateRecord | undefined>;
+  listEventTemplates(): Promise<EventTemplateRecord[]>;
+  deleteEventTemplate(id: string): Promise<void>;
   upsertAttendeeSession(session: AttendeeSession): Promise<AttendeeSession>;
   getAttendeeSession(eventId: string, sessionId: string): Promise<AttendeeSession | undefined>;
+  /** Every session of an event, newest heartbeat first: the Diagnose panel's one read for the roster. */
+  listAttendeeSessions(eventId: string, limit?: number): Promise<AttendeeSession[]>;
   upsertAttendeeAgendaIntent(intent: AttendeeAgendaIntent): Promise<AttendeeAgendaIntent>;
   getAttendeeAgendaIntent(eventId: string, attendeeId: string): Promise<AttendeeAgendaIntent | undefined>;
   appendSponsorLeadOptIn(optIn: SponsorLeadOptIn): Promise<SponsorLeadOptIn>;
@@ -182,6 +207,16 @@ export interface RuntimeStore {
   /** Newest first, every room of the event, hidden included: the crew moderation queue. */
   listRecentLiveChatMessages(eventId: string, limit: number): Promise<LiveChatMessage[]>;
   updateLiveChatMessageModeration(input: { id: string; eventId: string; moderationStatus: LiveChatMessage["moderationStatus"]; moderatedBy: string; moderatedAt: string }): Promise<LiveChatMessage | undefined>;
+  /**
+   * Delta poll: every row of the room created OR moderated OR archived since `since`, hidden and
+   * archived included, so the caller can turn a hide or a clear into a removal for open pages.
+   */
+  listLiveChatMessagesSince(eventId: string, roomKind: string, roomId: string, since: string): Promise<LiveChatMessage[]>;
+  /** Crew "Clear chat": archive every visible row of the room. Returns how many were archived. */
+  archiveLiveChatRoomMessages(input: { eventId: string; roomKind: string; roomId: string; archivedAt: string; archivedBy: string }): Promise<number>;
+  /** Per-person chat flood-guard row, keyed event:attendee. */
+  getLiveChatRateState(key: string): Promise<LiveChatRateState | undefined>;
+  setLiveChatRateState(state: LiveChatRateState): Promise<LiveChatRateState>;
   setLiveChatModerationState(state: LiveChatModerationState): Promise<LiveChatModerationState>;
   getLiveChatModerationState(key: string): Promise<LiveChatModerationState | undefined>;
   listLiveChatModerationStates(eventId: string): Promise<LiveChatModerationState[]>;
@@ -215,6 +250,16 @@ export interface RuntimeStore {
   listRuntimeClients(): Promise<RuntimeClientRecord[]>;
   getAgencySettings(id: string): Promise<AgencySettingsRecord | undefined>;
   setAgencySettings(settings: AgencySettingsRecord): Promise<AgencySettingsRecord>;
+  // Event requests (migration 0036): the /request-event row, from arrival to paid.
+  upsertEventRequest(request: EventRequestRecord): Promise<EventRequestRecord>;
+  getEventRequest(id: string): Promise<EventRequestRecord | undefined>;
+  /** The client's own link resolves by token alone; it carries no id a visitor could edit. */
+  getEventRequestByConfirmToken(token: string): Promise<EventRequestRecord | undefined>;
+  listEventRequests(limit?: number): Promise<EventRequestRecord[]>;
+  // The five instruction pages (migration 0036), edited from the workspace, linked from every email.
+  getHowItWorksPage(slug: HowItWorksAudience): Promise<HowItWorksPageRecord | undefined>;
+  listHowItWorksPages(): Promise<HowItWorksPageRecord[]>;
+  setHowItWorksPage(page: HowItWorksPageRecord): Promise<HowItWorksPageRecord>;
 }
 
 export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
@@ -237,6 +282,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     stageStreamStates: [],
     stageStreamEvents: [],
     liveChatMessages: [],
+    liveChatRateStates: [],
     liveChatModerationStates: [],
     attendeeLiveCapabilities: [],
     attendeeLiveControlStates: [],
@@ -246,9 +292,14 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     speedNetworkingMatches: [],
     contacts: [],
     eventAssets: [],
+    suppliers: [],
+    supplierEventLinks: [],
     emailSendLogs: [],
+    eventTemplates: [],
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],
+    eventRequests: [],
+    howItWorksPages: [],
   };
 }

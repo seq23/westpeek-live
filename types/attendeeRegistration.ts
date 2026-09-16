@@ -39,6 +39,11 @@ export interface AttendeeRegistrationInput {
   topicsOfInterest?: string[];
   networkingGoals?: string;
   networkingOptIn?: boolean;
+  /**
+   * The `?viewAs=` the page was rendered with, passed straight through. A preview persona has no
+   * attendee id to refuse on, so the identity it is browsing as is what the service refuses.
+   */
+  previewAs?: string;
 }
 
 export interface AttendeeRegistrationResult {

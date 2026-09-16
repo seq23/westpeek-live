@@ -9,8 +9,11 @@ import { getOperatorStageStreamState } from "@/services/video/stageStreamStateSe
  * intentionally ended and the event goes to `ended`, so the ingress_ended that follows is ENDED,
  * not a Daily failover. Shown on the crew console, the command page, the publish page, and the
  * testing console. Once ended, it reports so instead of offering the button again.
+ *
+ * `variant="bar"` is the same control sized for the Event Command Bar: one button, same action,
+ * same permission — ending a show must not be a different code path depending on where you press.
  */
-export async function EndShowControl({ eventId, stageId = "main-stage", compact = false, viewer: givenViewer }: { eventId: string; stageId?: string; compact?: boolean; viewer?: CrewViewer }) {
+export async function EndShowControl({ eventId, stageId = "main-stage", compact = false, variant = "card", viewer: givenViewer }: { eventId: string; stageId?: string; compact?: boolean; variant?: "card" | "bar"; viewer?: CrewViewer }) {
   const [state, event, viewer] = await Promise.all([
     getOperatorStageStreamState(eventId, stageId),
     findEventRecord(eventId).catch(() => undefined),
@@ -18,6 +21,15 @@ export async function EndShowControl({ eventId, stageId = "main-stage", compact 
   ]);
   const ended = state.operatorMarkedShowEnded || state.streamStatus === "ENDED";
   const eventEnded = event?.status === "ended" || event?.status === "replay_available" || event?.status === "archived";
+  if (variant === "bar") {
+    if (ended) return <span className="rounded-full bg-white/15 px-3 py-1.5 text-sm font-black text-white" data-testid="end-show-control" data-show-ended="true" data-event-ended={eventEnded ? "true" : "false"}>Show ended</span>;
+    return (
+      <GatedForm viewer={viewer} action="go_live" formAction={endTheShow} testId="end-show-control">
+        <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="stageId" value={stageId} />
+        <button className="rounded-full bg-rose-600 px-4 py-1.5 text-sm font-black text-white hover:bg-rose-700 disabled:cursor-not-allowed disabled:opacity-40" data-testid="end-show-button" title="Press BEFORE you stop the feed: the stage is marked intentionally ended, so a stopped feed is not read as a dropped one.">End show</button>
+      </GatedForm>
+    );
+  }
   return (
     <section className={`rounded-3xl border p-5 shadow-sm ${ended ? "border-slate-200 bg-slate-50" : "border-rose-200 bg-white"}`} data-testid="end-show-control" data-show-ended={ended ? "true" : "false"} data-event-ended={eventEnded ? "true" : "false"}>
       <div className="flex flex-wrap items-center justify-between gap-4">
