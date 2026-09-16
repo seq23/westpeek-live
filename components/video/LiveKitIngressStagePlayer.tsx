@@ -3,6 +3,7 @@ import { useEffect, useRef, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer, useTracks, ParticipantTile, GridLayout } from "@livekit/components-react";
 import { Room, Track } from "livekit-client";
 import type { AttendeePublishGrant } from "@/components/video/AttendeeStageControls";
+import { StageClientHeartbeat } from "@/components/video/StageClientHeartbeat";
 
 /** The production feed's participant identity, as minted by the ingress service. */
 export function isProductionFeedIdentity(identity: string | undefined) {
@@ -131,6 +132,9 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
       ) : (
         <LiveKitRoom key={token} room={room} token={token} serverUrl={serverUrl} connect audio={false} video={false} onConnected={() => setStartedOnce(true)} onDisconnected={() => { if (removedRef.current) return; if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive("LiveKit disconnected after stream had started."); } }} onError={(e) => { if (removedRef.current) return; if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive(e.message); } else setError(e.message); }} className="rounded-3xl border border-white/10 bg-black/40 p-4">
           <IngressTrackView />
+          {/* Reports what only this browser knows — quality and subscribed tracks — so the crew's
+              Diagnose panel can tell "receiving nothing" from "receiving it badly". */}
+          <StageClientHeartbeat eventId={eventId} />
           {/* `audio` / `video` on LiveKitRoom mean PUBLISH the local devices the moment the room
               connects — so "sound on" used to open an approved attendee's mic to the room on
               connect (found 16 Sep 2026). Watching never publishes; the attendee turns their own

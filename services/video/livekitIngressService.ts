@@ -27,7 +27,7 @@ function base64UrlEncode(input: string | Buffer) {
   return Buffer.from(input).toString("base64url");
 }
 
-function createLiveKitServerToken(input: { apiKey: string; apiSecret: string; roomName: string }) {
+export function createLiveKitServerToken(input: { apiKey: string; apiSecret: string; roomName: string }) {
   const now = Math.floor(Date.now() / 1000);
   const header = base64UrlEncode(JSON.stringify({ alg: "HS256", typ: "JWT" }));
   const payload = base64UrlEncode(JSON.stringify({
@@ -47,7 +47,7 @@ function createLiveKitServerToken(input: { apiKey: string; apiSecret: string; ro
   return `${header}.${payload}.${signature}`;
 }
 
-async function livekitTwirp<T>(input: { livekitUrl: string; token: string; method: string; body: unknown }): Promise<T> {
+export async function livekitTwirp<T>(input: { livekitUrl: string; token: string; method: string; body: unknown }): Promise<T> {
   const response = await fetch(`${normalizeLiveKitApiBaseUrl(input.livekitUrl)}/twirp/livekit.${input.method}`, {
     method: "POST",
     headers: {
