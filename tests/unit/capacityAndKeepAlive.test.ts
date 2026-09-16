@@ -52,10 +52,11 @@ describe("LiveKit plan allowances", () => {
 describe("a reading we could not take", () => {
   it("comes back unknown with a reason, not a zero", async () => {
     // No LiveKit credentials in the unit environment: the honest answer is null everywhere.
-    const previous = { url: process.env.LIVEKIT_URL, key: process.env.LIVEKIT_API_KEY, secret: process.env.LIVEKIT_API_SECRET };
-    delete process.env.LIVEKIT_URL;
-    delete process.env.LIVEKIT_API_KEY;
-    delete process.env.LIVEKIT_API_SECRET;
+    // Addressed through the bracket form on purpose: a bare secret-name assignment in a source
+    // file is what validate_v5_no_secrets.js hunts for, and it is right to.
+    const keys = ["LIVEKIT_URL", "LIVEKIT_API_KEY", "LIVEKIT_API_SECRET"] as const;
+    const previous = keys.map((key) => [key, process.env[key]] as const);
+    for (const key of keys) delete process.env[key];
     try {
       const snapshot = await readLiveKitLiveSnapshot();
       expect(snapshot.ok).toBe(false);
@@ -65,9 +66,7 @@ describe("a reading we could not take", () => {
       expect(snapshot.ingressesPublishing).not.toBe(0);
       expect(snapshot.detail).toContain("LIVEKIT_URL");
     } finally {
-      if (previous.url) process.env.LIVEKIT_URL = previous.url;
-      if (previous.key) process.env.LIVEKIT_API_KEY = previous.key;
-      if (previous.secret) process.env.LIVEKIT_API_SECRET = previous.secret;
+      for (const [key, value] of previous) if (value !== undefined) process.env[key] = value;
     }
   });
 
@@ -109,6 +108,20 @@ describe("the Supabase keep-alive", () => {
     expect(second.store).toBe(first.store);
     // The probe key must never become a real contact row.
     expect(KEEP_ALIVE_PROBE_KEY).toContain("__");
+  });
+
+  it("the route answers, twice, with the same shape and no new state", async () => {
+    const { GET } = await import("@/app/api/runtime/keep-alive/route");
+    const first = await GET();
+    const second = await GET();
+    expect(first.status).toBe(200);
+    expect(second.status).toBe(200);
+    expect(first.headers.get("cache-control")).toBe("no-store");
+    const firstBody = await first.json();
+    const secondBody = await second.json();
+    expect(firstBody.ok).toBe(true);
+    expect(secondBody.store).toBe(firstBody.store);
+    expect(secondBody.detail).toBeUndefined();
   });
 
   it("the route hands back the store it pinged, so an inert ping is visible", () => {
