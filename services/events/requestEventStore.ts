@@ -29,7 +29,7 @@ import { isSupabaseAdminConfigured } from "@/lib/env";
  * request was stored. Nothing here reports success it did not observe.
  *
  * Since 16 Sep 2026 the row it writes is the FIRST state of a request that runs
- * all the way to paid (migration 0034), so the write itself goes through the
+ * all the way to paid (migration 0036), so the write itself goes through the
  * runtime store like every other runtime row. This file stays the public front
  * door's own adapter: it keeps the never-throw contract, the machine-readable
  * reason, and the "is there anywhere durable to put this" guard, all of which

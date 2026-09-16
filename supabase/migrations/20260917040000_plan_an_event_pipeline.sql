@@ -1,4 +1,4 @@
--- 0034 · plan an event, end to end (16 Sep 2026)
+-- 0036 · plan an event, end to end (16 Sep 2026)
 --
 -- /request-event collected a request and nothing happened after that. There was no price, no way
 -- for the client to say yes, no record of payment, and no instructions. This migration gives the

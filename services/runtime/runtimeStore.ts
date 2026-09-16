@@ -219,13 +219,13 @@ export interface RuntimeStore {
   listRuntimeClients(): Promise<RuntimeClientRecord[]>;
   getAgencySettings(id: string): Promise<AgencySettingsRecord | undefined>;
   setAgencySettings(settings: AgencySettingsRecord): Promise<AgencySettingsRecord>;
-  // Event requests (migration 0034): the /request-event row, from arrival to paid.
+  // Event requests (migration 0036): the /request-event row, from arrival to paid.
   upsertEventRequest(request: EventRequestRecord): Promise<EventRequestRecord>;
   getEventRequest(id: string): Promise<EventRequestRecord | undefined>;
   /** The client's own link resolves by token alone; it carries no id a visitor could edit. */
   getEventRequestByConfirmToken(token: string): Promise<EventRequestRecord | undefined>;
   listEventRequests(limit?: number): Promise<EventRequestRecord[]>;
-  // The five instruction pages (migration 0034), edited from the workspace, linked from every email.
+  // The five instruction pages (migration 0036), edited from the workspace, linked from every email.
   getHowItWorksPage(slug: HowItWorksAudience): Promise<HowItWorksPageRecord | undefined>;
   listHowItWorksPages(): Promise<HowItWorksPageRecord[]>;
   setHowItWorksPage(page: HowItWorksPageRecord): Promise<HowItWorksPageRecord>;
