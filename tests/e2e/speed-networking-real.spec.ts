@@ -54,6 +54,9 @@ test("two attendees join → matched within 10s with names and timer → Next ma
 
   await gotoAndAssert(ada, `/venue/${eventId}/networking`);
   await expect(ada.getByTestId("networking-live")).toHaveAttribute("data-networking-status", "idle");
+  // The networking gate asks for topics inline when the profile has none (the seeded persona has none).
+  const adaGate = ada.getByTestId("networking-topics-gate");
+  if (await adaGate.count()) await adaGate.getByTestId("networking-topics-input").fill("AI");
   await ada.getByTestId("attendee-networking-queue-form").getByTestId("networking-join").click();
   await expect(ada).toHaveURL(/state=waiting&queued=1/);
   await expect(ada.getByTestId("networking-waiting")).toBeVisible();
@@ -68,6 +71,8 @@ test("two attendees join → matched within 10s with names and timer → Next ma
 
   // Grace joins: both are matched within 10s, each sees the other, the timer counts down from ~4:00.
   await gotoAndAssert(grace.page, `/venue/${eventId}/networking`);
+  const graceGate = grace.page.getByTestId("networking-topics-gate");
+  if (await graceGate.count()) await graceGate.getByTestId("networking-topics-input").fill("Navy, compilers");
   await grace.page.getByTestId("attendee-networking-queue-form").getByTestId("networking-join").click();
   const graceMatch = grace.page.getByTestId("networking-match");
   await expect(graceMatch).toBeVisible({ timeout: 10_000 });
@@ -107,6 +112,8 @@ test("two attendees join → matched within 10s with names and timer → Next ma
 
   // Linus joins: he is paired with one of them; the other keeps waiting (Ada and Grace have met).
   await gotoAndAssert(third.page, `/venue/${eventId}/networking`);
+  const linusGate = third.page.getByTestId("networking-topics-gate");
+  if (await linusGate.count()) await linusGate.getByTestId("networking-topics-input").fill("kernels");
   await third.page.getByTestId("attendee-networking-queue-form").getByTestId("networking-join").click();
 
   await expect(third.page.getByTestId("networking-match")).toBeVisible({ timeout: 10_000 });

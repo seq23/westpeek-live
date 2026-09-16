@@ -8,7 +8,6 @@ import { EventEndedState } from "@/components/venue/EventEndedState";
 import { EventNotOpenState } from "@/components/venue/EventNotOpenState";
 import { RegistrationClosedState } from "@/components/venue/RegistrationClosedState";
 import { RegistrationRequiredState } from "@/components/venue/RegistrationRequiredState";
-import { RegistrationAgendaPlanner } from "@/components/venue/RegistrationAgendaPlanner";
 import { getEventConfigPackage } from "@/services/events/eventConfigRepository";
 import { mapEventStatusToPublicState } from "@/services/events/eventStateResolver";
 
@@ -105,46 +104,21 @@ export function EventRegistration({ slug }: { slug: string }) {
         <input type="hidden" name="slug" value={config.event.slug} />
         <p className="text-sm text-slate-500">Registration</p>
         <h1 className="mt-2 text-3xl font-semibold">{config.event.name}</h1>
-        <p className="mt-2 text-slate-600">Registration creates your event-scoped attendee identity, attendee session, and optional agenda intent before routing you into the venue.</p>
+        <p className="mt-2 text-slate-600">Name, email, company — then you are in the venue. You can tell us more about yourself later; it makes the People page and networking work better for you.</p>
         <p className="mt-2 rounded-2xl bg-amber-50 p-3 text-sm text-amber-900">Attendee registration does not grant speaker, sponsor, client, crew, operator, admin, VIP, restricted-session, or camera/mic publishing access.</p>
         <div className="mt-6 space-y-4">
-          <p className="text-xs text-slate-500">Fields marked <span className="font-black text-brand-orange">*</span> are required. Everything else is optional.</p>
+          <p className="text-xs text-slate-500">Three fields and you are in. Fields marked <span className="font-black text-brand-orange">*</span> are required; everything else you can add later from &ldquo;Tell us more about you&rdquo; inside the venue.</p>
           {[
             ["name", "Name", "text", true, "Ada Lovelace"],
             ["email", "Email", "email", true, "you@company.com"],
             ["company", "Company / affiliation", "text", true, "Analytical Engines"],
-            ["title", "Title / role", "text", true, "Founder"],
-            // Plain text, not type="url": a browser refuses "mysite.com" without "https://" and says
-            // so in its own words; the server adds the scheme if it is missing (owner, 16 Sep 2026).
-            ["personalWebsite", "Personal website (optional)", "text", false, "mysite.com — https:// not needed"],
+            ["title", "Title / role (optional)", "text", false, "Founder"],
           ].map(([field, label, type, required, placeholder]) => (
             <div key={String(field)}>
               <label htmlFor={String(field)} className="text-sm font-medium text-slate-700">{label}{required ? <span className="ml-1 font-black text-brand-orange" aria-hidden="true">*</span> : null}</label>
-              <input id={String(field)} name={String(field)} required={Boolean(required)} aria-required={Boolean(required)} type={String(type)} placeholder={String(placeholder)} inputMode={field === "personalWebsite" ? "url" : undefined} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
+              <input id={String(field)} name={String(field)} required={Boolean(required)} aria-required={Boolean(required)} type={String(type)} placeholder={String(placeholder)} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
             </div>
           ))}
-          <div>
-            <label htmlFor="socialLinks" className="text-sm font-medium text-slate-700">Social media links</label>
-            <textarea id="socialLinks" name="socialLinks" rows={3} placeholder="LinkedIn, X, Instagram, or other profile links — one per line or comma-separated" className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
-          </div>
-          <div>
-            <label htmlFor="reasonForAttending" className="text-sm font-medium text-slate-700">What brings you to the conference?</label>
-            <textarea id="reasonForAttending" name="reasonForAttending" rows={3} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
-          </div>
-          <div>
-            <label htmlFor="interestingFact" className="text-sm font-medium text-slate-700">One interesting fact you want everyone to know</label>
-            <textarea id="interestingFact" name="interestingFact" rows={3} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
-          </div>
-          <div>
-            <label htmlFor="topicsOfInterest" className="text-sm font-medium text-slate-700">Topics of interest</label>
-            <textarea id="topicsOfInterest" name="topicsOfInterest" rows={3} placeholder="AI, fundraising, leadership, operations — one per line or comma-separated" className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
-          </div>
-          <div>
-            <label htmlFor="networkingGoals" className="text-sm font-medium text-slate-700">Networking goals</label>
-            <textarea id="networkingGoals" name="networkingGoals" rows={3} className="mt-1 w-full rounded-xl border border-slate-200 bg-white px-3 py-3 text-sm outline-none focus:border-brand-orange" />
-          </div>
-          <label className="flex items-center gap-2 rounded-xl border border-slate-200 p-3 text-sm text-slate-700"><input type="checkbox" name="networkingOptIn" /> Make my profile visible in the event people directory and networking queue.</label>
-          <RegistrationAgendaPlanner sessions={config.agenda.sessions.map((session) => ({ id: session.id, title: session.title, startsAt: session.startsAt, status: "upcoming", roomHref: `/venue/${config.event.id}/sessions/${session.id}`, speakerNames: [], room: session.room } as any))} breakouts={[]} booths={config.sponsors.sponsors.map((sponsor) => ({ id: sponsor.id, name: sponsor.name, headline: sponsor.headline || "Sponsor booth", description: "Sponsor booth", href: `/venue/${config.event.id}/expo/${sponsor.id}`, ctaLabel: "Visit booth" }))} />
           <button type="submit" className="w-full rounded-xl bg-slate-950 px-4 py-3 font-semibold text-white">Submit registration</button>
         </div>
       </form>

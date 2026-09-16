@@ -17,7 +17,7 @@ import { requestAttendeeStageAccess } from "@/lib/actions/attendeeLiveActions";
 import { attendeeStageStatus } from "@/services/venue/attendeeStageStatus";
 import { SafeSection } from "@/components/system/SafeSection";
 
-export async function MainStageExperience({ model }: { model: VirtualVenueModel }) {
+export async function MainStageExperience({ model, saved = false }: { model: VirtualVenueModel; saved?: boolean }) {
   const fallbackState = await getRoomFallbackState(model.eventId, "main_stage").catch(() => createInitialRoomFallbackState(model.eventId, "main_stage"));
   const stageStreamState = await getPublicStageStreamState(model.eventId, "main-stage");
   const attendeeLiveControl = await getAttendeeLiveControlState(model.eventId, "main_stage", "main-stage");
@@ -42,10 +42,12 @@ export async function MainStageExperience({ model }: { model: VirtualVenueModel 
             <AttendeeStageJoinControls eventId={model.eventId} roomId="main-stage" attendeeId={identity?.attendeeId} initial={stageStatus} requestAction={requestAttendeeStageAccess} />
           </div>
         </section>
-        <MainStageLiveChat model={model} />
+        <div className="space-y-4">
+          <MainStageLiveChat model={model} />
+          <SafeSection label="Tell us more" render={() => EditAttendeeProfilePanel({ eventId: model.eventId, returnTo: `/venue/${model.eventId}/stage`, saved })} />
+        </div>
       </div>
       <SafeSection label="My agenda" render={() => MyAgendaPanel({ model: model })} />
-      <SafeSection label="Attendee profile" render={() => EditAttendeeProfilePanel({ eventId: model.eventId })} />
       <MainStageAgendaStrip sessions={model.sessions} eventId={model.eventId} />
       {model.sessions.length > 50 ? <SessionFullState /> : null}
     </div>

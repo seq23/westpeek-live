@@ -157,6 +157,22 @@
       "evidence": []
     },
     {
+      "id": "app-people",
+      "path": "/app/people",
+      "persona": "operator",
+      "required_states": [
+        "empty",
+        "populated",
+        "error"
+      ],
+      "status": "UNPROVEN",
+      "evidence": [],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/app/people"
+      }
+    },
+    {
       "id": "app-contractors",
       "path": "/app/contractors",
       "persona": "operator",

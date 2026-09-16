@@ -2,7 +2,7 @@
   "schema_version": "1.0",
   "repo": "agency-event-os",
   "generated_from": "config/deployed-route-manifest.json",
-  "route_count": 116,
+  "route_count": 117,
   "rules": {
     "render_is_not_journey_proof": true,
     "mutation_requires_readback": true,
@@ -344,6 +344,42 @@
     {
       "id": "app-clients",
       "route": "/app/clients",
+      "persona": "operator",
+      "auth_mode": "role-specific",
+      "criticality": "standard",
+      "action_class": "read-or-navigation",
+      "visible_actions": [
+        "navigate"
+      ],
+      "required_states": [
+        "empty",
+        "populated",
+        "error"
+      ],
+      "required_proof": [
+        "route-render",
+        "identity",
+        "authorization",
+        "cross-role-denial",
+        "cross-event-or-client-isolation"
+      ],
+      "persistence_required": false,
+      "cleanup_policy": "none",
+      "tier_mapping": {
+        "source": "tier1",
+        "behavior": "tier2",
+        "browser_fixture": "tier3a",
+        "full_stack": "tier3b",
+        "deployed": "tier4a",
+        "provider": "tier4b",
+        "expert": "tier4c"
+      },
+      "status": "UNPROVEN",
+      "evidence": []
+    },
+    {
+      "id": "app-people",
+      "route": "/app/people",
       "persona": "operator",
       "auth_mode": "role-specific",
       "criticality": "standard",

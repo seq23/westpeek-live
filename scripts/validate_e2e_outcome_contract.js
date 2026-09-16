@@ -19,7 +19,7 @@ const required = [
 const failures = required.filter((file) => !fs.existsSync(file)).map((file) => `Missing ${file}`);
 function read(file) { return fs.existsSync(file) ? fs.readFileSync(file, 'utf8') : ''; }
 const suites = {
-  'tests/e2e/attendee-registration-outcome.spec.ts': ['company', 'title', 'registration-agenda-planner', 'cookie', 'my-agenda'],
+  'tests/e2e/attendee-registration-outcome.spec.ts': ['company', 'registration-agenda-planner', 'cookie', 'my-agenda', 'attendee-profile-panel'],
   'tests/e2e/attendee-venue-identity.spec.ts': ['main-stage', 'breakout', 'networking', 'help', 'people', 'my-agenda'],
   'tests/e2e/access-boundary-outcomes.spec.ts': ['speaker', 'sponsor', 'crew', 'operator', 'admin', 'publish', 'restricted'],
   'tests/e2e/stream-failover-outcomes.spec.ts': ['pre-stream', '4-second', 'StreamYard', 'LiveKit', 'Daily', 'switching', 'private'],

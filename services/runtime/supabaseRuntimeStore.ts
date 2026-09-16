@@ -10,6 +10,7 @@ import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, Sponsor
 import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
+import type { ContactRecord, RegistrationQuestion } from "@/types/attendeeRegistration";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
 
 
@@ -42,12 +43,16 @@ function mapSpeedNetworkingMatch(row: Record<string, unknown>): SpeedNetworkingM
   return { id: String(row.id), eventId: String(row.event_id), attendeeAId: String(row.attendee_a_id), attendeeBId: String(row.attendee_b_id), normalizedPairKey: String(row.normalized_pair_key), roomName: String(row.room_name), status: row.status as SpeedNetworkingMatchRecord["status"], startsAt: String(row.starts_at || ""), expiresAt: String(row.expires_at || ""), endedAt: row.ended_at ? String(row.ended_at) : undefined, endedReason: row.ended_reason ? String(row.ended_reason) : undefined };
 }
 
+function mapContact(row: Record<string, unknown>): ContactRecord {
+  return { email: String(row.email), name: String(row.name || ""), company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, hiddenFromDirectory: Boolean(row.hidden_from_directory), eventsAttended: Array.isArray(row.events_attended) ? row.events_attended.map(String) : [], firstSeenAt: String(row.first_seen_at || ""), lastSeenAt: String(row.last_seen_at || ""), updatedAt: String(row.updated_at || "") };
+}
+
 function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord {
   return { key: String(row.key), eventId: String(row.event_id), kind: row.kind as EventGuestStateRecord["kind"], guestId: row.guest_id ? String(row.guest_id) : undefined, state: row.state, updatedAt: String(row.updated_at || "") };
 }
 
 function mapAttendeeProfile(row: Record<string, unknown>): AttendeeProfile {
-  return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingOptIn: Boolean(row.networking_opt_in), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+  return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), email: row.email ? String(row.email) : undefined, extraAnswers: (row.extra_answers && typeof row.extra_answers === "object" ? (row.extra_answers as Record<string, string>) : {}), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingOptIn: Boolean(row.networking_opt_in), hiddenFromDirectory: Boolean(row.hidden_from_directory), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
 }
 
 function mapAttendeeSession(row: Record<string, unknown>): AttendeeSession {
@@ -117,6 +122,7 @@ function runtimeEventToRow(event: RuntimeEventRecord) {
     vip_code: event.accessCodes.vip,
     client_code: event.accessCodes.client,
     registration_enabled: event.registrationEnabled,
+    registration_questions: event.registrationQuestions ?? null,
     branding: event.branding,
     sessions: event.sessions,
     source: event.source === "seed" ? "runtime" : event.source,
@@ -153,6 +159,7 @@ function rowToRuntimeEvent(row: Record<string, unknown>): RuntimeEventRecord {
       client: String(row.client_code || ""),
     },
     registrationEnabled: Boolean(row.registration_enabled),
+    registrationQuestions: Array.isArray(row.registration_questions) ? (row.registration_questions as RegistrationQuestion[]) : undefined,
     branding: (row.branding && typeof row.branding === "object" ? row.branding : {}) as RuntimeEventRecord["branding"],
     sessions: Array.isArray(row.sessions) ? (row.sessions as RuntimeEventRecord["sessions"]) : [],
     source: (row.source as RuntimeEventRecord["source"]) || "runtime",
@@ -354,7 +361,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
 
   async upsertAttendeeProfile(profile: AttendeeProfile) {
     const { error } = await this.client.from("attendee_profiles").upsert({
-      attendee_id: profile.attendeeId, event_id: profile.eventId, email_hash: profile.emailHash, name: profile.name, email_masked: profile.emailMasked, company: profile.company, title: profile.title, personal_website: profile.personalWebsite, social_links: profile.socialLinks || [], reason_for_attending: profile.reasonForAttending, interesting_fact: profile.interestingFact, topics_of_interest: profile.topicsOfInterest || [], networking_goals: profile.networkingGoals, networking_opt_in: profile.networkingOptIn, role: profile.role, status: profile.status, created_at: profile.createdAt, updated_at: profile.updatedAt,
+      attendee_id: profile.attendeeId, event_id: profile.eventId, email_hash: profile.emailHash, email: profile.email ?? null, extra_answers: profile.extraAnswers || {}, name: profile.name, email_masked: profile.emailMasked, company: profile.company, title: profile.title, personal_website: profile.personalWebsite, social_links: profile.socialLinks || [], reason_for_attending: profile.reasonForAttending, interesting_fact: profile.interestingFact, topics_of_interest: profile.topicsOfInterest || [], networking_goals: profile.networkingGoals, networking_opt_in: profile.networkingOptIn, hidden_from_directory: Boolean(profile.hiddenFromDirectory), role: profile.role, status: profile.status, created_at: profile.createdAt, updated_at: profile.updatedAt,
     });
     if (error) fail(`attendee_profiles upsert: ${error.message}`);
     return profile;
@@ -574,6 +581,24 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     return ((data || []) as Record<string, unknown>[]).map(mapEventGuestState);
   }
 
+  async upsertContact(contact: ContactRecord) {
+    const { error } = await this.client.from("contacts").upsert({ email: contact.email, name: contact.name, company: contact.company, title: contact.title, personal_website: contact.personalWebsite ?? null, social_links: contact.socialLinks, topics_of_interest: contact.topicsOfInterest, networking_goals: contact.networkingGoals ?? null, hidden_from_directory: contact.hiddenFromDirectory, events_attended: contact.eventsAttended, first_seen_at: contact.firstSeenAt, last_seen_at: contact.lastSeenAt, updated_at: contact.updatedAt }, { onConflict: "email" });
+    if (error) failOrSchemaMissing("contacts", error);
+    return contact;
+  }
+
+  async getContact(email: string) {
+    const { data, error } = await this.client.from("contacts").select("*").eq("email", email).maybeSingle();
+    if (error) failOrSchemaMissing("contacts", error);
+    return data ? mapContact(data as Record<string, unknown>) : undefined;
+  }
+
+  async listContacts() {
+    const { data, error } = await this.client.from("contacts").select("*").order("last_seen_at", { ascending: false }).limit(5000);
+    if (error) failOrSchemaMissing("contacts", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapContact);
+  }
+
   async upsertSpeedNetworkingEntry(entry: SpeedNetworkingQueueEntry) {
     const { error } = await this.client.from("networking_queue_entries").upsert({ id: entry.id, event_id: entry.eventId, attendee_id: entry.attendeeId, display_name: entry.displayName, company: entry.company, title: entry.title, status: entry.status, joined_at: entry.joinedAt, matched_at: entry.matchedAt ?? null, match_id: entry.matchId ?? null, matches_completed: entry.matchesCompleted, updated_at: entry.updatedAt }, { onConflict: "id" });
     if (error) failOrSchemaMissing("networking_queue_entries", error);
@@ -670,7 +695,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
 
   async readSnapshot(): Promise<V6RuntimeSnapshot> {
     const snapshot = emptyRuntimeSnapshot();
-    const [auditLogs, accessAttempts, analyticsEvents, fallbackEvents, fallbackStates, incidentEvents, supportRequests, emailEvents, registrations, attendeeProfiles, attendeeSessions, attendeeAgendaIntents, sponsorLeadOptIns, attendeePermissions, runOfShowEvents, stageStreamStates, stageStreamEvents, liveChatMessages, attendeeLiveCapabilities, attendeeLiveControlStates, liveChatModerationStates, specialGuestProfiles, eventGuestStates, speedNetworkingEntries, speedNetworkingMatches] = await Promise.all([
+    const [auditLogs, accessAttempts, analyticsEvents, fallbackEvents, fallbackStates, incidentEvents, supportRequests, emailEvents, registrations, attendeeProfiles, attendeeSessions, attendeeAgendaIntents, sponsorLeadOptIns, attendeePermissions, runOfShowEvents, stageStreamStates, stageStreamEvents, liveChatMessages, attendeeLiveCapabilities, attendeeLiveControlStates, liveChatModerationStates, specialGuestProfiles, eventGuestStates, speedNetworkingEntries, speedNetworkingMatches, contacts] = await Promise.all([
       selectAll<Record<string, unknown>>(this.client, "audit_logs"),
       selectAll<Record<string, unknown>>(this.client, "v5_access_attempt_events"),
       selectAll<Record<string, unknown>>(this.client, "v5_analytics_events"),
@@ -698,6 +723,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
       selectAll<Record<string, unknown>>(this.client, "event_guest_states", "*", "updated_at").catch(tolerateMissingTable),
       selectAll<Record<string, unknown>>(this.client, "networking_queue_entries", "*", "updated_at").catch(tolerateMissingTable),
       selectAll<Record<string, unknown>>(this.client, "networking_queue_matches", "*", "starts_at").catch(tolerateMissingTable),
+      selectAll<Record<string, unknown>>(this.client, "contacts", "*", "updated_at").catch(tolerateMissingTable),
     ]);
 
     snapshot.auditLogs = auditLogs.map((row) => ({
@@ -808,6 +834,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     snapshot.eventGuestStates = eventGuestStates.map(mapEventGuestState);
     snapshot.speedNetworkingEntries = speedNetworkingEntries.map(mapSpeedNetworkingEntry);
     snapshot.speedNetworkingMatches = speedNetworkingMatches.map(mapSpeedNetworkingMatch);
+    snapshot.contacts = contacts.map(mapContact);
     snapshot.attendeeLiveCapabilities = attendeeLiveCapabilities.map((row) => row.capability as AttendeeLiveCapability).filter(Boolean);
     snapshot.attendeeLiveControlStates = attendeeLiveControlStates.map((row) => row.state as AttendeeLiveControlState).filter(Boolean);
     return snapshot;

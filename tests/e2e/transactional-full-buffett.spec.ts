@@ -56,12 +56,17 @@ transactionalDescribe("Transactional Full Buffett E2E", () => {
     await page.locator('[name="email"]').fill(`buffett-${unique}@example.com`);
     await page.locator('[name="company"]').fill("West Peek QA Ventures");
     await page.locator('[name="title"]').fill("Show Readiness Operator");
-    await page.locator('[name="personalWebsite"]').fill("https://westpeek.live");
-    await page.locator('[name="socialLinks"]').fill("https://linkedin.com/in/westpeekqa");
-    await page.locator('[name="reasonForAttending"]').fill("Validate the event venue transactionally before deployment.");
-    await page.locator('[name="interestingFact"]').fill("I test the system like a producer on show day.");
     await page.getByRole("button", { name: /submit registration/i }).click();
     await expect(page).toHaveURL(/\/venue\/event-summit\/lobby\?registered=1/);
+    // The rich profile fields are added from "Tell us more" inside the venue, through the one profile write path.
+    const card = page.getByTestId("attendee-profile-panel");
+    await card.locator("summary").click();
+    await card.getByTestId("tell-website").fill("https://westpeek.live");
+    await card.getByTestId("tell-social").fill("https://linkedin.com/in/westpeekqa");
+    await card.getByTestId("tell-reason").fill("Validate the event venue transactionally before deployment.");
+    await card.getByTestId("tell-fact").fill("I test the system like a producer on show day.");
+    await card.getByTestId("tell-us-more-save").click();
+    await expect(page).toHaveURL(/saved=profile/);
 
     await expectEventuallyRuntime(
       (snapshot) => (snapshot.registrations || []).some((registration: any) => registration.displayName === attendeeName && registration.company === "West Peek QA Ventures"),
@@ -87,6 +92,9 @@ transactionalDescribe("Transactional Full Buffett E2E", () => {
   test("attendee networking join writes queue analytics and matching engine proves match/no-repeat/exhaustion semantics", async ({ page }) => {
     await asRegisteredAttendee(page, "event-summit");
     await gotoAndAssert(page, "/venue/event-summit/networking");
+    // The networking gate asks for topics inline when the profile has none.
+    const gate = page.getByTestId("networking-topics-gate");
+    if (await gate.count()) await gate.getByTestId("networking-topics-input").fill("AI, fundraising");
     await page.getByRole("button", { name: /join queue/i }).click();
     await expect(page).toHaveURL(/\/venue\/event-summit\/networking\?state=waiting&queued=1/);
     await expectEventuallyRuntime(

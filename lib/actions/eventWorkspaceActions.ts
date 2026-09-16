@@ -3,6 +3,7 @@
 import { redirect } from "next/navigation";
 import { revalidatePath } from "next/cache";
 import { requireWorkspaceActor, WorkspaceActorRequiredError } from "@/lib/auth/workspaceActor";
+import { parseQuestionLines } from "@/services/attendees/registrationQuestions";
 import { archiveEventRecord, createClientRecord, createEventRecord, isRuntimeSchemaMissing, restoreEventRecord, setEventStatus, updateEventRecord, type CreateEventInput } from "@/services/events/eventRepository";
 import type { EventStatus } from "@/types/core";
 
@@ -38,6 +39,7 @@ export async function createEventAction(formData: FormData): Promise<void> {
       startAt: field(formData, "startAt") || undefined,
       timezone: field(formData, "timezone") || undefined,
       description: field(formData, "description") || undefined,
+      registrationQuestions: formData.has("registrationQuestions") ? parseQuestionLines(field(formData, "registrationQuestions")) : undefined,
     };
     const event = await createEventRecord(input, actor);
     revalidatePath("/app");
@@ -107,6 +109,7 @@ export async function updateEventBasicsAction(formData: FormData): Promise<void>
       timezone: field(formData, "timezone") || undefined,
       startAt: startAt ? new Date(startAt).toISOString() : undefined,
       registrationEnabled: field(formData, "registrationEnabled") === "on",
+      registrationQuestions: formData.has("registrationQuestions") ? parseQuestionLines(field(formData, "registrationQuestions")) : undefined,
     }, actor);
     revalidatePath(`/app/events/${eventId}`);
   } catch (error) {

@@ -1,4 +1,5 @@
 import { codeKey } from "@/lib/access/accessCodes";
+import type { RegistrationQuestion } from "@/types/attendeeRegistration";
 import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
 import { applyStageStreamSignal, getOrCreateStageStreamState } from "@/services/video/stageStreamStateService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -114,6 +115,8 @@ export interface CreateEventInput {
   timezone?: string;
   description?: string;
   source?: "runtime" | "request";
+  /** The "Tell us more" questions; undefined keeps the default four. */
+  registrationQuestions?: RegistrationQuestion[];
 }
 
 export interface EventListOptions {
@@ -256,6 +259,7 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
     joinCode: mintJoinCode(),
     accessCodes: mintAccessCodes(),
     registrationEnabled: false,
+    registrationQuestions: input.registrationQuestions,
     branding: { logo: "west-peek-live", hero: name, theme: "west-peek-live" },
     sessions: defaultSessions(slug, name, format, startAt, endAt),
     source: input.source || "runtime",
@@ -292,7 +296,7 @@ async function resolveClientForEvent(input: CreateEventInput, actor: WorkspaceAc
   return createClientRecord({ name: clientName }, actor);
 }
 
-export type EventPatch = Partial<Pick<RuntimeEventRecord, "name" | "eventType" | "description" | "startAt" | "endAt" | "timezone" | "registrationEnabled" | "branding" | "sessions" | "clientName" | "clientSlug" | "clientId" | "format">>;
+export type EventPatch = Partial<Pick<RuntimeEventRecord, "name" | "eventType" | "description" | "startAt" | "endAt" | "timezone" | "registrationEnabled" | "registrationQuestions" | "branding" | "sessions" | "clientName" | "clientSlug" | "clientId" | "format">>;
 
 async function requireRuntimeEvent(id: string) {
   const event = await getRuntimeStore().getRuntimeEvent(id);
@@ -422,6 +426,8 @@ export async function getRuntimeSchemaStatus(): Promise<RuntimeSchemaStatus> {
     // Migration 0027: speed networking queue and matches.
     ["networking_queue_entries", () => store.listSpeedNetworkingEntries("__schema_probe__")],
     ["networking_queue_matches", () => store.listSpeedNetworkingMatches("__schema_probe__")],
+    // Migration 0029: contacts across events.
+    ["contacts", () => store.getContact("__schema_probe__")],
   ];
   for (const [table, probe] of probes) {
     try {

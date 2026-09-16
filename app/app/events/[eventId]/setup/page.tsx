@@ -4,6 +4,7 @@ import { EventJoinCodePanel } from "@/components/events/EventJoinCodePanel";
 import { updateEventBasicsAction } from "@/lib/actions/eventWorkspaceActions";
 import { getEventConfigPackage } from "@/services/events/eventConfigRepository";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
+import { questionLines, questionsForEvent } from "@/services/attendees/registrationQuestions";
 
 export const dynamic = "force-dynamic";
 
@@ -49,6 +50,11 @@ export default async function EventSetupPage({ params, searchParams }: { params:
               </div>
               <div className="flex items-end">
                 <label className="flex items-center gap-3 text-sm font-black"><input type="checkbox" name="registrationEnabled" defaultChecked={editable.registrationEnabled} /> Require registration</label>
+              </div>
+              <div className="md:col-span-2">
+                <label htmlFor="setup-questions" className="text-sm font-black">&ldquo;Tell us more&rdquo; questions</label>
+                <p className="mt-1 text-xs text-brand-muted">One per line as <code>Label | textarea</code>, <code>Label | text</code>, or <code>Label | tags</code>; up to eight; reorder by moving lines. Attendees see these on the stage and lobby after registering.</p>
+                <textarea id="setup-questions" name="registrationQuestions" defaultValue={questionLines(questionsForEvent(editable))} rows={5} className="mt-2 w-full rounded-2xl border border-brand-line px-4 py-3 font-mono text-xs" data-testid="registration-questions-input" />
               </div>
               <div className="md:col-span-2">
                 <label htmlFor="setup-description" className="text-sm font-black">One line for attendees</label>
