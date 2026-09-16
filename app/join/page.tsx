@@ -24,7 +24,7 @@ export default async function JoinEventPage({ searchParams }: { searchParams?: P
         {resolvedSearchParams?.code ? (
           <div className={`mt-6 rounded-2xl border p-5 ${resolution.ok ? "border-emerald-200 bg-emerald-50" : "border-amber-200 bg-amber-50"}`}>
             <p className="text-sm font-black uppercase tracking-[0.2em]">{resolution.ok ? "Event found" : "Access state"}</p>
-            <h2 className="mt-2 text-2xl font-black">{resolution.eventName ?? "Code not ready"}</h2>
+            <h2 className="mt-2 text-2xl font-black">{resolution.eventName ?? `No event for “${resolvedSearchParams.code}”`}</h2>
             <p className="mt-2 text-sm leading-6 text-slate-700">{resolution.message}</p>
             {resolution.destination ? <a href={resolution.destination} className="mt-4 inline-flex rounded-full bg-brand-black px-5 py-3 text-sm font-bold text-white">Continue</a> : null}
           </div>

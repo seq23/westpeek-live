@@ -131,12 +131,33 @@ function storeKind(): "supabase" | "file" {
   return getRuntimeStore().kind;
 }
 
+/**
+ * The ways a phone keyboard mangles "wpl-vxckx6": capitals, an en dash or a space for the hyphen,
+ * the hyphen dropped, "wpl" autocorrected away, whitespace around it. The owner's first real Room
+ * (16 Sep 2026) failed to join from her phone on exactly this. Every variant maps to the one code.
+ */
+export function joinCodeCandidates(raw: string): string[] {
+  const trimmed = raw.trim().toLowerCase();
+  if (!trimmed) return [];
+  const out = new Set<string>([trimmed]);
+  const alnum = trimmed.replace(/[^a-z0-9]/g, "");
+  if (alnum.startsWith("wpl") && alnum.length > 3) out.add(`wpl-${alnum.slice(3)}`);
+  else if (alnum.length >= 6 && alnum.length <= 8) out.add(`wpl-${alnum}`);
+  if (alnum) out.add(alnum);
+  return Array.from(out);
+}
+
 export async function findEventRecord(codeOrSlugOrId: string | undefined): Promise<RuntimeEventRecord | undefined> {
   const key = codeOrSlugOrId?.trim().toLowerCase();
   if (!key) return undefined;
   try {
-    const runtime = await getRuntimeStore().getRuntimeEvent(key);
-    if (runtime) return runtime;
+    const exact = await getRuntimeStore().getRuntimeEvent(key);
+    if (exact) return exact;
+    for (const candidate of joinCodeCandidates(key)) {
+      if (candidate === key) continue;
+      const runtime = await getRuntimeStore().getRuntimeEvent(candidate);
+      if (runtime) return runtime;
+    }
   } catch (error) {
     if (!(error instanceof RuntimeSchemaMissingError)) throw error;
     // Table not migrated yet: seed events must keep resolving.
