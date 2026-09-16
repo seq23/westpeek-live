@@ -12,6 +12,7 @@ import { resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { grantOwnerOverrideIfMatched } from "@/lib/auth/ownerAccessOverride";
 import type { V4SpecialGuestRole } from "@/types/v4";
+import { getAccessCodeVersions } from "@/services/events/accessCodeService";
 
 // Day 1 special guest defaults are registry-managed; do not display or hardcode role codes here.
 async function enterGuest(formData: FormData) {
@@ -30,13 +31,18 @@ async function enterGuest(formData: FormData) {
   const { specialGuestCookieName } = getV5AccessCookieNames(env);
   const role = access.role as V4SpecialGuestRole;
   await logAccessAttempt({ status: "access_granted", accessKind: "special_guest", eventId: access.eventId, role, route: access.destination });
-  const cookie = await createV5AccessCookie({ kind: "special_guest", eventId: access.eventId, clientSlug: access.clientSlug, role, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 12 }, getV5AccessCookieSecret(env));
+  // The cookie remembers the code version it was minted at; changing the code sends it back here.
+  const codeVersion = role === "crew_lite" ? undefined : (await getAccessCodeVersions(access.eventId))[role];
+  const cookie = await createV5AccessCookie({ kind: "special_guest", eventId: access.eventId, clientSlug: access.clientSlug, role, codeVersion, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 12 }, getV5AccessCookieSecret(env));
   (await cookies()).set(specialGuestCookieName, cookie, getV5CookieOptions(60 * 60 * 12));
   redirect(access.destination);
 }
 
-export default async function SpecialGuestAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string }> }) {
+/** `?event=<code>&code=<role code>` PREFILLS the form (a guest link the crew copied); the guest still presses Continue. */
+export default async function SpecialGuestAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string; event?: string; code?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
+  const prefilledEvent = String(resolvedSearchParams?.event || "").trim().slice(0, 80);
+  const prefilledCode = String(resolvedSearchParams?.code || "").trim().slice(0, 120);
   const missing = missingAccessEnv().filter((item) => item === "V5_ACCESS_COOKIE_SECRET");
   if (missing.length) return <BrandedSetupError title="Special guest access is not configured yet." message="Special guest login needs a cookie secret to create role-scoped access cookies. This page now fails safely with setup instructions instead of throwing a server digest page." missingVariables={missing} defaultValues={accessDefaultLines()} />;
   return (
@@ -56,16 +62,17 @@ export default async function SpecialGuestAccessPage({ searchParams }: { searchP
           <div>
             <label htmlFor="special-event-code" className="text-sm font-black">Event code <span className="text-brand-orange">*</span></label>
             <p className="mt-1 text-xs text-brand-muted">Use the event code from your production contact. For the demo, use demo.</p>
-            <input id="special-event-code" name="eventCode" required className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
+            <input id="special-event-code" name="eventCode" required defaultValue={prefilledEvent} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
           </div>
           <div>
             <label htmlFor="special-role-code" className="text-sm font-black">Special guest password <span className="text-brand-orange">*</span></label>
             <p className="mt-1 text-xs text-brand-muted">Use your speaker, sponsor, client, crew-lite, or VIP password.</p>
-            <input id="special-role-code" name="roleCode" required className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
+            <input id="special-role-code" name="roleCode" required defaultValue={prefilledCode} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" data-prefilled={prefilledCode ? "true" : "false"} />
+            {prefilledCode ? <p className="mt-1 text-xs font-bold text-emerald-800" data-testid="guest-code-prefilled">Your code is filled in from your link. Press Continue.</p> : null}
           </div>
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Continue to assigned portal</button>
         </form>
-        {resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
+        {resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="guest-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
       </section>
       </main>
       <LegalFooter variant="compact" />

@@ -47,7 +47,7 @@ test.describe("owner real events", () => {
     await expect(page).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?created=1/);
     await expect(page.getByTestId("event-created-notice")).toContainText(/is live/i);
     const code = (await page.getByTestId("event-join-code").innerText()).trim();
-    expect(code).toMatch(/^wpl-[a-z0-9]{6}$/);
+    expect(code).toMatch(/^wpl-[a-z0-9]{6}$/i);
     await expect(page.getByTestId("event-join-link")).toContainText(`/join?code=${code}`);
     await expect(page.getByTestId("copy-join-code")).toBeVisible();
     await expect(page.locator("body")).toContainText(name);

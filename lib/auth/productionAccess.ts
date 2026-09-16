@@ -17,7 +17,8 @@ export type V5AccessCookiePayload =
   | (V5AccessCookieBase & { kind: "crew"; eventId?: string; role?: V4CrewRole; codeVersion?: number })
   | (V5AccessCookieBase & { kind: "operator"; eventId?: string; role?: V4CrewRole })
   | (V5AccessCookieBase & { kind: "owner"; role?: "owner"; ownerKey?: "primary" | "secondary" })
-  | (V5AccessCookieBase & { kind: "special_guest"; eventId: string; role: V4SpecialGuestRole; clientSlug?: string });
+  /** `codeVersion`: the event's version of this role's code when the guest entered; changing the code bumps it and a cookie behind it is sent back to the gate. */
+  | (V5AccessCookieBase & { kind: "special_guest"; eventId: string; role: V4SpecialGuestRole; clientSlug?: string; codeVersion?: number });
 
 export type V4AccessCookiePayload = V5AccessCookiePayload;
 

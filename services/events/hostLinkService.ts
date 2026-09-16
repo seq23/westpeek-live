@@ -4,6 +4,7 @@ import { mintAccessCodes } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
+import { displayCode } from "@/lib/access/accessCodes";
 
 /**
  * "Changing host should be super easy." The host of an event is the executive_producer crew role
@@ -42,7 +43,7 @@ async function setHostLinkState(eventId: string, state: HostLinkState) {
 
 /** The link itself: the crew gate, prefilled. Pure on the event row; never auto-submits. */
 export function hostLinkPath(event: Pick<RuntimeEventRecord, "joinCode" | "accessCodes">) {
-  return `/production-access/crew?event=${encodeURIComponent(event.joinCode)}&role=executive_producer&code=${encodeURIComponent(event.accessCodes.crew)}`;
+  return `/production-access/crew?event=${encodeURIComponent(displayCode(event.joinCode))}&role=executive_producer&code=${encodeURIComponent(displayCode(event.accessCodes.crew))}`;
 }
 
 export async function hostLinkUrl(event: Pick<RuntimeEventRecord, "joinCode" | "accessCodes">) {
@@ -57,11 +58,12 @@ export async function mintHostLink(eventId: string, grantedBy: string) {
 }
 
 /** Rotates the event's crew code, bumps the version, and marks every outstanding link revoked. */
-export async function revokeHostLinks(eventId: string, revokedBy: string) {
+/** `newCode`: a custom crew code chosen on the Access page; otherwise a fresh random one. Either way every link and cookie minted with the old code stops working. */
+export async function revokeHostLinks(eventId: string, revokedBy: string, newCode?: string) {
   const store = getRuntimeStore();
   const event = await store.getRuntimeEvent(eventId);
   if (!event) throw new Error("Only a runtime-created event has a crew code to rotate.");
-  const rotated: RuntimeEventRecord = { ...event, accessCodes: { ...event.accessCodes, crew: mintAccessCodes().crew }, updatedAt: new Date().toISOString() };
+  const rotated: RuntimeEventRecord = { ...event, accessCodes: { ...event.accessCodes, crew: newCode || mintAccessCodes().crew }, updatedAt: new Date().toISOString() };
   await store.upsertRuntimeEvent(rotated);
   const state = await getHostLinkState(eventId);
   const now = new Date().toISOString();

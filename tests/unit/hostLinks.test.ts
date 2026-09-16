@@ -75,7 +75,7 @@ describe("host links against the store", () => {
 
   it("mint records the grant; the link is the crew gate prefilled with event code, role, and the crew code; revoke rotates the code and ends old cookies", async () => {
     const before = (await findEventRecord(eventId))!;
-    expect(hostLinkPath(before)).toBe(`/production-access/crew?event=${before.joinCode}&role=executive_producer&code=${before.accessCodes.crew}`);
+    expect(hostLinkPath(before)).toBe(`/production-access/crew?event=${before.joinCode.toUpperCase()}&role=executive_producer&code=${before.accessCodes.crew}`);
 
     // Only the executive producer, owner, or operator may mint; a producer is refused with the reason.
     const form = new FormData(); form.set("eventId", eventId);

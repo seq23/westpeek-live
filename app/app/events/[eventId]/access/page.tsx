@@ -9,8 +9,9 @@ import { SafeSection } from "@/components/system/SafeSection";
 
 export const dynamic = "force-dynamic";
 
-export default async function EventSetupSubroutePage({ params }: { params: Promise<{ eventId: string }> }) {
+export default async function EventSetupSubroutePage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ codeSaved?: string; codeError?: string; codeField?: string }> }) {
   const resolvedParams = await params;
+  const query = searchParams ? await searchParams : undefined;
   const runtime = await ensureRuntimeEvent(resolvedParams.eventId);
   const config = getEventConfigPackage(resolvedParams.eventId);
   const access = getEventAccessConfig(config.event.slug);
@@ -18,7 +19,7 @@ export default async function EventSetupSubroutePage({ params }: { params: Promi
   return (
     <EventSetupShell eventId={resolvedParams.eventId} active="access" eyebrow="Setup · Access" title="Access setup">
       {runtime && runtime.source !== "seed" ? (
-        <div className="mb-6 space-y-6"><SafeSection label="Host" render={() => HostPanel({ eventId: runtime.id })} /><EventAccessCodesPanel event={runtime} /></div>
+        <div className="mb-6 space-y-6"><SafeSection label="Host" render={() => HostPanel({ eventId: runtime.id })} /><EventAccessCodesPanel event={runtime} notice={{ saved: query?.codeSaved, error: query?.codeError, field: query?.codeField }} /></div>
       ) : (
         <p className="mb-6 rounded-2xl border border-slate-200 bg-slate-50 p-4 text-sm text-slate-600">This is a compiled demo/seed event. Its crew password and role codes are Cloudflare secrets named by the env keys below; they are never shown here.</p>
       )}

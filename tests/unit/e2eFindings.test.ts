@@ -174,3 +174,15 @@ describe("registration: required fields are marked and a website needs no scheme
     expect(src).not.toMatch(/"personalWebsite", "Personal website", "url"/);
   });
 });
+
+describe("a React element never lands inside a template literal", () => {
+  it("no component file interpolates JSX into a string (it renders as [object Object])", async () => {
+    const { readdirSync, readFileSync, statSync } = await import("node:fs");
+    const { join } = await import("node:path");
+    const offenders: string[] = [];
+    const walk = (dir: string) => { for (const entry of readdirSync(dir)) { const full = join(dir, entry); if (statSync(full).isDirectory()) walk(full); else if (full.endsWith(".tsx") && /\$\{<[A-Z]/.test(readFileSync(full, "utf8"))) offenders.push(full); } };
+    for (const dir of ["app", "components"]) walk(new URL(`../../${dir}`, import.meta.url).pathname);
+    // The "recorded [object Object]" line on the green room and the "Last webhook · [object Object]" card (16 Sep 2026).
+    expect(offenders).toEqual([]);
+  });
+});

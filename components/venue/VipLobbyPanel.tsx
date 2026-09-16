@@ -3,6 +3,7 @@ import { LiveRoomChat } from "@/components/venue/LiveRoomChat";
 import { getCurrentGuestIdentity, listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { getVipRoom } from "@/services/guests/guestStateService";
 import type { ViewAsContext } from "@/lib/auth/viewAs";
+import { guestAccessStale } from "@/services/events/accessCodeService";
 import { SafeSection } from "@/components/system/SafeSection";
 
 /**
@@ -12,6 +13,9 @@ import { SafeSection } from "@/components/system/SafeSection";
 export async function VipLobbyPanel({ eventId, error, viewAs }: { eventId: string; error?: string; viewAs?: ViewAsContext }) {
   const [ownVip, room, vips] = await Promise.all([viewAs ? Promise.resolve(undefined) : getCurrentGuestIdentity(eventId, "vip"), getVipRoom(eventId), listGuestProfiles(eventId, "vip").catch(() => [])]);
   const vip = viewAs?.guest || ownVip;
+  // The VIP code was changed since this cookie was minted: the lounge is closed to it; the badge says why.
+  const stale = !viewAs && await guestAccessStale(eventId);
+  if (stale) return <section className="rounded-3xl bg-brand-black p-5 text-white" data-testid="vip-lobby-panel" data-vip-stale="true"><p className="text-lg font-black">Your VIP code was changed by the production team.</p><p className="mt-1 text-sm text-white/70">Ask them for the new link, then enter again at the <a href="/production-access/special-guest?error=rotated" className="underline">special-guest gate</a>.</p></section>;
   return (
     <div className="space-y-4" data-testid="vip-lobby-panel" data-vip-room-open={room.open ? "true" : "false"} data-view-as={viewAs?.guest.guestId}>
       <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand-black p-5 text-white">
