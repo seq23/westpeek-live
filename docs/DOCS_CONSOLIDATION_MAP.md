@@ -162,3 +162,4 @@ Purpose: every Markdown document is classified so active documentation stays int
 - New docs that duplicate any of the above authorities must be merged or archived instead of expanding the active doc surface.
 
 - `WEST_PEEK_BRAND_SYSTEM.md` — canonical cross-suite visual authority; active and locked.
+- `docs/manual-notes/migration-assurance.md` — how a migration actually reaches production: what the Supabase GitHub integration does and does not do, the guards that catch a forgotten one, and the named manual step when it goes red.
