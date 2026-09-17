@@ -2,6 +2,7 @@ import { CURRENT_BUILD_ID } from "@/lib/runtime/buildVersion";
 import { ladderReadiness } from "@/lib/video/fallbackReadiness";
 import { HEALTH_SIGNAL_LABELS, logHeadline, settleAll, worstLevel, type HealthLogEntry, type HealthSignal, type HealthSignalKey } from "@/lib/venue/eventHealth";
 import { findEventRecord } from "@/services/events/eventRepository";
+import { isDemonstrationEvent } from "@/services/events/eventConfigRepository";
 import { probeCrewPageReads } from "@/services/events/crewPageReadsProbe";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { getAttendeeRoster } from "@/services/venue/attendeeRosterService";
@@ -25,6 +26,12 @@ export interface EventHealthReport {
   stageId: string;
   status: string | null;
   live: boolean;
+  /**
+   * This event is a sample shown to people, with no real stream behind it. The panel says so, and
+   * the probes below read it to tell a fiction apart from a failure. It is NOT a way to silence a
+   * signal: every probe still runs, every signal is still reported, and a real event is unaffected.
+   */
+  demonstration: boolean;
   signals: HealthSignal[];
   level: ReturnType<typeof worstLevel>;
   log: HealthLogEntry[];
@@ -78,6 +85,21 @@ export async function getEventHealthReport(input: { eventId: string; stageId?: s
 
   const status = event?.status || null;
   const live = status === "live";
+  /**
+   * The Nova Founder Summit demo is marked LIVE so the venue looks like a real show to whoever is
+   * being shown it — but nothing is publishing to it, because there is nothing to publish. Before
+   * 17 Sep 2026 the owner's command bar therefore read "1 failing: webhook" through every demo:
+   * the probe was right, and what it was right about was a fiction.
+   *
+   * So the question the feed, stage and webhook probes actually ask is not "is this event live"
+   * but "is a stream EXPECTED right now" — live AND not a declared demonstration. A real live
+   * event still goes red for exactly this condition; a demonstration says out loud, in the signal
+   * itself, that there is no stream because there is no show. Nothing is suppressed: all nine
+   * signals are still probed, still listed, and still name their source.
+   */
+  const demonstration = isDemonstrationEvent(eventId);
+  const feedExpected = live && !demonstration;
+  const DEMO_WHY = "this is a demonstration event, shown live so the venue looks like a real show, with no stream behind it";
   const signals: HealthSignal[] = [];
 
   // Feed — is anything actually arriving from StreamYard.
@@ -87,11 +109,15 @@ export async function getEventHealthReport(input: { eventId: string; stageId?: s
     const yellow = events ? reconnectedRecently(events, now) : false;
     signals.push(signal("feed", yellow ? "yellow" : "green", yellow ? "Publishing, but the ingress reconnected in the last two minutes. Bitrate is not measured on this deployment." : "The ingress is publishing. Bitrate is not measured on this deployment.", "LiveKit Ingress/ListIngress", nowIso));
   } else if (reconcile?.checked && reconcile.publishing === false) {
-    signals.push(live
+    signals.push(feedExpected
       ? signal("feed", "red", "The event is live and nothing is publishing. Get the stream credentials, paste them into the existing StreamYard Custom RTMP destination, and go live there.", "LiveKit Ingress/ListIngress", nowIso, { label: "Get stream credentials", kind: "get-credentials" })
-      : signal("feed", "green", "Nothing is publishing, and nothing is expected to: the event is not live.", "LiveKit Ingress/ListIngress", nowIso));
-  } else if (live) {
+      : signal("feed", "green", `Nothing is publishing, and nothing is expected to: ${demonstration ? DEMO_WHY : "the event is not live"}.`, "LiveKit Ingress/ListIngress", nowIso));
+  } else if (feedExpected) {
     signals.push(unmeasured("feed", "LiveKit Ingress/ListIngress", "LiveKit could not be asked whether the ingress is publishing — no credentials on this Worker, no ingress to check, or LiveKit is unreachable. The event is live, so check StreamYard directly."));
+  } else if (demonstration) {
+    // Measured, and what was measured is the event's own declaration — not an assumption, and not
+    // a claim about LiveKit, which is exactly why the source names the config file.
+    signals.push(signal("feed", "green", `No ingress to ask about, and none expected: ${DEMO_WHY}.`, "data/events/demo/event.json (demonstration) + LiveKit Ingress/ListIngress", nowIso));
   } else {
     signals.push(signal("feed", "green", `Not live yet — stage reads ${state.streamStatus.replaceAll("_", " ").toLowerCase()}.`, "stage_stream_states.streamStatus", state.updatedAt));
   }
@@ -103,7 +129,7 @@ export async function getEventHealthReport(input: { eventId: string; stageId?: s
     const hasRoom = Boolean(state.livekitRoomName && state.livekitIngressId);
     const attendees = roster?.total ?? 0;
     if (state.streamStatus === "LIVEKIT_INGRESS_LIVE") signals.push(signal("stage", "green", "The room is active and a publisher is on it.", "stage_stream_states.streamStatus", state.updatedAt));
-    else if (!hasRoom && attendees > 0 && live) signals.push(signal("stage", "red", `${attendees} registered and there is no room to put them in. Get stream credentials — that creates the LiveKit room.`, "stage_stream_states + attendee_profiles", state.updatedAt, { label: "Get stream credentials", kind: "get-credentials" }));
+    else if (!hasRoom && attendees > 0 && feedExpected) signals.push(signal("stage", "red", `${attendees} registered and there is no room to put them in. Get stream credentials — that creates the LiveKit room.`, "stage_stream_states + attendee_profiles", state.updatedAt, { label: "Get stream credentials", kind: "get-credentials" }));
     else if (hasRoom) signals.push(signal("stage", "yellow", "The room exists but no publisher has arrived yet.", "stage_stream_states.streamStatus", state.updatedAt, { label: "Get stream credentials", kind: "get-credentials" }));
     else signals.push(signal("stage", "green", "No room yet, and nobody is waiting for one.", "stage_stream_states + attendee_profiles", state.updatedAt));
   }
@@ -116,7 +142,8 @@ export async function getEventHealthReport(input: { eventId: string; stageId?: s
     const pollAge = minutesAgo(state.lastHealthCheckAt, now);
     if (webhookAge !== undefined && webhookAge <= 5) signals.push(signal("webhook", "green", `A LiveKit webhook arrived ${Math.round(webhookAge)} min ago (${state.lastWebhookEvent || "event"}).`, "stage_stream_states.lastWebhookAt", state.updatedAt));
     else if (pollAge !== undefined && pollAge <= 5) signals.push(signal("webhook", "yellow", "No webhook in the last five minutes; the poll is carrying the stage state instead. Check the LiveKit project webhook points at /api/video/livekit-webhook.", "stage_stream_states.lastWebhookAt + lastHealthCheckAt", state.updatedAt));
-    else if (live) signals.push(signal("webhook", "red", "No webhook and no successful poll in the last five minutes — nothing is telling us what the feed is doing. Open the crew deck and watch the stage directly.", "stage_stream_states.lastWebhookAt + lastHealthCheckAt", state.updatedAt, { label: "Crew deck", kind: "crew-deck" }));
+    else if (feedExpected) signals.push(signal("webhook", "red", "No webhook and no successful poll in the last five minutes — nothing is telling us what the feed is doing. Open the crew deck and watch the stage directly.", "stage_stream_states.lastWebhookAt + lastHealthCheckAt", state.updatedAt, { label: "Crew deck", kind: "crew-deck" }));
+    else if (demonstration) signals.push(signal("webhook", "green", `No webhook, and none expected: ${DEMO_WHY}. A real event live with this reading is failing and reads red here.`, "data/events/demo/event.json (demonstration) + stage_stream_states.lastWebhookAt", state.updatedAt));
     else signals.push(signal("webhook", "green", "Nothing to report: no webhook expected before the show.", "stage_stream_states.lastWebhookAt", state.updatedAt));
   }
 
@@ -126,7 +153,7 @@ export async function getEventHealthReport(input: { eventId: string; stageId?: s
   if (!cloudflare) signals.push(unmeasured("fallback", "lib/video/fallbackReadiness", "The ladder could not be read."));
   else if (cloudflare.ready && testedThisShow) signals.push(signal("fallback", "green", "Cloudflare Stream is configured and has carried the room this show.", "environment + stage_stream_events", nowIso));
   else if (cloudflare.ready) signals.push(signal("fallback", "yellow", "Cloudflare Stream is configured but untested this show. Add it as a SECOND Custom RTMP destination in StreamYard before you need it.", "environment (CLOUDFLARE_STREAM_FALLBACK_*)", nowIso, { label: "Fallback setup on the crew deck", kind: "fallback" }));
-  else signals.push(signal("fallback", live ? "red" : "yellow", cloudflare.reason, "environment (CLOUDFLARE_STREAM_FALLBACK_*)", nowIso, { label: "Fallback setup on the crew deck", kind: "fallback" }));
+  else signals.push(signal("fallback", feedExpected ? "red" : "yellow", cloudflare.reason, "environment (CLOUDFLARE_STREAM_FALLBACK_*)", nowIso, { label: "Fallback setup on the crew deck", kind: "fallback" }));
 
   // Database — the reads the live surfaces actually make, against the real store.
   if (!dbProbe) {
@@ -165,6 +192,7 @@ export async function getEventHealthReport(input: { eventId: string; stageId?: s
     stageId,
     status,
     live,
+    demonstration,
     signals: settled,
     level: worstLevel(settled),
     log: (events || []).slice(0, 12).map((item) => ({ id: item.id, at: item.createdAt, headline: logHeadline(item.signal), detail: item.message })),

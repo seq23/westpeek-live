@@ -5,7 +5,7 @@ import { Track } from "livekit-client";
 import type { TrackReference } from "@livekit/components-core";
 import { RegisterPointOfUse } from "@/components/venue/RegisterPointOfUse";
 import type { MyNetworkingState } from "@/services/speed-networking/speedNetworkingService";
-import { SPEED_NETWORKING_CYCLE } from "@/types/speedNetworking";
+import { SPEED_NETWORKING_CYCLE, SPEED_NETWORKING_PRIVACY_PROMISE } from "@/types/speedNetworking";
 
 type Snapshot = MyNetworkingState & { registered: boolean; attendeeId: string | null };
 
@@ -257,14 +257,14 @@ export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, 
   return (
     <div className="space-y-4" data-testid="networking-live" data-networking-status={snapshot.registered ? snapshot.status : "unregistered"} data-queue-size={snapshot.queueSize} data-poll-ms={pollMs} data-setup-gap={snapshot.setupGapSeconds}>
       {!snapshot.registered ? (
-        <section className="rounded-3xl bg-white p-6" data-testid="networking-registration-required">
-          {/* What this is has already been said, and drawn, by the explainer above. This card is the
-              step: register, then the queue. The privacy promise stays beside the button, because
-              that is the moment it is wanted. */}
-          <p className="text-sm font-black text-slate-950">Register once and you can join the queue.</p>
-          <p className="mt-1 mb-4 text-sm text-slate-600">Your match sees your name and your company. Nothing else.</p>
-          {/* The page's one register card is above this. Pressing Join queue is the moment of intent. */}
-          <RegisterPointOfUse eventId={eventId} need="networking" label="Join queue" returnTo={`/venue/${eventId}/networking`} />
+        <section className="rounded-brand bg-brand-white p-5 shadow-brand sm:p-6" data-testid="networking-registration-required">
+          {/* The unregistered path, said before anything is offered: this reader has to register
+              first, and the control says so by opening into what registering needs. What networking
+              IS has already been said and drawn above; this card is only the step. */}
+          <p className="text-sm font-black text-brand-black" data-testid="networking-who-this-is-for">You are not registered for this event yet.</p>
+          <p className="mt-1 mb-4 text-sm text-brand-muted">Registering takes about fifteen seconds, and then joining the queue is one press.</p>
+          <RegisterPointOfUse eventId={eventId} need="networking" label="Join the queue" tone="primary" returnTo={`/venue/${eventId}/networking`} />
+          <p className="mt-3 text-sm font-bold text-brand-black" data-testid="speed-networking-privacy-promise">{SPEED_NETWORKING_PRIVACY_PROMISE}</p>
         </section>
       ) : snapshot.status === "closed" ? (
         <section className="rounded-3xl bg-white p-6" data-testid="networking-closed"><p className="text-sm font-black text-slate-950">The crew has closed networking for now.</p><p className="mt-1 text-sm text-slate-600">Come back when they open it; this page updates on its own.</p></section>
@@ -296,11 +296,13 @@ export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, 
           <form action={leaveAction} className="mt-4"><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="reason" value="leave" /><button type="submit" className="min-h-12 rounded-full border border-slate-300 px-5 text-sm font-black" data-testid="networking-leave">Leave the queue</button></form>
         </section>
       ) : serverJoinForm && !touched ? null : (
-        <section className="rounded-3xl bg-white p-6" data-testid="networking-idle">
-          <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Speed networking</p>
-          <h3 className="mt-2 text-2xl font-black text-slate-950">Meet another attendee, {snapshot.matchMinutes} minutes at a time</h3>
-          <p className="mt-1 text-sm text-slate-600">{snapshot.queueSize} {snapshot.queueSize === 1 ? "person is" : "people are"} waiting right now. Join and you are paired with the longest-waiting person you have not met; camera and mic come on in your 1:1 room.</p>
-          <form action={joinAction} className="mt-4"><input type="hidden" name="eventId" value={eventId} /><button type="submit" className="min-h-12 rounded-full bg-slate-950 px-6 text-base font-black text-white" data-testid="networking-join">Join queue</button></form>
+        <section className="rounded-brand bg-brand-white p-5 shadow-brand sm:p-6" data-testid="networking-idle">
+          {/* The client-side twin of the server Join form, shown only once the server's own copy is
+              stale. The two are mutually exclusive: never two Join buttons on one screen. */}
+          <p className="text-sm font-black text-brand-black" data-testid="networking-who-this-is-for">{snapshot.queueSize} {snapshot.queueSize === 1 ? "person is" : "people are"} waiting right now.</p>
+          <p className="mt-1 text-sm text-brand-muted">You are registered, so this is one press. Camera and mic come on in your 1:1 room.</p>
+          <form action={joinAction} className="mt-4"><input type="hidden" name="eventId" value={eventId} /><button type="submit" className="inline-flex min-h-14 items-center rounded-full bg-brand-orange px-8 text-base font-black text-brand-white transition-colors hover:bg-brand-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-black" data-testid="networking-join">Join the queue</button></form>
+          <p className="mt-3 text-sm font-bold text-brand-black" data-testid="speed-networking-privacy-promise">{SPEED_NETWORKING_PRIVACY_PROMISE}</p>
         </section>
       )}
     </div>

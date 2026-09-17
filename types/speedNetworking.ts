@@ -46,6 +46,16 @@ export interface SpeedNetworkingSettings {
 export const SPEED_NETWORKING_DEFAULT_MINUTES = 4;
 
 /**
+ * The sentence that removes the last hesitation before pressing Join queue, written once and
+ * rendered beside the button — never as a paragraph somewhere further down the page.
+ *
+ * It lived at the bottom of the explainer until 17 Sep 2026, which put it three screens away from
+ * the moment it answers. One constant so the promise and the button cannot drift apart, and so a
+ * validator can prove it is still beside the action rather than merely still in the repo.
+ */
+export const SPEED_NETWORKING_PRIVACY_PROMISE = "Your match sees your name and your company. Nothing else.";
+
+/**
  * The rotation (16 Sep 2026, the owner: "it should continually keep u in a 4 min cycle of talking
  * to new people with a small lag between to set up"). When a match runs out both people are put
  * straight back in the queue and paired again — but the next match does not start on the same
