@@ -32,7 +32,7 @@ export function PublicEventPage({ slug }: { slug: string }) {
         {isSample ? (
           <section className="rounded-3xl border border-brand-orange/40 bg-brand-orangeSoft p-4" data-testid="sample-event-notice">
             <p className="text-sm font-black text-slate-950">This is a West Peek Live sample event.</p>
-            <p className="mt-1 text-sm leading-6 text-slate-700">It is here to be walked through. Everything works — the stage, the chat, the expo, speed networking, the replay — but the company, the speakers, the sponsors and everyone on the People page are invented, and no message sent inside it reaches anybody.</p>
+            <p className="mt-1 text-sm leading-6 text-slate-700">It is here to be walked through. Everything works: the stage, the chat, the expo, speed networking, the replay. The company, the speakers, the sponsors and everyone on the People page are invented, and no message sent inside it reaches anybody.</p>
           </section>
         ) : null}
 

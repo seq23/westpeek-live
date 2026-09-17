@@ -32,11 +32,11 @@ export function SpeedNetworkingExplainer({ matchMinutes = SPEED_NETWORKING_DEFAU
   const facts: Array<{ title: string; body: string }> = [
     {
       title: `${minutes} minutes, one other person`,
-      body: `A video call with exactly one other person, cameras and microphones on, with a timer counting down. The room holds ${SPEED_NETWORKING_ROOM_CAPACITY === 2 ? "two people and only two" : `${SPEED_NETWORKING_ROOM_CAPACITY} people`} — nobody can walk in on it.`,
+      body: `A video call with exactly one other person, cameras and microphones on, with a timer counting down. The room holds ${SPEED_NETWORKING_ROOM_CAPACITY === 2 ? "two people and only two" : `${SPEED_NETWORKING_ROOM_CAPACITY} people`}, so nobody can walk in on it.`,
     },
     {
       title: "Someone you have not met",
-      body: `You are never paired with the same person twice${SHARED.blockSameCompany ? ", and never with someone from your own organisation" : ""}. When few people are waiting it is simply whoever has waited longest; when the room is busy it looks at the topics you both care about and at who wants opposite sides of the same conversation — someone hiring and someone looking, say — with waiting time weighted heavily enough that nobody is left out in favour of a better pairing.`,
+      body: `You are never paired with the same person twice${SHARED.blockSameCompany ? ", and never with someone from your own organisation" : ""}. When few people are waiting it is simply whoever has waited longest; when the room is busy it looks at the topics you both care about and at who wants opposite sides of the same conversation, someone hiring and someone looking, say, with waiting time weighted heavily enough that nobody is left out in favour of a better pairing.`,
     },
     {
       title: `A ${pause}-second pause between calls`,
@@ -56,7 +56,7 @@ export function SpeedNetworkingExplainer({ matchMinutes = SPEED_NETWORKING_DEFAU
       </h2>
       <p className="mt-2 max-w-2xl text-sm leading-6 text-slate-600">
         You join a queue, not a meeting. When a match is found you are put straight into a video call with one other
-        person. When the timer runs out you both go back in, and it happens again with somebody new — for as long as
+        person. When the timer runs out you both go back in, and it happens again with somebody new, for as long as
         you want it to.
       </p>
 
@@ -117,7 +117,7 @@ function CycleDiagram({ minutes, pause }: { minutes: number; pause: number }) {
 
         {/* and round again */}
         <path d="M 498 92 L 498 126 L 102 126 L 102 94" fill="none" stroke="#94a3b8" strokeWidth="2" strokeDasharray="5 5" markerEnd="url(#wpl-net-arrow)" />
-        <text x={300} y={150} textAnchor="middle" fontSize="13" fontWeight="800" fill="#475569">…and again with somebody new, until you leave</text>
+        <text x={300} y={150} textAnchor="middle" fontSize="13" fontWeight="800" fill="#475569">and again with somebody new, until you leave</text>
       </svg>
     </div>
   );
