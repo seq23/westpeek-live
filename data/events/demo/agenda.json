@@ -2,10 +2,102 @@
   "eventId": "event-summit",
   "sessions": [
     {
-      "id": "session-main",
-      "title": "Founder Lessons Main Stage",
-      "room": "main_stage",
-      "startsAt": "2026-06-12T15:00:00.000Z"
+      "id": "session-doors",
+      "title": "Doors Open and Orientation",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T15:00:00.000Z",
+      "endsAt": "2026-06-12T15:20:00.000Z"
+    },
+    {
+      "id": "session-keynote",
+      "title": "Keynote: Building in the Open",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T15:20:00.000Z",
+      "endsAt": "2026-06-12T16:05:00.000Z"
+    },
+    {
+      "id": "session-sponsor-clarity",
+      "title": "Sponsor Spotlight: Clarity Systems",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T16:05:00.000Z",
+      "endsAt": "2026-06-12T16:15:00.000Z"
+    },
+    {
+      "id": "session-panel",
+      "title": "Investor Panel: What Gets Funded Now",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T16:15:00.000Z",
+      "endsAt": "2026-06-12T17:00:00.000Z"
+    },
+    {
+      "id": "session-qa",
+      "title": "Live Q&A with the Panel",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T17:00:00.000Z",
+      "endsAt": "2026-06-12T17:15:00.000Z"
+    },
+    {
+      "id": "session-expo-break",
+      "title": "Break and Expo Walkabout",
+      "room": "Expo Hall",
+      "startsAt": "2026-06-12T17:15:00.000Z",
+      "endsAt": "2026-06-12T17:35:00.000Z"
+    },
+    {
+      "id": "session-speed-networking",
+      "title": "Speed Networking: Four Minutes Each",
+      "room": "Networking Lounge",
+      "startsAt": "2026-06-12T17:35:00.000Z",
+      "endsAt": "2026-06-12T17:55:00.000Z"
+    },
+    {
+      "id": "session-breakout-a",
+      "title": "Breakout A: Founder Lessons",
+      "room": "Breakout Room A",
+      "startsAt": "2026-06-12T17:55:00.000Z",
+      "endsAt": "2026-06-12T18:40:00.000Z"
+    },
+    {
+      "id": "session-breakout-b",
+      "title": "Breakout B: Hiring Before You Are Ready",
+      "room": "Breakout Room B",
+      "startsAt": "2026-06-12T17:55:00.000Z",
+      "endsAt": "2026-06-12T18:40:00.000Z"
+    },
+    {
+      "id": "session-breakout-c",
+      "title": "Breakout C: Pricing Without Flinching",
+      "room": "Breakout Room C",
+      "startsAt": "2026-06-12T17:55:00.000Z",
+      "endsAt": "2026-06-12T18:40:00.000Z"
+    },
+    {
+      "id": "session-sponsor-northwind",
+      "title": "Sponsor Spotlight: Northwind Analytics",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T18:40:00.000Z",
+      "endsAt": "2026-06-12T18:50:00.000Z"
+    },
+    {
+      "id": "session-fireside",
+      "title": "Fireside: The Second Hire",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T18:50:00.000Z",
+      "endsAt": "2026-06-12T19:25:00.000Z"
+    },
+    {
+      "id": "session-roundtable",
+      "title": "Ask Me Anything: The Operators' Hour",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T19:25:00.000Z",
+      "endsAt": "2026-06-12T19:40:00.000Z"
+    },
+    {
+      "id": "session-close",
+      "title": "Closing: What Happens Next",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T19:40:00.000Z",
+      "endsAt": "2026-06-12T19:55:00.000Z"
     }
   ]
 }

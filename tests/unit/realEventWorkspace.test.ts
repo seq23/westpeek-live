@@ -34,7 +34,7 @@ import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 
 /** Every name and number the compiled demo fixtures would put on the page. */
-const SEED_GIVEAWAYS = ["Drake Speaker", "Iona Founder", "Clarity AI", "Northline Ventures", "Investor Panel", "Event brief approved", "Run-of-show approved"];
+const SEED_GIVEAWAYS = ["Drake Mensah", "Iona Adeyemi", "Clarity AI", "Northline Ventures", "Investor Panel", "Event brief approved", "Run-of-show approved"];
 
 async function markup(node: Promise<unknown> | unknown) {
   return renderToStaticMarkup((await node) as ReactElement);
@@ -145,7 +145,7 @@ describe("a seed event keeps its fixtures", () => {
 
   it("the demo summit still shows its own speakers and sponsors — that is what a demo is for", async () => {
     const speakers = await markup(SpeakerManager({ eventId: "event-summit" }));
-    expect(speakers).toContain("Drake Speaker");
+    expect(speakers).toContain("Drake Mensah");
     expect(speakers).toContain("demo event");
     expect(speakers).not.toContain("No speaker has arrived yet");
 

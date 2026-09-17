@@ -47,6 +47,7 @@ import workshopVideo from "@/data/events/premium-workshop-intensive/video.json";
 import workshopCommunications from "@/data/events/premium-workshop-intensive/communications.json";
 import type { V4SpecialGuestRole } from "@/types/v4";
 import { peekOverlayEvent } from "@/services/events/runtimeEventOverlay";
+import { demoShowStartMs } from "@/lib/mock/demoSchedule";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
 export interface EventIndexRecord {
@@ -227,12 +228,12 @@ export function getGeneratedEventRoleCode(eventCode: string | undefined, role: V
 const eventConfigPackages: Record<string, Omit<EventConfigPackage, "event" | "attendee">> = {
   demo: {
     branding: demoBranding,
-    agenda: demoAgenda,
     speakers: demoSpeakers,
     sponsors: demoSponsors,
-    runOfShow: demoRunOfShow,
     video: demoVideo,
     communications: demoCommunications,
+    get agenda() { return { eventId: demoAgenda.eventId, sessions: reanchorDemoRows(demoAgenda.sessions) }; },
+    get runOfShow() { return { eventId: demoRunOfShow.eventId, segments: reanchorDemoRows(demoRunOfShow.segments) }; },
   } as Omit<EventConfigPackage, "event" | "attendee">,
   "leadership-reset-webinar": {
     branding: webinarBranding,
@@ -271,6 +272,33 @@ const eventConfigPackages: Record<string, Omit<EventConfigPackage, "event" | "at
     communications: workshopCommunications,
   } as Omit<EventConfigPackage, "event" | "attendee">,
 };
+
+
+/**
+ * The demo summit's config carries a canonical show day (12 June 2026, 15:00Z) so that the JSON
+ * stays readable and diffable. Everything that renders it — the public event page, the workspace
+ * agenda, the client run-of-show view — re-anchors those instants onto the viewer's own day, the
+ * same anchor the venue uses, so the demo never shows a landing page for an event that finished
+ * months ago while its venue is mid-panel. Only the demo is re-anchored; every other event keeps
+ * the instants its producer typed.
+ */
+const DEMO_CONFIG_SHOW_DAY_MS = Date.parse("2026-06-12T15:00:00.000Z");
+
+function reanchorDemoInstant(value: string): string {
+  const parsed = Date.parse(value);
+  if (Number.isNaN(parsed)) return value;
+  return new Date(demoShowStartMs() + (parsed - DEMO_CONFIG_SHOW_DAY_MS)).toISOString();
+}
+
+function reanchorDemoRows(rows: Array<Record<string, string>>): Array<Record<string, string>> {
+  return rows.map((row) => {
+    const next: Record<string, string> = { ...row };
+    for (const key of ["startsAt", "endsAt", "startAt", "endAt"]) {
+      if (typeof next[key] === "string") next[key] = reanchorDemoInstant(next[key]);
+    }
+    return next;
+  });
+}
 
 export function getEventIndex(): EventIndexRecord[] {
   return (eventsIndex as { events: EventIndexRecord[] }).events;

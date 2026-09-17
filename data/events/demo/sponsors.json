@@ -3,8 +3,24 @@
   "sponsors": [
     {
       "id": "sponsor-clarity",
-      "name": "Clarity Labs",
+      "name": "Clarity Systems",
+      "tier": "Title sponsor",
       "roleCodeEnvKey": "EVENT_DEMO_SPONSOR_CLARITY_CODE"
+    },
+    {
+      "id": "sponsor-northwind",
+      "name": "Northwind Analytics",
+      "tier": "Gold sponsor"
+    },
+    {
+      "id": "sponsor-fernbank",
+      "name": "Fernbank Legal",
+      "tier": "Silver sponsor"
+    },
+    {
+      "id": "sponsor-relay",
+      "name": "Relay Payroll",
+      "tier": "Community sponsor"
     }
   ]
 }

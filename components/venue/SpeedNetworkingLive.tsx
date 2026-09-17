@@ -258,7 +258,10 @@ export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, 
     <div className="space-y-4" data-testid="networking-live" data-networking-status={snapshot.registered ? snapshot.status : "unregistered"} data-queue-size={snapshot.queueSize} data-poll-ms={pollMs} data-setup-gap={snapshot.setupGapSeconds}>
       {!snapshot.registered ? (
         <section className="rounded-3xl bg-white p-6" data-testid="networking-registration-required">
-          <p className="text-sm font-black text-slate-950">Meet other attendees, one at a time.</p>
+          {/* What this is has already been said, and drawn, by the explainer above. This card is the
+              step: register, then the queue. The privacy promise stays beside the button, because
+              that is the moment it is wanted. */}
+          <p className="text-sm font-black text-slate-950">Register once and you can join the queue.</p>
           <p className="mt-1 mb-4 text-sm text-slate-600">Your match sees your name and your company. Nothing else.</p>
           {/* The page's one register card is above this. Pressing Join queue is the moment of intent. */}
           <RegisterPointOfUse eventId={eventId} need="networking" label="Join queue" returnTo={`/venue/${eventId}/networking`} />

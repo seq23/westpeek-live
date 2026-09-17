@@ -107,6 +107,15 @@ describe("speed networking fairness when everybody joined at the same moment", (
    * fair round leaves nobody out at all, and 13 is where the pre-fix rotation failed); 51 is the
    * scored tier, where affinity chooses partners and must not be allowed to choose who is seated.
    */
+  /**
+   * The budget has to match what the simulation actually costs, not a round number. A 51-person
+   * room plays every round through the scored matcher and takes about 40 seconds on a developer
+   * machine, so a flat 20 seconds made the clock, rather than the rotation, the thing that failed
+   * — intermittently, and on origin/main as well as on a branch (reproduced 17 Sep 2026). The
+   * assertions below are untouched; only the stopwatch is honest now.
+   */
+  const budgetFor = (people: number) => Math.max(20_000, people * 2_500);
+
   for (const people of [3, 5, 7, 9, 12, 13, 51]) {
     it(`spreads the sit-outs to within one over ${ROUNDS} rounds with ${people} waiting (${selectSpeedNetworkingTier(people)} tier)`, async () => {
       const { sitOutsByRound, totals } = await playRotation(`fair-spread-${people}`, people, ROUNDS);
@@ -116,7 +125,7 @@ describe("speed networking fairness when everybody joined at the same moment", (
       expect(spread(totals), `sit-outs were not level: ${JSON.stringify(totals)}`).toBeLessThanOrEqual(1);
       // And the arithmetic adds up — the rounds really did run and really did leave somebody out.
       expect(totals.reduce((sum, count) => sum + count, 0)).toBe(ROUNDS * (people % 2));
-    }, 20_000);
+    }, budgetFor(people));
 
     it(`never sits the same person out twice running with ${people} waiting`, async () => {
       const { sitOutsByRound } = await playRotation(`fair-consecutive-${people}`, people, ROUNDS);
@@ -125,7 +134,7 @@ describe("speed networking fairness when everybody joined at the same moment", (
           expect(sitOutsByRound[index - 1], `${id} sat out rounds ${index - 1} and ${index}`).not.toContain(id);
         }
       }
-    }, 20_000);
+    }, budgetFor(people));
   }
 
   /**

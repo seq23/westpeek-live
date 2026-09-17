@@ -2,10 +2,121 @@
   "eventId": "event-summit",
   "segments": [
     {
-      "id": "ros-main",
-      "title": "Opening + Founder Lessons",
-      "room": "main_stage",
+      "id": "ros-opening",
+      "title": "Doors Open: Welcome and Orientation",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T15:00:00.000Z",
+      "endsAt": "2026-06-12T15:10:00.000Z",
+      "description": "Come in, get your bearings, and see how the day runs.",
       "backupPlan": "Daily room ready; Zoom manual fallback requires crew confirmation."
+    },
+    {
+      "id": "ros-welcome",
+      "title": "Opening: Why We Brought You Together",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T15:10:00.000Z",
+      "endsAt": "2026-06-12T15:20:00.000Z",
+      "description": "Nova Capital opens the summit and sets out what the next few hours are for.",
+      "backupPlan": "Pre-recorded welcome on file if the client cannot join."
+    },
+    {
+      "id": "ros-keynote",
+      "title": "Keynote: Building in the Open",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T15:20:00.000Z",
+      "endsAt": "2026-06-12T16:05:00.000Z",
+      "description": "Forty-five minutes on building a company with the work visible.",
+      "backupPlan": "Producer advances the deck from the crew copy if screen share fails."
+    },
+    {
+      "id": "ros-sponsor",
+      "title": "Sponsor Spotlight: Clarity Systems",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T16:05:00.000Z",
+      "endsAt": "2026-06-12T16:15:00.000Z",
+      "description": "A short word from Clarity Systems, and their booth opens in the expo.",
+      "backupPlan": "Play the sponsor video if the representative is unavailable."
+    },
+    {
+      "id": "ros-panel",
+      "title": "Investor Panel: What Gets Funded Now",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T16:15:00.000Z",
+      "endsAt": "2026-06-12T17:00:00.000Z",
+      "description": "Four investors on what is getting funded and what they are passing on.",
+      "backupPlan": "Move to a solo fireside if two or more panellists drop."
+    },
+    {
+      "id": "ros-qa",
+      "title": "Live Q&A with the Panel",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T17:00:00.000Z",
+      "endsAt": "2026-06-12T17:15:00.000Z",
+      "description": "Raise your hand and ask the panel yourself, on camera.",
+      "backupPlan": "Moderator reads from collected chat questions if no hands go up."
+    },
+    {
+      "id": "ros-break",
+      "title": "Break and Expo Walkabout",
+      "room": "Expo Hall",
+      "startsAt": "2026-06-12T17:15:00.000Z",
+      "endsAt": "2026-06-12T17:35:00.000Z",
+      "description": "Twenty minutes. Stretch, or walk the expo; every booth is staffed.",
+      "backupPlan": "Extend the break card by five minutes if the panel overruns."
+    },
+    {
+      "id": "ros-networking",
+      "title": "Speed Networking: Four Minutes Each",
+      "room": "Networking Lounge",
+      "startsAt": "2026-06-12T17:35:00.000Z",
+      "endsAt": "2026-06-12T17:55:00.000Z",
+      "description": "Four minutes on camera with one person you have not met, on a loop.",
+      "backupPlan": "Extend round length and point the stage card at the expo if the queue thins."
+    },
+    {
+      "id": "ros-breakouts",
+      "title": "Breakouts: Three Rooms, Pick One",
+      "room": "Breakout Rooms",
+      "startsAt": "2026-06-12T17:55:00.000Z",
+      "endsAt": "2026-06-12T18:40:00.000Z",
+      "description": "Three small rooms at once: founder lessons, hiring, and pricing.",
+      "backupPlan": "Merge a room into the one next door if a host drops."
+    },
+    {
+      "id": "ros-sponsor-two",
+      "title": "Sponsor Spotlight: Northwind Analytics",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T18:40:00.000Z",
+      "endsAt": "2026-06-12T18:50:00.000Z",
+      "description": "A short word from Northwind Analytics as everyone comes back.",
+      "backupPlan": "Play the 60-second sponsor video and keep the booth card up."
+    },
+    {
+      "id": "ros-fireside",
+      "title": "Fireside: The Second Hire",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T18:50:00.000Z",
+      "endsAt": "2026-06-12T19:25:00.000Z",
+      "description": "The hire after the founders, and what it changes.",
+      "backupPlan": "Host runs the same questions with the breakout host who stayed back."
+    },
+    {
+      "id": "ros-ama",
+      "title": "Ask Me Anything: The Operators' Hour",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T19:25:00.000Z",
+      "endsAt": "2026-06-12T19:40:00.000Z",
+      "description": "Anything you did not get to ask, on camera or in chat.",
+      "backupPlan": "Moderator reads from the chat backlog if the queue empties."
+    },
+    {
+      "id": "ros-close",
+      "title": "Closing: What Happens Next",
+      "room": "Main Stage",
+      "startsAt": "2026-06-12T19:40:00.000Z",
+      "endsAt": "2026-06-12T19:55:00.000Z",
+      "description": "Replay, the people you met, and what Nova is doing next.",
+      "backupPlan": "Host closes alone against the end card."
     }
   ]
 }

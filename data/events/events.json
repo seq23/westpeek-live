@@ -4,7 +4,7 @@
       "slug": "demo",
       "eventId": "event-summit",
       "publicCode": "demo",
-      "status": "published",
+      "status": "live",
       "configPath": "data/events/demo/event.json"
     },
     {

@@ -45,7 +45,7 @@ test("speaker: identity → green room → tech check → cue cards → paste/ap
   await speaker.page.getByTestId("guest-identity-submit").click();
   await expect(speaker.page.getByTestId("speaker-portal-shell")).toContainText("Ada Lovelace · Analytical Engines · Founder");
   await expect(speaker.page.locator("body")).not.toContainText("speaker-drake");
-  await expect(speaker.page.locator("body")).not.toContainText("Drake Speaker");
+  await expect(speaker.page.locator("body")).not.toContainText("Drake Mensah");
 
   // Green room is a real place: backstage, producer notes, run of show, backstage room, cue cards.
   await gotoAndAssert(speaker.page, `/speaker/events/${eventId}/green-room`);

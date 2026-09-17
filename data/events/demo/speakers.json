@@ -3,8 +3,44 @@
   "speakers": [
     {
       "id": "speaker-drake",
-      "name": "Drake Speaker",
+      "name": "Drake Mensah",
+      "role": "Managing Partner, Northline Ventures",
       "roleCodeEnvKey": "EVENT_DEMO_SPEAKER_DRAKE_CODE"
+    },
+    {
+      "id": "speaker-nadia",
+      "name": "Nadia Haddad",
+      "role": "Partner, Long Bridge Partners"
+    },
+    {
+      "id": "speaker-iona",
+      "name": "Iona Adeyemi",
+      "role": "Founder and CEO, ScaleThread"
+    },
+    {
+      "id": "speaker-amara",
+      "name": "Amara Okonjo",
+      "role": "Chief Operating Officer, Brightloom Health"
+    },
+    {
+      "id": "speaker-priya",
+      "name": "Priya Raghunathan",
+      "role": "Co-founder and CTO, Ostinato Labs"
+    },
+    {
+      "id": "speaker-teo",
+      "name": "Teo Alvarez",
+      "role": "Founder, Cadence Robotics"
+    },
+    {
+      "id": "speaker-yuki",
+      "name": "Yuki Tanaka-Bright",
+      "role": "Head of Platform, Ferrymead"
+    },
+    {
+      "id": "speaker-marcus",
+      "name": "Marcus Bell",
+      "role": "General Partner, Tidewater Growth"
     }
   ]
 }
