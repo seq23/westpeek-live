@@ -87,16 +87,22 @@ export interface SpeedNetworkingCandidate {
   networkingGoals?: string;
   /** ISO. The queue clock: reset whenever they return to waiting. */
   joinedAt: string;
-  /** Left over from the last round, or told "you are next": they lead the queue this round. */
+  /**
+   * Sat out the LAST round — they were told "you are next", so they lead this one. Set for exactly
+   * the people the previous round could not seat and cleared the moment they are matched, which is
+   * what makes "never the same person twice running" a rule rather than a hope.
+   */
   priority?: boolean;
   /**
-   * How many rounds this person has been the odd one out. Sit-outs are mostly rotated by
-   * "you are next" plus the requeue putting the pair at the back — but only while the queue has
-   * distinct join times to sort on. When a roomful joins together (the crew opens networking and
-   * everyone presses Join) every joinedAt is effectively identical, the sort falls back to a
-   * stable tie-break, and the same person is left out over and over: measured 3 sit-outs in 7
-   * rounds with 7 people who joined at the same instant. The debt makes the rotation independent
-   * of the tie-break — most sat out lead the queue until the count is level.
+   * How many rounds this person has sat out in total, for the whole time they have been in this
+   * queue. CUMULATIVE on purpose, and this is the part that had to change: a debt that resets
+   * when somebody is finally matched only ever says "did you sit out last round", and a queue
+   * where everyone joined at the same instant then ping-pongs between the same two people at the
+   * tail of the stable tie-break — measured over 12 rounds of simultaneous joins, the last two in
+   * the arbitrary order took every single sit-out (6 each) at 3, 5, 7 and 9 waiting while nobody
+   * else sat out once. Carrying the total instead makes the rotation a property of the algorithm:
+   * the most-owed lead the queue, the least-owed is the one the round leaves out, and the counts
+   * level to within one whatever the tie-break happens to be.
    */
   timesSatOut?: number;
 }
@@ -160,12 +166,25 @@ export interface SpeedNetworkingRoundPlan {
   metEveryone: SpeedNetworkingCandidate[];
 }
 
+/**
+ * The fairness order, and the only thing any tier is allowed to use to decide WHO gets a seat:
+ * whoever sat out last round, then whoever the queue owes the most sit-outs to, then longest
+ * waiting. Wait time is the last word rather than the first because a roomful that pressed Join
+ * together has no wait times to speak of — the debt is what is left to be fair with.
+ */
 function queueOrder(a: SpeedNetworkingCandidate, b: SpeedNetworkingCandidate) {
-  // Most sat out first, then whoever was told "you are next", then longest waiting.
-  const satOut = (b.timesSatOut || 0) - (a.timesSatOut || 0);
-  if (satOut !== 0) return satOut;
-  if (Boolean(a.priority) !== Boolean(b.priority)) return a.priority ? -1 : 1;
+  const owed = owedSeats(b) - owedSeats(a);
+  if (owed !== 0) return owed;
   return a.joinedAt.localeCompare(b.joinedAt);
+}
+
+/**
+ * What the round owes this person, as one number so the pair sort and the queue sort cannot drift
+ * apart. Sitting out the LAST round outranks any amount of older debt — "never twice running" is
+ * the harder promise — and the offset is far above any sit-out count a real event could reach.
+ */
+function owedSeats(candidate: SpeedNetworkingCandidate) {
+  return (candidate.priority ? 1_000_000 : 0) + (candidate.timesSatOut || 0);
 }
 
 /**
@@ -200,37 +219,38 @@ export function planSpeedNetworkingRound(input: {
 
   const queue = [...input.waiting].sort(queueOrder);
   const metEveryone = queue.filter((candidate) => !queue.some((other) => compatible(candidate, other)) && queue.length > 1);
+  const metEveryoneIds = new Set(metEveryone.map((candidate) => candidate.attendeeId));
+  const pairable = queue.filter((candidate) => !metEveryoneIds.has(candidate.attendeeId));
+  /**
+   * An odd room always leaves somebody out, so WHO is a decision and not a remainder: the person
+   * the queue owes the least — last in the fairness order — is held back before any pairing runs.
+   * Every tier then pairs an even list, which is what makes the rotation independent of how the
+   * tier happens to choose partners. If the round ends up unable to seat other people anyway they
+   * are all paired off together below, so holding one back never costs a match.
+   */
+  const heldBack = pairable.length % 2 === 1 ? pairable[pairable.length - 1] : undefined;
+  const seating = heldBack ? pairable.filter((candidate) => candidate !== heldBack) : pairable;
   const taken = new Set<string>();
   const pairs: SpeedNetworkingRoundPlan["pairs"] = [];
 
-  if (tier === "scored") {
-    // Every allowed pair, best first; greedy over that list is a stable, explainable matching.
-    const scored: Array<{ first: SpeedNetworkingCandidate; second: SpeedNetworkingCandidate; score: number }> = [];
-    for (let i = 0; i < queue.length; i += 1) {
-      for (let j = i + 1; j < queue.length; j += 1) {
-        if (!compatible(queue[i], queue[j])) continue;
-        scored.push({ first: queue[i], second: queue[j], score: scoreSpeedNetworkingPair(queue[i], queue[j], nowMs).score });
-      }
-    }
-    scored.sort((a, b) => b.score - a.score || queueOrder(a.first, b.first) || a.second.attendeeId.localeCompare(b.second.attendeeId));
-    for (const option of scored) {
-      if (taken.has(option.first.attendeeId) || taken.has(option.second.attendeeId)) continue;
-      taken.add(option.first.attendeeId);
-      taken.add(option.second.attendeeId);
-      pairs.push(option);
-    }
-  } else if (tier === "fifo") {
+  const seat = (first: SpeedNetworkingCandidate, second: SpeedNetworkingCandidate) => {
+    taken.add(first.attendeeId);
+    taken.add(second.attendeeId);
+    pairs.push({ first, second, score: scoreSpeedNetworkingPair(first, second, nowMs).score });
+  };
+
+  if (tier === "fifo") {
     // Small room: fairness is the algorithm. The existing pure engine does exactly this — two
     // longest-waiting compatible people, no repeats — and same-company pairs are handed to it as
     // pairs that have already met, which is the one extra rule it does not know about.
-    const byId = new Map(queue.map((candidate) => [candidate.attendeeId, candidate]));
+    const byId = new Map(seating.map((candidate) => [candidate.attendeeId, candidate]));
     const blocked: Array<[string, string]> = [];
-    for (let i = 0; i < queue.length; i += 1) {
-      for (let j = i + 1; j < queue.length; j += 1) {
-        if (!compatible(queue[i], queue[j])) blocked.push([queue[i].attendeeId, queue[j].attendeeId]);
+    for (let i = 0; i < seating.length; i += 1) {
+      for (let j = i + 1; j < seating.length; j += 1) {
+        if (!compatible(seating[i], seating[j])) blocked.push([seating[i].attendeeId, seating[j].attendeeId]);
       }
     }
-    const entries: SpeedNetworkingEntry[] = queue.map((candidate) => ({
+    const entries: SpeedNetworkingEntry[] = seating.map((candidate, rank) => ({
       id: candidate.attendeeId,
       agencyId: "west-peek",
       eventId: input.eventId,
@@ -238,35 +258,49 @@ export function planSpeedNetworkingRound(input: {
       attendeeId: candidate.attendeeId,
       displayName: candidate.displayName,
       status: "waiting",
-      // The engine orders purely by queue time, so the sit-out debt and "you are next" are
-      // expressed the only way it understands: a prefix that sorts ahead of any real timestamp
-      // (it starts with "0", an ISO year does not), most-sat-out first.
-      joinedQueueAt: candidate.timesSatOut || candidate.priority
-        ? `0${String(999 - Math.min(999, candidate.timesSatOut || 0)).padStart(3, "0")}${candidate.priority ? "0" : "1"}-${candidate.joinedAt}`
-        : candidate.joinedAt,
+      // The engine orders purely by queue time, so the fairness order is expressed the only way it
+      // understands: the rank this candidate already has, as a prefix that sorts ahead of any real
+      // timestamp (it starts with "0", an ISO year does not).
+      joinedQueueAt: `0${String(rank).padStart(4, "0")}-${candidate.joinedAt}`,
     }));
     const remaining = new Map(entries.map((entry) => [entry.attendeeId!, entry]));
     // A pair both of whom asked to meet someone again is taken back out of the history the engine reads.
     const historyForEngine = history.filter((item) => !(repeatOptIn.has(item.attendeeAId) && repeatOptIn.has(item.attendeeBId)));
-    for (let guard = 0; guard < queue.length; guard += 1) {
+    for (let guard = 0; guard < seating.length; guard += 1) {
       const pair = selectNextSpeedNetworkingPair(Array.from(remaining.values()), blocked, historyForEngine);
       if (!pair) break;
       const [first, second] = pair;
       remaining.delete(first.attendeeId!);
       remaining.delete(second.attendeeId!);
-      const firstCandidate = byId.get(first.attendeeId!)!;
-      const secondCandidate = byId.get(second.attendeeId!)!;
-      taken.add(firstCandidate.attendeeId);
-      taken.add(secondCandidate.attendeeId);
-      pairs.push({ first: firstCandidate, second: secondCandidate, score: scoreSpeedNetworkingPair(firstCandidate, secondCandidate, nowMs).score });
+      seat(byId.get(first.attendeeId!)!, byId.get(second.attendeeId!)!);
+    }
+  } else if (tier === "scored") {
+    // Every allowed pair, best first; greedy over that list is a stable, explainable matching. The
+    // sit-out debt is the MAJOR key, ahead of the score: the pairs that seat whoever the round owes
+    // the most are taken first, so affinity chooses who they talk to and never whether they talk.
+    const scored: Array<{ first: SpeedNetworkingCandidate; second: SpeedNetworkingCandidate; score: number }> = [];
+    for (let i = 0; i < seating.length; i += 1) {
+      for (let j = i + 1; j < seating.length; j += 1) {
+        if (!compatible(seating[i], seating[j])) continue;
+        scored.push({ first: seating[i], second: seating[j], score: scoreSpeedNetworkingPair(seating[i], seating[j], nowMs).score });
+      }
+    }
+    const owedBy = (option: { first: SpeedNetworkingCandidate; second: SpeedNetworkingCandidate }) => Math.max(owedSeats(option.first), owedSeats(option.second));
+    scored.sort((a, b) => owedBy(b) - owedBy(a) || b.score - a.score || queueOrder(a.first, b.first) || a.second.attendeeId.localeCompare(b.second.attendeeId));
+    for (const option of scored) {
+      if (taken.has(option.first.attendeeId) || taken.has(option.second.attendeeId)) continue;
+      seat(option.first, option.second);
     }
   } else {
-    for (const seed of queue) {
+    // Weighted random: seats are handed out in the fairness order and only the PARTNER is drawn.
+    // The most-owed person is seeded first, so the draw decides who somebody talks to and never
+    // whether they are seated at all.
+    for (const seed of seating) {
       if (taken.has(seed.attendeeId)) continue;
-      const options = queue.filter((other) => !taken.has(other.attendeeId) && compatible(seed, other));
+      const options = seating.filter((other) => !taken.has(other.attendeeId) && compatible(seed, other));
       if (!options.length) continue;
       let partner = options[0];
-      if (tier === "weighted_random") {
+      {
         const { poolFraction, minimumPoolSize, waitMinuteWeight } = SPEED_NETWORKING_MATCHING_CONFIG.weightedRandom;
         const poolSize = Math.max(minimumPoolSize, Math.ceil(options.length * poolFraction));
         const pool = options.slice(0, poolSize);
@@ -279,14 +313,21 @@ export function planSpeedNetworkingRound(input: {
           if (ticket <= 0) { partner = pool[index]; break; }
         }
       }
-      taken.add(seed.attendeeId);
-      taken.add(partner.attendeeId);
-      pairs.push({ first: seed, second: partner, score: scoreSpeedNetworkingPair(seed, partner, nowMs).score });
+      seat(seed, partner);
     }
   }
 
+  // Whoever is still standing — the person held back, plus anyone the tier ran out of partners for
+  // — is paired off among themselves in the fairness order, so holding a seat back for the
+  // rotation never costs the round a conversation that was actually available.
+  const standing = queue.filter((candidate) => !taken.has(candidate.attendeeId) && !metEveryoneIds.has(candidate.attendeeId));
+  for (const first of standing) {
+    if (taken.has(first.attendeeId)) continue;
+    const partner = standing.find((other) => !taken.has(other.attendeeId) && compatible(first, other));
+    if (partner) seat(first, partner);
+  }
+
   const leftOver = queue.filter((candidate) => !taken.has(candidate.attendeeId));
-  const metEveryoneIds = new Set(metEveryone.map((candidate) => candidate.attendeeId));
   // "Odd one out" is the one an odd-sized round could not seat — not somebody the queue can never serve.
   const oddOneOut = leftOver.find((candidate) => !metEveryoneIds.has(candidate.attendeeId));
   return { tier, pairs, oddOneOut, unmatched: leftOver, metEveryone };

@@ -5053,6 +5053,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:speed-networking-fairness",
+      "command": "node scripts/validate_speed_networking_fairness_contract.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "attendee fairness",
+      "whatItProves": "Who sits out a speed networking round is chosen rather than left over. Asserts the one fairness order used by every tier, the least-owed attendee being held back before any pairing runs, the sit-out debt being a floor the scored tier cannot outvote with affinity, and the debt surviving a match but not being charged per poll; then RUNS the deterministic simultaneous-join simulation (3, 5, 7, 9, 12, 13 and 51 waiting, 12 rounds each, all three tiers) and requires the sit-out counts to differ by at most one with nobody out twice running.",
+      "whatItDoesNotProve": "Does not prove the rotation as an attendee experiences it in a browser, nor anything about who they are matched WITH; partner quality above fifty waiting is the affinity score's own concern.",
+      "failureHandling": "Juniper repairs and reruns. A failure here means some attendee is being left out more often than the room.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; a failure is a fairness regression and must be fixed before release.",
+      "runtimeCost": "Static file reads plus one vitest file; a few seconds.",
+      "maintenanceCost": "Review on each speed networking matcher change.",
+      "removalConditions": "Retire only if speed networking is retired.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",
