@@ -1,6 +1,9 @@
 # Plan — one place for the owner, and seeing the room as anyone
 
-Status: **APPROVED and locked** by the owner, 16 Sep 2026. Build in the Part 3 order.
+Status: **APPROVED and locked** by the owner, 16 Sep 2026. Built in the Part 3 order.
+**COMPLETE — all ten items shipped, 16 Sep 2026.** Item 10, the last one, is
+`scripts/validate_owner_one_place_rule.js` (admitted as `validate:owner-one-place-rule`) plus §3 and
+§19 of the operator manual. See the Part 3 table for what each item landed as.
 
 Two complaints, one root cause:
 
@@ -157,6 +160,39 @@ Add to the manual and enforce with a validator: **an owner holding the master ke
 | 10 | Validator + manual §3/§6/§7 updates | all |
 
 Each ships as its own PR.
+
+### Item 10, as built
+
+`scripts/validate_owner_one_place_rule.js`, admitted in `_validator_admission_register.json` as
+`validate:owner-one-place-rule` and run by `validate:deploy-parity`. It enforces §2.6 as one
+sentence, both halves:
+
+- **Never a second page.** It derives the owner-reachable surfaces from
+  `EVENT_COMMAND_BAR_SURFACES`, cross-checks them against `config/deployed-route-manifest.json` and
+  against every layout that actually mounts the bar (so a surface added, renamed or dropped is
+  reported as drift rather than silently uncovered), derives the primary actions from
+  `lib/navigation/ownerPrimaryActions.ts` whose ids must match this plan's own parenthetical word
+  for word, and then follows imports from each surface's routes to the module that implements each
+  action. An action reachable from only one surface fails the build. Hard-fails on zero surfaces,
+  zero actions or zero routes.
+- **Never a code.** No owner-reachable surface may redirect a master-key holder to a
+  `/production-access` gate, and all four gates share one pass-through
+  (`lib/auth/ownerNeverEntersACode.ts`) so a cookie that already opens the destination is never
+  asked for a password.
+
+Two defects it found on `main` and that were fixed with it:
+
+1. **The personas were unreachable from four of the five surfaces.** The Event Command Bar imported
+   a placeholder `components/command/EnterTheRoomMenu.tsx`, not the real menu built for items 4 to 6
+   at `components/preview/EnterTheRoomMenu.tsx`. Two components with the same export name; the
+   name-matching check over the top of them was green. The placeholder is deleted and the one menu
+   grew a `variant="bar"`.
+2. **The owner was still being sent to a code gate.** `/speaker/events/**`, `/sponsor/events/**` and
+   `/client/**` bounced their visitor to the special-guest gate whenever a guest cookie they also
+   held had gone stale, without asking whether that visitor held the master key, and the crew and
+   special-guest gates had no owner pass-through to let them back out. This is the owner's "every
+   time I click open it gives me another operator launchpad gate". Reproduced and guarded in
+   `tests/unit/ownerNeverEntersACode.test.ts`.
 
 ---
 

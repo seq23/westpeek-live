@@ -13,6 +13,7 @@ import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { SupersededGateNotice, supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { grantOwnerOverrideIfMatched } from "@/lib/auth/ownerAccessOverride";
+import { alreadyAuthorisedDestination } from "@/lib/auth/ownerNeverEntersACode";
 import type { V4CrewRole } from "@/types/v4";
 import { CREW_ROLES, crewRoleDescriptions, crewRoleLabels } from "@/lib/auth/crewRolePermissions";
 import { getHostLinkState } from "@/services/events/hostLinkService";
@@ -68,6 +69,12 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
   const prefilledCode = String(resolvedSearchParams?.code || "").trim().slice(0, 120);
   const missing = missingAccessEnv();
   if (missing.length) return <BrandedSetupError title="Crew access is not configured yet." message="Crew login needs explicit access variables. This page now fails safely with setup instructions instead of throwing a server digest page." missingVariables={missing} defaultValues={accessDefaultLines()} />;
+  // The master key never enters a code. An owner or operator whose cookie already opens the
+  // destination they were sent here for goes straight there instead of meeting a second gate.
+  if (!resolvedSearchParams?.error) {
+    const destination = await alreadyAuthorisedDestination(resolvedSearchParams?.next);
+    if (destination) redirect(destination);
+  }
   return (
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">

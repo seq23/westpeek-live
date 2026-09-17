@@ -155,7 +155,7 @@ check(/shrink-0 whitespace-nowrap rounded-full px-2\.5 py-1 text-xs/.test(chips)
 const ON_THE_BAR = [
   "components/command/EventSwitcherMenu.tsx",
   "components/command/EventHealthDot.tsx",
-  "components/command/EnterTheRoomMenu.tsx",
+  "components/preview/EnterTheRoomMenu.tsx",
   "components/command/CommandBarCodes.tsx",
   "components/command/CommandBarGoLive.tsx",
   "components/moderation/StageRequestsToggle.tsx",
@@ -169,7 +169,7 @@ for (const file of ON_THE_BAR) {
 check(/flex-nowrap items-center gap-1\.5 overflow-x-auto px-3 py-1/.test(bar), `${BAR} must keep the one compact scrolling row the 96px phone budget was measured against; a wrapping bar was three rows deep on a phone.`);
 check(bar.includes("data-chrome-overflow-fade"), `${BAR} must show the same fade the nav does wherever its row can run past the edge.`);
 check(read(CHIPS).includes("export const COMMAND_PANEL"), `${CHIPS} must own the menu panel recipe: a row that scrolls clips an absolutely positioned dropdown, so every bar menu has to escape it the same way.`);
-for (const menu of ["components/command/EventSwitcherMenu.tsx", "components/command/EventHealthDot.tsx", "components/command/EnterTheRoomMenu.tsx", "components/command/CommandBarCodes.tsx"]) {
+for (const menu of ["components/command/EventSwitcherMenu.tsx", "components/command/EventHealthDot.tsx", "components/preview/EnterTheRoomMenu.tsx", "components/command/CommandBarCodes.tsx"]) {
   const body = read(menu);
   check(body.includes("COMMAND_PANEL"), `${menu} opens a menu off the scrolling bar and must use the shared panel recipe, or its panel is clipped by the row.`);
   check(!/className="absolute [^"]*z-40/.test(body), `${menu} must not pin its panel with a bare absolute inside the scrolling row.`);
