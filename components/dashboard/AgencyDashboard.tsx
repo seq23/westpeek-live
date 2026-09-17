@@ -41,7 +41,7 @@ export async function AgencyDashboard() {
         <WestPeekProductionsLogo size="sm" />
         <p className="mt-4 text-sm font-medium text-slate-300">{settings.agencyName} · signed in as {actor?.label || "unknown"}</p>
         <h1 className="mt-2 text-3xl font-semibold">Run West Peek Rooms and client events from one cockpit.</h1>
-        <p className="mt-2 max-w-3xl text-slate-300">Start a Room now, plan a client event for later, share the join code, and hand crew, speakers, sponsors, VIPs, and clients their own codes — all from the event row.</p>
+        <p className="mt-2 max-w-3xl text-slate-300">Start a Room now, plan a client event for later, share the event code, and hand crew, speakers, sponsors, VIPs, and clients their own codes — all from the event row.</p>
         <p className="mt-4 inline-flex rounded-full bg-white/10 px-3 py-1 text-xs font-semibold text-slate-200" data-testid="persistence-mode">{schema.ok ? `${schema.store} runtime store · tables ready` : `${schema.store} runtime store · migration pending`}</p>
       </div>
 
@@ -70,7 +70,7 @@ export async function AgencyDashboard() {
 
       <SectionCard title="Your events" eyebrow="Real rows">
         {upcoming.length === 0 ? (
-          <EmptyState title="No events yet" body="Press New event. Now gives you a live Room with a join code in one step; Later creates a draft you publish when it is ready." />
+          <EmptyState title="No events yet" body="Press New event. Now gives you a live Room with a event code in one step; Later creates a draft you publish when it is ready." />
         ) : (
           <div className="space-y-3" data-testid="dashboard-events">
             {upcoming.map((event) => (
@@ -78,7 +78,7 @@ export async function AgencyDashboard() {
                 <div className="flex items-start justify-between gap-4">
                   <div>
                     <h3 className="font-semibold text-slate-950">{event.name}</h3>
-                    <p className="text-sm text-slate-500">{event.clientName} · {when(event.startAt, event.timezone)} · join code {event.joinCode}</p>
+                    <p className="text-sm text-slate-500">{event.clientName} · {when(event.startAt, event.timezone)} · event code {event.joinCode}</p>
                   </div>
                   <StatusBadge status={event.status} tone={event.status === "live" ? "good" : "neutral"} />
                 </div>

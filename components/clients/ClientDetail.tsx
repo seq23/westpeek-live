@@ -38,7 +38,7 @@ export async function ClientDetail({ clientId }: { clientId: string }) {
                   <div className="flex items-start justify-between">
                     <div>
                       <p className="font-semibold">{event.name}</p>
-                      <p className="text-sm text-slate-500">{new Date(event.startAt).toLocaleString("en-US", { timeZone: event.timezone })} · join code {event.joinCode}</p>
+                      <p className="text-sm text-slate-500">{new Date(event.startAt).toLocaleString("en-US", { timeZone: event.timezone })} · event code {event.joinCode}</p>
                     </div>
                     <StatusBadge status={event.status} />
                   </div>

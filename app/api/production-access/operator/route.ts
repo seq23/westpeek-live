@@ -4,6 +4,7 @@ import { assertSeparatedProductionPasswords, getEnv, getOperatorLaunchpadPasswor
 import { missingAccessEnv } from "@/lib/env/safeEnv";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { ownerOverrideResponseIfMatched, redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
+import { checkGateAttempts, clearGateAttempts, gateAttemptKeyFor, recordGateFailure, requestIpHash } from "@/services/access/gateAttemptLimiter";
 
 export const dynamic = "force-dynamic";
 
@@ -15,13 +16,25 @@ export async function POST(request: NextRequest) {
   const env = getEnv();
   assertSeparatedProductionPasswords(env);
 
+  // Same bargain as the crew gate: the password names its door, so the gate does the defending.
+  const { ip, ipHash } = await requestIpHash(request);
+  const attemptKey = gateAttemptKeyFor({ ip, gate: "operator" });
+  const gate = checkGateAttempts(attemptKey);
+  if (!gate.allowed) {
+    await logAccessAttempt({ status: "access_denied", accessKind: "operator", role: "executive_producer", reason: "rate_limited", route: "/production-access/operator", ipHash });
+    return redirectTo(request, `/production-access/operator?error=too_many&retry=${gate.retryInSeconds}`);
+  }
+
   const ownerOverride = await ownerOverrideResponseIfMatched({ request, password, route: "/production-access/operator", next: safeNext, fallback: "/production-access/launchpad" });
-  if (ownerOverride) return ownerOverride;
+  if (ownerOverride) { clearGateAttempts(attemptKey); return ownerOverride; }
 
   if (!password || password !== getOperatorLaunchpadPassword(env)) {
-    await logAccessAttempt({ status: "access_denied", accessKind: "operator", role: "executive_producer", reason: "invalid_password", route: "/production-access/operator" });
+    const limit = recordGateFailure(attemptKey);
+    await logAccessAttempt({ status: "access_denied", accessKind: "operator", role: "executive_producer", reason: limit.cooling ? "rate_limited_after_failures" : "invalid_password", route: "/production-access/operator", ipHash });
+    if (limit.cooling) return redirectTo(request, `/production-access/operator?error=too_many&retry=${limit.retryInSeconds}`);
     return redirectTo(request, "/production-access/operator?error=invalid");
   }
+  clearGateAttempts(attemptKey);
 
   await logAccessAttempt({ status: "access_granted", accessKind: "operator", eventId: "event-summit", role: "executive_producer", route: safeNext });
   const { operatorCookieName } = getV5AccessCookieNames(env);

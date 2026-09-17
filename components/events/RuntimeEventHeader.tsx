@@ -7,7 +7,7 @@ import { formatEventDate } from "@/lib/utils/format";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
 /**
- * The real-row header for a runtime-created event: status, join code, publish /
+ * The real-row header for a runtime-created event: status, event code, publish /
  * go-live, and archive / restore. Seed events never render this — they are
  * compiled and cannot be changed from the workspace.
  */
