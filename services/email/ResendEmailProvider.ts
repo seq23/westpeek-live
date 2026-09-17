@@ -1,5 +1,6 @@
 import type { EmailMessage, EmailProvider, EmailSendResult } from "./EmailProvider";
 import { getEmailReplyTo, getEnv, isResendConfigured } from "@/lib/env";
+import { BRAND_REPLY_TO, resolveSendingIdentity } from "@/lib/brand";
 
 /**
  * Production Resend provider.
@@ -22,12 +23,14 @@ export class ResendEmailProvider implements EmailProvider {
         "Content-Type": "application/json",
       },
       body: JSON.stringify({
-        from: message.from || env.EMAIL_FROM,
+        // Belt and braces. sendEmail already resolved this, but sendProductionEmail calls the
+        // provider directly, and Resend refuses any identity off the verified sending domain.
+        from: resolveSendingIdentity(message.from || env.EMAIL_FROM),
         to: message.to,
         subject: message.subject,
         html: message.html,
         text: message.text,
-        reply_to: message.replyTo || getEmailReplyTo(env),
+        reply_to: message.replyTo || getEmailReplyTo(env) || BRAND_REPLY_TO,
         headers: message.headers,
       }),
     });

@@ -98,7 +98,12 @@ export function isSupabaseAdminConfigured(env: Partial<AppEnv> = getEnv()) {
 }
 
 export function isResendConfigured(env: Partial<AppEnv> = getEnv()) {
-  return Boolean(env.RESEND_API_KEY && env.EMAIL_FROM);
+  // The key alone. EMAIL_FROM used to be part of this, which meant an unset or cleared EMAIL_FROM
+  // did not change the sending address — it silently swapped the real provider for MockEmailProvider
+  // and every message was discarded with no error anywhere. The from address can no longer be
+  // missing (resolveSendingIdentity always returns BRAND_FROM_EMAIL), so the key is the only thing
+  // that decides whether mail can actually leave.
+  return Boolean(env.RESEND_API_KEY);
 }
 
 export function getEmailReplyTo(env: Partial<AppEnv> = getEnv()) {

@@ -13,6 +13,12 @@ const required = [
   "components/brand/WestPeekLiveWordmark.tsx",
   "public/brand/west-peek-live-wordmark.svg",
   "public/brand/wp-mark.svg",
+  // The real West Peek monogram, taken from the join-west-peek brand repo. Required to exist so the
+  // shells cannot quietly go back to typing the letters WP into a styled square.
+  "public/brand/wp-mark-white.png",
+  "public/brand/wp-mark-black.png",
+  "components/brand/WestPeekLogo.tsx",
+  "app/icon.png",
 ];
 
 const userFacingRoots = [
@@ -77,6 +83,43 @@ const wordmark = fs.existsSync(wordmarkPath) ? fs.readFileSync(wordmarkPath, "ut
 if (!wordmark.includes("text-brand-orange")) failures.push("Wordmark does not use orange for Live!");
 if (!wordmark.includes("brand-script")) failures.push("Wordmark does not use script class for Live!");
 if (!wordmark.includes("-rotate-6")) failures.push("Wordmark does not skew Live!");
+
+/**
+ * The logo, and the three things about it that are easy to lose.
+ *
+ * WEST_PEEK_BRAND_SYSTEM.md line 7 says to use the approved asset and not to fabricate substitute
+ * marks; lines 37-42 put the parent logo in the primary shell. The owner's ask adds that it links
+ * back to westpeek.live. Each of those is one assertion here, and each counts itself, so a shell
+ * that drops the mark fails rather than passing on an empty loop.
+ */
+const logoChecks = [
+  ["components/brand/WestPeekLogo.tsx", "/brand/wp-mark-white.png", "the logo component must reference the white monogram for dark shells"],
+  ["components/brand/WestPeekLogo.tsx", "/brand/wp-mark-black.png", "the logo component must reference the dark monogram for white surfaces"],
+  ["components/brand/WestPeekLogo.tsx", "https://westpeek.live", "the logo must link back to the West Peek home page"],
+  // "<WestPeekLogoHomeLink", not the bare name: the import alone contains the identifier, so a
+  // substring check would keep passing after the element was deleted from the markup.
+  ["components/venue/VenueHeader.tsx", "<WestPeekLogoHomeLink", "the venue header must RENDER the real logo, not the wordmark alone"],
+  ["components/navigation/Sidebar.tsx", "<WestPeekLogoHomeLink", "the workspace sidebar must RENDER the real logo"],
+];
+
+let logoAssertions = 0;
+for (const [file, needle, why] of logoChecks) {
+  const full = path.join(root, file);
+  if (!fs.existsSync(full)) {
+    failures.push(`Missing ${file} — ${why}`);
+    continue;
+  }
+  logoAssertions += 1;
+  if (!fs.readFileSync(full, "utf8").includes(needle)) failures.push(`${file} is missing "${needle}" — ${why}`);
+}
+if (logoAssertions !== logoChecks.length) {
+  failures.push(`Only ${logoAssertions} of ${logoChecks.length} logo assertions could run; the logo surfaces moved and this check went inert`);
+}
+
+// The fabricated WP square is gone and must stay gone.
+if (wordmark.includes("WestPeekLiveMark")) {
+  failures.push("WestPeekLiveMark is back — WEST_PEEK_BRAND_SYSTEM.md line 7 forbids a fabricated substitute mark; use WestPeekLogo");
+}
 
 if (failures.length) {
   console.error("Brand validation failed:");

@@ -1,4 +1,5 @@
-import { WestPeekLiveMark, WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
+import { WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
+import { WestPeekLogoHomeLink } from "@/components/brand/WestPeekLogo";
 import { WorkspaceNavList } from "@/components/navigation/WorkspaceNavList";
 
 
@@ -7,7 +8,7 @@ export function Sidebar() {
     <aside className="border-b border-brand-line bg-brand-black text-white lg:sticky lg:top-0 lg:block lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r lg:border-white/10">
       <div className="flex items-center justify-between gap-3 px-4 py-4 lg:block lg:p-5">
         <div className="flex items-center gap-3 lg:block">
-          <WestPeekLiveMark inverse />
+          <WestPeekLogoHomeLink size="md" inverse />
           <div className="lg:mt-4">
             <WestPeekLiveWordmark size="sm" inverse />
             <p className="mt-1 text-xs font-semibold uppercase tracking-[0.25em] text-white/45">Production OS</p>

@@ -62,8 +62,12 @@ const envExampleValues = {
   V5_CREW_COOKIE_NAME: "wpl_crew_access",
   V5_SPECIAL_GUEST_COOKIE_NAME: "wpl_guest_access",
   V5_OPERATOR_COOKIE_NAME: "wpl_operator_access",
-  EMAIL_FROM: "West Peek Live <hello@westpeek.live>",
-  EMAIL_REPLY_TO: "support@westpeek.live",
+  // These must stay on the verified sending domain and match lib/brand.ts. They used to read
+  // "West Peek Live <hello@westpeek.live>" and "support@westpeek.live", both on the apex, which
+  // carries no Resend DKIM key — anyone who copied this example into EMAIL_FROM would have had
+  // every send rejected. validate_email_sender_identity.js fails if these drift again.
+  EMAIL_FROM: "West Peek Live <notifications@events.westpeek.live>",
+  EMAIL_REPLY_TO: "hello@westpeek.live",
   VIDEO_PROVIDER: "livekit",
   DAILY_API_BASE_URL: "https://api.daily.co/v1",
   DAILY_FALLBACK_ENABLED: "true",

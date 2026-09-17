@@ -28,8 +28,8 @@ Purpose: safe env contract for local, CI, Cloudflare Worker, postdeploy, and pro
 | `DAILY_DOMAIN` | Required production/Cloudflare secret or env value. |
 | `DAILY_FALLBACK_ENABLED` | Required production/Cloudflare secret or env value. |
 | `DAILY_STAGE_FALLBACK_REQUIRES_TOKEN` | Required production/Cloudflare secret or env value. |
-| `EMAIL_FROM` | Required production/Cloudflare secret or env value. |
-| `EMAIL_REPLY_TO` | Required production/Cloudflare secret or env value. |
+| `EMAIL_FROM` | Required production/Cloudflare secret or env value. Must be on `events.westpeek.live` — see "The sending identity" below. An address off that domain is ignored, not honoured. |
+| `EMAIL_REPLY_TO` | Required production/Cloudflare secret or env value. Where replies land; unlike the from, this may be an apex `westpeek.live` address. |
 | `EVENT_DEMO_CLIENT_CODE` | Required production/Cloudflare secret or env value. |
 | `EVENT_DEMO_CREW_LITE_CODE` | Required production/Cloudflare secret or env value. |
 | `EVENT_DEMO_SPEAKER_CODE` | Required production/Cloudflare secret or env value. |
@@ -196,3 +196,47 @@ Do not commit `.env.local`.
 ## Workers Free variable cap
 
 A Worker on the Workers Free plan may carry at most **64** variables and secrets. On 16 Sep 2026 we hit the cap; the 20 `EVENT_{LEADERSHIP_RESET_WEBINAR,PREMIUM_WORKSHOP_INTENSIVE,PROVIDER_INNOVATION_EXPO,SEED_DEMO_DAY}_*_CODE` secrets were deleted (no runtime code read them — only manifests and docs; `EVENT_DEMO_*` stay because `lib/env/safeEnv.ts` reads them). `validate:worker-variable-budget` keeps the required-secrets manifest at 60 or fewer entries so there is always headroom under the 64 cap.
+
+## The sending identity
+
+West Peek Live sends as **`notifications@events.westpeek.live`**.
+
+That is a code fact, not a configuration fact. `lib/brand.ts` holds it as `BRAND_FROM_EMAIL`, and
+`resolveSendingIdentity()` is on both send paths — `withHouseAddresses` in `services/email/emailService.ts`
+and the direct call in `services/email/ResendEmailProvider.ts`. A candidate from `EMAIL_FROM` or from the
+`runtime_house_defaults` row wins **only** if it is on `events.westpeek.live`; anything else loses to the
+constant. `scripts/validate_email_sender_identity.js` fails the build if any of that is unpicked.
+
+This is deliberate. Neither the secret's value nor the saved row can be read back from CI, so the from
+address is decided where it can be reviewed instead of somewhere it can only be guessed at.
+
+### Why the subdomain, and only the subdomain
+
+| Domain | Records | What it is for |
+| --- | --- | --- |
+| `events.westpeek.live` | DKIM at `resend._domainkey.events.westpeek.live`; SPF `include:amazonses.com` and MX `feedback-smtp.us-east-1.amazonses.com` under `send.events.westpeek.live` | **Sending.** This is Resend's record set, and the only identity Resend will accept from this account. |
+| `westpeek.live` (apex) | SPF `include:_spf.mx.cloudflare.net`, MX `route1-3.mx.cloudflare.net` | **Receiving**, via Cloudflare Email Routing. No DKIM key, so a send claiming an apex address is rejected by Resend. |
+
+So `hello@westpeek.live` is a fine reply-to and an impossible from. `scripts/sync_required_secrets_manifest.js`
+offered `West Peek Live <hello@westpeek.live>` as the `EMAIL_FROM` example until 17 Sep 2026; anyone who
+copied it would have had every send rejected.
+
+### `EMAIL_FROM` no longer decides whether email sends
+
+`isResendConfigured()` used to require `RESEND_API_KEY && EMAIL_FROM`. An unset or cleared `EMAIL_FROM`
+therefore did not change the address — it silently swapped `ResendEmailProvider` for `MockEmailProvider`,
+and every message was discarded with no error anywhere. It keys on `RESEND_API_KEY` alone now.
+
+### NAMED STOP — DMARC, owner action, Cloudflare DNS
+
+There is **no DMARC record** on `westpeek.live` or `events.westpeek.live`. Confirmed 17 Sep 2026 against
+both `8.8.8.8` and `1.1.1.1`. SPF and DKIM alone no longer clear the bulk-sender bar Gmail and Yahoo have
+enforced since February 2024, so this is a deliverability risk, not a formality.
+
+It cannot be fixed from this repo — it is a DNS record in the Cloudflare dashboard for `westpeek.live`.
+Add, at `_dmarc.westpeek.live`, TXT:
+
+    v=DMARC1; p=none; rua=mailto:hello@westpeek.live; fo=1
+
+Start at `p=none` so nothing is rejected while the reports come in, read a week of them to confirm every
+legitimate sender aligns, then tighten to `p=quarantine`.
