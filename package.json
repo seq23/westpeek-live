@@ -266,7 +266,7 @@
     "validate:v5": "npm run validate:v5-hard",
     "validate:v5-access-security": "node scripts/validate_v5_access_security.js",
     "validate:v5-event-config-schema": "node scripts/validate_v5_event_config_schema.js",
-    "validate:v5-hard": "npm run validate:structure && npm run validate:brand && npm run validate:whitelabel-video && npm run validate:daily-static && npm run validate:v5-access-security && npm run validate:v5-route-authorization && npm run validate:v5-no-secrets && npm run validate:v5-event-config-schema && npm run validate:v5-publishing && npm run validate:v5-runtime-boundaries",
+    "validate:v5-hard": "npm run validate:structure && npm run validate:brand && npm run validate:brand-system && npm run validate:whitelabel-video && npm run validate:daily-static && npm run validate:v5-access-security && npm run validate:v5-route-authorization && npm run validate:v5-no-secrets && npm run validate:v5-event-config-schema && npm run validate:v5-publishing && npm run validate:v5-runtime-boundaries",
     "validate:v5-no-secrets": "node scripts/validate_v5_no_secrets.js",
     "validate:v5-publishing": "node scripts/validate_v5_publishing.js",
     "validate:v5-route-authorization": "node scripts/validate_v5_route_authorization.js",

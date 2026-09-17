@@ -17,7 +17,7 @@ import { budgetRangeLabel, EVENT_REQUEST_STATE_LABELS, formatPrice, type EventRe
 const STATE_TONE: Record<string, string> = {
   requested: "bg-amber-100 text-amber-900",
   approved: "bg-sky-100 text-sky-900",
-  confirmed: "bg-indigo-100 text-indigo-900",
+  confirmed: "bg-teal-100 text-teal-900",
   paid: "bg-emerald-100 text-emerald-900",
   declined: "bg-slate-200 text-slate-700",
 };

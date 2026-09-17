@@ -1,6 +1,7 @@
 import type { VirtualVenueModel } from "@/types/virtualVenue";
 import { VenueNav } from "./VenueNav";
 import { WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
+import { WestPeekLogoHomeLink } from "@/components/brand/WestPeekLogo";
 import type { VenueActivity } from "@/services/venue/venueActivityService";
 
 /**
@@ -27,6 +28,7 @@ export function VenueHeader({ model, attendee, activity, subordinate = false }: 
       <div className="mx-auto flex w-full max-w-7xl items-center gap-2">
         {subordinate ? null : (
           <>
+            <WestPeekLogoHomeLink size="sm" inverse />
             <span className="hidden shrink-0 sm:block"><WestPeekLiveWordmark size="sm" inverse /></span>
             <h1 className="max-w-[9rem] shrink truncate text-xs font-black tracking-[-0.02em] sm:max-w-[14rem]" data-chrome-event-name="venue-nav">{model.eventName}</h1>
           </>

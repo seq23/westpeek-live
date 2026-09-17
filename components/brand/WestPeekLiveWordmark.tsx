@@ -41,16 +41,3 @@ export function WestPeekLiveWordmark({ size = "md", inverse = false, className =
     </span>
   );
 }
-
-export function WestPeekLiveMark({ inverse = false }: { inverse?: boolean }) {
-  return (
-    <span
-      className={`inline-flex h-10 w-10 items-center justify-center rounded-2xl border text-sm font-black tracking-[-0.08em] ${
-        inverse ? "border-white/20 bg-white text-brand-black" : "border-brand-line bg-brand-black text-white"
-      }`}
-      aria-label="West Peek"
-    >
-      WP
-    </span>
-  );
-}
