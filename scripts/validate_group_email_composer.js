@@ -81,6 +81,9 @@ must(!/setInterval|setTimeout|cron|scheduled|CronTrigger/i.test(codeOnly(group))
 const transactional = check("services/email/eventEmailService.ts", ["sendManualWorkflow"]);
 must(!transactional.includes("emailSuppressionService") && !transactional.includes("suppressedAddresses"), "A transactional send to one named person must never consult the unsubscribe list: a speaker who unsubscribed from announcements still gets their green room link.");
 
+const audienceTypes = check("types/emailAudience.ts", ["export function unsubscribeIsActive"]);
+must(audienceTypes.includes("return record.resubscribedAt < record.unsubscribedAt;"), "A resubscribe stamped at the same millisecond as the unsubscribe was written second and must win, or pressing \"put me back on\" straight after unsubscribing leaves the person silently suppressed.");
+
 // 3 · the volume, counted from something we can actually read ----------------------------------
 const volume = check("services/email/emailVolumeService.ts", ["RESEND_DAILY_ALLOWANCE", "RESEND_MONTHLY_ALLOWANCE", "export async function checkSendAllowance", "VOLUME_SOURCE_NOTE"]);
 must(volume.includes("Counted from this app's own send log"), "The usage figure must say what it is counting rather than implying it came from Resend.");

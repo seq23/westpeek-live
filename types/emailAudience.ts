@@ -115,8 +115,15 @@ export interface EmailUnsubscribeRecord {
   resubscribedBy?: string;
 }
 
-/** Suppressed only while the unsubscribe is the most recent thing that happened to this address. */
+/**
+ * Suppressed only while the unsubscribe is the most recent thing that happened to this address.
+ *
+ * A resubscribe stamped at the same millisecond as the unsubscribe WINS — it was written second,
+ * and the alternative is that somebody who presses "put me back on" straight after unsubscribing
+ * stays silently suppressed. Re-unsubscribing writes a fresh row with no resubscribe on it, so a
+ * stale resubscribe can only ever be older than the unsubscribe above it.
+ */
 export function unsubscribeIsActive(record: EmailUnsubscribeRecord) {
   if (!record.resubscribedAt) return true;
-  return record.resubscribedAt <= record.unsubscribedAt;
+  return record.resubscribedAt < record.unsubscribedAt;
 }

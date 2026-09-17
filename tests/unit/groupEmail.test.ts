@@ -13,6 +13,7 @@ import { sendManualWorkflow, listEventEmailLog, listAllEmailLog } from "@/servic
 import { buildUnsubscribeToken, readUnsubscribeToken, recordResubscribe, recordUnsubscribe, isUnsubscribed } from "@/services/email/emailSuppressionService";
 import { checkSendAllowance, RESEND_DAILY_ALLOWANCE } from "@/services/email/emailVolumeService";
 import { sha256Hex } from "@/lib/security/portableCrypto";
+import { unsubscribeIsActive } from "@/types/emailAudience";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { EmailSendLog } from "@/types/emailProduction";
@@ -164,6 +165,16 @@ describe("group email", () => {
     await recordResubscribe({ email: "ada@example.com", by: "self" });
     expect(await isUnsubscribed("ada@example.com")).toBe(false);
     expect((await resolveAudience({ kind: "attendees", eventId: second })).members).toHaveLength(1);
+  });
+
+  it("a resubscribe in the same millisecond as the unsubscribe still wins", () => {
+    // It was written second. The alternative is that pressing "put me back on" straight after
+    // unsubscribing leaves the person silently suppressed for ever.
+    const stamp = "2026-09-17T12:00:00.000Z";
+    expect(unsubscribeIsActive({ email: "ada@example.com", emailHash: "x", unsubscribedAt: stamp, unsubscribedSource: "one_click", resubscribedAt: stamp })).toBe(false);
+    expect(unsubscribeIsActive({ email: "ada@example.com", emailHash: "x", unsubscribedAt: stamp, unsubscribedSource: "one_click" })).toBe(true);
+    // A resubscribe older than the unsubscribe above it does not revive anybody.
+    expect(unsubscribeIsActive({ email: "ada@example.com", emailHash: "x", unsubscribedAt: stamp, unsubscribedSource: "one_click", resubscribedAt: "2026-01-01T00:00:00.000Z" })).toBe(true);
   });
 
   it("the token cannot be guessed, tampered with, or replayed for a different person", async () => {
