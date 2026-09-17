@@ -75,13 +75,16 @@ export async function setEventAccessCode(eventId: string, field: AccessCodeField
   if (codeKey(current) === codeKey(stored)) return { ok: true, event, field, code: displayCode(stored) };
   const allEvents = await store.listRuntimeEvents();
   if (!codeIsFree({ field, stored, event, allEvents })) return { ok: false, reason: field === "join" ? "Another event already uses that join code." : "This event already uses that code for another role." };
-  // Written before the overwrite, and only once the change is certain to go ahead: a code refused
-  // for a collision has not been replaced and must not appear in the history as though it had.
-  await recordSupersededCode({ eventId, field, previousCode: current, replacedBy: actor, reason: input.reason || (input.regenerate ? "rotate" : "custom") });
+  const reason = input.reason || (input.regenerate ? "rotate" : "custom");
+  // The crew code is overwritten inside revokeHostLinks and nowhere else, so that is where its
+  // history row is written; recording it here as well would double it.
   if (field === "crew") {
-    const { event: rotated } = await revokeHostLinks(eventId, actor, stored);
+    const { event: rotated } = await revokeHostLinks(eventId, actor, stored, reason);
     return { ok: true, event: rotated, field, code: displayCode(stored) };
   }
+  // Written before the overwrite, and only once the change is certain to go ahead: a code refused
+  // for a collision has not been replaced and must not appear in the history as though it had.
+  await recordSupersededCode({ eventId, field, previousCode: current, replacedBy: actor, reason });
   const updated: RuntimeEventRecord = field === "join" ? { ...event, joinCode: stored, updatedAt: new Date().toISOString() } : { ...event, accessCodes: { ...event.accessCodes, [field]: stored }, updatedAt: new Date().toISOString() };
   await store.upsertRuntimeEvent(updated);
   if (field !== "join") await bumpAccessCodeVersion(eventId, field);

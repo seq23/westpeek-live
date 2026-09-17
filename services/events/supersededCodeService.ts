@@ -1,6 +1,7 @@
 import { codeKey, displayCode, type AccessCodeField } from "@/lib/access/accessCodes";
 import { randomId } from "@/lib/security/portableCrypto";
 import { getHostLinkState } from "@/services/events/hostLinkService";
+import { joinCodeCandidates } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { supersededCodeIsLive, type SupersededCodeReason, type SupersededCodeRecord } from "@/types/supersededCode";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
@@ -48,14 +49,18 @@ export async function recordSupersededCode(input: { eventId: string; field: Acce
  * name the producer's event in the refusal.
  */
 export async function findSupersededCode(raw: string | undefined, now: Date = new Date()): Promise<SupersededCodeHit | undefined> {
-  const key = codeKey(raw);
-  if (!key) return undefined;
+  if (!codeKey(raw)) return undefined;
   const store = getRuntimeStore();
-  const record = await store.findSupersededCode(key).catch(() => undefined);
-  if (!record || !supersededCodeIsLive(record, now)) return undefined;
-  const event = await store.getRuntimeEvent(record.eventId).catch(() => undefined);
-  if (!event) return undefined;
-  return { record, event };
+  // The history forgives a phone exactly as the live resolver does, or it would answer "wpl-supers"
+  // and not "supers" — and the person retyping an old code is already the person having a bad time.
+  const keys = Array.from(new Set([codeKey(raw), ...joinCodeCandidates(String(raw)).map(codeKey)].filter(Boolean)));
+  for (const key of keys) {
+    const record = await store.findSupersededCode(key).catch(() => undefined);
+    if (!record || !supersededCodeIsLive(record, now)) continue;
+    const event = await store.getRuntimeEvent(record.eventId).catch(() => undefined);
+    if (event) return { record, event };
+  }
+  return undefined;
 }
 
 /** The same lookup narrowed to one field: the privileged gates must not answer for the join code. */

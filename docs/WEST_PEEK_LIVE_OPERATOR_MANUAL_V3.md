@@ -207,10 +207,29 @@ Any code can be set by hand instead.
 
 1. Owner Console → **Access codes**, or the event's **Access** page.
 2. Type your own: **4–24 characters, letters, digits and hyphens, unique across events.**
-3. Save. The old code **stops working immediately**, and the notice says exactly what that killed — crew sessions and crew links, or guests sent back to the gate, or old event-code links.
+3. Save. The old code **stops opening anything immediately**, and the notice says exactly what that killed — crew sessions and crew links, or guests sent back to the gate, or old event-code links. For the next 90 days it is still recognised, so an old link gets an honest answer rather than a dead end; see below.
 4. **Regenerate** puts a code back to the automatic `WPL-…` form.
 
 A hand-set code **wins over the generated one** and survives a rename. Who can do this: owner, operator, and producers holding `manage_access_codes`; anyone else sees the row read-only with the reason.
+
+### When a code changes, the old one is not simply dead
+
+Changing a code used to be all cost and no cushion. Anyone following a link sent before the change was told **"That code did not match an event"**, the same sentence they would get for a typo or a code somebody invented. They could not tell that the event existed, that the code had moved, or what to do next. That happened for real on 16 September: the workshop's event code changed and the link already sent stopped working with no explanation.
+
+Every code you replace is now remembered for **90 days**, and the answer an old code gets depends on what kind of code it was.
+
+| Old code | What happens | Why |
+| --- | --- | --- |
+| **The event code** | The person is taken to the event anyway, with one line telling them the code changed and this is the right place. They type nothing. | An event code is an invitation, not a credential. You changed it, they did not. |
+| **Crew, speaker, sponsor, client, VIP** | **Refused.** They are told which code it was, the day it was replaced, and to ask the producer for the current one. | These are credentials. Ending somebody's access is the whole reason to rotate one, so rotating still genuinely ends it. |
+
+So rotating a role code after a show still locks that person out, exactly as before. What changed is that they get an answer they can act on instead of one that looks like their own mistake.
+
+After 90 days an old code is forgotten and goes back to being unrecognised. The codes an event has retired are listed on its **Access** page under **Codes this event has retired**, with the date each one went.
+
+### Before you press Rotate or Adopt, read the count
+
+Both confirms now tell you what the press will cost in numbers the system actually holds: how many people have registered, how many are in the venue right now, how many host links are outstanding. Where there is no number to give, it says so: we never recorded how many speaker or sponsor links were copied out of the Access page, so the confirm admits that rather than guessing.
 
 ### Where to find them
 
