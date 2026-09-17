@@ -4698,6 +4698,27 @@
       "simplificationDisposition": "KEEP"
     },
     {
+      "script": "validate:migration-map-coverage",
+      "command": "node scripts/validate_migration_map_coverage.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "RUNTIME_TABLE_MIGRATIONS in types/runtimeEvent.ts cannot be forgotten. The validator parses db/migrations/ and fails if any table created, or any column added, by a migration at or above MAP_FLOOR (0023) is not in the map pointing at the migration that introduces it - and fails on a map entry no migration supplies. The map is what /api/runtime/health probes, and while it was hand-maintained it silently skipped 0023, 0030, 0031, 0032, 0035, 0037 and 0038; three of those were never applied in production and each was found by accident. Exemptions must be explicit, reasoned, and still present in the SQL. Hard-fails when it examines zero migrations or checks zero objects.",
+      "whatItDoesNotProve": "Static coverage of the map only. Whether the live database actually has those objects is read after deploy from /api/runtime/health (migrationCoverage), which the post-deploy smoke test turns into a red step.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only if /api/runtime/health stops probing from RUNTIME_TABLE_MIGRATIONS.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
+    },
+    {
       "script": "validate:event-workspace-spine",
       "command": "node scripts/validate_event_workspace_spine.js",
       "status": "ACTIVE",
