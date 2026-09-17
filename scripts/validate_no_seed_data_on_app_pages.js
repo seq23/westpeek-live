@@ -10,29 +10,36 @@ const path = require("path");
  * page that renders a component which reads seed data is the same defect.
  */
 const SEED_READS = ["@/lib/runtime/getRuntimeData", "lib/runtime/getRuntimeData", "getAssetsForEvent(", "getRuntimeData()"];
+/**
+ * Demo-only surfaces may read the seed fixtures; they say "demo" on the page. Every *SeedView is
+ * the seed branch of a workspace page: its dispatcher asks realRuntimeEvent(eventId) first and only
+ * a seed event ever reaches it, which is the owner's rule — seed data is fine if it is for a test
+ * or a demo. Each one must carry the @seed-view marker, checked below, so the exemption cannot be
+ * claimed by a file that quietly stopped being a demo branch.
+ */
 const ALLOWED = new Set([
-  // Demo-only surfaces may read the seed fixtures; they say "demo" on the page.
-  "components/production/DemoEventPreview.tsx",
+  // components/production/DemoEventPreview.tsx was here until 16 Sep 2026; no such file has ever
+  // existed on this branch, so the exemption was protecting nothing. The existence check below
+  // now catches that class of entry.
+  "components/approvals/EventApprovalQueueSeedView.tsx",
+  "components/events/EventOverviewSeedView.tsx",
+  "components/production/ProductionCommandCenterSeedView.tsx",
+  "components/run-of-show/RunOfShowSeedView.tsx",
+  "components/speakers/SpeakerManagerSeedView.tsx",
+  "components/sponsors/SponsorManagerSeedView.tsx",
+  "components/tasks/TaskBoardSeedView.tsx",
 ]);
 
 /**
- * The pages still standing on seed fixtures on 16 Sep 2026, each waiting for its own rebuild. This
- * list may only SHRINK: a new offender fails, and an entry that no longer offends must be deleted
- * (so the list cannot quietly outlive the defect). Assets was the first one taken off it.
+ * EMPTY as of 16 Sep 2026, and it stays that way. Eleven event-workspace pages stood here — the
+ * owner opened an event she had created and was shown the demo summit's speakers, sponsors, tasks,
+ * run of show and an 87% readiness score computed off fixtures. Each one now reads the runtime
+ * store and renders an honest empty state where there is nothing yet.
+ *
+ * This list may only SHRINK: a new offender fails, and an entry that no longer offends must be
+ * deleted. Nothing may be added back without the owner saying so in the PR that adds it.
  */
-const KNOWN_SEED_PAGES = new Set([
-  "app/app/events/[eventId]/analytics/page.tsx",
-  "app/app/events/[eventId]/report/page.tsx",
-  "app/app/events/[eventId]/approval-queue/page.tsx",
-  "app/app/events/[eventId]/builder/page.tsx",
-  "app/app/events/[eventId]/overview/page.tsx",
-  "app/app/events/[eventId]/page.tsx",
-  "app/app/events/[eventId]/publish/page.tsx",
-  "app/app/events/[eventId]/run-of-show/page.tsx",
-  "app/app/events/[eventId]/speakers/page.tsx",
-  "app/app/events/[eventId]/sponsors/page.tsx",
-  "app/app/events/[eventId]/tasks/page.tsx",
-]);
+const KNOWN_SEED_PAGES = new Set([]);
 
 function readFile(file) { return fs.readFileSync(file, "utf8"); }
 function walk(dir, out = []) {
@@ -78,10 +85,16 @@ for (const file of offenders) {
 for (const known of KNOWN_SEED_PAGES) {
   if (!offenders.has(known)) failures.push(`${known} no longer reads seed fixtures: delete it from KNOWN_SEED_PAGES so the list keeps shrinking`);
 }
+for (const allowed of ALLOWED) {
+  if (!fs.existsSync(allowed)) { failures.push(`${allowed} is on the ALLOWED list but does not exist: delete the entry`); continue; }
+  if (!/SeedView\.tsx$/.test(allowed)) continue;
+  if (!readFile(allowed).includes("@seed-view")) failures.push(`${allowed} claims the demo exemption but carries no @seed-view marker explaining which dispatcher guards it`);
+}
 if (!examined) failures.push("validate_no_seed_data_on_app_pages examined zero files");
+if (!componentIndex.size) failures.push("validate_no_seed_data_on_app_pages examined zero components");
 if (failures.length) {
   console.error("validate_no_seed_data_on_app_pages: FAIL — seed fixtures must never be shown as the owner's real data");
   for (const failure of [...new Set(failures)]) console.error(`- ${failure}`);
   process.exit(1);
 }
-console.log(`validate_no_seed_data_on_app_pages: PASS — ${examined} /app files examined; ${offenders.size} still on seed fixtures, all of them on the shrinking KNOWN_SEED_PAGES list (${KNOWN_SEED_PAGES.size} left).`);
+console.log(`validate_no_seed_data_on_app_pages: PASS — ${examined} /app files and ${componentIndex.size} components examined; ${offenders.size} on seed fixtures; KNOWN_SEED_PAGES holds ${KNOWN_SEED_PAGES.size}.`);
