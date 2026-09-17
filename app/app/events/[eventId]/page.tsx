@@ -1,6 +1,7 @@
 import { ProductionCommandCenter } from "@/components/production/ProductionCommandCenter";
 import { ManageEventTabs } from "@/components/events/ManageEventTabs";
 import { RuntimeEventHeader } from "@/components/events/RuntimeEventHeader";
+import { SafeSection } from "@/components/system/SafeSection";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
 
 export const dynamic = "force-dynamic";
@@ -13,7 +14,7 @@ export default async function EventCommandCenterPage({ params, searchParams }: {
     <div className="space-y-6">
       <ManageEventTabs eventId={resolvedParams.eventId} />
       {runtimeEvent && runtimeEvent.source !== "seed" ? <RuntimeEventHeader event={runtimeEvent} justCreated={resolvedSearchParams?.created === "1"} error={resolvedSearchParams?.error} returnTo={`/app/events/${resolvedParams.eventId}`} /> : null}
-      <ProductionCommandCenter eventId={resolvedParams.eventId} rosterSearch={resolvedSearchParams?.roster || ""} diagnose={resolvedSearchParams?.diagnose} />
+      <SafeSection label="Command center" render={() => ProductionCommandCenter({ eventId: resolvedParams.eventId, rosterSearch: resolvedSearchParams?.roster || "", diagnose: resolvedSearchParams?.diagnose })} />
     </div>
   );
 }

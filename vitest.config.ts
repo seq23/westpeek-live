@@ -9,6 +9,9 @@ export default defineConfig({
     include: ["tests/unit/**/*.test.ts"],
     exclude: ["tests/e2e/**", "node_modules/**", ".next/**", ".open-next/**", "coverage/**"],
   },
+  // tsconfig keeps jsx: "preserve" for Next's own build, so vite is told here how to compile the
+  // .tsx a test imports. Without it a test that renders a server component cannot even parse it.
+  oxc: { jsx: "automatic" },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
