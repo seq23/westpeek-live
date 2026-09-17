@@ -11,6 +11,7 @@ import type { EmailSendLog } from "@/types/emailProduction";
 import type { EventTemplateRecord } from "@/types/eventTemplates";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { HouseDefaultsRecord } from "@/types/houseDefaults";
 import type { EventRequestRecord } from "@/types/eventRequest";
 import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
@@ -134,6 +135,7 @@ export interface V6RuntimeSnapshot {
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
   agencySettings: AgencySettingsRecord[];
+  houseDefaults: HouseDefaultsRecord[];
   eventRequests: EventRequestRecord[];
   howItWorksPages: HowItWorksPageRecord[];
 }
@@ -260,6 +262,10 @@ export interface RuntimeStore {
   listRuntimeClients(): Promise<RuntimeClientRecord[]>;
   getAgencySettings(id: string): Promise<AgencySettingsRecord | undefined>;
   setAgencySettings(settings: AgencySettingsRecord): Promise<AgencySettingsRecord>;
+  // The house defaults (migration 0043): what a new event, an email and the capacity readout start
+  // from. A sibling row to agency settings, not a wider one — see types/houseDefaults.ts.
+  getHouseDefaults(id: string): Promise<HouseDefaultsRecord | undefined>;
+  setHouseDefaults(defaults: HouseDefaultsRecord): Promise<HouseDefaultsRecord>;
   // Event requests (migration 0036): the /request-event row, from arrival to paid.
   upsertEventRequest(request: EventRequestRecord): Promise<EventRequestRecord>;
   getEventRequest(id: string): Promise<EventRequestRecord | undefined>;
@@ -311,6 +317,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     runtimeEvents: [],
     runtimeClients: [],
     agencySettings: [],
+    houseDefaults: [],
     eventRequests: [],
     howItWorksPages: [],
   };

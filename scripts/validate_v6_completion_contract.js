@@ -27,7 +27,10 @@ const required = [
   "lib/actions/videoFallbackActions.ts",
   "lib/actions/registrationActions.ts",
   "lib/actions/venueRuntimeActions.ts",
-  "lib/actions/communicationActions.ts",
+  // The communications surface is one panel now: lib/actions/communicationActions.ts and the older
+  // dashboard behind it were deleted on 16 Sep 2026 because they stacked a second send log under the
+  // first. Sending goes through lib/actions/eventEmailActions.ts.
+  "lib/actions/eventEmailActions.ts",
   "db/migrations/0020_v6_e2e_runtime_tables.sql"
 ];
 const missing = required.filter((file) => !fs.existsSync(file));

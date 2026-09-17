@@ -69,7 +69,7 @@ export async function EventAnalyticsDashboard({ eventId }: { eventId: string }) 
               <WorkspaceEmptyState
                 testId="analytics-feed-empty"
                 title="Nothing has happened on this event yet"
-                line="The feed fills in on its own: a registration, someone walking into the lobby, a session join, a booth visit, a replay watched. Publish the event and send the join code, and the first rows appear within seconds."
+                line="The feed fills in on its own: a registration, someone walking into the lobby, a session join, a booth visit, a replay watched. Publish the event and send the event code, and the first rows appear within seconds."
                 actionHref={`/app/events/${eventId}/publish`}
                 actionLabel="Open publishing"
               />

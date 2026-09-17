@@ -1,11 +1,12 @@
 import Link from "next/link";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { HouseLogo } from "@/components/brand/HouseLogo";
+import { NewEventTemplatePicker } from "@/components/events/NewEventTemplatePicker";
 import { RuntimeSchemaStop } from "@/components/system/RuntimeSchemaStop";
 import { createEventAction } from "@/lib/actions/eventWorkspaceActions";
 import { getRuntimeSchemaStatus, listClientRecords } from "@/services/events/eventRepository";
-import { questionLines } from "@/services/attendees/registrationQuestions";
+import { getHouseDefaults } from "@/services/agencies/houseDefaultsService";
+import { parseQuestionLines, questionLines } from "@/services/attendees/registrationQuestions";
 import { getEventTemplate } from "@/services/events/eventTemplateService";
-import { DEFAULT_REGISTRATION_QUESTIONS } from "@/types/attendeeRegistration";
 
 export const dynamic = "force-dynamic";
 
@@ -34,27 +35,32 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
   const initialClientId = resolved?.clientId || "";
   // "Use this template" arrives as ?template=…: the form opens already filled in.
   const template = resolved?.template ? await getEventTemplate(resolved.template) : undefined;
-  const [schema, clients] = await Promise.all([getRuntimeSchemaStatus(), listClientRecords()]);
+  const [schema, clients, house] = await Promise.all([getRuntimeSchemaStatus(), listClientRecords(), getHouseDefaults()]);
   const error = resolved?.error;
+  // The questions the form opens with: the template's if one was picked, otherwise the house set
+  // from Settings, which itself falls back to the four the code has always shipped.
+  const openingQuestions = template?.registrationQuestions.length ? parseQuestionLines(template.registrationQuestions.join("\n")) : house.defaultRegistrationQuestions;
 
   return (
     <main className="min-h-screen bg-brand-ash px-5 py-8 text-brand-black sm:px-8 lg:px-12">
       <section className="mx-auto max-w-4xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
         <div className="flex flex-col gap-4 sm:flex-row sm:items-start sm:justify-between">
-          <WestPeekProductionsLogo size="md" />
+          <HouseLogo size="md" />
           <Link href="/app/events" className="rounded-full border border-brand-line px-4 py-2 text-sm font-bold hover:border-brand-orange hover:text-brand-orange">Back to events</Link>
         </div>
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">New event</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Start a Room now, or plan an event for later.</h1>
-        <p className="mt-4 max-w-3xl text-sm leading-6 text-brand-muted">One form creates every event West Peek Live runs — an on-demand Room for West Peek itself or a planned client event. The event, its join code, and its crew, speaker, sponsor, VIP, and client access codes are saved the moment you press the button. No PR, no redeploy.</p>
+        <p className="mt-4 max-w-3xl text-sm leading-6 text-brand-muted">One form creates every event West Peek Live runs — an on-demand Room for West Peek itself or a planned client event. The event, its event code, and its crew, speaker, sponsor, VIP, and client access codes are saved the moment you press the button. No PR, no redeploy.</p>
 
         {!schema.ok ? <RuntimeSchemaStop status={schema} /> : null}
         {error === "schema_missing" ? <RuntimeSchemaStop status={schema} /> : null}
         {error && error !== "schema_missing" ? <p className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800" role="alert">Could not create the event: {error}</p> : null}
 
+        <NewEventTemplatePicker selectedId={template?.id} when={resolved?.when} clientId={resolved?.clientId} />
+
         {template ? (
           <p className="mt-6 rounded-2xl border border-brand-line bg-brand-ash p-4 text-sm" data-testid="create-from-template">
-            Starting from <strong>{template.name}</strong> — {template.format === "room" ? "Room" : "Stage"}, {template.durationMinutes} minutes{template.sessions.length ? `, ${template.sessions.length} session${template.sessions.length === 1 ? "" : "s"}` : ""}. Change anything you like; nothing is locked.
+            Starting from <strong>{template.name}</strong> — {template.format === "room" ? "Room" : "Stage"}, {template.durationMinutes} minutes{template.sessions.length ? `, ${template.sessions.length} session${template.sessions.length === 1 ? "" : "s"}` : ""}{template.registrationQuestions.length ? `, ${template.registrationQuestions.length} registration question${template.registrationQuestions.length === 1 ? "" : "s"}` : ""}. Change anything you like; nothing is locked.
           </p>
         ) : null}
 
@@ -68,7 +74,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
                 <input type="radio" name="when" value="now" defaultChecked={initialWhen === "now"} className="mt-1" data-testid="when-now" />
                 <span>
                   <span className="block text-sm font-black">Now</span>
-                  <span className="mt-1 block text-xs leading-5 text-brand-muted">Create &amp; open. The event goes live immediately with a join code you can send to anyone.</span>
+                  <span className="mt-1 block text-xs leading-5 text-brand-muted">Create &amp; open. The event goes live immediately with a event code you can send to anyone.</span>
                 </span>
               </label>
               <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-brand-line bg-white p-4 has-[:checked]:border-brand-orange has-[:checked]:ring-2 has-[:checked]:ring-brand-orange/30">
@@ -121,7 +127,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
             </div>
             <div>
               <label htmlFor="timezone" className="text-sm font-black">Timezone</label>
-              <input id="timezone" name="timezone" defaultValue="America/Chicago" className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
+              <input id="timezone" name="timezone" defaultValue={house.defaultTimezone} className="mt-2 min-h-12 w-full rounded-full border border-brand-line px-5 text-sm" />
             </div>
             <div className="md:col-span-2">
               <label htmlFor="description" className="text-sm font-black">One line for attendees (optional)</label>
@@ -130,13 +136,13 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
             <div>
               <label htmlFor="registrationQuestions" className="text-sm font-black">&ldquo;Tell us more&rdquo; questions (optional, one per line)</label>
               <p className="mt-1 text-xs text-brand-muted">What attendees are asked after they register, on the stage and lobby. One per line as <code>Label | textarea</code>, <code>Label | text</code>, or <code>Label | tags</code>; up to eight; reorder by moving lines.</p>
-              <textarea id="registrationQuestions" name="registrationQuestions" defaultValue={questionLines(DEFAULT_REGISTRATION_QUESTIONS)} rows={4} className="mt-2 w-full rounded-2xl border border-brand-line px-4 py-3 font-mono text-xs" data-testid="registration-questions-input" />
+              <textarea id="registrationQuestions" name="registrationQuestions" defaultValue={questionLines(openingQuestions)} rows={4} className="mt-2 w-full rounded-2xl border border-brand-line px-4 py-3 font-mono text-xs" data-testid="registration-questions-input" />
             </div>
           </div>
 
           <div className="rounded-3xl bg-brand-ash p-5 text-sm leading-6 text-brand-muted">
             <p className="font-black text-brand-black">Defaults applied to every event</p>
-            <p>Branding: West Peek Live. Agenda: one Main stage session. Registration: off — the join code is enough. Production feed / source: StreamYard. Primary embedded distribution: LiveKit. Fallback: Cloudflare Stream, then Daily, then Zoom + Google Meet.</p>
+            <p>Branding: West Peek Live. Agenda: one Main stage session. Registration: off — the event code is enough. Production feed / source: StreamYard. Primary embedded distribution: LiveKit. Fallback: Cloudflare Stream, then Daily, then Zoom + Google Meet.</p>
             <p className="mt-2">Guided spine after creation: Basics → Branding → Attendee Flow → Venue → Agenda → Access → Communications → Preview → Publish.</p>
           </div>
 
@@ -146,7 +152,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
             </button>
             <Link href="/app/events" className="inline-flex rounded-full border border-brand-black px-5 py-3 text-sm font-bold">Cancel</Link>
           </div>
-          <p className="text-xs text-brand-muted">Now → &ldquo;Create &amp; open&rdquo; lands you in the lobby with the join code. Later → &ldquo;Create&rdquo; opens the draft event page.</p>
+          <p className="text-xs text-brand-muted">Now → &ldquo;Create &amp; open&rdquo; lands you in the lobby with the event code. Later → &ldquo;Create&rdquo; opens the draft event page.</p>
         </form>
       </section>
     </main>

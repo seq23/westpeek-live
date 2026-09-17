@@ -5137,6 +5137,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:shelf-email-assets-house-defaults",
+      "command": "node scripts/validate_shelf_email_assets_and_house_defaults.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "The template shelf ships stocked with four ordinary rows a clean install can edit or delete, /app/events/new offers them above the Now/Later choice, the Email tab sends for real through the same action the event page posts to, the Communications page carries one panel and one log with the crew call sheet folded in as an eighth workflow, the manual and the five instruction pages download as Markdown built from live content and structurally separate from event assets, and every one of the seven house defaults is read by the thing it governs.",
+      "whatItDoesNotProve": "Does not prove a real Resend delivery, a real Supabase Storage upload, or browser behaviour; those remain with the e2e and postdeploy lanes.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only with the template library.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",

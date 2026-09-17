@@ -1,4 +1,6 @@
 import { randomId } from "@/lib/security/portableCrypto";
+import { getHouseDefaults, markStarterTemplatesInstalled } from "@/services/agencies/houseDefaultsService";
+import { STARTER_EVENT_TEMPLATES } from "./starterEventTemplates";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { questionsForEvent } from "@/services/attendees/registrationQuestions";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -9,12 +11,38 @@ import type { EventTemplateRecord, TemplateSession } from "@/types/eventTemplate
  * in the runtime store (migration 0033) rather than compiled JSON, and every field is one the
  * create form actually reads — a template that carried things nothing consumes would be decoration,
  * which is what the old seed cards were.
+ *
+ * A clean install now arrives with four of them (see starterEventTemplates.ts) so the shelf is
+ * never empty. They are written once and are then ordinary rows: editable, deletable, gone for good
+ * when deleted.
  */
 function now() {
   return new Date().toISOString();
 }
 
+/**
+ * Write the four starter templates, once, on a store that has never had them.
+ *
+ * The shelf was empty on a clean install, so the create form offered nothing and the feature looked
+ * missing. These are written as ORDINARY ROWS — the owner can edit or delete any of them — and the
+ * install is stamped on the house defaults row so a deleted one stays deleted. It is not a seed
+ * fixture and it is not on any seed-data exemption list; after this runs there is nothing to
+ * distinguish a starter from a template saved off a real event.
+ */
+export async function installStarterTemplatesOnce() {
+  const house = await getHouseDefaults();
+  if (house.starterTemplatesInstalledAt) return { installed: 0 };
+  const at = now();
+  const store = getRuntimeStore();
+  for (const starter of STARTER_EVENT_TEMPLATES) {
+    await store.upsertEventTemplate({ ...starter, createdAt: at, updatedAt: at });
+  }
+  await markStarterTemplatesInstalled(at);
+  return { installed: STARTER_EVENT_TEMPLATES.length };
+}
+
 export async function listEventTemplates() {
+  await installStarterTemplatesOnce().catch(() => undefined);
   return getRuntimeStore().listEventTemplates().catch(() => [] as EventTemplateRecord[]);
 }
 

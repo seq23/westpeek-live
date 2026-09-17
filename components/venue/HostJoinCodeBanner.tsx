@@ -2,7 +2,7 @@ import Link from "next/link";
 import { EventJoinCodePanel } from "@/components/events/EventJoinCodePanel";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
-/** Host-only panel at the top of a runtime event's lobby: the join code, the link, and the way back to the workspace. */
+/** Host-only panel at the top of a runtime event's lobby: the event code, the link, and the way back to the workspace. */
 /** `crewHost`: the executive_producer crew cookie for this event — their command centre is the crew deck, not the workspace. */
 export function HostJoinCodeBanner({ event, justCreated, crewHost = false }: { event: RuntimeEventRecord; justCreated?: boolean; crewHost?: boolean }) {
   return (

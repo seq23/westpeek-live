@@ -125,7 +125,7 @@ export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roo
                 <td className="py-3 pr-3"><VipRowControl eventId={eventId} attendeeId={row.attendeeId} name={row.name} email={row.emailMasked} standing={vipByAttendee.get(row.attendeeId)} vipCode={vipCode} viewer={viewer} /></td>
                 <td className="py-3"><AttendeeDiagnosePanel eventId={eventId} row={row} diagnosis={diagnoses?.byAttendee.get(row.attendeeId)} open={opened === row.attendeeId} openHref={diagnoseHref(row.attendeeId)} closeHref={diagnoseHref()} returnTo={returnTo} /></td>
               </tr>
-            )) : <tr><td colSpan={7} className="py-4 text-sm text-slate-500">{search ? `No registered attendee matches "${search}".` : "No registered attendees yet. Rows appear as people register with the join code."}</td></tr>}
+            )) : <tr><td colSpan={7} className="py-4 text-sm text-slate-500">{search ? `No registered attendee matches "${search}".` : "No registered attendees yet. Rows appear as people register with the event code."}</td></tr>}
           </tbody>
         </table>
       </div>

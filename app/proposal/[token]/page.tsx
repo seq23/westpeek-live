@@ -1,6 +1,6 @@
 import { notFound } from "next/navigation";
 import Link from "next/link";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { HouseLogo } from "@/components/brand/HouseLogo";
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { confirmProposalAction } from "@/lib/actions/eventRequestActions";
 import { getEventRequestByConfirmToken } from "@/services/event-intake/eventRequestPipeline";
@@ -46,7 +46,7 @@ export default async function ProposalPage({
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
         <section className="mx-auto max-w-2xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10" data-testid="proposal" data-state={request.state}>
-          <WestPeekProductionsLogo size="md" />
+          <HouseLogo size="md" />
           <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Your event</p>
           <h1 className="mt-3 text-4xl font-black tracking-tight">{request.company || request.name}</h1>
           <p className="mt-2 text-sm text-brand-muted">Prepared for {request.name}. {request.eventType ? `${request.eventType}. ` : ""}{request.eventDate ? `Target date ${request.eventDate}.` : ""}</p>

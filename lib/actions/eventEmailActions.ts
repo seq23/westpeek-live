@@ -14,10 +14,17 @@ function clean(value: FormDataEntryValue | null) {
  * Send now. A person pressed this — nothing in the app mails an attendee on a timer. The guard is
  * the same one the deck uses, every send writes a log row naming the role that sent it, and the
  * outcome comes back on the page rather than in a console nobody reads.
+ *
+ * Both send surfaces come through here: the event's Communications page and the Email tab's
+ * cross-event sender. The Email tab posts returnTo=/app/email so the answer lands where the person
+ * was standing; it does not have a send path of its own, because a second path is a second set of
+ * bugs and a second log.
  */
 export async function sendEventEmailAction(formData: FormData) {
   const eventId = clean(formData.get("eventId"));
   const workflow = clean(formData.get("workflow")) as EmailWorkflowType;
+  // Only the two pages that host a send form; anything else would be an open redirect.
+  const returnTo = clean(formData.get("returnTo")) === "/app/email" ? "/app/email" : `/app/events/${eventId}/communications`;
   if (!eventId || !workflow) return;
   const auth = await requireLiveEventControlAccessForRequest(eventId, "manage_access_codes");
   if (!auth.ok) throw new Error(auth.error);
@@ -31,5 +38,5 @@ export async function sendEventEmailAction(formData: FormData) {
   });
   for (const path of [`/app/events/${eventId}/communications`, "/app/email", `/app/events/${eventId}`]) revalidatePath(path);
   const query = result.ok ? `sent=${result.sent}&workflow=${workflow}` : `emailError=${encodeURIComponent(result.reason || `${result.failed} message${result.failed === 1 ? "" : "s"} failed`)}`;
-  redirect(`/app/events/${eventId}/communications?${query}`);
+  redirect(`${returnTo}?${query}`);
 }

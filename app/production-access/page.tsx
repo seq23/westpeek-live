@@ -15,10 +15,10 @@ export default function ProductionAccessPage() {
         <WestPeekProductionsLogo size="md" />
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Production Access</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Which door is yours?</h1>
-        <p className="mt-4 max-w-2xl text-sm leading-6 text-brand-muted">Attendees never come through here; they use the join code. These four doors are for the people who run the show or appear in it. Each card says who it is for and what it opens.</p>
+        <p className="mt-4 max-w-2xl text-sm leading-6 text-brand-muted">Attendees never come through here; they use the event code. These four doors are for the people who run the show or appear in it. Each card says who it is for and what it opens.</p>
         <div className="mt-8 grid gap-4 md:grid-cols-2 xl:grid-cols-4">
           <a href="/production-access/crew" className="rounded-3xl border border-slate-200 p-6 hover:border-brand-orange" data-testid="crew-access-card">
-            <h2 className="text-2xl font-black">Crew / Production Team</h2>
+            <h2 className="text-2xl font-black">Crew / Production Team Access</h2>
             <p className="mt-3 text-sm leading-6 text-slate-600">People hired for the day — moderator, technical director, show caller, support. One event, one role, no admin. Uses the event&rsquo;s crew code (or the crew password from the packet).</p>
           </a>
           <a href="/production-access/special-guest" className="rounded-3xl border border-slate-200 p-6 hover:border-brand-orange" data-testid="special-guest-access-card">

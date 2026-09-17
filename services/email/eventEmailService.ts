@@ -1,4 +1,5 @@
-import { getEmailReplyTo, isResendConfigured } from "@/lib/env";
+import { isResendConfigured } from "@/lib/env";
+import { getHouseDefaults } from "@/services/agencies/houseDefaultsService";
 import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -30,6 +31,7 @@ export const MANUAL_WORKFLOWS: ManualWorkflow[] = [
   { workflow: "asset_deadline_reminder", label: "Asset reminder", whoItIsFor: "A speaker or sponsor", gist: "A nudge to send the deck or the logo." },
   { workflow: "show_day_reminder", label: "Show day reminder", whoItIsFor: "Anyone you name", gist: "When it starts and how to get in." },
   { workflow: "report_ready", label: "Report ready", whoItIsFor: "The client", gist: "The event report is ready to read." },
+  { workflow: "crew_call_sheet", label: "Crew call sheet", whoItIsFor: "The crew", gist: "Who is on, when they are on, and where to be." },
 ];
 
 export function isManualWorkflow(workflow: string): workflow is EmailWorkflowType {
@@ -38,14 +40,16 @@ export function isManualWorkflow(workflow: string): workflow is EmailWorkflowTyp
 
 export async function emailConfiguration() {
   let configured = false;
-  let replyTo: string | undefined;
   try {
     configured = isResendConfigured();
-    replyTo = getEmailReplyTo();
   } catch {
     configured = false;
   }
-  return { configured, replyTo };
+  // The reply-to the banner prints is the one a message will really carry: the house setting, which
+  // falls back to EMAIL_REPLY_TO. Printing the env value while sending from the setting would be a
+  // page telling the owner something it does not do.
+  const house = await getHouseDefaults().catch(() => undefined);
+  return { configured, replyTo: house?.replyToEmail || undefined, fromEmail: house?.fromEmail || undefined };
 }
 
 export async function listEventEmailLog(eventId: string, limit = 200) {

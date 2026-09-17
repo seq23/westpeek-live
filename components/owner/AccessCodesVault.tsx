@@ -43,7 +43,7 @@ export async function AccessCodesVault() {
     stem: codeSchemeSummary(event).stem,
     onScheme: codeSchemeSummary(event).onScheme,
     codes: [
-      { field: "join", label: "Join code (attendees)", code: displayCode(event.joinCode), link: `${base}/events/${event.id}/register` },
+      { field: "join", label: "Event code", code: displayCode(event.joinCode), link: `${base}/events/${event.id}/register` },
       { field: "crew", label: "Crew", code: displayCode(event.accessCodes.crew), link: `${base}${guestGatePath(event, "crew")}` },
       { field: "speaker", label: "Speaker", code: displayCode(event.accessCodes.speaker), link: `${base}${guestGatePath(event, "speaker")}` },
       { field: "sponsor", label: "Sponsor", code: displayCode(event.accessCodes.sponsor), link: `${base}${guestGatePath(event, "sponsor")}` },

@@ -1,6 +1,6 @@
 import { isResendConfigured } from "@/lib/env";
 import type { EmailProvider } from "./EmailProvider";
-import { createEmailProvider } from "./emailService";
+import { createEmailProvider, withHouseAddresses } from "./emailService";
 import { buildEmailSendLog } from "./emailLogService";
 import { buildWorkflowPreview, renderEmailWorkflowHtml } from "./emailWorkflowTemplates";
 import { renderEmailWorkflowText } from "./emailWorkflowService";
@@ -37,13 +37,13 @@ export async function sendProductionEmail(
   provider: EmailProvider = createEmailProvider(),
 ) {
   try {
-    const result = await provider.send({
+    const result = await provider.send(await withHouseAddresses({
       to: request.recipient.email,
       subject: request.subject,
       html: request.html,
       text: request.text,
       headers: request.headers,
-    });
+    }));
 
     return {
       result,

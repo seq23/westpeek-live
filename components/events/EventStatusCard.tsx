@@ -12,7 +12,7 @@ export function EventStatusCard({ card }: { card: EventPortfolioCard }) {
         <div className="min-w-0">
           <a href={`/app/events/${card.id}`} className="block text-lg font-black text-slate-950 hover:text-brand-orange">{card.name}</a>
           <p className="text-sm text-slate-500">{card.client} · {new Date(card.startAt).toLocaleString("en-US", { timeZone: card.timezone, month: "short", day: "numeric", hour: "numeric", minute: "2-digit" })} · {card.timezone}</p>
-          <p className="mt-1 text-xs text-slate-500">{seed ? "Demo / seed event (compiled)" : `${card.format === "room" ? "Room" : "Stage"} · join code ${card.joinCode} · ${card.createdByLabel}`}</p>
+          <p className="mt-1 text-xs text-slate-500">{seed ? "Demo / seed event (compiled)" : `${card.format === "room" ? "Room" : "Stage"} · event code ${card.joinCode} · ${card.createdByLabel}`}</p>
         </div>
         <div className="flex flex-col items-end gap-2">
           <StatusBadge status={card.status} tone={card.status === "live" ? "good" : card.status === "archived" ? "bad" : card.incidentCount > 0 ? "bad" : "neutral"} />

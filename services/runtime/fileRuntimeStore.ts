@@ -6,6 +6,7 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { HouseDefaultsRecord } from "@/types/houseDefaults";
 import type { EventRequestRecord } from "@/types/eventRequest";
 import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
@@ -100,6 +101,7 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     runtimeEvents: Array.isArray(parsed.runtimeEvents) ? parsed.runtimeEvents : [],
     runtimeClients: Array.isArray(parsed.runtimeClients) ? parsed.runtimeClients : [],
     agencySettings: Array.isArray(parsed.agencySettings) ? parsed.agencySettings : [],
+    houseDefaults: Array.isArray(parsed.houseDefaults) ? parsed.houseDefaults : [],
     eventRequests: Array.isArray(parsed.eventRequests) ? parsed.eventRequests : [],
     howItWorksPages: Array.isArray(parsed.howItWorksPages) ? parsed.howItWorksPages : [],
   };
@@ -697,6 +699,17 @@ export class FileRuntimeStore implements RuntimeStore {
     snapshot.agencySettings.push(settings);
     this.write(snapshot);
     return settings;
+  }
+
+  async getHouseDefaults(id: string) {
+    return (this.read().houseDefaults || []).find((item: HouseDefaultsRecord) => item.id === id);
+  }
+
+  async setHouseDefaults(defaults: HouseDefaultsRecord) {
+    const snapshot = this.read();
+    snapshot.houseDefaults = [...(snapshot.houseDefaults || []).filter((item: HouseDefaultsRecord) => item.id !== defaults.id), defaults];
+    this.write(snapshot);
+    return defaults;
   }
 
   async upsertEventRequest(request: EventRequestRecord) {

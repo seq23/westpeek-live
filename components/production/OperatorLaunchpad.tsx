@@ -83,7 +83,7 @@ async function LaunchpadBody() {
       <ConsoleSection storagePrefix="wpl-launchpad" id="set-up" title="Set up an event" blurb="Before the doors open: make the event, hand out the codes, build the venue, write what goes out.">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
           <LaunchpadCard title="New event" href="/app/events/new">A name and a time is enough; everything else can follow.</LaunchpadCard>
-          {current ? <LaunchpadCard title="Access codes" href={`/app/events/${current.id}/access`}>Join code and the role codes for {current.name}, with the links.</LaunchpadCard> : null}
+          {current ? <LaunchpadCard title="Access codes" href={`/app/events/${current.id}/access`}>Event code and the role codes for {current.name}, with the links.</LaunchpadCard> : null}
           {current ? <LaunchpadCard title="Venue setup" href={`/app/events/${current.id}/venue`}>Lobby, stage, expo, networking, replay, help.</LaunchpadCard> : null}
           {current ? <LaunchpadCard title="Communications" href={`/app/events/${current.id}/communications`}>What goes out to this event&rsquo;s audience.</LaunchpadCard> : null}
           {current ? <LaunchpadCard title="Crew briefing" href={`/app/events/${current.id}/crew`}>The call sheet and instructions the crew read.</LaunchpadCard> : null}

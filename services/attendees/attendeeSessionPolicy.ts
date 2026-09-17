@@ -1,4 +1,5 @@
 import { findEventRecord } from "@/services/events/eventRepository";
+import { DEFAULT_ATTENDEE_SESSION_DAYS, MAX_ATTENDEE_SESSION_DAYS, MIN_ATTENDEE_SESSION_DAYS } from "@/types/attendeeSession";
 
 /**
  * How long a registration lasts, and how we say so.
@@ -14,9 +15,7 @@ import { findEventRecord } from "@/services/events/eventRepository";
  * browser well enough to say "this ran out" and offer the one-field way back, rather than showing
  * a blank form to somebody who registered last month.
  */
-export const DEFAULT_ATTENDEE_SESSION_DAYS = 14;
-export const MIN_ATTENDEE_SESSION_DAYS = 1;
-export const MAX_ATTENDEE_SESSION_DAYS = 365;
+export { DEFAULT_ATTENDEE_SESSION_DAYS, MIN_ATTENDEE_SESSION_DAYS, MAX_ATTENDEE_SESSION_DAYS } from "@/types/attendeeSession";
 
 /** How much longer the cookie lives than the session, so an expired return is recognised instead of blank. */
 export const RETURN_HINT_DAYS = 60;

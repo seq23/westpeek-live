@@ -12,11 +12,11 @@ import { SafeSection } from "@/components/system/SafeSection";
 import { WorkspaceReadinessList } from "@/components/workspace/WorkspaceEmptyState";
 
 const transitions: Array<{ status: "registration_open" | "pre_event" | "live" | "ended" | "draft"; label: string; help: string; primary?: boolean }> = [
-  { status: "registration_open", label: "Publish", help: "Opens the join code and the public event page.", primary: true },
+  { status: "registration_open", label: "Publish", help: "Opens the event code and the public event page.", primary: true },
   { status: "pre_event", label: "Mark pre-event", help: "Published; attendees see the countdown state." },
   { status: "live", label: "Go live", help: "Sends /join straight into the lobby.", primary: true },
   { status: "ended", label: "End event", help: "Attendees get the replay state." },
-  { status: "draft", label: "Back to draft", help: "Closes the join code again." },
+  { status: "draft", label: "Back to draft", help: "Closes the event code again." },
 ];
 
 /**
@@ -48,7 +48,7 @@ export async function EventPublishPanel({ eventId, updated, error }: { eventId: 
         <p className="mt-2 text-sm text-slate-600" data-testid="publish-event-start">Starts {event ? `${formatEventDate(event.startAt, event.timezone)} · ${event.timezone}` : "— no event record found"}</p>
         {runtime ? (
           <>
-            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">Status changes save to the event row immediately — no PR, no redeploy. Publish opens the join code; Go live sends attendees straight into the lobby.</p>
+            <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">Status changes save to the event row immediately — no PR, no redeploy. Publish opens the event code; Go live sends attendees straight into the lobby.</p>
             {updated ? <p className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800" data-testid="publish-updated">Status is now {updated.replaceAll("_", " ")}.</p> : null}
             {error ? <p className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">{error}</p> : null}
             <div className="mt-5"><EventJoinCodePanel event={runtime} /></div>

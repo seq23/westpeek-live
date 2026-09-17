@@ -117,6 +117,7 @@ export const PLAN_AN_EVENT_MIGRATION_FILE = "db/migrations/0036_plan_an_event_pi
 export const ATTENDEE_CLIENT_TELEMETRY_MIGRATION_FILE = "db/migrations/0037_attendee_client_telemetry.sql";
 export const ATTENDEE_SESSION_LIFETIME_MIGRATION_FILE = "db/migrations/0038_attendee_session_lifetime.sql";
 export const GROUP_EMAIL_MIGRATION_FILE = "db/migrations/0044_email_group_sends_and_unsubscribes.sql";
+export const HOUSE_DEFAULTS_MIGRATION_FILE = "db/migrations/0043_house_defaults.sql";
 
 /**
  * Which SQL file introduces each database object /api/runtime/health probes: a table as `table`, a
@@ -228,5 +229,8 @@ export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
   // Without this, a speaker's address has nowhere to be written and every guest audience resolves
   // to nobody — the composer would report the group as empty rather than as unmigrated.
   "special_guest_profiles.email": GROUP_EMAIL_MIGRATION_FILE,
+  // 0043 - the house defaults: the from and reply-to addresses, the logo, and what a new event
+  // inherits for timezone, networking match length, session lifetime and registration questions.
+  runtime_house_defaults: HOUSE_DEFAULTS_MIGRATION_FILE,
 };
 
