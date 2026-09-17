@@ -47,7 +47,7 @@ export function RegisterToTakePart({ eventId, registered, context = "stage", ret
   const href = `/events/${eventId}/register${returnTo ? `?returnTo=${encodeURIComponent(returnTo)}` : ""}`;
   return (
     <aside
-      className={`rounded-2xl border bg-brand-orangeSoft p-4 ${prominent ? "sticky bottom-4 z-20 border-brand-orange ring-2 ring-brand-orange motion-safe:animate-in shadow-brand" : "border-brand-orange/40"}`}
+      className={`rounded-2xl border bg-brand-orangeSoft p-4 ${prominent ? "border-brand-orange ring-2 ring-brand-orange motion-safe:animate-in shadow-brand" : "border-brand-orange/40"}`}
       data-testid="register-to-take-part"
       data-register-context={context}
       data-register-prominent={prominent ? "true" : "false"}

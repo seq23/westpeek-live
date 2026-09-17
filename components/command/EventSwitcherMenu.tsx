@@ -3,6 +3,8 @@
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { switchEventPath } from "@/lib/navigation/eventCommandSurfaces";
+import { COMMAND_CHIP_MUTED } from "@/components/command/commandChrome";
+import { COMMAND_PANEL } from "@/components/command/commandChrome";
 
 /**
  * The event name, and a menu of the other events. Jumping lands on the SAME KIND of page for the
@@ -17,12 +19,12 @@ export function EventSwitcherMenu({ eventId, eventName, events }: { eventId: str
   const others = events.filter((event) => event.id !== eventId);
   return (
     <details className="relative" data-testid="command-bar-event-switcher">
-      <summary className="flex cursor-pointer list-none items-center gap-1 rounded-full bg-white/10 px-3 py-1.5 text-sm font-black text-white hover:bg-white/20">
-        <span className="max-w-[14rem] truncate" data-testid="command-bar-event-name">{eventName}</span>
+      <summary className={`flex cursor-pointer list-none items-center gap-1 ${COMMAND_CHIP_MUTED}`}>
+        <span className="max-w-[6rem] truncate sm:max-w-[14rem]" data-testid="command-bar-event-name">{eventName}</span>
         <span aria-hidden>▾</span>
         <span className="sr-only">Switch event</span>
       </summary>
-      <div className="absolute left-0 z-40 mt-2 max-h-80 w-72 overflow-auto rounded-2xl border border-brand-line bg-white p-2 shadow-xl">
+      <div className={`${COMMAND_PANEL} p-2 xl:left-0 xl:max-h-80 xl:w-72`}>
         {others.length ? others.map((event) => (
           <Link key={event.id} href={switchEventPath(pathname, eventId, event.id)} className="block rounded-xl px-3 py-2 text-sm font-bold text-brand-black hover:bg-brand-ash" data-testid={`command-bar-switch-${event.id}`}>
             {event.name}

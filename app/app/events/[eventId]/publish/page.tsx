@@ -12,7 +12,7 @@ export default async function EventPublishPage({ params, searchParams }: { param
   return (
     <div className="space-y-6">
       <SafeSection label="Go live" render={() => GoLiveCard({ eventId: resolvedParams.eventId, returnTo: `/app/events/${resolvedParams.eventId}/publish` })} />
-      <EventPublishPanel eventId={resolvedParams.eventId} updated={resolvedSearchParams?.updated} error={resolvedSearchParams?.error} />
+      <SafeSection label="Publishing" render={() => EventPublishPanel({ eventId: resolvedParams.eventId, updated: resolvedSearchParams?.updated, error: resolvedSearchParams?.error })} />
     </div>
   );
 }

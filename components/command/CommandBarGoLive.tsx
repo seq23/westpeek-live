@@ -7,6 +7,7 @@ import { goLiveAction } from "@/lib/actions/goLiveActions";
 import { viewerCan, type CrewViewer } from "@/lib/auth/crewViewer";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getOperatorStageStreamState } from "@/services/video/stageStreamStateService";
+import { COMMAND_CHIP } from "@/components/command/commandChrome";
 
 /**
  * Go live / End show, and the credentials that come with them, on the bar itself (plan §2.1, §2.5).
@@ -55,7 +56,7 @@ export async function CommandBarGoLive({ eventId, viewer, stageId = "main-stage"
   return (
     <GatedForm viewer={viewer} action="go_live" formAction={goLiveAction} testId="command-bar-go-live">
       <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="stageId" value={stageId} />
-      <button className="rounded-full bg-brand-orange px-4 py-1.5 text-sm font-black text-white hover:bg-white hover:text-brand-black disabled:cursor-not-allowed disabled:opacity-40" data-testid="command-bar-go-live-button">
+      <button className={`${COMMAND_CHIP} bg-brand-orange text-white hover:bg-white hover:text-brand-black disabled:cursor-not-allowed disabled:opacity-40`} data-testid="command-bar-go-live-button">
         {shape.ended ? "Go live again" : "Go live"}
       </button>
     </GatedForm>
@@ -70,7 +71,7 @@ export async function CommandBarGoLive({ eventId, viewer, stageId = "main-stage"
 export async function CommandBarCredentials({ eventId, viewer, stageId = "main-stage" }: { eventId: string; viewer: CrewViewer; stageId?: string }) {
   const shape = await readShape(eventId, stageId);
   return (
-    <details open={shape.hasCredentials || shape.ended} className="border-t border-white/10 bg-brand-black/95 px-4 py-2" data-testid="command-bar-credentials" data-has-credentials={shape.hasCredentials ? "true" : "false"} data-ended={shape.ended ? "true" : "false"}>
+    <details open={shape.hasCredentials || shape.ended} className="rounded-b-3xl bg-brand-black/95 px-4 py-2 text-white shadow-lg" data-testid="command-bar-credentials" data-has-credentials={shape.hasCredentials ? "true" : "false"} data-ended={shape.ended ? "true" : "false"}>
       <summary className="cursor-pointer list-none text-xs font-black uppercase tracking-[0.25em] text-white/70 hover:text-white">
         Stream credentials {shape.hasCredentials ? "▾" : shape.ended ? "▾" : "▸"}
       </summary>
