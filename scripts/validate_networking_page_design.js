@@ -100,6 +100,7 @@ check(!/<svg|<CycleDiagram|<SpeedNetworkingPairDrawing|<dl\b/.test(betweenParagr
 // ---------------------------------------------------------------------------
 check(/<SpeedNetworkingPairDrawing[\s/>]/.test(explainer), `${EXPLAINER} must RENDER <SpeedNetworkingPairDrawing>. An import left behind after the element was deleted from the JSX is the exact failure this is written to catch.`);
 check(countOf(drawing, /<PairTile[\s/>]/g) === 2, `${DRAWING} must render exactly two tiles. The product puts exactly two people in the room; a drawing with one or three is a lie about the feature.`);
+check(/WHAT A ROUND LOOKS LIKE/.test(drawing), `${DRAWING} must label itself as a drawing. A reader who has joined nothing must never be shown something that reads as "you are matched".`);
 check(/caption="Your match"/.test(drawing) && /caption="You"/.test(drawing), `${DRAWING} must caption both tiles, the way the real room does — a tile with no name under it is an anonymous stranger.`);
 check(/TIME LEFT/.test(drawing) && /wpl-countdown-bar/.test(drawing), `${DRAWING} must show the countdown; the timer is half of what makes a round a round.`);
 check(/<circle/.test(drawing) && /#73706a/.test(drawing), `${DRAWING} must draw the grey placeholder figure in each tile — the owner named that shape herself.`);

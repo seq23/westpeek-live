@@ -52,8 +52,9 @@ export function SpeedNetworkingPairDrawing({ matchMinutes = SPEED_NETWORKING_DEF
         {/* The room itself: the black surround the two tiles actually sit in. */}
         <rect x="0" y="0" width="600" height="330" rx="24" fill="#050505" />
 
-        {/* Header row: what the room says about itself, and the clock. */}
-        <text x="20" y="42" fontSize="13" fontWeight="800" letterSpacing="3" fill="#f05a1a">YOU ARE MATCHED</text>
+        {/* Header row. The room itself says "You are matched"; the DRAWING says what it is a drawing
+            of, because a reader who has not joined anything must never think they already have. */}
+        <text x="20" y="42" fontSize="13" fontWeight="800" letterSpacing="2.4" fill="#f05a1a">WHAT A ROUND LOOKS LIKE</text>
         <rect x="446" y="18" width="134" height="48" rx="14" fill="#171717" />
         <text x="513" y="37" textAnchor="middle" fontSize="10" fontWeight="800" letterSpacing="1.2" fill="#73706a">TIME LEFT</text>
         <text x="513" y="57" textAnchor="middle" fontSize="19" fontWeight="800" fill="#ffffff" fontFamily="ui-monospace, SFMono-Regular, Menlo, monospace">{shown}</text>

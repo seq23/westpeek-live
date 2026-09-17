@@ -99,13 +99,16 @@ export function SpeedNetworkingExplainer({ matchMinutes = SPEED_NETWORKING_DEFAU
    * identical rectangles: each carries the question it settles, its own drawn glyph, and the one
    * that answers "who am I going to be stuck with" is given the width of the row.
    */
-  const facts: Array<{ question: string; title: string; body: string; glyph: Glyph; wide?: boolean }> = [
+  const facts: Array<{ question: string; title: string; body: string; glyph: Glyph; wide?: boolean; lead?: boolean }> = [
     {
       question: "Who am I talking to?",
       glyph: "pair",
       title: `${minutes} minutes, one other person`,
       body: `A video call with exactly one other person, cameras and microphones on, with a timer counting down. The room holds ${SPEED_NETWORKING_ROOM_CAPACITY === 2 ? "two people and only two" : `${SPEED_NETWORKING_ROOM_CAPACITY} people`}, so nobody can walk in on it.`,
+      // The hesitation that actually stops people. It opens the row, and it is the ONE card given
+      // the soft tint — orange is sparse here or it stops meaning anything.
       wide: true,
+      lead: true,
     },
     {
       question: "How are we paired?",
@@ -122,6 +125,7 @@ export function SpeedNetworkingExplainer({ matchMinutes = SPEED_NETWORKING_DEFAU
     {
       question: "How do I get out?",
       glyph: "leave",
+      wide: true,
       title: "It keeps going until you leave",
       body: "One call ends, the next is found, and round follows round for as long as you stay. Leaving is one button and takes effect immediately; nothing is scheduled and you do not have to sign up for a slot.",
     },
@@ -141,7 +145,7 @@ export function SpeedNetworkingExplainer({ matchMinutes = SPEED_NETWORKING_DEFAU
         {facts.map((fact) => (
           <div
             key={fact.title}
-            className={`rounded-brand border p-5 ${fact.wide ? "border-brand-orange/50 bg-brand-orangeSoft sm:col-span-2" : "border-brand-line bg-brand-white"}`}
+            className={`rounded-brand border p-5 ${fact.lead ? "border-brand-orange/50 bg-brand-orangeSoft" : "border-brand-line bg-brand-white"}${fact.wide ? " sm:col-span-2" : ""}`}
             data-testid="speed-networking-answer"
           >
             <div className="flex items-start gap-3">
@@ -167,7 +171,7 @@ type Glyph = "pair" | "shuffle" | "pause" | "leave";
  */
 function FactGlyph({ glyph }: { glyph: Glyph }) {
   const paths: Record<Glyph, ReactNode> = {
-    pair: <><rect x="2.5" y="6" width="8" height="12" rx="2" /><rect x="13.5" y="6" width="8" height="12" rx="2" /></>,
+    pair: <><circle cx="7" cy="9" r="2.6" /><path d="M2.5 19a4.5 4.5 0 0 1 9 0" /><circle cx="17" cy="9" r="2.6" /><path d="M12.5 19a4.5 4.5 0 0 1 9 0" /></>,
     shuffle: <><path d="M3 7h4l10 10h4" /><path d="M3 17h4l10 -10h4" /><path d="M18 4l3 3l-3 3" /><path d="M18 14l3 3l-3 3" /></>,
     pause: <><path d="M9 6v12" /><path d="M15 6v12" /></>,
     leave: <><path d="M14 4H6a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h8" /><path d="M11 12h10" /><path d="M17 8l4 4l-4 4" /></>,
