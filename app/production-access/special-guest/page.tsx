@@ -12,6 +12,7 @@ import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionA
 import { resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { grantOwnerOverrideIfMatched } from "@/lib/auth/ownerAccessOverride";
+import { alreadyAuthorisedDestination } from "@/lib/auth/ownerNeverEntersACode";
 import type { V4SpecialGuestRole } from "@/types/v4";
 import { getAccessCodeVersions } from "@/services/events/accessCodeService";
 import { SupersededGateNotice, supersededGateQuery } from "@/components/access/SupersededGateNotice";
@@ -48,6 +49,12 @@ export default async function SpecialGuestAccessPage({ searchParams }: { searchP
   const prefilledCode = String(resolvedSearchParams?.code || "").trim().slice(0, 120);
   const missing = missingAccessEnv().filter((item) => item === "V5_ACCESS_COOKIE_SECRET");
   if (missing.length) return <BrandedSetupError title="Special guest access is not configured yet." message="Special guest login needs a cookie secret to create role-scoped access cookies. This page now fails safely with setup instructions instead of throwing a server digest page." missingVariables={missing} defaultValues={accessDefaultLines()} />;
+  // The master key never enters a code. An owner or operator whose cookie already opens the
+  // destination they were sent here for goes straight there instead of meeting a second gate.
+  if (!resolvedSearchParams?.error) {
+    const destination = await alreadyAuthorisedDestination(resolvedSearchParams?.next);
+    if (destination) redirect(destination);
+  }
   return (
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">

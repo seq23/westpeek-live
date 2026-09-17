@@ -81,6 +81,13 @@ The video model is layered on purpose:
 
 ## 3. If you are the OWNER — step by step
 
+**What the product guarantees you.** Two promises, and they are enforced by a validator on every build, not left to care:
+
+1. **You never enter a code.** Your master password is the only thing you ever type. No page you can reach will ask you for a crew code, a speaker code, a VIP code or the operator password, and no page will bounce you to a gate because some other code was changed. If a gate ever appears in front of you, that is a bug, not a policy.
+2. **You never need a second page to finish one thing.** Going live, ending the show, opening or closing stage requests, copying a code, and walking into the room are all on the command bar, and the command bar is on every page that belongs to an event. Whichever of those pages you happen to be on, the whole set is in front of you.
+
+The validator that holds this is `npm run validate:owner-one-place-rule`. It walks every owner page, follows what each one can actually reach, and fails the build if any of those five controls goes missing from even one of them, or if any page can send you to a code gate.
+
 ### 3.1 Get in
 
 1. Go to `westpeek.live/production-access` → **Owner Access**.
@@ -595,6 +602,7 @@ A schema change is written twice: once as `db/migrations/00NN_name.sql`, and onc
 - Client instructions are **editable pages**, never frozen attachments.
 - Files are **archived, never deleted** — there is no delete path in the product.
 - Nobody is a **VIP** without the VIP code; rotating it revokes everyone admitted under the old one.
+- An owner holding the master key **never enters a code** and **never needs a second page** to finish one thing. Both halves are enforced by a validator, so a change that breaks either one cannot ship.
 - The owner chip says **"Owner"**, never a person's name — the master password is shared, so the app cannot know which of you it is.
 - Watching is open to anyone with the link; **registering is what buys a voice**.
 - A group email always carries an unsubscribe, and an unsubscribe holds across every event. A transactional message to one person is never suppressed.

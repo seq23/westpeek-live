@@ -7,8 +7,8 @@ import { redirect } from "next/navigation";
 import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret, matchOwnerMasterPassword } from "@/lib/env";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
-import { createV5AccessCookie, getV5CookieOptions, readV5AccessCookie } from "@/lib/auth/productionAccess";
-import { canOwnerAccessPath } from "@/lib/auth/v5RouteAuthorization";
+import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
+import { alreadyAuthorisedDestination } from "@/lib/auth/ownerNeverEntersACode";
 
 async function enterOwner(formData: FormData) {
   "use server";
@@ -41,17 +41,10 @@ async function enterOwner(formData: FormData) {
 
 export default async function OwnerAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
-  // A valid owner cookie is not asked for the password again.
+  // A cookie that already opens the destination is not asked for the password again.
   if (!resolvedSearchParams?.error) {
-    try {
-      const env = getEnv();
-      const { ownerCookieName } = getV5AccessCookieNames(env);
-      const owner = await readV5AccessCookie((await cookies()).get(ownerCookieName)?.value, getV5AccessCookieSecret(env));
-      const next = resolvedSearchParams?.next && resolvedSearchParams.next.startsWith("/") && !resolvedSearchParams.next.startsWith("//") ? resolvedSearchParams.next : "/app/owner";
-      if (owner?.kind === "owner" && canOwnerAccessPath(next, owner)) redirect(next);
-    } catch {
-      // Fall through to the form when access config is missing.
-    }
+    const destination = await alreadyAuthorisedDestination(resolvedSearchParams?.next, "/app/owner");
+    if (destination) redirect(destination);
   }
   return (
     <>

@@ -2,7 +2,7 @@ import Link from "next/link";
 import { CommandBarCodes } from "@/components/command/CommandBarCodes";
 import { CommandBarCredentials, CommandBarGoLive } from "@/components/command/CommandBarGoLive";
 import { COMMAND_CHIP_MUTED, COMMAND_CHIP_STATIC } from "@/components/command/commandChrome";
-import { EnterTheRoomMenu } from "@/components/command/EnterTheRoomMenu";
+import { EnterTheRoomMenu } from "@/components/preview/EnterTheRoomMenu";
 import { EventHealthDot } from "@/components/command/EventHealthDot";
 import { EventSwitcherMenu } from "@/components/command/EventSwitcherMenu";
 import { StageRequestsToggle } from "@/components/moderation/StageRequestsToggle";
@@ -59,7 +59,10 @@ export async function EventCommandBar({ eventId }: { eventId: string }) {
 
         <SafeSection label="Stage requests" compact render={() => StageRequestsToggle({ eventId, viewer, variant: "bar" })} />
 
-        <EnterTheRoomMenu eventId={eventId} />
+        {/* The REAL menu (personas + the event's real guests), not a bar-local copy: it is the same
+            component the Owner Console and the workspace header render, so "enter the room as a
+            speaker" reaches every surface the bar does rather than the event workspace alone. */}
+        <SafeSection label="Enter the room" compact render={() => EnterTheRoomMenu({ eventId, variant: "bar" })} />
 
         <SafeSection label="Codes" compact render={() => CommandBarCodes({ eventId })} />
 

@@ -87,7 +87,7 @@ const ACTIONS = [
   { name: "end show", token: "EndShowControl", definedIn: "components/moderation/EndShowControl.tsx", onBar: "components/command/CommandBarGoLive.tsx" },
   { name: "stage requests", token: "StageRequestsToggle", definedIn: "components/moderation/StageRequestsToggle.tsx", onBar: BAR },
   { name: "codes", token: "CommandBarCodes", definedIn: "components/command/CommandBarCodes.tsx", onBar: BAR, alsoCountedAs: { token: "EventAccessCodesPanel", definedIn: "components/events/EventAccessCodesPanel.tsx" } },
-  { name: "enter the room", token: "EnterTheRoomMenu", definedIn: "components/command/EnterTheRoomMenu.tsx", onBar: BAR, alsoCountedAs: { token: "/stage`", definedIn: "components/command/EnterTheRoomMenu.tsx" } },
+  { name: "enter the room", token: "EnterTheRoomMenu", definedIn: "components/preview/EnterTheRoomMenu.tsx", onBar: BAR },
 ];
 
 for (const action of ACTIONS) {
@@ -103,7 +103,7 @@ for (const action of ACTIONS) {
 }
 
 // ------------------------------------------------------ every bar section fails soft on its own
-const sections = ["Event switcher", "Health", "Go live", "Stage requests", "Codes", "Stream credentials"];
+const sections = ["Event switcher", "Health", "Go live", "Stage requests", "Enter the room", "Codes", "Stream credentials"];
 for (const label of sections) check(bar.includes(`label="${label}"`), `The bar must render its "${label}" section through SafeSection: one dead probe must not blank the bar.`);
 
 // ------------------------------------------------------------------- the health signal is honest
@@ -130,10 +130,12 @@ check(dot.includes("health-source-"), "Every signal must show its source and las
 check(dot.includes("health-action-"), "A yellow or red signal must show the button to press, not just a description.");
 check(dot.includes("command-bar-health-log"), "The panel must carry the per-show event log.");
 
-// ------------------------------------------------- 'Enter the room' stays a placeholder this branch
-const enterTheRoom = read("components/command/EnterTheRoomMenu.tsx");
-check(enterTheRoom.includes("TODO(work/preview-personas)"), "The Enter the room menu is a placeholder: it must name work/preview-personas as its owner.");
-check(enterTheRoom.includes("enter-the-room-myself"), "Myself (host) must work today — the owner cookie already authorises /venue/**; there was simply no link.");
+// ------------------------------------------- 'Enter the room' is the ONE menu, not a bar-local copy
+const enterTheRoom = read("components/preview/EnterTheRoomMenu.tsx");
+check(!fs.existsSync("components/command/EnterTheRoomMenu.tsx"), "There must be exactly one Enter the room menu. The bar-local placeholder is what made the personas unreachable from every surface but the event workspace.");
+check(enterTheRoom.includes('variant === "bar"'), "The one menu must carry the bar variant, or the bar needs a copy of it again.");
+check(enterTheRoom.includes("enter-as-host"), "Myself (host) must work today — the owner cookie already authorises /venue/**; there was simply no link.");
+check(enterTheRoom.includes("PREVIEW_PERSONAS.map"), "The bar's menu must be the one that renders the personas, not a placeholder that names the branch building them.");
 
 if (examined < 30) failures.push(`validate_event_command_bar examined only ${examined} assertions — it must not pass on an empty walk.`);
 if (failures.length) {

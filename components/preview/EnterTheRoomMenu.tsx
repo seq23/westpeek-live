@@ -1,3 +1,4 @@
+import { COMMAND_CHIP_MUTED, COMMAND_PANEL } from "@/components/command/commandChrome";
 import { PREVIEW_PERSONAS } from "@/lib/auth/previewIdentity";
 import { readViewAsViewer } from "@/lib/auth/viewAs";
 import { guestPreviewLinks } from "@/components/guests/GuestPreviewLinks";
@@ -18,17 +19,33 @@ const ROLE_WORD = { speaker: "speaker", sponsor: "sponsor", vip: "VIP", client: 
  * surrounding chrome, so it drops into the Event Command Bar, an Owner Console row, or the event
  * workspace header without changing. It renders nothing at all for anyone `canViewAsGuest` refuses,
  * so it is safe wherever it is dropped.
+ *
+ * This is the ONLY "Enter the room" menu in the repo, and it has to stay that way. A second, simpler
+ * copy once lived at `components/command/EnterTheRoomMenu.tsx` as a placeholder; the bar imported
+ * that one, so on every surface except the event workspace "Enter the room" offered exactly one
+ * entry and the personas were unreachable. Two components with the same name and no link between
+ * them is how a shipped feature goes missing. `variant="bar"` is what that placeholder existed for:
+ * the dark-bar chip and the panel recipe that escapes the bar's scrolling row.
  */
-export async function EnterTheRoomMenu({ eventId, clientSlug, returnTo, compact = false }: { eventId: string; clientSlug?: string; returnTo?: string; compact?: boolean }) {
+export async function EnterTheRoomMenu({ eventId, clientSlug, returnTo, compact = false, variant = "page" }: { eventId: string; clientSlug?: string; returnTo?: string; compact?: boolean; variant?: "page" | "bar" }) {
   const viewer = await readViewAsViewer(eventId);
   if (!viewer.ok) return null;
   const guests = await listGuestProfiles(eventId).catch(() => []);
   const back = encodeURIComponent(returnTo || `/app/events/${eventId}`);
   const entry = "block rounded-xl px-3 py-2 text-left text-xs font-bold text-brand-black hover:bg-brand-ash";
+  const onBar = variant === "bar";
+  // On the bar the chip recipe decides the height and the panel recipe escapes the scrolling row;
+  // anywhere else the menu keeps the outlined button it has always been.
+  const summaryClass = onBar
+    ? `flex cursor-pointer list-none items-center gap-1 ${COMMAND_CHIP_MUTED}`
+    : `cursor-pointer list-none rounded-full border border-brand-black font-black hover:border-brand-orange hover:text-brand-orange ${compact ? "px-3 py-1 text-[11px]" : "px-4 py-2 text-xs"}`;
+  const panelClass = onBar
+    ? `${COMMAND_PANEL} p-2 xl:left-0 xl:w-72`
+    : "absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-brand-line bg-white p-2 shadow-lg";
   return (
-    <details className="relative" data-testid="enter-the-room-menu" data-event={eventId}>
-      <summary className={`cursor-pointer list-none rounded-full border border-brand-black font-black hover:border-brand-orange hover:text-brand-orange ${compact ? "px-3 py-1 text-[11px]" : "px-4 py-2 text-xs"}`} data-testid="enter-the-room-trigger">Enter the room ▾</summary>
-      <div className="absolute right-0 z-20 mt-2 w-72 rounded-2xl border border-brand-line bg-white p-2 shadow-lg" data-testid="enter-the-room-panel">
+    <details className="relative" data-testid="enter-the-room-menu" data-variant={variant} data-event={eventId}>
+      <summary className={summaryClass} data-testid="enter-the-room-trigger">Enter the room <span aria-hidden>▾</span></summary>
+      <div className={panelClass} data-testid="enter-the-room-panel">
         <a href={`/venue/${eventId}/stage`} className={`${entry} !font-black text-brand-orange`} data-testid="enter-as-host">
           Myself (host)
           <span className="mt-0.5 block text-[11px] font-medium text-brand-muted">Your own identity, full controls. No code, no registration.</span>

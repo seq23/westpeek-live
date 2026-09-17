@@ -4950,6 +4950,27 @@
       "simplificationDisposition": "KEEP"
     },
     {
+      "script": "validate:owner-one-place-rule",
+      "command": "node scripts/validate_owner_one_place_rule.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "The one rule the owner locked in docs/plans/OWNER_ONE_PLACE_AND_VIEW_AS.md §2.6, both halves. It derives the owner-reachable surfaces from EVENT_COMMAND_BAR_SURFACES, cross-checks them against config/deployed-route-manifest.json and against every layout that actually mounts the Event Command Bar, derives the primary actions from lib/navigation/ownerPrimaryActions.ts whose ids must match the plan's own parenthetical word for word, then follows imports from each surface's routes to the module that implements each action and fails when an action is reachable from only one surface. The second half: no owner-reachable surface may redirect a master-key holder to a code gate, and all four production-access gates share one pass-through so a cookie that already opens the destination is never asked for a code.",
+      "whatItDoesNotProve": "Does not prove the controls work in a browser, nor that a live provider answers; the browser, provider and postdeploy lanes remain UNPROVEN here. It measures reachability by import graph, so a control imported but rendered behind a false condition still counts as present.",
+      "failureHandling": "Juniper repairs and reruns. Selected lifecycle stage remains blocked.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; it fires when a primary action is moved off the bar, a surface is added without declaring it, or a gate redirect stops asking for the master key.",
+      "runtimeCost": "Low; a static import walk of the five event route families.",
+      "maintenanceCost": "None by hand: the surfaces and the actions are derived, and a drift between the plan and the registry is itself a failure.",
+      "removalConditions": "Retire only if the owner retires the §2.6 rule; the plan is the authority, not this script.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
+    },
+    {
       "script": "validate:capacity-contract",
       "command": "node scripts/validate_capacity_and_keepalive_contract.js",
       "status": "ACTIVE",
