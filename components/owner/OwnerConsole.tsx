@@ -88,7 +88,7 @@ async function LiveNowRow({ event }: { event: RuntimeEventRecord }) {
       <div className="flex flex-wrap items-start justify-between gap-3">
         <div>
           <p className="text-lg font-black text-brand-black">{event.name}</p>
-          <p className="text-sm text-brand-muted">Join code <strong>{displayCode(event.joinCode)}</strong> · feed <strong data-testid={`console-live-feed-${event.id}`}>{feed}</strong> · <strong>{onStage}</strong> on stage · chat <strong>{locked ? "locked" : "open"}</strong> · stage requests <strong>{control && (control.globalCameraEnabled || control.globalMicrophoneEnabled) ? "open" : "closed"}</strong></p>
+          <p className="text-sm text-brand-muted">Event code <strong>{displayCode(event.joinCode)}</strong> · feed <strong data-testid={`console-live-feed-${event.id}`}>{feed}</strong> · <strong>{onStage}</strong> on stage · chat <strong>{locked ? "locked" : "open"}</strong> · stage requests <strong>{control && (control.globalCameraEnabled || control.globalMicrophoneEnabled) ? "open" : "closed"}</strong></p>
         </div>
         <div className="flex flex-wrap gap-2 text-xs font-black">
           <Link href={`/crew/events/${event.id}`} className="rounded-full bg-brand-black px-3 py-2 text-white hover:bg-brand-orange" data-testid={`console-open-crew-${event.id}`}>Open crew console</Link>

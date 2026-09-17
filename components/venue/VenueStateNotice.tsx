@@ -4,7 +4,7 @@ import type { VirtualVenueModel } from "@/types/virtualVenue";
 
 /**
  * What every venue page renders instead of its content when the event is ended, archived, or
- * not open: the join code's own message, the replay center for an ended event, and the way back.
+ * not open: the event code's own message, the replay center for an ended event, and the way back.
  */
 export function VenueStateNotice({ model, gate, isHost }: { model: VirtualVenueModel; gate: Exclude<VenueGate, "open">; isHost: boolean }) {
   const eventId = model.eventId;

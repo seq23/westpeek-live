@@ -48,7 +48,7 @@ export default async function PreviewGuestPage({ searchParams }: { searchParams?
             <form method="get" action="/production-access/special-guest/preview" className="mt-6 flex flex-wrap items-end gap-3" data-testid="preview-event-form">
               <label className="grid gap-1 text-sm font-black">Event code<input name="event" defaultValue={eventCode} required className="min-h-12 rounded-full border border-brand-line px-5 text-sm font-normal" placeholder="wpl-xxxxxx or the slug" /></label>
               <button className="min-h-12 rounded-full bg-brand-black px-6 text-sm font-bold text-white">Show guests</button>
-              {eventCode ? <p className="w-full rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-800" data-testid="preview-event-unknown">No event matches &ldquo;{eventCode}&rdquo;. Use the join code or the slug from the workspace.</p> : null}
+              {eventCode ? <p className="w-full rounded-2xl bg-amber-50 p-3 text-sm font-bold text-amber-800" data-testid="preview-event-unknown">No event matches &ldquo;{eventCode}&rdquo;. Use the event code or the slug from the workspace.</p> : null}
             </form>
           ) : (
             <>

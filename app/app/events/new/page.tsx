@@ -46,7 +46,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
         </div>
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">New event</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Start a Room now, or plan an event for later.</h1>
-        <p className="mt-4 max-w-3xl text-sm leading-6 text-brand-muted">One form creates every event West Peek Live runs — an on-demand Room for West Peek itself or a planned client event. The event, its join code, and its crew, speaker, sponsor, VIP, and client access codes are saved the moment you press the button. No PR, no redeploy.</p>
+        <p className="mt-4 max-w-3xl text-sm leading-6 text-brand-muted">One form creates every event West Peek Live runs — an on-demand Room for West Peek itself or a planned client event. The event, its event code, and its crew, speaker, sponsor, VIP, and client access codes are saved the moment you press the button. No PR, no redeploy.</p>
 
         {!schema.ok ? <RuntimeSchemaStop status={schema} /> : null}
         {error === "schema_missing" ? <RuntimeSchemaStop status={schema} /> : null}
@@ -68,7 +68,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
                 <input type="radio" name="when" value="now" defaultChecked={initialWhen === "now"} className="mt-1" data-testid="when-now" />
                 <span>
                   <span className="block text-sm font-black">Now</span>
-                  <span className="mt-1 block text-xs leading-5 text-brand-muted">Create &amp; open. The event goes live immediately with a join code you can send to anyone.</span>
+                  <span className="mt-1 block text-xs leading-5 text-brand-muted">Create &amp; open. The event goes live immediately with a event code you can send to anyone.</span>
                 </span>
               </label>
               <label className="flex cursor-pointer items-start gap-3 rounded-2xl border border-brand-line bg-white p-4 has-[:checked]:border-brand-orange has-[:checked]:ring-2 has-[:checked]:ring-brand-orange/30">
@@ -136,7 +136,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
 
           <div className="rounded-3xl bg-brand-ash p-5 text-sm leading-6 text-brand-muted">
             <p className="font-black text-brand-black">Defaults applied to every event</p>
-            <p>Branding: West Peek Live. Agenda: one Main stage session. Registration: off — the join code is enough. Production feed / source: StreamYard. Primary embedded distribution: LiveKit. Fallback: Cloudflare Stream, then Daily, then Zoom + Google Meet.</p>
+            <p>Branding: West Peek Live. Agenda: one Main stage session. Registration: off — the event code is enough. Production feed / source: StreamYard. Primary embedded distribution: LiveKit. Fallback: Cloudflare Stream, then Daily, then Zoom + Google Meet.</p>
             <p className="mt-2">Guided spine after creation: Basics → Branding → Attendee Flow → Venue → Agenda → Access → Communications → Preview → Publish.</p>
           </div>
 
@@ -146,7 +146,7 @@ export default async function CreateEventPage({ searchParams }: { searchParams?:
             </button>
             <Link href="/app/events" className="inline-flex rounded-full border border-brand-black px-5 py-3 text-sm font-bold">Cancel</Link>
           </div>
-          <p className="text-xs text-brand-muted">Now → &ldquo;Create &amp; open&rdquo; lands you in the lobby with the join code. Later → &ldquo;Create&rdquo; opens the draft event page.</p>
+          <p className="text-xs text-brand-muted">Now → &ldquo;Create &amp; open&rdquo; lands you in the lobby with the event code. Later → &ldquo;Create&rdquo; opens the draft event page.</p>
         </form>
       </section>
     </main>

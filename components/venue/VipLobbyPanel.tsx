@@ -30,7 +30,7 @@ export async function VipLobbyPanel({ eventId, error, viewAs, grantedName }: { e
       {room.open ? (
         <section className="rounded-3xl border border-brand-orange/40 bg-brand-orangeSoft p-5" data-testid="vip-lounge">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">{room.label}</p>
-          <p className="mt-2 text-sm text-slate-700">{vips.length} VIP{vips.length === 1 ? "" : "s"} named for this event{vips.length ? `: ${vips.map((item) => item.name).join(", ")}` : ""}. Chat here is VIP-and-crew only; register as an attendee with the join code to post with your identity.</p>
+          <p className="mt-2 text-sm text-slate-700">{vips.length} VIP{vips.length === 1 ? "" : "s"} named for this event{vips.length ? `: ${vips.map((item) => item.name).join(", ")}` : ""}. Chat here is VIP-and-crew only; register as an attendee with the event code to post with your identity.</p>
           {viewAs ? <p className="mt-4 rounded-2xl bg-white/70 p-4 text-sm text-slate-700" data-testid="vip-chat-preview-disabled">Lounge chat is not shown in preview; open the lounge from the crew deck to read or moderate it as crew.</p> : <div className="mt-4"><SafeSection label="VIP lounge chat" render={() => LiveRoomChat({ eventId: eventId, roomKind: "breakout", roomId: room.roomId, title: room.label, description: "Opened by the crew for VIP guests." })} /></div>}
         </section>
       ) : null}

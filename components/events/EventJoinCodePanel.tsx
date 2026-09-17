@@ -13,7 +13,7 @@ export async function EventJoinCodePanel({ event, tone = "light", headline }: { 
   const dark = tone === "dark";
   return (
     <section className={`rounded-3xl p-5 shadow-sm ${dark ? "bg-brand-black text-white" : "border border-brand-line bg-white text-brand-black"}`} data-testid="event-join-code-panel">
-      <p className={`text-xs font-black uppercase tracking-[0.25em] ${dark ? "text-brand-orange" : "text-brand-orange"}`}>{headline || (event.status === "live" ? "Live now · share this code" : "Join code")}</p>
+      <p className={`text-xs font-black uppercase tracking-[0.25em] ${dark ? "text-brand-orange" : "text-brand-orange"}`}>{headline || (event.status === "live" ? "Live now · share this code" : "Event code")}</p>
       <div className="mt-3 flex flex-col gap-4 sm:flex-row sm:items-center sm:justify-between">
         <div>
           <p className={`text-4xl font-black tracking-tight ${dark ? "text-white" : "text-brand-black"}`} data-testid="event-join-code">{displayCode(event.joinCode)}</p>
