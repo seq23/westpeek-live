@@ -1,4 +1,4 @@
-# West Peek Live — Owner, Operator, Crew & Guest Manual (v3)
+# West Peek Live — Owner, Operator, Crew & Guest Manual (v4)
 
 Status: ACTIVE. Supersedes `docs/archive/superseded/docs__West_Peek_Live_Day1_Complete_Product_Operator_Manual_v2.md`.
 
@@ -7,13 +7,14 @@ Status: ACTIVE. Supersedes `docs/archive/superseded/docs__West_Peek_Live_Day1_Co
 | Canonical domain | https://westpeek.live |
 | Worker fallback URL | https://west-peek-live.seq-taylor.workers.dev |
 | Hosting | Cloudflare Workers (**Paid**, $5/mo — 30 s CPU, 10M req/mo, 128 variables) |
-| Database | Supabase (Free tier — see §12) |
+| Database | Supabase (Free tier — see §16) |
 | Video | LiveKit Cloud, project `westpeek-live` (**Ship**, $50/mo) |
 | Backup video | Cloudflare Stream Live, input `westpeek-fallback` (pay-as-you-go) |
-| Email | Resend |
 | Storage | Supabase Storage, private bucket `event-assets` |
 | Read this inside the app | `westpeek.live/manual` (owner + operator) |
-| Last revised | 16 September 2026 |
+| Download it | **Assets → West Peek documents → Operator manual → Download .md**, or from the repo at `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md` |
+| Email | Resend — house addresses set in Settings |
+| Last revised | 17 September 2026 |
 
 > **No access codes appear in this document.** Every code lives behind the owner gate in the app. See §5.
 
@@ -29,13 +30,17 @@ Status: ACTIVE. Supersedes `docs/archive/superseded/docs__West_Peek_Live_Day1_Co
 6. [If you are CREW — step by step](#6-if-you-are-crew--step-by-step)
 7. [If you are a SPECIAL GUEST — speaker, sponsor, VIP, client](#7-if-you-are-a-special-guest--speaker-sponsor-vip-client)
 8. [If you are an ATTENDEE](#8-if-you-are-an-attendee)
-9. [Files and assets](#9-files-and-assets)
-10. [Clients who want us to run their event](#10-clients-who-want-us-to-run-their-event)
-11. [The fallback ladder — what to do when the feed dies](#11-the-fallback-ladder--what-to-do-when-the-feed-dies)
-12. [Show-day runbook](#12-show-day-runbook)
-13. [Capacity, cost, and where the ceiling is](#13-capacity-cost-and-where-the-ceiling-is)
-14. [Troubleshooting](#14-troubleshooting)
-15. [Rules that do not bend](#15-rules-that-do-not-bend)
+9. [Files, assets and documents](#9-files-assets-and-documents)
+10. [Email — one composer, one log](#10-email--one-composer-one-log)
+11. [Templates](#11-templates)
+12. [Contractors and vendors](#12-contractors-and-vendors)
+13. [Clients who want us to run their event](#13-clients-who-want-us-to-run-their-event)
+14. [The fallback ladder — what to do when the feed dies](#14-the-fallback-ladder--what-to-do-when-the-feed-dies)
+15. [Show-day runbook](#15-show-day-runbook)
+16. [Capacity, cost, and where the ceiling is](#16-capacity-cost-and-where-the-ceiling-is)
+17. [How a database change reaches production](#17-how-a-database-change-reaches-production)
+18. [Troubleshooting](#18-troubleshooting)
+19. [Rules that do not bend](#19-rules-that-do-not-bend)
 
 ---
 
@@ -68,7 +73,9 @@ The video model is layered on purpose:
 | **Speakers, sponsors, VIPs, clients** | `/production-access/special-guest` | Guests with a role code from the invitation | Green room and cue cards, booth, lounge, read-only client overview |
 | **Public join** | `/join` or `/events/{eventId}` | Attendees | Registration and the venue |
 
-**Owner = host everywhere.** The master password makes you a host on any event and opens every crew, operator and guest surface without collecting another password. A crew member holding the `executive_producer` role is also a host. There are **two master passwords**; both work on every gate.
+**Owner = host everywhere.** The master password makes you a host on any event and opens every crew, operator and guest surface without collecting another password. A crew member holding the `executive_producer` role is also a host. There are **two master passwords**; both work on every gate, and the console tells you which one you came in on.
+
+**Each password names its own door** — `owner-access-2027!`, `operator-launchpad-2027!`, `crew-access-2027!` — and they rotate with the year. That makes them guessable on purpose, so the defending happens at the gate: six wrong attempts from one place and it stops answering for two minutes. The values themselves are in the vault (§5), never in this document.
 
 ---
 
@@ -79,9 +86,31 @@ The video model is layered on purpose:
 1. Go to `westpeek.live/production-access` → **Owner Access**.
 2. Enter a master password. You land on the **Owner Console**.
 
-### 3.2 The Owner Console
+### 3.2 The command bar — the thing you will actually use
 
-![Owner Console](images/manual/02-owner-console.jpg)
+![The command bar on an event page](images/manual/16-command-bar-crew.jpg)
+
+On **every page that belongs to an event** — the workspace, the crew deck, the venue, a speaker's or sponsor's page — a single bar sits at the top for owner and operator only. Nobody else ever sees it.
+
+`Event name ▾ · status · health · Go live / End show · Stage requests · Enter the room ▾ · Codes ▾ · Crew deck · Manual`
+
+Everything on it acts **where you are**. You do not navigate to go live, to open stage requests, to copy a code, or to walk into the room. The event name is a switcher, so you can move between events without going back to a list.
+
+**The health dot** shows the worst of nine signals — feed, stage, webhook, fallback, database, chat, attendees, build, capacity. It never reads green off a check that did not run: a probe with no answer reads **grey**, and every signal names its source and when it was last looked at. A yellow or red one tells you what to do, with the button in the panel.
+
+**Enter the room ▾** is how you see the event as somebody else:
+
+| Entry | What you get |
+| --- | --- |
+| **Myself (host)** | The stage with your own identity and every control. No code |
+| An attendee · A VIP · A speaker · A sponsor · The client | The real page as that kind of person sees it — **before anyone has entered a code** |
+| A named guest | That person's own page, with their own state |
+
+Previews are **read-only at the service layer**, not merely hidden: nothing typed in one can be saved, and a preview never appears in a count, a directory, a roster, networking or an export.
+
+### 3.3 The Owner Console
+
+![Owner Console](images/manual/09-owner-console-sections.jpg)
 
 `westpeek.live/app/owner` — "Everything, in order."
 
@@ -96,10 +125,14 @@ A table of contents across the top; every section folds and remembers whether yo
 | **Guests** | Speakers, sponsors, VIPs, clients — open their real pages **as them**, role codes with copy links, preview a guest |
 | **Networking** | Queue size, matches in progress, open or closed |
 | **Replays** | Per ended event: whether a replay is ready |
-| **Access codes** | Every event's six codes and the global gate passwords (§5) |
-| **Settings** | Global configuration |
+| **Access codes** | Every code for every event, and the global gate passwords (§5) |
+| **Settings** | The agency name, the brand colours, the team roster, and the house defaults every new event inherits |
 
-### 3.3 Start a Room right now
+**Settings** is where the house defaults live — the agency name, the brand colours, the team roster, and the things every new event should inherit rather than be asked about each time.
+
+![Settings](images/manual/15-settings.jpg)
+
+### 3.4 Start a Room right now
 
 ![New event](images/manual/03-new-event.jpg)
 
@@ -112,7 +145,7 @@ A table of contents across the top; every section folds and remembers whether yo
 
 **Going live is one button, in one card.** The Go-live card appears on the event's Publish page, on the event's row in the Owner Console (and in **Live now** once it is running), and at the top of the crew deck — the same card in all three. Press **Go live** and the event goes live *and* the stream credentials appear underneath: the RTMP URL, the stream key (masked until **Reveal**), **Copy both for StreamYard**, and the three steps to paste them in. You never have to open a second page to start a show.
 
-### 3.4 See everyone who has ever registered
+### 3.5 See everyone who has ever registered
 
 ![People across events](images/manual/05-people.jpg)
 
@@ -120,7 +153,9 @@ A table of contents across the top; every section folds and remembers whether yo
 
 People who registered before 16 Sep 2026 have no email on file (only a hash was kept back then); the moment they register again anywhere, the email fills in on every row.
 
-### 3.5 Hand off the show
+Our own test rows — Playwright fixtures and `example.com` addresses — are **counted apart and hidden** behind a toggle, so the headline number is your real network. You can archive them, and the archive never touches a row from a real event.
+
+### 3.6 Hand off the show
 
 Owner Console → **Crews** → **Copy host link** → send it to whoever is running it. The link prefills the crew gate; they press Enter and hold the host banner, go-live, end-the-show and every control **for that event only**. **Revoke host link** rotates the crew code and kills the link and anyone who entered with it.
 
@@ -145,18 +180,18 @@ An operator is West Peek staff running the control room. Same building as the ow
 
 ### The shape
 
-Every code for an event is built from the same stem: **the first six letters or digits of the event name**, uppercased.
+Every code for an event is built from the same stem: **the first six letters or digits of the event name**, uppercased. So an event called "Nova Summit" has the stem `NOVASU`, and its six codes are the prefixes below with that stem on the end. No real code appears in this document, and a validator fails the build if one ever does.
 
 | Who | Code | Opens |
 | --- | --- | --- |
-| Attendees | `WPL-45MINU` | The venue, via `/join` |
-| Crew | `WPL-CREW-45MINU` | `/crew/events/…` — moderation, go-live, end the show |
-| Speaker | `WPL-SPEAKER-45MINU` | `/speaker/events/…` — green room, cue cards, stage |
-| Sponsor | `WPL-SPONSOR-45MINU` | `/sponsor/events/…` — booth, leads |
-| Client | `WPL-CLIENT-45MINU` | `/client/…` — approvals, reports, scoped to their own slug |
-| VIP | `WPL-VIP-45MINU` | The venue plus the VIP badge and lounge |
+| Attendees — **the event code** | `WPL-` + the stem | The venue, via `/join` |
+| Crew | `WPL-CREW-` + the stem | `/crew/events/…` — moderation, go-live, end the show |
+| Speaker | `WPL-SPEAKER-` + the stem | `/speaker/events/…` — green room, cue cards, stage |
+| Sponsor | `WPL-SPONSOR-` + the stem | `/sponsor/events/…` — booth, leads |
+| Client | `WPL-CLIENT-` + the stem | `/client/…` — approvals, reports, scoped to their own slug |
+| VIP | `WPL-VIP-` + the stem | The venue plus the VIP badge and lounge |
 
-Codes are **UPPERCASE**, matched **case-insensitively**, and the join code is accepted with or without the `WPL-` prefix — `45minu` gets in.
+Codes are **UPPERCASE**, matched **case-insensitively**, and the event code is accepted with or without the `WPL-` prefix — typing the stem alone gets in.
 
 **Why the roles are separate credentials:** the code *is* the role. A sponsor holding the client's code would be reading the paying client's approvals and reports. Each one opens a different area and nothing else.
 
@@ -172,7 +207,7 @@ Any code can be set by hand instead.
 
 1. Owner Console → **Access codes**, or the event's **Access** page.
 2. Type your own: **4–24 characters, letters, digits and hyphens, unique across events.**
-3. Save. The old code **stops working immediately**, and the notice says exactly what that killed — crew sessions and crew links, or guests sent back to the gate, or old join links.
+3. Save. The old code **stops working immediately**, and the notice says exactly what that killed — crew sessions and crew links, or guests sent back to the gate, or old event-code links.
 4. **Regenerate** puts a code back to the automatic `WPL-…` form.
 
 A hand-set code **wins over the generated one** and survives a rename. Who can do this: owner, operator, and producers holding `manage_access_codes`; anyone else sees the row read-only with the reason.
@@ -183,12 +218,16 @@ A hand-set code **wins over the generated one** and survives a rename. Who can d
 
 The four **global** gate passwords sit in the same place:
 
-| Key | In the vault |
-| --- | --- |
-| `OWNER_MASTER_ACCESS_PASSWORD` | Value shown — masked, Reveal, Copy |
-| `OPERATOR_LAUNCHPAD_PASSWORD` | Value shown |
-| `CREW_ACCESS_PASSWORD` | Value shown |
-| `OWNER_MASTER_ACCESS_PASSWORD_2` | Marked **set**; the spare key's value is held separately and not shown |
+| Gate | Shape | In the vault |
+| --- | --- | --- |
+| Owner Access | `owner-access-<year>!` | Value shown — masked, Reveal, Copy |
+| Operator Launchpad | `operator-launchpad-<year>!` | Value shown |
+| Crew / Production Team Access | `crew-access-<year>!` | Value shown |
+| Owner Access — second key | *(not derived from anything)* | Marked **set**; the value is never shown, here or in the vault |
+
+The first three name the door they open and carry the year, so they rotate on a schedule you can remember. Rotating is one command, printed on the card in the vault.
+
+**The second owner key is different on purpose.** It is the West Peek password Sequoia and Scooter already share — *an address, in camel case* — and it is the one to use when the predictable key is not appropriate: from a borrowed machine, over a shoulder, or if the first key has been handed around and not yet rotated. It follows no pattern anyone could work out from the outside, it is **never displayed** in the vault or anywhere else in the app, and it is not written down here. Both keys open every gate; the console tells you which one you came in on.
 
 Those values render **only** under an owner session — an operator never receives them — and every Reveal or Copy writes an audit row naming the key, never the value.
 
@@ -209,7 +248,7 @@ Those values render **only** under an owner session — an operator never receiv
 ### Going live
 
 1. The **Go-live card** is the first thing on the deck. Press **Go live**: the event goes live and the credentials appear in the same card. If the show has been ended before, the card says so — the stream key was released on purpose — and **Get stream credentials** mints a fresh one in a click.
-2. **Copy both for StreamYard**, then in StreamYard **edit** your existing Custom RTMP destination (do not add a second one) and start broadcasting. Add the **Cloudflare fallback** as a second destination at the same time (§11).
+2. **Copy both for StreamYard**, then in StreamYard **edit** your existing Custom RTMP destination (do not add a second one) and start broadcasting. Add the **Cloudflare fallback** as a second destination at the same time (§14).
 3. The stage flips live within seconds. Confirm on a second device.
 
 **Ending a show releases the stream key.** That is deliberate: a key left behind in somebody's StreamYard must not work on the next show. Restarting is one press of **Get stream credentials** from whichever surface you are on — the Owner Console will do it without opening the deck.
@@ -223,8 +262,12 @@ Those values render **only** under an owner session — an operator never receiv
 | Silence · Hide · Lock chat | Per person, or the whole room |
 | Bring a speaker to the stage / send backstage | From the speaker roster |
 | Networking | Open or close the queue; matcher pairs people into 1:1 rooms with a timer |
-| Move down / Move back up | The fallback ladder (§10) |
-| **End the show** | Deliberate. Releases the feed, marks the event ENDED, every viewer's stage says so |
+| Move down / Move back up | The fallback ladder (§14) |
+| **Diagnose** (per person on the roster) | Answers "I can't see it": connected or not, their connection quality, **which video tracks actually reached them**, their app version and browser. It separates never-connected from receiving-nothing (ours) from a poor line (theirs) |
+| **See their view** (per person) | Opens the stage rendered with **their** real state — their VIP standing, whether they are silenced, what you have permitted them. Read-only, and recorded |
+| **Slow mode** | Off, 5, 10 or 30 seconds between messages. Crew, hosts and speakers are exempt. A per-person flood limit is always on underneath it |
+| **Clear chat** | Archives the room's messages for everyone, crew included. The confirm names the count, and there is no un-clear |
+| **End the show** | Deliberate. Releases the feed, marks the event ENDED, every viewer's stage says so, and the networking queue closes with it |
 
 Everyone is **permitted to watch by default**. You only approve people to come *on* the stage.
 
@@ -247,6 +290,8 @@ All four enter at `westpeek.live/production-access/special-guest` with the role 
 ### Sponsor
 
 Booth page, lead capture, ready room, and a post-event report.
+
+> Speakers and sponsors are asked for an **email address** when they first give their name. Guests who arrived before 17 Sep 2026 have none on file and cannot be reached by the group composer until they next open their portal — §10 counts and names them rather than skipping them quietly.
 
 ### VIP
 
@@ -271,17 +316,25 @@ A read-only overview: approvals, assets, reports, run of show, timeline. Clients
 
 ![Venue lobby](images/manual/07-venue-lobby.jpg)
 
-1. Go to `westpeek.live/join`, type the event code (case does not matter; the `WPL-` prefix is optional), or open the public event link.
-2. **Register** — Name, Email, Company. Title optional.
-3. Land in the **venue**: Lobby · Stage · Sessions · Breakouts · Expo · Networking · People · Replay · Run of Show · Help. If the event is already live you land **on the stage**.
-4. **Tell us more** — an optional card under the chat; the questions are set per event.
-5. **Hide me from the People directory** — a toggle; crew still see you, networking still works.
-6. **Raise a hand** to join the stage when the crew has stage requests open.
-7. When the show ends the stage says so and the **replay centre** appears when production publishes it.
+**A link opens the show.** `westpeek.live/join?code=…` goes straight to the stage of a live event — no form, no interstitial. Typing the code by hand works too: case does not matter and the `WPL-` prefix is optional.
+
+**Watching needs nothing.** The video plays and the chat is readable with no account, no code and no registration. That is deliberate: anyone holding the link can watch.
+
+**Registering is what buys you a voice** — posting in chat, joining networking, raising a hand, appearing on the People page. Name, email, company. The ask sits beside the chat from the moment you arrive, becomes prominent once after about forty-five seconds of watching, and is never in front of the video. Once you have registered it never appears again.
+
+**Your registration lasts 14 days on that device.** Leave and come back and you are still in. On a second device, open the same link and enter the email you used — nothing else to retype. Privileged standing does not travel that way: a VIP re-enters the VIP code on the new device, and the crew re-approves anyone who was on stage.
+
+**In the venue:** Lobby · Stage · Sessions · Breakouts · Expo · Networking · People · Replay · Run of Show · Help. A **Now / Next strip** under the navigation says what is on and what follows, in your own clock, and it collapses if you would rather not see it. The navigation marks what is actually happening — a live stage, an open networking queue — and nothing where there is nothing.
+
+**Sound.** The stage tries to start with sound on. Where the browser refuses — which phones do on a first visit — the video still plays and a speaker icon appears with "Tap for sound". One tap is enough. The same icon with a slash through it means muted.
+
+**Networking** pairs you with one other person for four minutes, someone you have not met. When the timer ends there is a short pause — you see who is next and your own camera preview — and then the next conversation opens. **Next match** skips ahead; **End networking** leaves.
+
+**When the show ends** the stage says so, and the replay appears once production publishes it.
 
 ---
 
-## 9. Files and assets
+## 9. Files, assets and documents
 
 Every file for an event lives in one place: **the event's Assets page**, with a cross-event view at `/app/assets` grouped by event.
 
@@ -296,9 +349,75 @@ Every file for an event lives in one place: **the event's Assets page**, with a 
 
 **Downloads are signed and expire after ten minutes**, and are refused to anyone without owner, operator or crew access to that event.
 
+### West Peek documents
+
+![Documents in Assets](images/manual/14-documents.jpg)
+
+Above the event files, `/app/assets` keeps the six documents that are not anybody's upload: **this manual**, and the five instruction pages we send to clients, crew, speakers, sponsors and attendees. Each offers **Download .md**, and an instruction page is generated **from its live content at the moment you press it**, so what you send is never a stale copy. They belong to no event, they cannot be archived or deleted here, and they never count as an event's files.
+
 ---
 
-## 10. Clients who want us to run their event
+## 10. Email — one composer, one log
+
+![The Email tab](images/manual/12-email-tab.jpg)
+
+Everything West Peek sends goes out from **`/app/email`**, and every message that has ever been sent appears in one log underneath it. Nothing in this product sends on a timer. Every row is a message a person chose to send.
+
+### Two ways to send
+
+**A transactional message to one person** — straight from the Email tab: pick the event, pick the message, type the addresses, send. Eight of these exist, each a written template: speaker invite, sponsor setup, client invite, tech check reminder, asset reminder, show day reminder, report ready, and the crew call sheet. The same panel sits on each event's **Communications** page, where the event is already chosen for you.
+
+**A message to a group** — `/app/email/compose`.
+
+![Write to a group](images/manual/13-email-compose.jpg)
+
+Pick the event, pick who it goes to — *all registered attendees, VIPs, speakers, sponsors, crew, the client,* or one person — then a template or your own words. The composer **works out who that is and shows you the count before you send**, and you can expand it to see exactly who. A group that resolves to nobody refuses rather than reporting a cheerful send to an empty room, and a person who appears in two groups is emailed once.
+
+### Unsubscribe
+
+Every group send carries a real unsubscribe link and the headers that make Gmail and Apple Mail show their own control.
+
+- Unsubscribing is **per person, across every event** — this is West Peek's list, not one show's.
+- The count says so before you send: *"47 people · 2 unsubscribed"*.
+- **A transactional message to one person is never suppressed.** A speaker who unsubscribed from announcements still gets their own green room link, because that is not a mailing, it is their invitation.
+- The unsubscribe page needs no login, and there is a way back for someone who pressed it by mistake.
+
+### What you can send in a month
+
+Resend allows roughly 3,000 messages a month and 100 a day on this plan. A send that would break the daily allowance **refuses before the first message goes**, rather than half-sending. The month's usage sits on the Email tab, counted from our own log — and it says that is what it is counting.
+
+> **Guests who arrived before 17 Sep 2026 have no email address on file.** Speakers and sponsors were never asked for one until then. They are counted and named as unreachable rather than silently skipped, and they fill in the moment they next open their portal.
+
+---
+
+## 11. Templates
+
+![Event templates](images/manual/10-templates.jpg)
+
+A template is a starting point: the format, the type, how long it runs, the sessions it opens with, and the questions it asks at registration. **`/app/templates`** ships with four:
+
+| Template | Shape |
+| --- | --- |
+| **West Peek Room** | Room · 45 min · one session — our own on-demand room, no registration, no client |
+| **45-minute workshop** | Stage · 45 min · four sessions — one teacher, one subject |
+| **Client webinar** | Stage · 75 min · four sessions — the standard client booking, with a real Q&A |
+| **Demo day** | Stage · 180 min · four sessions — founder pitches on a timer, then investor questions |
+
+**Use this template** opens the New event form already filled in; you change the name and the date and you are done. **Save an event as a template** takes the shape of an event that worked. They are ordinary rows — edit them, delete them, and a deleted one stays deleted.
+
+---
+
+## 12. Contractors and vendors
+
+One address book, two views. A **contractor** is a person you pay for a role on a show — a moderator, a technical director, a camera operator. A **vendor** is a company supplying a service.
+
+Each record holds the name, company, role or service, contact details, the agreed rate, notes, and a status: **shortlisted · booked · paid**. Attach one to as many events as you like — the record is the person, so a corrected rate fixes every show at once. `/app/contractors` and `/app/vendors` list everyone across events with filters and a CSV export that exports exactly what you are looking at.
+
+An unagreed rate reads **"No rate agreed"**, never `$0`. Records are archived, never deleted.
+
+---
+
+## 13. Clients who want us to run their event
 
 ![Plan an event](images/manual/08-request-event.jpg)
 
@@ -321,11 +440,13 @@ Every file for an event lives in one place: **the event's Assets page**, with a 
 
 These pages are editable by West Peek from the workspace, so an instruction fix reaches everyone who already has the link.
 
-> **Status:** the `/how-it-works/*` pages and the approve → price → pay → instructions flow are in the build queue as of 16 Sep 2026. Until they ship, send the client the scoping email manually and point crew at §6 of this manual.
+**How a request moves.** One row, five states, and only a person moves it: **requested** when the form arrives → **approved** when West Peek attaches a price and a scope and emails the client their link → **confirmed** when the client agrees → **paid** when West Peek records the settlement → or **declined**, with a reason. The instructions go out with the settlement, not before.
+
+**Payment is recorded by hand.** There is no card form and no provider connected; the client's page says plainly that payment is by bank transfer. One function in the app is the only thing that can write the paid state, and a validator fails the build if anything else tries — so a provider drops into that one seam later without touching the rest.
 
 ---
 
-## 11. The fallback ladder — what to do when the feed dies
+## 14. The fallback ladder — what to do when the feed dies
 
 | Rung | Attendees see | Keeps the StreamYard feed? | Configured |
 | --- | --- | --- | --- |
@@ -347,7 +468,7 @@ The card refuses to move down if that rung is not configured, rather than sendin
 
 ---
 
-## 12. Show-day runbook
+## 15. Show-day runbook
 
 | When | Do |
 | --- | --- |
@@ -355,14 +476,14 @@ The card refuses to move down if that rung is not configured, rather than sendin
 | T-60m | Crew in the deck. StreamYard open with **both** destinations set |
 | T-30m | Broadcast privately, confirm the stage shows the feed, then stop |
 | T-10m | Stage requests **Closed** until you want hands up. VIP lounge open. Chat unlocked |
-| T-0 | **Go live** from the card (Publish page, Owner Console row, or crew deck — same card). Confirm from a second device on a different network |
-| During | Moderate. Approve raised hands. Watch the ladder |
+| T-0 | **Go live** from the command bar, wherever you are. Confirm from a second device on a different network |
+| During | Moderate. Approve raised hands. Watch the health dot. Open networking when you want the room talking to each other |
 | End | **End the show** from the card. The stream key is released; restarting later needs one press of **Get stream credentials** |
 | After | Replay appears when published. Export contacts from `/app/people` |
 
 ---
 
-## 13. Capacity, cost, and where the ceiling is
+## 16. Capacity, cost, and where the ceiling is
 
 | Service | Plan | Included | First cliff |
 | --- | --- | --- | --- |
@@ -371,11 +492,36 @@ The card refuses to move down if that rung is not configured, rather than sendin
 | Cloudflare Stream | Pay as you go | — | $5 / 1,000 min stored, $1 / 1,000 min delivered |
 | Supabase | Free | 500 MB, shared compute, 5 GB egress | **Pauses after 7 days idle**; no backups |
 
+![Plans and capacity](images/manual/11-capacity.jpg)
+
+**`/app/capacity`** shows the month against these allowances, transcode minutes first because that is the cliff we reach first. Anything the provider will not tell the app reads **unknown** and points at the dashboard that knows — no bar is ever drawn against a number nobody checked.
+
+**Supabase no longer pauses.** A scheduled job reads one row every morning, which resets the seven-day idle clock. It fails loudly if the read does not succeed, and it fails if it pinged the wrong store — a green run that kept nothing awake is worse than no run.
+
 A 90-minute Room with 200 people costs roughly **nothing extra** on these plans. The practical ceiling today is Supabase's shared compute at around a thousand simultaneous chatters. Supabase Pro ($25/mo) buys daily backups and no auto-pause — worth it the first time a paying client's event is on the line.
 
 ---
 
-## 14. Troubleshooting
+## 17. How a database change reaches production
+
+Worth knowing, because it bit us three times in one day and every time it looked like something else.
+
+A schema change is written twice: once as `db/migrations/00NN_name.sql`, and once **byte-identically** as `supabase/migrations/<timestamp>_name.sql`. The Supabase GitHub integration applies the second one when the branch merges to `main`. The first is what the app reads to describe itself.
+
+**If the mirror is missing, nothing runs and nothing says so** — that was the root of all three incidents. Migration 0023 had no mirror, so its table never existed; 0036 then failed against the missing table; and 0037 and 0038, which sort after it, never ran at all. The integration *did* report the failure in red, on a push-to-main check run, which appears on no pull request and in no notification.
+
+**What now prevents it:**
+
+- Every table created and column added by any migration must be registered in the app's health map. A validator walks the migrations and fails the build if one is missing, so the map cannot be forgotten.
+- `/api/runtime/health` proves the whole map against the live database and names the migration file for anything absent.
+- A deploy whose database is behind **fails loudly** instead of waiting for someone to click the thing that breaks.
+- The page that needs a missing table shows a **named stop** — what is missing, the file to run, and where to run it — rather than an error.
+
+**If you ever see a named stop:** open the Supabase project for westpeek.live, SQL editor, paste the file it names, run it, reload. The migrations are additive and safe to run twice.
+
+---
+
+## 18. Troubleshooting
 
 | Symptom | Cause | Fix |
 | --- | --- | --- |
@@ -389,10 +535,15 @@ A 90-minute Room with 200 people costs roughly **nothing extra** on these plans.
 | A gate asks for a password you already entered | Your session expired — owner sessions last 12 hours | Re-enter at `/production-access/owner` |
 | A page behaves as if you are not signed in, right after a deploy | Stale bundle in an open tab | The app should prompt and reload itself; if it does not, hard refresh (⌘⇧R) |
 | A privileged code stopped working | Someone rotated it, or set a custom one | Owner Console → Access codes shows the current one |
+| A gate says "too many attempts" | Six wrong tries from one place | Two minutes, then it answers again. A correct code clears the record |
+| "Events cannot be saved until one migration runs" | The database is behind the code | It is a named stop, not a crash. Run the file it names in the Supabase SQL editor and reload (§17) |
+| An attendee says they cannot see the stream | Three different causes | **Diagnose** on their roster row tells you which: never connected, receiving nothing (ours), or a poor line (theirs) |
+| Someone was emailed who asked not to be | — | Should be impossible for a group send. Transactional messages to one person are deliberately never suppressed — that is their invitation, not a mailing (§10) |
+| A speaker or sponsor cannot be emailed | They gave their name before 17 Sep 2026, when we started asking for an address | They fill in the next time they open their portal |
 
 ---
 
-## 15. Rules that do not bend
+## 19. Rules that do not bend
 
 - Events are **archived, never deleted**.
 - Nothing is ever emailed to an attendee automatically without a crew click.
@@ -404,4 +555,9 @@ A 90-minute Room with 200 people costs roughly **nothing extra** on these plans.
 - Files are **archived, never deleted** — there is no delete path in the product.
 - Nobody is a **VIP** without the VIP code; rotating it revokes everyone admitted under the old one.
 - The owner chip says **"Owner"**, never a person's name — the master password is shared, so the app cannot know which of you it is.
+- Watching is open to anyone with the link; **registering is what buys a voice**.
+- A group email always carries an unsubscribe, and an unsubscribe holds across every event. A transactional message to one person is never suppressed.
+- A 1:1 networking room holds **exactly two people**, enforced in the grant, in the room, and at render.
+- No page draws a bar against a number the provider would not give us; it says **unknown**.
+- A migration that has not reached the database is a **named stop**, never a silent failure.
 - This manual is updated **in the same pull request** as any change it describes.

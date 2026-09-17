@@ -2755,6 +2755,50 @@
       "persistenceRequired": false,
       "cleanupPolicy": "none",
       "role": "operator"
+    },
+    {
+      "id": "app-capacity",
+      "path": "/app/capacity",
+      "authMode": "role-specific",
+      "persona": "operator",
+      "criticality": "standard",
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/app/capacity"
+      },
+      "safeActions": [
+        "navigate"
+      ],
+      "fixtureRequirements": [],
+      "persistenceRequired": false,
+      "cleanupPolicy": "none",
+      "role": "operator"
+    },
+    {
+      "id": "app-email-compose",
+      "path": "/app/email/compose",
+      "authMode": "role-specific",
+      "persona": "operator",
+      "criticality": "standard",
+      "viewports": [
+        "desktop",
+        "mobile"
+      ],
+      "expectedIdentity": {
+        "type": "route",
+        "value": "/app/email/compose"
+      },
+      "safeActions": [
+        "navigate"
+      ],
+      "fixtureRequirements": [],
+      "persistenceRequired": false,
+      "cleanupPolicy": "none",
+      "role": "operator"
     }
   ],
   "allowedHttpFailures": []

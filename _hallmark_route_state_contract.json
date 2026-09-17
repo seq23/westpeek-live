@@ -1791,6 +1791,30 @@
         "type": "route",
         "value": "/manual"
       }
+    },
+    {
+      "id": "app-capacity",
+      "path": "/app/capacity",
+      "persona": "operator",
+      "required_states": [
+        "empty",
+        "populated",
+        "error"
+      ],
+      "status": "UNPROVEN",
+      "evidence": []
+    },
+    {
+      "id": "app-email-compose",
+      "path": "/app/email/compose",
+      "persona": "operator",
+      "required_states": [
+        "empty",
+        "populated",
+        "error"
+      ],
+      "status": "UNPROVEN",
+      "evidence": []
     }
   ]
 }
