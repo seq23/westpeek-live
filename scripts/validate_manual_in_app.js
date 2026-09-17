@@ -18,18 +18,41 @@ const generatedAfter = fs.readFileSync(GENERATED, "utf8");
 examined += 1;
 if (generatedBefore !== generatedAfter) failures.push(`${GENERATED} was stale: run "node scripts/build_manual_assets.js" and commit it (the in-app manual had drifted from ${SOURCE})`);
 
-// No codes, anywhere — in the file or in what the app renders.
-const CODE_SHAPES = [/\bWPL-[A-Z0-9]{4,}/, /\bCREW-[A-Z0-9]{6}/, /\bSPK-[A-Z0-9]{6}/, /\bSPN-[A-Z0-9]{6}/, /\bCLT-[A-Z0-9]{6}/, /\bVIP-[A-Z0-9]{6}/];
-for (const [label, body] of [[SOURCE, source], [GENERATED, generatedAfter]]) {
-  for (const shape of CODE_SHAPES) {
-    const match = shape.exec(body);
-    // The scheme is described with a STEM placeholder; a real six-character stem is a code.
-    // Placeholders are how the scheme is explained: XXXXXX, STEM, and the worked example 45MINU
-    // (the demo stem used throughout §5). A real-looking code that is none of those is a leak.
-    if (match && !/STEM|ROLE|45MINU|XXXX|EXAMPL/.test(match[0])) failures.push(`${label} carries something code-shaped (${match[0]}). The manual never carries codes.`);
+// No codes, anywhere — in the file, in what the app renders, or in what Assets hands out.
+//
+// The shapes are read out of lib/manual/accessCodeShapes.ts rather than kept here, because the
+// manual is downloadable as Markdown from /app/assets now and that download applies the same list.
+// Two lists would drift, and the one that drifted would be the one guarding the file somebody
+// actually walks away with.
+const SHAPES_FILE = "lib/manual/accessCodeShapes.ts";
+const shapesSource = read(SHAPES_FILE);
+const shapeBody = (shapesSource.match(/export const ACCESS_CODE_SHAPES[^[]*\[([\s\S]*?)\];/) || [])[1] || "";
+const CODE_SHAPES = (shapeBody.match(/\/(?:\\.|[^/\\])+\//g) || []).map((literal) => new RegExp(literal.slice(1, -1)));
+const placeholderLiteral = (shapesSource.match(/export const ACCESS_CODE_PLACEHOLDERS = \/(.+?)\/;/) || [])[1];
+const passwordLiteral = (shapesSource.match(/export const PASSWORD_SHAPE = \/(.+?)\/;/) || [])[1];
+if (CODE_SHAPES.length < 6 || !placeholderLiteral || !passwordLiteral) {
+  // Hard stop rather than a quiet pass: a parse that found nothing would check nothing.
+  failures.push(`${SHAPES_FILE} did not yield the code shapes (${CODE_SHAPES.length} found). The manual would go out unchecked.`);
+} else {
+  const PLACEHOLDERS = new RegExp(placeholderLiteral);
+  const PASSWORD_SHAPE = new RegExp(passwordLiteral);
+  // The scheme is described with a STEM placeholder; a real six-character stem is a code.
+  // Placeholders are how the scheme is explained: XXXXXX, STEM, and the worked example 45MINU
+  // (the demo stem used throughout §5). A real-looking code that is none of those is a leak.
+  for (const [label, body] of [[SOURCE, source], [GENERATED, generatedAfter]]) {
+    for (const shape of CODE_SHAPES) {
+      const match = shape.exec(body);
+      if (match && !PLACEHOLDERS.test(match[0])) failures.push(`${label} carries something code-shaped (${match[0]}). The manual never carries codes.`);
+    }
+    if (PASSWORD_SHAPE.test(body)) failures.push(`${label} looks like it carries a password value.`);
   }
-  if (/PASSWORD\s*[:=]\s*\S/.test(body)) failures.push(`${label} looks like it carries a password value.`);
 }
+
+// And the download really runs that check before it serves a byte.
+const documents = read("services/documents/westPeekDocuments.ts");
+for (const token of ["findAccessCodeShape", "MANUAL_SOURCE", "readHowItWorksPage"]) if (!documents.includes(token)) failures.push(`services/documents/westPeekDocuments.ts must use ${token}`);
+const downloadRoute = read("app/api/documents/[documentId]/download/route.ts");
+for (const token of ["renderWestPeekDocument", "getWorkspaceActor", "text/markdown"]) if (!downloadRoute.includes(token)) failures.push(`the document download route must use ${token}`);
 
 const page = read("app/manual/page.tsx");
 for (const token of ["MANUAL_SOURCE", "renderMarkdownLite", "manual-toc", "manual-body"]) if (!page.includes(token)) failures.push(`app/manual/page.tsx must use ${token}`);

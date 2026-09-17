@@ -5,6 +5,7 @@ import { applyStageStreamSignal, getOrCreateStageStreamState } from "@/services/
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { findEventIndexRecord, getAttendeeConfig, getEventConfig, getEventConfigPackage, getEventIndex } from "@/services/events/eventConfigRepository";
 import { createAuditLog } from "@/services/audit";
+import { getHouseDefaults } from "@/services/agencies/houseDefaultsService";
 import { RUNTIME_EVENTS_MIGRATION_FILE, RUNTIME_TABLE_MIGRATIONS, RuntimeSchemaMissingError, type RuntimeAccessCodes, type RuntimeClientRecord, type RuntimeEventFormat, type RuntimeEventRecord, type RuntimeEventSession } from "@/types/runtimeEvent";
 import type { EventStatus } from "@/types/core";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
@@ -285,7 +286,10 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
   const name = input.name.trim();
   if (!name) throw new Error("Event name is required.");
   const now = new Date();
-  const startAt = input.when === "now" || !input.startAt ? now.toISOString() : zonedLocalToIso(input.startAt, input.timezone || "America/Chicago");
+  // What the house says, for anything the form did not: the zone, the networking match length, how
+  // long an attendee stays registered. Settings is where those are set; this is where they land.
+  const house = await getHouseDefaults();
+  const startAt = input.when === "now" || !input.startAt ? now.toISOString() : zonedLocalToIso(input.startAt, input.timezone || house.defaultTimezone);
   const durationMinutes = Math.max(15, Math.min(480, Number(input.durationMinutes) || 120));
   const endAt = new Date(new Date(startAt).getTime() + 1000 * 60 * durationMinutes).toISOString();
   const format: RuntimeEventFormat = input.format === "room" ? "room" : "stage";
@@ -304,10 +308,11 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
     description: input.description?.trim() || undefined,
     startAt,
     endAt,
-    timezone: input.timezone?.trim() || "America/Chicago",
+    timezone: input.timezone?.trim() || house.defaultTimezone,
     ...codesFromStem(await freeCodeStem(name, slug)),
     registrationEnabled: false,
-    registrationQuestions: input.registrationQuestions,
+    registrationQuestions: input.registrationQuestions?.length ? input.registrationQuestions : house.defaultRegistrationQuestions,
+    attendeeSessionDays: house.defaultAttendeeSessionDays,
     branding: { logo: "west-peek-live", hero: name, theme: "west-peek-live" },
     sessions: input.templateSessions?.length ? sessionsFromTemplate(slug, startAt, input.templateSessions) : defaultSessions(slug, name, format, startAt, endAt),
     source: input.source || "runtime",
@@ -317,6 +322,14 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
     updatedAt: now.toISOString(),
   };
   await getRuntimeStore().upsertRuntimeEvent(record);
+  // Networking settings are a row per event, not a field on the event, so the house match length is
+  // inherited by writing that row now. Change the default in Settings and the next event gets it;
+  // events already created keep whatever they were set to.
+  // Imported here rather than at the top: the networking service reads this module, and a static
+  // import back into it would be a cycle evaluated before either module's constants exist.
+  await import("@/services/speed-networking/speedNetworkingService")
+    .then((mod) => mod.setNetworkingSettings(record.id, { open: true, matchMinutes: house.defaultNetworkingMatchMinutes }, actor.id))
+    .catch(() => undefined);
   await createAuditLog({
     agencyId: "west-peek",
     clientId: record.clientId,

@@ -1,4 +1,13 @@
 /**
+ * How long a registration lasts, in days. The bounds live on the type module rather than in the
+ * policy service because the house default in Settings reads them too, and the policy service
+ * reads the event repository — importing it from there would close a cycle.
+ */
+export const DEFAULT_ATTENDEE_SESSION_DAYS = 14;
+export const MIN_ATTENDEE_SESSION_DAYS = 1;
+export const MAX_ATTENDEE_SESSION_DAYS = 365;
+
+/**
  * How this browser proved who it is. "device_registered" filled the form here; "email_restored"
  * typed a matching address on a second device and nothing more, so it carries no privilege.
  */

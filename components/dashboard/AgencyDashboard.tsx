@@ -4,7 +4,7 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EmptyState } from "@/components/shared/EmptyState";
 import { RuntimeSchemaStop } from "@/components/system/RuntimeSchemaStop";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { HouseLogo } from "@/components/brand/HouseLogo";
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { getRuntimeSchemaStatus, listClientRecords, listEventRecords } from "@/services/events/eventRepository";
 import { getAgencySettings } from "@/services/agencies/agencySettingsService";
@@ -38,7 +38,7 @@ export async function AgencyDashboard() {
   return (
     <div className="space-y-6">
       <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
-        <WestPeekProductionsLogo size="sm" />
+        <HouseLogo size="sm" />
         <p className="mt-4 text-sm font-medium text-slate-300">{settings.agencyName} · signed in as {actor?.label || "unknown"}</p>
         <h1 className="mt-2 text-3xl font-semibold">Run West Peek Rooms and client events from one cockpit.</h1>
         <p className="mt-2 max-w-3xl text-slate-300">Start a Room now, plan a client event for later, share the join code, and hand crew, speakers, sponsors, VIPs, and clients their own codes — all from the event row.</p>

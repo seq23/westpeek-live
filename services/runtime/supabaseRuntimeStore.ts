@@ -8,6 +8,7 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { HouseDefaultsRecord } from "@/types/houseDefaults";
 import type { EventRequestRecord } from "@/types/eventRequest";
 import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
@@ -383,6 +384,25 @@ function rowToRuntimeClient(row: Record<string, unknown>): RuntimeClientRecord {
     createdBy: String(row.created_by || ""),
     createdByLabel: String(row.created_by_label || ""),
     createdAt: String(row.created_at || ""),
+    updatedAt: String(row.updated_at || ""),
+  };
+}
+
+function rowToHouseDefaults(row: Record<string, unknown>): HouseDefaultsRecord {
+  return {
+    id: String(row.id),
+    fromEmail: String(row.from_email || ""),
+    replyToEmail: String(row.reply_to_email || ""),
+    logoStoragePath: String(row.logo_storage_path || ""),
+    logoFileName: String(row.logo_file_name || ""),
+    defaultTimezone: String(row.default_timezone || ""),
+    defaultNetworkingMatchMinutes: Number(row.default_networking_match_minutes) || 0,
+    defaultAttendeeSessionDays: Number(row.default_attendee_session_days) || 0,
+    defaultRegistrationQuestions: Array.isArray(row.default_registration_questions) ? (row.default_registration_questions as HouseDefaultsRecord["defaultRegistrationQuestions"]) : [],
+    livekitTier: (String(row.livekit_tier || "") as HouseDefaultsRecord["livekitTier"]) || "",
+    starterTemplatesInstalledAt: String(row.starter_templates_installed_at || ""),
+    updatedBy: String(row.updated_by || ""),
+    updatedByLabel: String(row.updated_by_label || ""),
     updatedAt: String(row.updated_at || ""),
   };
 }
@@ -1079,6 +1099,33 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     }, { onConflict: "id" });
     if (error) failOrSchemaMissing("runtime_agency_settings", error);
     return settings;
+  }
+
+  async getHouseDefaults(id: string) {
+    const { data, error } = await this.client.from("runtime_house_defaults").select("*").eq("id", id).maybeSingle();
+    if (error) failOrSchemaMissing("runtime_house_defaults", error);
+    return data ? rowToHouseDefaults(data as Record<string, unknown>) : undefined;
+  }
+
+  async setHouseDefaults(defaults: HouseDefaultsRecord) {
+    const { error } = await this.client.from("runtime_house_defaults").upsert({
+      id: defaults.id,
+      from_email: defaults.fromEmail,
+      reply_to_email: defaults.replyToEmail,
+      logo_storage_path: defaults.logoStoragePath,
+      logo_file_name: defaults.logoFileName,
+      default_timezone: defaults.defaultTimezone,
+      default_networking_match_minutes: defaults.defaultNetworkingMatchMinutes,
+      default_attendee_session_days: defaults.defaultAttendeeSessionDays,
+      default_registration_questions: defaults.defaultRegistrationQuestions,
+      livekit_tier: defaults.livekitTier,
+      starter_templates_installed_at: defaults.starterTemplatesInstalledAt || null,
+      updated_by: defaults.updatedBy,
+      updated_by_label: defaults.updatedByLabel,
+      updated_at: defaults.updatedAt,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("runtime_house_defaults", error);
+    return defaults;
   }
 
   async upsertEventRequest(request: EventRequestRecord) {
