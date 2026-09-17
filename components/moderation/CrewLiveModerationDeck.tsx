@@ -20,7 +20,7 @@ import { StageRequestsToggle } from "@/components/moderation/StageRequestsToggle
  * where its role is allowed by `crewActionPermissions` — every section still renders for every
  * role, with the controls the role may not use disabled and the reason on them.
  */
-export async function CrewLiveModerationDeck({ eventId, search, searchAction, diagnose, includeRoomControls = true, includeStreamConsole = true }: { eventId: string; search?: string; searchAction: string; diagnose?: string; includeStreamConsole?: boolean; includeRoomControls?: boolean }) {
+export async function CrewLiveModerationDeck({ eventId, search, searchAction, diagnose, backupRooms, backupRoomsError, includeRoomControls = true, includeStreamConsole = true }: { eventId: string; search?: string; searchAction: string; diagnose?: string; backupRooms?: string; backupRoomsError?: string; includeStreamConsole?: boolean; includeRoomControls?: boolean }) {
   const viewer = await getCrewViewer(eventId);
   return (
     <div className="space-y-6" data-testid="crew-live-moderation-deck" data-viewer-kind={viewer.kind} data-viewer-role={viewer.role || viewer.kind}>
@@ -34,7 +34,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, di
             <h2 className="mt-2 text-2xl font-black tracking-tight">Make the stage live, and move it if the feed fails</h2>
             <p className="mt-2 max-w-3xl text-sm text-slate-300">Generate the RTMP credentials once, paste them into StreamYard → Custom RTMP, and start the broadcast there; the stage flips within seconds. The ladder below moves attendees to a backup room when the feed drops, and back up when it returns.</p>
           </div>
-          <SafeSection label="Go live" render={() => StreamYardIngressPanel({ eventId, viewer, includeEndShow: false })} />
+          <SafeSection label="Go live" render={() => StreamYardIngressPanel({ eventId, viewer, includeEndShow: false, returnTo: searchAction, backupRoomsSaved: backupRooms === "saved", backupRoomsError })} />
         </section>
       ) : null}
       <SafeSection label="Host" render={() => HostPanel({ eventId, viewer })} />

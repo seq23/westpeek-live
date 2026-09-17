@@ -10,7 +10,10 @@ import { livekitWebhookUrl } from "@/lib/runtime/appBaseUrl";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { CloudflareFallbackCard } from "@/components/testing/CloudflareFallbackCard";
+import { BackupRoomsCard } from "@/components/stage/BackupRoomsCard";
 import { CLOUDFLARE_FALLBACK_STEPS, cloudflareFallbackCredentials, ladderReadiness, rungReadiness, type LadderSource } from "@/lib/video/fallbackReadiness";
+import { getEventBackupRoom } from "@/services/video/backupRoomService";
+import type { BackupRoomValues } from "@/types/backupRoom";
 
 function StatusBadge({ status }: { status: string }) {
   const tone = status.includes("LIVE") || status === "READY_FOR_STREAMYARD" ? "bg-emerald-50 text-emerald-800" : status.includes("SWITCHING") ? "bg-amber-50 text-amber-800" : status.includes("ENDED") ? "bg-slate-100 text-slate-700" : "bg-slate-100 text-slate-700";
@@ -45,8 +48,8 @@ function SignalButton({ eventId, signal, label, reason, tone = "neutral", viewer
   );
 }
 
-function ProviderLadderCard({ activeSource }: { activeSource: string }) {
-  const rungs = ladderReadiness();
+function ProviderLadderCard({ activeSource, backup }: { activeSource: string; backup: BackupRoomValues }) {
+  const rungs = ladderReadiness(process.env, backup);
   return (
     <div className="rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="provider-ladder-card">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-slate-500">Show-day ladder</p>
@@ -65,15 +68,18 @@ function ProviderLadderCard({ activeSource }: { activeSource: string }) {
 }
 
 /** `includeEndShow` is off where the deck already renders the full End-the-show control above this panel (two copies broke the crew end-the-show journey, 16 Sep 2026). */
-export async function StreamYardIngressPanel({ eventId = "event-summit", viewer: givenViewer, includeEndShow = true }: { eventId?: string; viewer?: CrewViewer; includeEndShow?: boolean }) {
+export async function StreamYardIngressPanel({ eventId = "event-summit", viewer: givenViewer, includeEndShow = true, returnTo, backupRoomsSaved, backupRoomsError }: { eventId?: string; viewer?: CrewViewer; includeEndShow?: boolean; returnTo?: string; backupRoomsSaved?: boolean; backupRoomsError?: string }) {
   const state = await getOperatorStageStreamState(eventId, "main-stage");
+  // Zoom and Google Meet are ready when THIS event has a meeting saved, so every readiness read on
+  // this panel — the ladder, the disabled Move down buttons — carries the event's own row.
+  const backup = await getEventBackupRoom(eventId, "main-stage");
   const viewer = givenViewer || await getCrewViewer(eventId);
   const webhookUrl = await livekitWebhookUrl();
   const pollingOnly = !state.lastWebhookEvent && Boolean(state.lastHealthCheckAt);
   // Filtered at the store, newest first. Reading the whole snapshot and filtering here showed
   // "No stage stream events recorded yet" for a runtime event whose state had already recorded
   // generate_credentials and two webhooks (16 Sep 2026): the unfiltered read is row-capped.
-  const readiness = ladderReadiness();
+  const readiness = ladderReadiness(process.env, backup);
   const unreadyReason = (source: LadderSource) => { const rung = readiness.find((item) => item.source === source); return rung && !rung.ready ? `Refused: ${rung.reason}` : undefined; };
   const events = await getRuntimeStore().listStageStreamEvents(eventId, "main-stage", 8).catch(() => []);
   return (
@@ -103,9 +109,10 @@ export async function StreamYardIngressPanel({ eventId = "event-summit", viewer:
         <CopyToClipboardButton value={webhookUrl} label="Webhook URL" />
       </div>
       <CloudflareFallbackCard {...cloudflareFallbackCredentials()} reason={rungReadiness("CLOUDFLARE_STREAM").reason} steps={[...CLOUDFLARE_FALLBACK_STEPS]} />
+      <SafeSection label="Backup rooms" compact render={() => BackupRoomsCard({ eventId, viewer, returnTo, saved: backupRoomsSaved, error: backupRoomsError })} />
       {includeEndShow ? <div className="mt-4"><SafeSection label="End of show" compact render={() => EndShowControl({ eventId, compact: true, viewer })} /></div> : null}
       <div className="mt-4 grid gap-4 lg:grid-cols-[1fr_1fr]">
-        <ProviderLadderCard activeSource={state.activeStreamSource} />
+        <ProviderLadderCard activeSource={state.activeStreamSource} backup={backup} />
         <div className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm text-amber-900">
           <p className="font-black">Backend alert / recommendation</p>
           <p className="mt-1">{state.fallbackRecommendation || "Primary path healthy. Keep all fallback providers warm."}</p>

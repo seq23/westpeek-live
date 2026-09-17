@@ -5,6 +5,8 @@
  * with nothing behind it must say so and must refuse the "Move down" button — a producer who
  * clicks it on show day would otherwise send the room to a black player.
  */
+import type { BackupRoomValues } from "@/types/backupRoom";
+
 export type LadderSource = "LIVEKIT_INGRESS" | "CLOUDFLARE_STREAM" | "DAILY" | "ZOOM" | "GOOGLE_MEET";
 
 export interface RungReadiness {
@@ -26,23 +28,29 @@ export function cloudflareFallbackReady(env: Env = process.env) {
   return has(env, "CLOUDFLARE_STREAM_FALLBACK_PLAYBACK_URL", "NEXT_PUBLIC_CLOUDFLARE_STREAM_FALLBACK_PLAYBACK_URL") && has(env, "CLOUDFLARE_STREAM_FALLBACK_RTMPS_KEY");
 }
 
-export function ladderReadiness(env: Env = process.env): RungReadiness[] {
+/**
+ * `backup` is the event's saved Backup rooms row (services/video/backupRoomService). Zoom and Google
+ * Meet are ready when a person has actually put a meeting in for THIS event — they stopped being an
+ * environment question on 17 Sep 2026. Omitting it reads the house room out of the environment,
+ * which is what a caller with no event in hand (the health probe) is asking about.
+ */
+export function ladderReadiness(env: Env = process.env, backup?: BackupRoomValues): RungReadiness[] {
   const livekit = has(env, "LIVEKIT_API_KEY") && has(env, "LIVEKIT_API_SECRET") && has(env, "LIVEKIT_URL", "NEXT_PUBLIC_LIVEKIT_URL");
   const cloudflare = cloudflareFallbackReady(env);
   const daily = has(env, "DAILY_API_KEY") && has(env, "DAILY_DOMAIN");
-  const zoom = has(env, "TIER4_ZOOM_MEETING_NUMBER", "ZOOM_MEETING_NUMBER");
-  const meet = has(env, "GOOGLE_MEET_MANAGED_FALLBACK_URL", "GOOGLE_MEET_EMERGENCY_URL");
+  const zoom = Boolean((backup?.zoomMeetingNumber || "").trim()) || (!backup && has(env, "TIER4_ZOOM_MEETING_NUMBER", "ZOOM_MEETING_NUMBER"));
+  const meet = Boolean((backup?.googleMeetUrl || "").trim()) || (!backup && has(env, "GOOGLE_MEET_MANAGED_FALLBACK_URL", "GOOGLE_MEET_EMERGENCY_URL"));
   return [
     { source: "LIVEKIT_INGRESS", rung: "Primary", label: "StreamYard-compatible RTMP to LiveKit", ready: livekit, reason: livekit ? "" : "LiveKit keys are not set — the primary path cannot mint ingress credentials." },
     { source: "CLOUDFLARE_STREAM", rung: "Fallback 1", label: "LiveKit + Cloudflare Stream Live", ready: cloudflare, reason: cloudflare ? "" : "Cloudflare Stream has no playback URL or stream key on this Worker — attendees would get a black player." },
     { source: "DAILY", rung: "Fallback 2", label: "Daily embedded room", ready: daily, reason: daily ? "" : "Daily API key or domain is not set." },
-    { source: "ZOOM", rung: "Fallback 3", label: "Zoom embedded/manual escalation", ready: zoom, reason: zoom ? "" : "No Zoom meeting number is configured." },
-    { source: "GOOGLE_MEET", rung: "Final", label: "Google Meet continuity room", ready: meet, reason: meet ? "" : "No Google Meet continuity room URL is configured." },
+    { source: "ZOOM", rung: "Fallback 3", label: "Zoom embedded room", ready: zoom, reason: zoom ? "" : "No Zoom meeting number is set for this event — put one in on the Backup rooms card and this rung turns on." },
+    { source: "GOOGLE_MEET", rung: "Final", label: "Google Meet continuity room", ready: meet, reason: meet ? "" : "No Google Meet link is set for this event — put one in on the Backup rooms card and this rung turns on." },
   ];
 }
 
-export function rungReadiness(source: LadderSource, env: Env = process.env) {
-  return ladderReadiness(env).find((rung) => rung.source === source)!;
+export function rungReadiness(source: LadderSource, env: Env = process.env, backup?: BackupRoomValues) {
+  return ladderReadiness(env, backup).find((rung) => rung.source === source)!;
 }
 
 /** The RTMPS pair the producer pastes into StreamYard. The key is a secret: masked until revealed, never logged. */

@@ -60,6 +60,8 @@ export interface StageStreamState {
   dailyRoomName?: string;
   dailyRoomUrl?: string;
   zoomMeetingNumber?: string;
+  /** The Zoom meeting's own passcode when it has one. Needed client-side to join the embedded room. */
+  zoomMeetingPasscode?: string;
   googleMeetFallbackUrl?: string;
   hasEverStarted: boolean;
   operatorMarkedShowEnded: boolean;
@@ -103,6 +105,7 @@ export interface PublicStageStreamState {
   breakoutAttendeeCameraEnabled: boolean;
   cloudflareStreamPlaybackUrl?: string;
   zoomMeetingNumber?: string;
+  zoomMeetingPasscode?: string;
   googleMeetFallbackUrl?: string;
   fallbackReason?: string;
   fallbackRecommendation?: string;
@@ -141,6 +144,9 @@ export function toPublicStageStreamState(state: StageStreamState): PublicStageSt
     breakoutAttendeeCameraEnabled: state.breakoutAttendeeCameraEnabled,
     cloudflareStreamPlaybackUrl: state.cloudflareStreamPlaybackUrl,
     zoomMeetingNumber: state.zoomMeetingNumber,
+    // The attendee's own browser joins the embedded Zoom room, so the meeting passcode has to reach
+    // it. It is the meeting's passcode, never a West Peek access code, and the venue is gated.
+    zoomMeetingPasscode: state.zoomMeetingPasscode,
     googleMeetFallbackUrl: state.googleMeetFallbackUrl,
     fallbackReason: state.fallbackReason,
     fallbackRecommendation: state.fallbackRecommendation,

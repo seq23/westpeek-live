@@ -5,7 +5,7 @@ import { CrewLiveModerationDeck } from "@/components/moderation/CrewLiveModerati
 
 export const dynamic = "force-dynamic";
 
-export default async function CrewEventHomePage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ roster?: string; diagnose?: string }> }) {
+export default async function CrewEventHomePage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ roster?: string; diagnose?: string; backupRooms?: string; backupRoomsError?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   await ensureRuntimeEvent(resolvedParams.eventId);
@@ -31,7 +31,7 @@ export default async function CrewEventHomePage({ params, searchParams }: { para
           <h2 className="mt-2 text-2xl font-black tracking-tight">Who is on the stage, who is waiting, and what chat is doing</h2>
           <p className="mt-2 max-w-3xl text-sm text-slate-300">Permit, approve, revoke, silence, hide, and lock from here during the show. The same controls appear on the operator command page.</p>
         </div>
-        <CrewLiveModerationDeck eventId={resolvedParams.eventId} search={resolvedSearchParams?.roster || ""} searchAction={`/crew/events/${resolvedParams.eventId}`} diagnose={resolvedSearchParams?.diagnose} />
+        <CrewLiveModerationDeck eventId={resolvedParams.eventId} search={resolvedSearchParams?.roster || ""} searchAction={`/crew/events/${resolvedParams.eventId}`} diagnose={resolvedSearchParams?.diagnose} backupRooms={resolvedSearchParams?.backupRooms} backupRoomsError={resolvedSearchParams?.backupRoomsError} />
       </section>
 
       <CrewBriefingPanel />

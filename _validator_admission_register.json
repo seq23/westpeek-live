@@ -5034,6 +5034,27 @@
       "simplificationDisposition": "KEEP"
     },
     {
+      "script": "validate:configurable-backup-rooms",
+      "command": "node scripts/validate_configurable_backup_rooms.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "The bottom two rungs of the show-day ladder can be set up by a person and are honest about themselves: the Zoom meeting number and the Google Meet link are saved per event by the owner, an operator, or crew holding go_live, each rung's readiness follows the saved value rather than a Worker variable, a rung with no meeting refuses the move down on the server naming what is missing rather than sending the room to a black player, a value that is not a meeting number or a Meet link is refused with a sentence a crew member can act on, a meeting typed in mid-show reaches everyone already watching through the stage poll without a reload because the saved row is folded onto the stage state on every read, Zoom stays embedded inside the venue with Zoom's own meeting-information panel and extra toolbar suppressed, Google Meet shows an in-place panel saying where the show went and that chat, the roster, stage requests and networking do not travel rather than performing a silent redirect, the crew card says where a producer reads it that neither rung can bring an attendee onto the West Peek stage, and \"Email everyone the new link\" is a link to the group composer so nothing can be sent without a person pressing Send on the screen that shows who it is going to.",
+      "whatItDoesNotProve": "Static contract only. That a real Zoom meeting joins inside the embed and that Google Meet accepts the link are proven by a live show; the readiness arithmetic, the refusals, the mid-show propagation and the rollback are proven at runtime by tests/unit/backupRooms.test.ts, and the one-row-per-recipient send by tests/unit/groupEmail.test.ts.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only if the Zoom and Google Meet rungs are removed from the ladder, or replaced by rungs a person cannot configure.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
+    },
+    {
       "script": "validate:group-email-composer",
       "command": "node scripts/validate_group_email_composer.js",
       "status": "ACTIVE",

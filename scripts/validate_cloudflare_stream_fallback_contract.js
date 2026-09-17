@@ -13,9 +13,9 @@ check("lib/video/fallbackReadiness.ts", ["export function cloudflareFallbackRead
 const card = check("components/testing/CloudflareFallbackCard.tsx", ["Fallback 1: Cloudflare Stream", "cloudflare-rtmps-url", "cloudflare-rtmps-key", "cloudflare-rtmps-key-reveal", "cloudflare-test-fallback-player", "cloudflare-fallback-steps", "CopyToClipboardButton", "data-revealed"]);
 if (!/revealed \? streamKey : masked/.test(card)) throw new Error("The stream key must be masked until Reveal is clicked.");
 if (/console\.(log|error|warn)/.test(card)) throw new Error("The stream key is a secret: the card must never log.");
-const panel = check("components/testing/StreamYardIngressPanel.tsx", ["CloudflareFallbackCard", "cloudflareFallbackCredentials()", "ladderReadiness()", 'rungReadiness("CLOUDFLARE_STREAM")', "unready={unreadyReason(", "ladder-rung-", "data-ready=", "stage-signal-${signal}-refused"]);
+const panel = check("components/testing/StreamYardIngressPanel.tsx", ["CloudflareFallbackCard", "cloudflareFallbackCredentials()", "ladderReadiness(process.env, backup)", 'rungReadiness("CLOUDFLARE_STREAM")', "unready={unreadyReason(", "ladder-rung-", "data-ready=", "stage-signal-${signal}-refused"]);
 for (const source of ["CLOUDFLARE_STREAM", "DAILY", "ZOOM", "GOOGLE_MEET"]) if (!panel.includes(`unreadyReason("${source}")`)) throw new Error(`Move down to ${source} is not refused when the rung is unconfigured.`);
-check("lib/actions/stageStreamActions.ts", ["rungReadiness(target)", "throw new Error(`Refused: ${rung.reason}`)", "manual_switch_to_cloudflare_stream:"]);
+check("lib/actions/stageStreamActions.ts", ["rungReadiness(target, process.env, await getEventBackupRoom(eventId, stageId))", "throw new Error(`Refused: ${rung.reason}`)", "manual_switch_to_cloudflare_stream:"]);
 // The five secrets are declared everywhere a deploy reads.
 const manifests = [["deployment/cloudflare-required-secrets.json", "requiredSecrets"], ["deployment/env-var-registry.json", "requiredProductionEnv"], ["deployment/env-var-registry.json", "cloudflareSecretKeys"], ["_env_contract.json", "requiredRuntimeEnv"], ["_env_contract.json", "cloudflareSecretEnv"]];
 for (const [file, key] of manifests) {

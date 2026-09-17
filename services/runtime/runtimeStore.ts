@@ -1,6 +1,7 @@
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState, V4VideoProvider } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
+import type { EventBackupRoomRecord } from "@/types/backupRoom";
 import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
@@ -114,6 +115,7 @@ export interface V6RuntimeSnapshot {
   attendeePermissions: AttendeePermission[];
   runOfShowEvents: V6RunOfShowRuntimeEvent[];
   stageStreamStates: StageStreamState[];
+  eventBackupRooms: EventBackupRoomRecord[];
   stageStreamEvents: StageStreamEvent[];
   liveChatMessages: LiveChatMessage[];
   liveChatModerationStates: LiveChatModerationState[];
@@ -208,6 +210,13 @@ export interface RuntimeStore {
   upsertAttendeePermission(permission: AttendeePermission): Promise<AttendeePermission>;
   listAttendeePermissions(eventId: string, attendeeId: string): Promise<AttendeePermission[]>;
   appendRunOfShowEvent(event: V6RunOfShowRuntimeEvent): Promise<V6RunOfShowRuntimeEvent>;
+  /**
+   * The Zoom meeting and Meet room a person typed in for this event (migration 0045). Kept apart
+   * from the stage state on purpose: "Reset primary" rebuilds that row from defaults, and a meeting
+   * the crew entered mid-show must survive it.
+   */
+  getEventBackupRoom(eventId: string, stageId: string): Promise<EventBackupRoomRecord | undefined>;
+  setEventBackupRoom(record: EventBackupRoomRecord): Promise<EventBackupRoomRecord>;
   getStageStreamState(key: string): Promise<StageStreamState | undefined>;
   setStageStreamState(key: string, state: StageStreamState): Promise<StageStreamState>;
   appendStageStreamEvent(event: StageStreamEvent): Promise<StageStreamEvent>;
@@ -296,6 +305,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     attendeePermissions: [],
     runOfShowEvents: [],
     stageStreamStates: [],
+    eventBackupRooms: [],
     stageStreamEvents: [],
     liveChatMessages: [],
     liveChatRateStates: [],

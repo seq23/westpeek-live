@@ -1,6 +1,7 @@
 import { randomId, base64UrlEncode } from "@/lib/security/portableCrypto";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { findEventRecord } from "@/services/events/eventRepository";
+import { getEventBackupRoom, houseGoogleMeetUrl, houseZoomMeetingNumber } from "@/services/video/backupRoomService";
 import type { StageStreamEvent, StageStreamSignal, StageStreamState } from "@/types/stageStream";
 import { toOperatorStageStreamState, toPublicStageStreamState } from "@/types/stageStream";
 
@@ -16,12 +17,33 @@ function configuredCloudflarePlaybackUrl() {
   return process.env.CLOUDFLARE_STREAM_FALLBACK_PLAYBACK_URL || process.env.NEXT_PUBLIC_CLOUDFLARE_STREAM_FALLBACK_PLAYBACK_URL || undefined;
 }
 
+// The house rooms: a deployment-wide Zoom bridge or Meet room, kept for the deployments that have
+// one. An event's own saved Backup rooms row wins over them — see withBackupRoom below.
 function configuredGoogleMeetUrl() {
-  return process.env.GOOGLE_MEET_MANAGED_FALLBACK_URL || process.env.GOOGLE_MEET_EMERGENCY_URL || undefined;
+  return houseGoogleMeetUrl();
 }
 
 function configuredZoomMeetingNumber() {
-  return process.env.TIER4_ZOOM_MEETING_NUMBER || process.env.ZOOM_MEETING_NUMBER || undefined;
+  return houseZoomMeetingNumber();
+}
+
+/**
+ * Fold the event's saved Zoom meeting and Meet link onto the stage state on every read.
+ *
+ * Done here rather than at write time on purpose. The crew types a meeting in mid-show; the stage
+ * state may have been written minutes earlier and is written again by the next signal. Merging on
+ * read means the attendee player's ten-second poll picks the new meeting up with no reload for
+ * anybody, and "Reset primary" cannot throw the meeting away.
+ */
+async function withBackupRoom(state: StageStreamState): Promise<StageStreamState> {
+  const backup = await getEventBackupRoom(state.eventId, state.stageId).catch(() => undefined);
+  if (!backup) return state;
+  return {
+    ...state,
+    zoomMeetingNumber: backup.zoomMeetingNumber,
+    zoomMeetingPasscode: backup.zoomPasscode,
+    googleMeetFallbackUrl: backup.googleMeetUrl,
+  };
 }
 
 function defaultStageStreamState(eventId: string, stageId = "main-stage"): StageStreamState {
@@ -53,10 +75,10 @@ export async function getOrCreateStageStreamState(eventId: string, stageId = "ma
   const store = getRuntimeStore();
   const key = stageStreamKey(eventId, stageId);
   const existing = await store.getStageStreamState(key).catch(() => undefined);
-  if (existing) return { ...existing, cloudflareStreamPlaybackUrl: existing.cloudflareStreamPlaybackUrl || configuredCloudflarePlaybackUrl(), zoomMeetingNumber: existing.zoomMeetingNumber || configuredZoomMeetingNumber(), googleMeetFallbackUrl: existing.googleMeetFallbackUrl || configuredGoogleMeetUrl() };
+  if (existing) return withBackupRoom({ ...existing, cloudflareStreamPlaybackUrl: existing.cloudflareStreamPlaybackUrl || configuredCloudflarePlaybackUrl() });
   const created = defaultStageStreamState(eventId, stageId);
   await store.setStageStreamState(key, created).catch(() => created);
-  return created;
+  return withBackupRoom(created);
 }
 
 export async function getPublicStageStreamState(eventId: string, stageId = "main-stage") {
