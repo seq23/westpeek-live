@@ -74,7 +74,9 @@ describe("event templates", () => {
     const second = await saveEventTemplate({ name: "Two", createdByLabel: "Owner" });
     expect((await listEventTemplates()).map((template) => template.name)).toContain("Two");
     if (first.ok) await deleteEventTemplate(first.template.id);
-    const remaining = await listEventTemplates();
+    // The four starter templates arrive with a clean install (starterEventTemplates.ts), so what is
+    // asserted here is the owner's own two: one saved, one deleted, one left.
+    const remaining = (await listEventTemplates()).filter((template) => !template.id.startsWith("template-starter-"));
     expect(remaining.map((template) => template.name)).toEqual(["Two"]);
     if (second.ok) expect(templatePrefillQuery(second.template)).toContain(`template=${second.template.id}`);
   });

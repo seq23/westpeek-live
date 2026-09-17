@@ -6,9 +6,9 @@ import { emailConfiguration, listAllEmailLog } from "@/services/email/eventEmail
 import { listEventRecords } from "@/services/events/eventRepository";
 
 /**
- * Every message the app has sent, newest first, grouped by the event it belongs to. Sending happens
- * on the event's own Communications page — this is the record, and the honest answer to "did that
- * go out?".
+ * Every message the app has sent, newest first, grouped by the event it belongs to. The record, and
+ * the honest answer to "did that go out?". Sending happens in the panel above, or on the event's
+ * own Communications page; both write these rows.
  */
 export async function EmailAcrossEvents() {
   const [{ configured, replyTo }, log, events] = await Promise.all([
@@ -29,7 +29,7 @@ export async function EmailAcrossEvents() {
         <p className={`rounded-2xl p-3 text-sm font-bold ${configured ? "bg-emerald-50 text-emerald-900" : "bg-amber-50 text-amber-900"}`} data-testid="email-provider-banner">
           {configured ? `Resend is configured${replyTo ? `; replies go to ${replyTo}` : ""}.` : "Resend is not configured on this deployment: sends are recorded as mock and nothing leaves."}
         </p>
-        <p className="mt-2 text-sm text-brand-muted">Nothing here was sent on a timer. Every row is a message a person chose to send from an event&rsquo;s Communications page.</p>
+        <p className="mt-2 text-sm text-brand-muted">Nothing here was sent on a timer. Every row is a message a person chose to send, from the panel above or from an event&rsquo;s Communications page.</p>
         {log.length ? (
           <div className="mt-4 space-y-4">
             {Array.from(byEvent.entries()).map(([eventId, rows]) => (

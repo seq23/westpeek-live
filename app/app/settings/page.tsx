@@ -1,4 +1,6 @@
+import Link from "next/link";
 import { SectionCard } from "@/components/shared/SectionCard";
+import { HouseDefaultsPanel } from "@/components/settings/HouseDefaultsPanel";
 import { RuntimeSchemaStop } from "@/components/system/RuntimeSchemaStop";
 import { saveAgencySettingsAction } from "@/lib/actions/agencySettingsActions";
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
@@ -9,7 +11,7 @@ export const dynamic = "force-dynamic";
 
 const MEMBER_ROWS = 6;
 
-export default async function SettingsPage({ searchParams }: { searchParams?: Promise<{ saved?: string; error?: string }> }) {
+export default async function SettingsPage({ searchParams }: { searchParams?: Promise<{ saved?: string; savedDefaults?: string; error?: string }> }) {
   const search = searchParams ? await searchParams : undefined;
   const [settings, schema, actor] = await Promise.all([getAgencySettings(), getRuntimeSchemaStatus(), getWorkspaceActor()]);
   const rows = Array.from({ length: MEMBER_ROWS }, (_, index) => settings.members[index] || { name: "", email: "", role: "" });
@@ -18,9 +20,10 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Pr
     <div className="space-y-6">
       {!schema.ok ? <RuntimeSchemaStop status={schema} /> : null}
       {search?.saved ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800" data-testid="settings-saved">Settings saved by {settings.updatedByLabel}.</p> : null}
-      {search?.error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">{search.error}</p> : null}
+      {search?.savedDefaults ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800" data-testid="house-defaults-saved">House defaults saved.</p> : null}
+      {search?.error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="settings-error">{search.error}</p> : null}
       <SectionCard title="Agency settings" eyebrow="Configuration">
-        <p className="text-sm text-slate-600">Branding and members are stored on the agency settings row and read by the workspace. Billing is not configured in this baseline and has no panel here.</p>
+        <p className="text-sm text-slate-600">The name on the door, the two brand colours, and who is on the team. Stored on the agency settings row and read by the workspace. What we pay for — LiveKit Ship, Workers Paid, Cloudflare Stream by the minute — is not a panel here; the readout at <Link href="/app/capacity" className="font-black underline">/app/capacity</Link> is where you see what those plans include and how close a show is to the edge of one.</p>
         <form action={saveAgencySettingsAction} className="mt-5 space-y-6" data-testid="agency-settings-form">
           <div className="grid gap-4 md:grid-cols-3">
             <label className="text-sm font-medium text-slate-700">
@@ -53,6 +56,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Pr
           {ownerOnly ? <p className="text-xs text-slate-500">Only the owner (or a signed-in staff member) can change settings.</p> : null}
         </form>
       </SectionCard>
+      <HouseDefaultsPanel disabled={!schema.ok || ownerOnly} />
     </div>
   );
 }

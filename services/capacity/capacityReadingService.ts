@@ -2,7 +2,8 @@ import { createHmac } from "crypto";
 import { getLiveKitEnv } from "@/lib/env";
 import { normalizeLiveKitApiBaseUrl } from "@/services/video/livekitIngressService";
 import { pingRuntimeStore } from "@/services/runtime/supabaseKeepAlive";
-import { CLOUDFLARE_WORKERS_PLAN, livekitPlan, livekitTier, type AllowanceKey, type LiveKitPlan } from "@/lib/capacity/capacityPlans";
+import { CLOUDFLARE_WORKERS_PLAN, livekitPlan, type AllowanceKey, type LiveKitPlan } from "@/lib/capacity/capacityPlans";
+import { houseLivekitTier } from "@/services/agencies/houseDefaultsService";
 import requiredSecrets from "@/deployment/cloudflare-required-secrets.json";
 
 /**
@@ -136,7 +137,9 @@ function livekitAllowanceLimit(plan: LiveKitPlan, key: AllowanceKey) {
 }
 
 export async function readCapacityPosition(): Promise<CapacityPosition> {
-  const plan = livekitPlan(livekitTier());
+  // The tier is a setting now, because the owner changes plans and a redeploy is not how you record
+  // that. It falls back to LIVEKIT_TIER, so an install that never opens Settings reads as before.
+  const plan = livekitPlan(await houseLivekitTier());
   const [snapshot, ping] = await Promise.all([readLiveKitLiveSnapshot(), pingRuntimeStore()]);
 
   const livekit: CapacityReading[] = [

@@ -10,6 +10,9 @@ export type EmailWorkflowType =
   | "show_day_reminder"
   | "testing_failure_alert"
   | "report_ready"
+  // The crew call sheet (16 Sep 2026). It was the one segment the old Communications panel had and
+  // the new one did not, so it came across when that panel was deleted rather than being lost.
+  | "crew_call_sheet"
   // The plan-an-event path (migration 0036): the approval the client is sent, and the five
   // instruction emails that go out when the event is paid for. Each instruction carries a link to
   // an editable /how-it-works page, never a copy of it.

@@ -13,6 +13,7 @@ const labels: Record<EmailWorkflowType, string> = {
   show_day_reminder: "Show day reminder",
   testing_failure_alert: "Testing failure alert",
   report_ready: "Report ready",
+  crew_call_sheet: "Crew call sheet",
   scope_approved: "Scope and price",
   instructions_client: "Instructions for the client",
   instructions_crew: "Instructions for crew",

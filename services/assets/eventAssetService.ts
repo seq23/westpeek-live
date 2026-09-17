@@ -65,6 +65,44 @@ export async function requestAssetUpload(input: {
   }
 }
 
+/**
+ * The house logo: the same private bucket, the same signed-upload dance, no event and no asset row.
+ *
+ * It reuses this module's storage helpers on purpose — a second upload path would be a second set
+ * of bucket-creation, refusal and signed-URL bugs. What it does NOT do is write an EventAssetRecord:
+ * the logo belongs to the agency, not to an event, so it can never appear in a library or move an
+ * event's file count.
+ */
+export const HOUSE_LOGO_PREFIX = "house/logo";
+
+export async function requestHouseLogoUpload(input: { fileName: string; mimeType: string; sizeBytes: number }): Promise<UploadTicket | UploadRefusal> {
+  const refusal = assetUploadRefusal({ mimeType: input.mimeType, sizeBytes: input.sizeBytes });
+  if (refusal) return { ok: false, reason: refusal };
+  if (!input.mimeType.startsWith("image/")) return { ok: false, reason: "A logo has to be an image — PNG, JPG or SVG." };
+  const client = await storageClient();
+  if (!client) return { ok: false, reason: "File storage is not configured on this deployment (no Supabase service key), so a logo cannot be uploaded. The wordmark stays." };
+  const assetId = randomId("logo");
+  const storagePath = storagePathFor(HOUSE_LOGO_PREFIX, assetId, input.fileName);
+  try {
+    await ensureBucket(client);
+    const { data, error } = await client.storage.from(EVENT_ASSET_BUCKET).createSignedUploadUrl(storagePath);
+    if (error || !data) return { ok: false, reason: `Storage refused the upload: ${error?.message || "no signed URL returned"}.` };
+    return { ok: true, assetId, signedUrl: data.signedUrl, token: data.token, storagePath, bucket: EVENT_ASSET_BUCKET };
+  } catch (error) {
+    return { ok: false, reason: `Storage is unreachable: ${error instanceof Error ? error.message : String(error)}.` };
+  }
+}
+
+/** A one-hour signed URL for the stored logo, or nothing — in which case the wordmark renders. */
+export async function houseLogoUrl(storagePath: string): Promise<string | undefined> {
+  if (!storagePath) return undefined;
+  const client = await storageClient();
+  if (!client) return undefined;
+  const { data, error } = await client.storage.from(EVENT_ASSET_BUCKET).createSignedUrl(storagePath, 60 * 60);
+  if (error || !data) return undefined;
+  return data.signedUrl;
+}
+
 export async function recordUploadedAsset(input: {
   eventId: string;
   assetId: string;
