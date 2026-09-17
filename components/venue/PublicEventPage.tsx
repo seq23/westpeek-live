@@ -10,12 +10,16 @@ import { RegistrationClosedState } from "@/components/venue/RegistrationClosedSt
 import { RegistrationRequiredState } from "@/components/venue/RegistrationRequiredState";
 import { ReturningAttendeeForm } from "@/components/venue/ReturningAttendeeForm";
 import { DEFAULT_ATTENDEE_SESSION_DAYS, attendeeSessionDaysFor, registeredForWords } from "@/services/attendees/attendeeSessionPolicy";
-import { getEventConfigPackage } from "@/services/events/eventConfigRepository";
+import { findEventIndexRecord, getEventConfigPackage } from "@/services/events/eventConfigRepository";
 import { mapEventStatusToPublicState } from "@/services/events/eventStateResolver";
 
 export function PublicEventPage({ slug }: { slug: string }) {
   const config = getEventConfigPackage(slug);
   const publicState = mapEventStatusToPublicState(config.event.state as any);
+  // A sample event is compiled from repo config rather than created in the workspace. It says so,
+  // in its own words, above everything else: the demo summit is meant to be walked through by
+  // people who have never seen the product, and it must never be mistaken for a real client show.
+  const isSample = Boolean(findEventIndexRecord(slug)?.configPath.startsWith("data/events/"));
 
   if (publicState === "draft" || publicState === "archived") {
     return <EventNotOpenState title={config.event.name} message="This event is not publicly open. Use your event code again later or contact the production team." />;
@@ -25,6 +29,13 @@ export function PublicEventPage({ slug }: { slug: string }) {
     <>
       <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto max-w-6xl space-y-6">
+        {isSample ? (
+          <section className="rounded-3xl border border-brand-orange/40 bg-brand-orangeSoft p-4" data-testid="sample-event-notice">
+            <p className="text-sm font-black text-slate-950">This is a West Peek Live sample event.</p>
+            <p className="mt-1 text-sm leading-6 text-slate-700">It is here to be walked through. Everything works — the stage, the chat, the expo, speed networking, the replay — but the company, the speakers, the sponsors and everyone on the People page are invented, and no message sent inside it reaches anybody.</p>
+          </section>
+        ) : null}
+
         <section className="rounded-3xl bg-slate-950 p-8 text-white">
           <p className="text-sm text-slate-300">{config.event.client}</p>
           <h1 className="mt-3 text-4xl font-semibold">{config.event.name}</h1>
