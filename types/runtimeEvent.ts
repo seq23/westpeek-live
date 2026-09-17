@@ -118,6 +118,7 @@ export const ATTENDEE_CLIENT_TELEMETRY_MIGRATION_FILE = "db/migrations/0037_atte
 export const ATTENDEE_SESSION_LIFETIME_MIGRATION_FILE = "db/migrations/0038_attendee_session_lifetime.sql";
 export const GROUP_EMAIL_MIGRATION_FILE = "db/migrations/0044_email_group_sends_and_unsubscribes.sql";
 export const HOUSE_DEFAULTS_MIGRATION_FILE = "db/migrations/0043_house_defaults.sql";
+export const EVENT_BACKUP_ROOMS_MIGRATION_FILE = "db/migrations/0045_event_backup_rooms.sql";
 
 /**
  * Which SQL file introduces each database object /api/runtime/health probes: a table as `table`, a
@@ -232,5 +233,10 @@ export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
   // 0043 - the house defaults: the from and reply-to addresses, the logo, and what a new event
   // inherits for timezone, networking match length, session lifetime and registration questions.
   runtime_house_defaults: HOUSE_DEFAULTS_MIGRATION_FILE,
+
+  // 0045 - the Zoom meeting and Google Meet link a person types in for one event. Unapplied, every
+  // save is swallowed and the bottom two rungs of the show-day ladder read "not configured" forever,
+  // which is exactly the state this migration exists to end.
+  event_backup_rooms: EVENT_BACKUP_ROOMS_MIGRATION_FILE,
 };
 

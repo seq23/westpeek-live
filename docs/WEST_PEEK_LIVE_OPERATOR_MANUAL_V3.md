@@ -453,18 +453,38 @@ These pages are editable by West Peek from the workspace, so an instruction fix 
 | **Primary — LiveKit ingress** | The show, and attendees can be brought on stage | Yes | Yes |
 | **Fallback 1 — Cloudflare Stream** | The show in a Cloudflare player, watch-only | **Yes** | Yes (`westpeek-fallback`) |
 | Fallback 2 — Daily | Only if a host turns a camera on | No | Yes |
-| Fallback 3 — Zoom embedded | Zoom meeting in the page | No | Yes |
-| Fallback 4 — Google Meet | Leaves the venue | No | Yes |
+| Fallback 3 — Zoom embedded | Zoom meeting in the page | No | Only once you put a meeting in |
+| Fallback 4 — Google Meet | Leaves the venue | No | Only once you put a link in |
 
 **Before the show:** add Cloudflare as a **second destination** in StreamYard (Destinations → Add destination → Custom RTMP). The RTMPS URL and key are on the crew deck's Fallback 1 card with copy buttons. Broadcast to **both**.
 
 **When LiveKit fails:** crew deck → **"Move down: Cloudflare Stream"**. Attendees swap in about ten seconds, same page; chat, roster and networking are untouched.
 
-**While on Cloudflare** you cannot bring an attendee onto the stage — that is WebRTC, LiveKit only.
+**While on Cloudflare** you cannot bring an attendee onto the stage. That is WebRTC, LiveKit only.
 
 **When LiveKit is healthy again:** **"Move back up"**.
 
 The card refuses to move down if that rung is not configured, rather than sending everyone to a blank player.
+
+### Setting up the last two rungs
+
+Zoom and Google Meet have no meeting of their own until somebody gives them one. Both are set on the **Backup rooms** card, which sits next to the Fallback 1 card on the crew deck and also on the event's **Video** page. Owner, operator, and any crew member whose role may go live can change them.
+
+| Field | What to put in |
+| --- | --- |
+| Zoom meeting number | The Meeting ID from the Zoom invite. Spaces and dashes are fine, and pasting the whole join link works too |
+| Zoom passcode | Only if the meeting has one. Leave it empty if it does not |
+| Google Meet link | The address of the Meet room, such as `https://meet.google.com/abc-defg-hij` |
+
+Both are saved per event and both are optional. If what you type is not a meeting the card says what is wrong with it and saves nothing. Clearing a field turns that rung back off.
+
+**You can do this during the show.** Save a meeting while the room is already on that rung and everyone watching picks it up within about ten seconds. Nobody reloads anything. "Reset primary" does not throw the meeting away.
+
+**Zoom keeps everyone in the venue.** The meeting opens inside the West Peek page with our header, our chat and our attendee list still there. Zoom's own meeting information panel and its extra toolbar are switched off. Zoom's logo on the joining screen, the small "powered by Zoom" mark, and the meeting topic as it was typed in Zoom cannot be hidden, so name the meeting after the event when you create it.
+
+**Google Meet is the only rung that leaves the venue.** Attendees get a panel in place of the video that says the show has moved and carries the link. Chat, the attendee list, stage requests and networking stay on our page and do not travel with them, and nobody can be brought onto the West Peek stage from a Meet room. When you move back up the panel disappears on its own and they are back on the stage.
+
+**Telling the people who are not watching.** Moving down to Meet only reaches the people with the page open. The Backup rooms card has **Email everyone the new link**, which opens the group composer addressed to every registered attendee of the event, with the link and a short message already written. It sends when you press Send there and not before, like every other email in this product, and it lands in the same send log.
 
 ---
 

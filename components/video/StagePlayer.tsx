@@ -18,6 +18,8 @@ import { notifyServerBuildId } from "@/components/system/BuildVersionWatchdog";
 interface StagePlayerProps {
   initialState: PublicStageStreamState;
   eventId: string;
+  /** Used where a room shows a name: the Zoom embed's own label, and the Meet "we have moved" panel. */
+  eventName?: string;
   stageId?: string;
   viewerRole?: "attendee" | "producer" | "operator" | "crew" | "admin";
   displayName?: string;
@@ -35,7 +37,7 @@ function attendeeOverlayMessage(state: PublicStageStreamState) {
   return "Refreshing the live stream. Please stay on this page...";
 }
 
-export function StagePlayer({ initialState, eventId, stageId = "main-stage", viewerRole = "attendee", displayName = "Attendee", profileId, initialStageStatus }: StagePlayerProps) {
+export function StagePlayer({ initialState, eventId, eventName, stageId = "main-stage", viewerRole = "attendee", displayName = "Attendee", profileId, initialStageStatus }: StagePlayerProps) {
   const [state, setState] = useState(initialState);
   const stageStatus = useAttendeeStageStatus(eventId, stageId, initialStageStatus, viewerRole === "attendee" && Boolean(profileId));
   const publishGrant = viewerRole === "attendee" && profileId && stageStatus ? { canPublishAudio: stageStatus.canPublishAudio, canPublishVideo: stageStatus.canPublishVideo, status: stageStatus.status, reason: stageStatus.reason } : undefined;
@@ -113,8 +115,8 @@ export function StagePlayer({ initialState, eventId, stageId = "main-stage", vie
   const player = shouldShowPreStream ? <StagePreStreamCard />
     : state.activeStreamSource === "CLOUDFLARE_STREAM" ? <CloudflareStreamFallbackStagePlayer playbackUrl={state.cloudflareStreamPlaybackUrl} />
     : state.activeStreamSource === "DAILY" ? <DailyFallbackStagePlayer eventId={eventId} roomId={stageId} displayName={displayName} muted={preferences.muted} volume={preferences.volume} />
-    : state.activeStreamSource === "ZOOM" ? <ZoomEmbeddedRoom config={{ providerMode: "zoom_embedded", roomKind: "stage", roomLabel: "West Peek Live! Backup Room", displayName, zoomMeetingNumber: state.zoomMeetingNumber, attendeeSafeStatus: "opening" }} eventId={eventId} userName={displayName} />
-    : state.activeStreamSource === "GOOGLE_MEET" ? <GoogleMeetFallbackStagePlayer fallbackUrl={state.googleMeetFallbackUrl} />
+    : state.activeStreamSource === "ZOOM" ? <ZoomEmbeddedRoom config={{ providerMode: "zoom_embedded", roomKind: "stage", roomLabel: eventName || "West Peek Live! Backup Room", displayName, zoomMeetingNumber: state.zoomMeetingNumber, zoomMeetingPassword: state.zoomMeetingPasscode, attendeeSafeStatus: "opening" }} eventId={eventId} userName={displayName} />
+    : state.activeStreamSource === "GOOGLE_MEET" ? <GoogleMeetFallbackStagePlayer fallbackUrl={state.googleMeetFallbackUrl} eventName={eventName} />
     : <LiveKitIngressStagePlayer eventId={eventId} roomId={stageId} displayName={displayName} muted={preferences.muted} volume={preferences.volume} publishGrant={publishGrant} room={attendeeRoom} onIngressDropAfterLive={(reason) => requestServerFallback("attendee_livekit_disconnect_after_started", reason)} />;
 
   return (

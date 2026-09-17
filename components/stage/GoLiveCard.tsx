@@ -2,6 +2,7 @@ import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { EndShowControl } from "@/components/moderation/EndShowControl";
 import { SafeSection } from "@/components/system/SafeSection";
 import { StreamCredentials } from "@/components/stage/StreamCredentials";
+import { BackupRoomsCard } from "@/components/stage/BackupRoomsCard";
 import { getCrewViewer, viewerCan, type CrewViewer } from "@/lib/auth/crewViewer";
 import { goLiveAction } from "@/lib/actions/goLiveActions";
 import { ladderReadiness } from "@/lib/video/fallbackReadiness";
@@ -61,12 +62,16 @@ export async function GoLiveCard({ eventId, viewer: givenViewer, compact = false
       <StreamCredentials eventId={eventId} rtmpUrl={state?.livekitIngressUrl} streamKey={state?.livekitStreamKey} ended={ended} problem={state?.lastProvisionError} canAct={viewerCan(viewer, "go_live")} returnTo={returnTo} />
 
       {compact ? null : (
-        <div className="mt-4 rounded-2xl bg-brand-ash p-4 text-sm">
-          <p className="font-black">If the feed dies</p>
-          <p className="mt-1 text-brand-muted">
-            Fallback 1 is Cloudflare Stream — {fallback?.ready ? "ready now: set it up as a second Custom RTMP destination in StreamYard before the show, then move the room down from the crew deck." : fallback?.reason}
-          </p>
-        </div>
+        <>
+          <div className="mt-4 rounded-2xl bg-brand-ash p-4 text-sm">
+            <p className="font-black">If the feed dies</p>
+            <p className="mt-1 text-brand-muted">
+              Fallback 1 is Cloudflare Stream — {fallback?.ready ? "ready now: set it up as a second Custom RTMP destination in StreamYard before the show, then move the room down from the crew deck." : fallback?.reason}
+            </p>
+          </div>
+          {/* Fallback 3 and Final, beside Fallback 1: the two rungs that need a meeting typed in. */}
+          <SafeSection label="Backup rooms" compact render={() => BackupRoomsCard({ eventId, viewer, returnTo })} />
+        </>
       )}
     </section>
   );

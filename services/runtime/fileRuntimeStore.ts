@@ -1,6 +1,7 @@
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
+import type { EventBackupRoomRecord } from "@/types/backupRoom";
 import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
@@ -301,6 +302,17 @@ export class FileRuntimeStore implements RuntimeStore {
   }
 
 
+
+  async getEventBackupRoom(eventId: string, stageId: string) {
+    return (this.read().eventBackupRooms || []).find((item: EventBackupRoomRecord) => item.eventId === eventId && item.stageId === stageId);
+  }
+
+  async setEventBackupRoom(record: EventBackupRoomRecord) {
+    const snapshot = this.read();
+    snapshot.eventBackupRooms = [...(snapshot.eventBackupRooms || []).filter((item: EventBackupRoomRecord) => !(item.eventId === record.eventId && item.stageId === record.stageId)), record];
+    this.write(snapshot);
+    return record;
+  }
 
   async getStageStreamState(key: string) {
     const snapshot = this.read();

@@ -3,6 +3,7 @@ import { createSupabaseAdminClient } from "@/lib/supabase/admin";
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
+import type { EventBackupRoomRecord } from "@/types/backupRoom";
 import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
@@ -696,6 +697,36 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
 
+
+  async getEventBackupRoom(eventId: string, stageId: string) {
+    const { data, error } = await this.client.from("event_backup_rooms").select("*").eq("event_id", eventId).eq("stage_id", stageId).maybeSingle();
+    if (error) failOrSchemaMissing("event_backup_rooms", error);
+    if (!data) return undefined;
+    const row = data as Record<string, unknown>;
+    return {
+      eventId: String(row.event_id || ""),
+      stageId: String(row.stage_id || "main-stage"),
+      zoomMeetingNumber: row.zoom_meeting_number ? String(row.zoom_meeting_number) : undefined,
+      zoomPasscode: row.zoom_passcode ? String(row.zoom_passcode) : undefined,
+      googleMeetUrl: row.google_meet_url ? String(row.google_meet_url) : undefined,
+      updatedBy: row.updated_by ? String(row.updated_by) : undefined,
+      updatedAt: String(row.updated_at || ""),
+    } satisfies EventBackupRoomRecord;
+  }
+
+  async setEventBackupRoom(record: EventBackupRoomRecord) {
+    const { error } = await this.client.from("event_backup_rooms").upsert({
+      event_id: record.eventId,
+      stage_id: record.stageId,
+      zoom_meeting_number: record.zoomMeetingNumber ?? null,
+      zoom_passcode: record.zoomPasscode ?? null,
+      google_meet_url: record.googleMeetUrl ?? null,
+      updated_by: record.updatedBy ?? null,
+      updated_at: record.updatedAt,
+    }, { onConflict: "event_id,stage_id" });
+    if (error) failOrSchemaMissing("event_backup_rooms", error);
+    return record;
+  }
 
   async getStageStreamState(key: string) {
     const [eventId, stageId] = key.split(":");

@@ -29,6 +29,9 @@ export interface ComposerQuery {
   audience?: string;
   oneOff?: string;
   workflow?: string;
+  /** Prefilled by a ComposeLink that knows what the message is about; still typed over, still pressed. */
+  subject?: string;
+  body?: string;
   sent?: string;
   composeError?: string;
 }
@@ -70,6 +73,10 @@ export async function EmailComposer({ query }: { query?: ComposerQuery }) {
             is sent by choosing. Kept separate from the message so the page can resolve the real
             count before there is anything to send. */}
         <form method="get" action="/app/email/compose" className="mt-5 grid gap-3 md:grid-cols-3" data-testid="composer-audience-form">
+          {/* Re-resolving the audience must not throw away a message a link prefilled, or the crew
+              deck's "Email everyone the new link" would empty itself on the first click. */}
+          <input type="hidden" name="subject" value={String(query?.subject || "")} />
+          <input type="hidden" name="body" value={String(query?.body || "")} />
           <label className="grid gap-1 text-sm font-semibold text-slate-700">
             Event
             <select name="event" defaultValue={eventId} className="rounded-xl border border-slate-300 px-3 py-2" data-testid="composer-event">
@@ -137,11 +144,11 @@ export async function EmailComposer({ query }: { query?: ComposerQuery }) {
             </label>
             <label className="grid gap-1 text-sm font-semibold text-slate-700">
               Subject
-              <input name="subject" placeholder="Leave blank to use the template's own subject" className="rounded-xl border border-slate-300 px-3 py-2" data-testid="composer-subject" />
+              <input name="subject" defaultValue={String(query?.subject || "")} placeholder="Leave blank to use the template's own subject" className="rounded-xl border border-slate-300 px-3 py-2" data-testid="composer-subject" />
             </label>
             <label className="grid gap-1 text-sm font-semibold text-slate-700">
               What it says
-              <textarea name="body" rows={6} placeholder="Doors at 9, the stream link is in the invite, bring the deck." className="rounded-xl border border-slate-300 px-3 py-2" data-testid="composer-body" />
+              <textarea name="body" rows={6} defaultValue={String(query?.body || "")} placeholder="Doors at 9, the stream link is in the invite, bring the deck." className="rounded-xl border border-slate-300 px-3 py-2" data-testid="composer-body" />
               <span className="text-xs font-normal text-slate-500">With a template chosen this is the line of your own inside it. Writing your own needs both a subject and a body.</span>
             </label>
             <div className="rounded-2xl border border-brand-line p-4">

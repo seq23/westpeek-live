@@ -48,7 +48,7 @@ export async function MainStageExperience({ model, saved = false }: { model: Vir
             put it about 700px down a 414px screen and a newcomer decided the stage was broken
             (the owner, 16 Sep 2026). */}
         <div className="min-w-0 space-y-4">
-          <StagePlayer initialState={stageStreamState} eventId={model.eventId} stageId="main-stage" viewerRole="attendee" displayName={identity?.displayName || "Registered attendee"} profileId={identity?.attendeeId} initialStageStatus={stageStatus} />
+          <StagePlayer initialState={stageStreamState} eventId={model.eventId} eventName={model.eventName} stageId="main-stage" viewerRole="attendee" displayName={identity?.displayName || "Registered attendee"} profileId={identity?.attendeeId} initialStageStatus={stageStatus} />
           <div>
             <h1 className="text-xl font-black tracking-[-0.02em] text-balance sm:text-2xl">{liveSession?.title || "Main stage is standing by"}</h1>
             <p className="mt-1 max-w-[65ch] text-sm leading-6 text-slate-600">If the picture refreshes or switches source behind the scenes, stay on this page. It comes back on its own.</p>

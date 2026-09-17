@@ -88,10 +88,21 @@ export function ZoomEmbeddedRoom({ config, eventId, userName = "Guest", userEmai
         throw new Error("Room container is unavailable.");
       }
 
+      // White-labelled as far as Zoom's own SDK allows. `meetingInfo: []` removes Zoom's meeting
+      // information panel — the topic, the meeting number and the passcode — so the only name on
+      // this page is the event's, in our header above. `toolbar.buttons: []` drops Zoom's extra
+      // toolbar apps. What the SDK gives us NO way to suppress: the Zoom logo on the joining and
+      // reconnecting screens, the "powered by Zoom" mark in the video footer, Zoom's own error and
+      // permission dialogs, and the meeting topic as it was typed in Zoom (only the account that
+      // created the meeting can change that, so name the meeting after the event there).
       await client.init({
         zoomAppRoot: root,
         language: "en-US",
+        patchJsMedia: true,
+        leaveOnPageUnload: true,
         customize: {
+          meetingInfo: [],
+          toolbar: { buttons: [] },
           video: {
             isResizable: true,
             viewSizes: {
@@ -132,7 +143,7 @@ export function ZoomEmbeddedRoom({ config, eventId, userName = "Guest", userEmai
           <p className="text-xs font-black uppercase tracking-[0.28em] text-brand-orange">West Peek Live! room</p>
           <h2 className="mt-2 text-2xl font-black tracking-[-0.04em] text-brand-black">{config.roomLabel}</h2>
           <p className="mt-2 max-w-2xl text-sm leading-6 text-brand-muted">
-            This room opens inside West Peek Live! so attendees stay inside the event venue.
+            This room opens inside West Peek Live! so attendees stay inside the event venue, with the chat, the attendee list and networking still on this page. Nobody can be brought onto the West Peek stage from here.
           </p>
         </div>
         {status !== "joined" ? (
