@@ -5263,6 +5263,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:email-sender-identity",
+      "command": "node scripts/validate_email_sender_identity.js",
+      "status": "ACTIVE",
+      "admission": "registered_support_lane",
+      "parentOrMatrixAuthority": "validate:v5-hard",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "wrong or undeliverable sender identity on every outbound email",
+      "whatItProves": "Every send path resolves the from address through lib/brand.ts to notifications@events.westpeek.live, the one domain carrying the Resend DKIM key. resolveSendingIdentity is on both withHouseAddresses and the direct ResendEmailProvider call, so neither a stale runtime_house_defaults row nor an EMAIL_FROM secret set to an apex address can send. isResendConfigured no longer gates on EMAIL_FROM, so a cleared secret can no longer swap in MockEmailProvider and silently discard every message. The secrets manifest offers no apex sender. Hard-fails when it scans zero send-surface files.",
+      "whatItDoesNotProve": "Does not read the EMAIL_FROM Cloudflare secret or the saved house-defaults row, neither of which is readable from CI - that is precisely why the code resolves them rather than trusting them. Does not prove Resend domain verification status, an actual delivery, or DMARC: sending-domain DNS and DMARC are owner-held in Cloudflare DNS and are recorded as a named stop in ENVIRONMENT_VARIABLES.md.",
+      "failureHandling": "Block the release. A drifted sender is either mail nobody receives or mail arriving from the wrong identity; both are visible to every recipient.",
+      "ownerDecisionNeeded": "NO. The sending identity is fixed by DNS, not by preference.",
+      "expectedFailureFrequency": "Very low; only fires when someone reintroduces an unresolved from or edits the brand constants.",
+      "runtimeCost": "Negligible; reads a handful of source files.",
+      "maintenanceCost": "Review only if the verified sending domain changes, which requires new DKIM records first.",
+      "removalConditions": "Retire only if the sender identity stops being resolved in code and an equivalent proof is admitted.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "Blocks validate:v5-hard and therefore the release.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",
