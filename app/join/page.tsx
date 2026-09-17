@@ -1,5 +1,6 @@
 import { redirect } from "next/navigation";
 import { WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
+import { WestPeekLogoHomeLink } from "@/components/brand/WestPeekLogo";
 import { resolveEventJoinCode } from "@/services/events/eventStateResolver";
 import { SupersededCodeNotice, withSupersededCode } from "@/components/access/SupersededCodeNotice";
 
@@ -31,7 +32,12 @@ export default async function JoinEventPage({ searchParams }: { searchParams?: P
   return (
     <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
       <section className="mx-auto max-w-2xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
-        <WestPeekLiveWordmark size="md" />
+        {/* A white card, so the dark monogram. This is the front door an invited guest lands on
+            with no other West Peek chrome around it, which is the surface most worth signing. */}
+        <div className="flex items-center gap-3">
+          <WestPeekLogoHomeLink size="md" />
+          <WestPeekLiveWordmark size="md" />
+        </div>
         <h1 className="mt-6 text-3xl font-black tracking-tight sm:text-4xl">Join your event</h1>
         <p className="mt-3 text-sm leading-6 text-brand-muted">Put in the code from your invitation and we will take you straight to the show. Nothing to install, and you can watch before you sign up for anything.</p>
         <form className="mt-6 flex flex-col gap-3" action="/join" method="get">
