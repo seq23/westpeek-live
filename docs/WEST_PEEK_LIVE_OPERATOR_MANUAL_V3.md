@@ -64,7 +64,7 @@ The video model is layered on purpose:
 | --- | --- | --- | --- |
 | **Owner Access** | `/production-access/owner` | Sequoia, Scooter | Everything: create Rooms, run them, every guest's view, billing, settings |
 | **Operator Launchpad** | `/production-access/operator` | West Peek producers and staff | The control room: diagnostics, testing, fallback decisions, every event. Separate operator password |
-| **Crew / Production Team** | `/production-access/crew` | People hired for the day — moderator, technical director, show caller, support | One event, one role, no admin |
+| **Crew / Production Team Access** | `/production-access/crew` | People hired for the day — moderator, technical director, show caller, support | One event, one role, no admin |
 | **Speakers, sponsors, VIPs, clients** | `/production-access/special-guest` | Guests with a role code from the invitation | Green room and cue cards, booth, lounge, read-only client overview |
 | **Public join** | `/join` or `/events/{eventId}` | Attendees | Registration and the venue |
 

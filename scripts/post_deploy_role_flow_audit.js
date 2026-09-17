@@ -23,7 +23,7 @@ const checks = [
     mustContain: ["Operator launchpad password", "secure production vault", "never displays the password"],
     mustNotContain: [requiredDay1Default("OPERATOR_LAUNCHPAD_PASSWORD")],
   },
-  { path: "/production-access", mustContain: ["Production Access", "Crew / Production Team", "Speakers, sponsors, VIPs, clients", "Operator Launchpad", "Owner Access"], mustNotContain: [] },
+  { path: "/production-access", mustContain: ["Production Access", "Crew / Production Team Access", "Speakers, sponsors, VIPs, clients", "Operator Launchpad", "Owner Access"], mustNotContain: [] },
 ];
 
 function toUrl(pathname) {
