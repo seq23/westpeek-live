@@ -44,8 +44,6 @@ export interface HouseDefaultsRecord {
   updatedAt: string;
 }
 
-export const HOUSE_DEFAULTS_MIGRATION_FILE = "db/migrations/0043_house_defaults.sql";
-
 /** A from address Resend can actually send from has to be a real address on a domain you verified. */
 export function isSendableAddress(value: string) {
   return /^[^\s@]+@[^\s@.]+\.[^\s@]+$/.test(value.trim());
