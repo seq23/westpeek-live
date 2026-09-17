@@ -69,6 +69,16 @@ export interface EventConfigRecord {
   publishLifecycle: string;
   publicCode: string;
   runtimeStateBoundary: string;
+  /**
+   * A sample event that exists to be SHOWN, with no real stream, no real client and no real
+   * attendees behind it. Declared by the event's own config file, never inferred from a slug.
+   *
+   * The health probes read this to tell "no feed because this is a sample event" apart from "no
+   * feed and there should be one" — a demonstration event is still probed, still reports every
+   * signal, and its reading still says out loud that it is a demonstration. What it does not do is
+   * report a production failure for a stream nobody ever intended to send.
+   */
+  demonstration?: boolean;
 }
 
 export interface AttendeeConfigRecord {
@@ -315,6 +325,18 @@ export function getEventConfig(slugOrEventId: string | undefined): EventConfigRe
   if (!code) return undefined;
   const record = getEventIndex().find((item) => item.slug === code || item.eventId === code || item.publicCode.toLowerCase() === code);
   return record ? (eventConfigs[record.slug] || dynamicEventConfig(record.slug)) : (eventConfigs[code] || dynamicEventConfig(code));
+}
+
+/**
+ * Is this event a demonstration — a sample event shown to people, with nothing real behind it?
+ *
+ * True ONLY when the event's own config file declares `demonstration: true`. A runtime event
+ * (every real event the owner or a client creates) is built by `dynamicEventConfig`, which does
+ * not set the flag, so a real event can never answer true here by accident. An unknown id answers
+ * false, which is the safe direction: an event we cannot identify is treated as real.
+ */
+export function isDemonstrationEvent(slugOrEventId: string | undefined): boolean {
+  return Boolean(getEventConfig(slugOrEventId)?.demonstration);
 }
 
 export function getAttendeeConfig(slugOrEventId: string | undefined): AttendeeConfigRecord | undefined {

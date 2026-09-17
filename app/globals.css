@@ -52,3 +52,40 @@ textarea {
 .mobile-scrollbar {
   scrollbar-width: thin;
 }
+
+/*
+ * Motion that means something, and nothing that moves for its own sake.
+ *
+ * Two loops only, both on the speed networking page, both drawings of a thing the product really
+ * does: the round counting down, and the cycle coming back round to the start. Anyone who has
+ * asked their system not to animate gets the same drawing held still — the countdown bar rests
+ * part-spent so it still reads as a timer, and the cycle arrow rests as a plain dashed line.
+ */
+@keyframes wpl-round-countdown {
+  from { transform: scaleX(1); }
+  to { transform: scaleX(0); }
+}
+
+@keyframes wpl-cycle-flow {
+  to { stroke-dashoffset: -24; }
+}
+
+.wpl-countdown-bar {
+  transform-origin: left center;
+  animation: wpl-round-countdown 12s linear infinite;
+}
+
+.wpl-cycle-flow {
+  animation: wpl-cycle-flow 1.6s linear infinite;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .wpl-countdown-bar,
+  .wpl-cycle-flow {
+    animation: none;
+  }
+
+  .wpl-countdown-bar {
+    transform: scaleX(0.55);
+  }
+}

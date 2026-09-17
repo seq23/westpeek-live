@@ -8,5 +8,6 @@
   "publishLifecycle": "published",
   "publicCode": "demo",
   "runtimeStateBoundary": "live operational state must be stored in runtime store, not repo config only",
-  "clientSlug": "nova-capital"
+  "clientSlug": "nova-capital",
+  "demonstration": true
 }

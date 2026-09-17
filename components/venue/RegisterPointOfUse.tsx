@@ -20,13 +20,21 @@ const NEEDS = {
 
 export type RegisterNeed = keyof typeof NEEDS;
 
-export function RegisterPointOfUse({ eventId, need, label, returnTo, variant = "button", testId }: { eventId: string; need: RegisterNeed; label: string; returnTo?: string; variant?: "button" | "field"; testId?: string }) {
+/**
+ * `tone="primary"` is for the one page where this control IS the page's primary action — the
+ * networking page, where an unregistered reader's Join queue is the whole point of the screen.
+ * Everywhere else the control stays black, because there it sits beside something else that is
+ * the main event and orange would be competing with it.
+ */
+export function RegisterPointOfUse({ eventId, need, label, returnTo, variant = "button", tone = "default", testId }: { eventId: string; need: RegisterNeed; label: string; returnTo?: string; variant?: "button" | "field"; tone?: "default" | "primary"; testId?: string }) {
   const [open, setOpen] = useState(false);
   const panelId = useId();
   const query = new URLSearchParams({ reason: need, ...(returnTo ? { returnTo } : {}) });
   const control = variant === "field"
     ? "min-h-11 w-full rounded-full border border-slate-200 px-4 text-left text-sm text-slate-500"
-    : "min-h-12 rounded-full bg-slate-950 px-6 text-base font-black text-white";
+    : tone === "primary"
+      ? "min-h-14 rounded-full bg-brand-orange px-8 text-base font-black text-brand-white transition-colors hover:bg-brand-black focus-visible:outline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-brand-black"
+      : "min-h-12 rounded-full bg-slate-950 px-6 text-base font-black text-white";
   return (
     <div data-testid={testId} data-register-point-of-use={need} data-register-point-of-use-open={open ? "true" : "false"}>
       <button type="button" onClick={() => setOpen(true)} aria-expanded={open} aria-controls={panelId} className={control} data-testid={`register-point-of-use-${need}`}>{label}</button>

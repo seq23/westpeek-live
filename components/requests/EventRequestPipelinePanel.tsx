@@ -17,7 +17,10 @@ import { budgetRangeLabel, EVENT_REQUEST_STATE_LABELS, formatPrice, type EventRe
 const STATE_TONE: Record<string, string> = {
   requested: "bg-amber-100 text-amber-900",
   approved: "bg-sky-100 text-sky-900",
-  confirmed: "bg-teal-100 text-teal-900",
+  // Indigo is not a West Peek colour and validate:brand-system has been red on it. Confirmed is
+  // the state that has been agreed and is waiting to be paid, which is exactly what the soft
+  // orange tint is for: restrained emphasis on a live, active state.
+  confirmed: "bg-brand-orangeSoft text-brand-black",
   paid: "bg-emerald-100 text-emerald-900",
   declined: "bg-slate-200 text-slate-700",
 };
