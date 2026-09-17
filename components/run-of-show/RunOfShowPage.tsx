@@ -1,62 +1,64 @@
-import { getEvent, getRunOfShowForEvent, getSpeakersForEvent, getSponsorsForEvent } from "@/lib/runtime/getRuntimeData";
 import { SectionCard } from "@/components/shared/SectionCard";
-import { StatusBadge } from "@/components/shared/StatusBadge";
+import { WorkspaceEmptyState } from "@/components/workspace/WorkspaceEmptyState";
+import { RunOfShowSeedView } from "@/components/run-of-show/RunOfShowSeedView";
+import { realRuntimeEvent } from "@/lib/workspace/realEvent";
+import { listWorkspaceSpeakers, workspaceSegments } from "@/services/events/eventWorkspaceReadModel";
 import { formatEventDate } from "@/lib/utils/format";
 
-export function RunOfShowPage({ eventId }: { eventId: string }) {
-  const event = getEvent(eventId);
-  const segments = getRunOfShowForEvent(event.id);
-  const speakers = getSpeakersForEvent(event.id);
-  const sponsors = getSponsorsForEvent(event.id);
+/**
+ * The event's own timeline: the sessions the producer entered, in order, with the speakers who have
+ * actually arrived listed beside it.
+ *
+ * It used to render the seed run-of-show segments, cues and approval states. A Room created a
+ * minute earlier told its producer to "bring Drake live after the 30-second bumper" — the demo
+ * summit's notes. There are no per-segment producer cues in the store yet, so none are shown: the
+ * cue cards a producer really writes live per SPEAKER on the crew deck, and the page says so.
+ */
+export async function RunOfShowPage({ eventId }: { eventId: string }) {
+  const event = realRuntimeEvent(eventId);
+  if (!event) return <RunOfShowSeedView eventId={eventId} />;
+  const segments = workspaceSegments(event);
+  const speakers = await listWorkspaceSpeakers(event.id);
 
   return (
-    <div className="space-y-6">
+    <div className="space-y-6" data-testid="run-of-show" data-segments={segments.length}>
       <div className="rounded-3xl border border-brand-line bg-white p-4 shadow-sm sm:p-6">
         <p className="text-sm font-medium text-slate-500">Run of show</p>
         <h1 className="mt-2 text-3xl font-semibold">{event.name}</h1>
-        <p className="mt-2 text-slate-600">Structured production timeline connected to speakers, sponsors, cues, assets, approvals, and crew.</p>
+        <p className="mt-2 text-slate-600">This event&rsquo;s own sessions, in order. Edit them on Setup. Producer cues are written per speaker on the crew deck and land on their teleprompter within about five seconds — there are no per-segment cue notes in the store, so none are shown here.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
-        <SectionCard title="Production timeline">
+        <SectionCard title="Production timeline" eyebrow={`${segments.length} segment${segments.length === 1 ? "" : "s"}`}>
           <div className="space-y-4">
-            {segments.map((segment) => {
-              const speaker = speakers.find((item) => item.id === segment.speakerId);
-              const sponsor = sponsors.find((item) => item.id === segment.sponsorId);
-              return (
-                <div key={segment.id} className="rounded-2xl border border-slate-200 p-4">
-                  <div className="flex items-start justify-between gap-4">
-                    <div>
-                      <p className="text-sm text-slate-500">{formatEventDate(segment.startAt, event.timezone)} · {segment.durationMinutes} min · {segment.room}</p>
-                      <h3 className="mt-1 text-lg font-semibold">{segment.publicTitle}</h3>
-                      <p className="mt-1 text-sm text-slate-600">{segment.clientFacingDescription}</p>
-                    </div>
-                    <StatusBadge status={segment.readinessStatus} tone={segment.readinessStatus === "ready" ? "good" : "warn"} />
-                  </div>
-                  <div className="mt-4 grid gap-3 md:grid-cols-3">
-                    <div className="rounded-xl bg-slate-50 p-3 text-sm"><strong>Speaker</strong><br />{speaker?.name ?? "None"}</div>
-                    <div className="rounded-xl bg-slate-50 p-3 text-sm"><strong>Sponsor</strong><br />{sponsor?.name ?? "None"}</div>
-                    <div className="rounded-xl bg-slate-50 p-3 text-sm"><strong>Approval</strong><br />{segment.approvalStatus}</div>
-                  </div>
-                  <div className="mt-4 rounded-xl bg-slate-950 p-3 text-sm text-white">
-                    <strong>Producer cue:</strong> {segment.producerNotes}<br />
-                    <strong>Technical cue:</strong> {segment.technicalCues}
-                  </div>
-                </div>
-              );
-            })}
-          </div>
-        </SectionCard>
-
-        <SectionCard title="Readiness panel">
-          <div className="space-y-3 text-sm">
             {segments.map((segment) => (
-              <div key={segment.id} className="rounded-xl bg-slate-50 p-3">
-                <p className="font-medium">{segment.publicTitle}</p>
-                <p className="text-slate-500">{segment.readinessStatus} · {segment.approvalStatus}</p>
+              <div key={segment.id} className="rounded-2xl border border-slate-200 p-4" data-testid={`ros-segment-${segment.id}`}>
+                <p className="text-sm text-slate-500">{formatEventDate(segment.startAt, event.timezone)} · {segment.durationMinutes} min · {segment.room}</p>
+                <h3 className="mt-1 text-lg font-semibold">{segment.title}</h3>
               </div>
             ))}
           </div>
+        </SectionCard>
+
+        <SectionCard title="Speakers on the day" eyebrow={`${speakers.length} arrived`}>
+          {speakers.length ? (
+            <ul className="space-y-3 text-sm" data-testid="ros-speakers">
+              {speakers.map((speaker) => (
+                <li key={speaker.guestId} className="rounded-xl bg-slate-50 p-3">
+                  <p className="font-medium">{speaker.name}</p>
+                  <p className="text-slate-500">{speaker.stage.replaceAll("_", " ")} · tech check {speaker.techCheck.replaceAll("_", " ")}</p>
+                </li>
+              ))}
+            </ul>
+          ) : (
+            <WorkspaceEmptyState
+              testId="ros-speakers-empty"
+              title="No speaker has arrived yet"
+              line="Speakers appear against the timeline once one enters with this event's speaker code. Send them the speaker link from Access."
+              actionHref={`/app/events/${event.id}/access`}
+              actionLabel="Get the speaker link"
+            />
+          )}
         </SectionCard>
       </div>
     </div>
