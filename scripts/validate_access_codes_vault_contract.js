@@ -23,7 +23,11 @@ if (/href=|URLSearchParams|location\.search/.test(gates)) throw new Error("A gat
 if (gates.includes("spare.value")) throw new Error("The spare key panel must not read a value it should not have.");
 const middleware = read("middleware.ts"); examined += 1;
 if (!middleware.includes('pathname === "/app/owner"') || !middleware.includes("no-store")) throw new Error("The Owner Console response must be no-store: it carries the gate passwords.");
-check("components/owner/AccessCodesVaultTable.tsx", ["vault-search", "vault-copy-all-", "vault-reveal-", "vault-rotate-", "setEventAccessCodeAction", "recordCodeVaultViewAction", "window.confirm", "stops working immediately"]);
+// The confirm used to be pinned on the words "stops working immediately". Since migration 0046 that
+// is no longer what happens: the old code stops OPENING anything, and for 90 days it still answers
+// (an attendee is landed on their event, a role code is told when it changed). So the contract is
+// now the stronger one the owner actually needs before pressing: a real count of who is affected.
+check("components/owner/AccessCodesVaultTable.tsx", ["vault-search", "vault-copy-all-", "vault-reveal-", "vault-rotate-", "setEventAccessCodeAction", "recordCodeVaultViewAction", "window.confirm", "${code.impact}", "${event.adoptImpact}"]);
 check("lib/actions/accessCodeAuditActions.ts", ['actor?.kind !== "owner"', "access_code_revealed", "access_code_copied"]);
 check("components/owner/OwnerConsole.tsx", ['id="access-codes"', "AccessCodesVault()", '{ id: "access-codes", label: "Access codes" }']);
 check("tests/e2e/access-codes-vault.spec.ts", ["operator", "vault-reveal-", "rotate", "OWNER_MASTER_ACCESS_PASSWORD_2"]);

@@ -15,7 +15,7 @@ check("services/events/eventRepository.ts", ["codeKey(event.joinCode) === wanted
 check("app/production-access/special-guest/page.tsx", ["defaultValue={prefilledEvent}", "defaultValue={prefilledCode}", "guest-code-prefilled", 'error === "rotated"']);
 if (/autoSubmit|requestSubmit|\.submit\(\)/.test(read("app/production-access/special-guest/page.tsx") + read("app/production-access/crew/page.tsx"))) throw new Error("A prefilled gate must never submit itself.");
 check("app/production-access/crew/page.tsx", ["defaultValue={prefilledCode}"]);
-check("services/events/accessCodeService.ts", ["export async function setEventAccessCode", "export function codeIsFree", "validateCustomCode(input.value, field)", "revokeHostLinks(eventId, actor, stored)", "bumpAccessCodeVersion(eventId, field)", "export async function guestAccessStale"]);
+check("services/events/accessCodeService.ts", ["export async function setEventAccessCode", "export function codeIsFree", "validateCustomCode(input.value, field)", "revokeHostLinks(eventId, actor, stored, reason)", "bumpAccessCodeVersion(eventId, field)", "export async function guestAccessStale"]);
 for (const gate of ["app/production-access/special-guest/page.tsx", "app/api/production-access/special-guest/route.ts"]) check(gate, ["getAccessCodeVersions(access.eventId)", "codeVersion, issuedAt"]);
 for (const layout of ["app/speaker/events/[eventId]/layout.tsx", "app/sponsor/events/[eventId]/layout.tsx", "app/client/[clientSlug]/events/[eventId]/layout.tsx"]) check(layout, ["guestAccessStale(", 'redirect("/production-access/special-guest?error=rotated")']);
 check("components/venue/VipLobbyPanel.tsx", ["guestAccessStale(eventId)"]);
