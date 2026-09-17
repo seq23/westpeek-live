@@ -1,6 +1,7 @@
-import { getEvent } from "@/lib/runtime/getRuntimeData";
 import { getEventPublishState, getPublishReadiness, canPublishEvent } from "@/services/events/eventPublishService";
-import { peekOverlayEvent } from "@/services/events/runtimeEventOverlay";
+import { findEventRecord } from "@/services/events/eventRepository";
+import { realRuntimeEvent } from "@/lib/workspace/realEvent";
+import { getEventWorkspaceReadModel } from "@/services/events/eventWorkspaceReadModel";
 import { publishEventAction } from "@/lib/actions/eventWorkspaceActions";
 import { ManageEventTabs } from "@/components/events/ManageEventTabs";
 import { EventJoinCodePanel } from "@/components/events/EventJoinCodePanel";
@@ -8,6 +9,7 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { EndShowControl } from "@/components/moderation/EndShowControl";
 import { formatEventDate } from "@/lib/utils/format";
 import { SafeSection } from "@/components/system/SafeSection";
+import { WorkspaceReadinessList } from "@/components/workspace/WorkspaceEmptyState";
 
 const transitions: Array<{ status: "registration_open" | "pre_event" | "live" | "ended" | "draft"; label: string; help: string; primary?: boolean }> = [
   { status: "registration_open", label: "Publish", help: "Opens the join code and the public event page.", primary: true },
@@ -17,13 +19,21 @@ const transitions: Array<{ status: "registration_open" | "pre_event" | "live" | 
   { status: "draft", label: "Back to draft", help: "Closes the join code again." },
 ];
 
-export function EventPublishPanel({ eventId, updated, error }: { eventId: string; updated?: string; error?: string }) {
-  const event = getEvent(eventId);
-  const runtime = peekOverlayEvent(eventId);
+/**
+ * Publishing, for a real event and for the demo alike. The readiness list below the buttons used to
+ * be counted off the seed arrays for BOTH: a real event was told it had "0 speaker profile(s)
+ * connected" while three speakers stood in its green room, because its speakers live in the runtime
+ * store and the count was reading fixtures. A real event now gets the workspace's own counted
+ * readiness; the seed event keeps the fixture-based one, which is what a demo is for.
+ */
+export async function EventPublishPanel({ eventId, updated, error }: { eventId: string; updated?: string; error?: string }) {
+  const runtime = realRuntimeEvent(eventId);
+  const event = runtime || (await findEventRecord(eventId));
   const state = getEventPublishState(eventId);
-  const readiness = getPublishReadiness(eventId);
+  const model = runtime ? await getEventWorkspaceReadModel(runtime) : undefined;
+  const readiness = runtime ? [] : getPublishReadiness(eventId);
   const ready = canPublishEvent(eventId);
-  const currentStatus = runtime?.status || event.status;
+  const currentStatus = runtime?.status || event?.status || "draft";
 
   return (
     <div className="space-y-6">
@@ -32,10 +42,10 @@ export function EventPublishPanel({ eventId, updated, error }: { eventId: string
       <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-orange">Publishing</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
-          <h1 className="text-3xl font-black text-slate-950">Publish {event.name}</h1>
+          <h1 className="text-3xl font-black text-slate-950">Publish {event?.name || eventId}</h1>
           <StatusBadge status={currentStatus} tone={currentStatus === "live" ? "good" : "neutral"} />
         </div>
-        <p className="mt-2 text-sm text-slate-600" data-testid="publish-event-start">Starts {formatEventDate(event.startAt, event.timezone)} · {event.timezone}</p>
+        <p className="mt-2 text-sm text-slate-600" data-testid="publish-event-start">Starts {event ? `${formatEventDate(event.startAt, event.timezone)} · ${event.timezone}` : "— no event record found"}</p>
         {runtime ? (
           <>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">Status changes save to the event row immediately — no PR, no redeploy. Publish opens the join code; Go live sends attendees straight into the lobby.</p>
@@ -65,17 +75,21 @@ export function EventPublishPanel({ eventId, updated, error }: { eventId: string
             </div>
           </>
         )}
-        <div className="mt-6 grid gap-3 md:grid-cols-2">
-          {readiness.map((item) => (
-            <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
-              <div className="flex items-center justify-between gap-3">
-                <h2 className="font-bold text-slate-950">{item.label}</h2>
-                <span className={`rounded-full px-3 py-1 text-xs font-black ${item.status === "pass" ? "bg-emerald-100 text-emerald-800" : item.status === "warning" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>{item.status}</span>
+        {model ? (
+          <div className="mt-6" data-testid="publish-readiness-runtime"><WorkspaceReadinessList items={model.readiness} /></div>
+        ) : (
+          <div className="mt-6 grid gap-3 md:grid-cols-2">
+            {readiness.map((item) => (
+              <div key={item.id} className="rounded-2xl border border-slate-200 p-4">
+                <div className="flex items-center justify-between gap-3">
+                  <h2 className="font-bold text-slate-950">{item.label}</h2>
+                  <span className={`rounded-full px-3 py-1 text-xs font-black ${item.status === "pass" ? "bg-emerald-100 text-emerald-800" : item.status === "warning" ? "bg-amber-100 text-amber-800" : "bg-red-100 text-red-800"}`}>{item.status}</span>
+                </div>
+                <p className="mt-2 text-sm text-slate-600">{item.detail}</p>
               </div>
-              <p className="mt-2 text-sm text-slate-600">{item.detail}</p>
-            </div>
-          ))}
-        </div>
+            ))}
+          </div>
+        )}
         {!runtime ? (
           <div className="mt-6 flex flex-wrap gap-3">
             <button className="rounded-full bg-brand-black px-5 py-3 text-sm font-bold text-white" disabled={!ready}>Mark ready for review</button>

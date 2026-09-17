@@ -58,13 +58,14 @@ export async function setNetworkingSettings(eventId: string, input: { open: bool
 export interface SpeedNetworkingRoundState {
   priorityAttendeeIds: string[];
   /**
-   * How many rounds each attendee has been the odd one out. Sit-outs are mostly rotated by
-   * "you are next" plus the requeue putting the pair at the back — but only while the queue has
-   * distinct join times to sort on. When a roomful joins together (the crew opens networking and
-   * everyone presses Join) every joinedAt is effectively identical, the sort falls back to a
-   * stable tie-break, and the same person is left out over and over: measured 3 sit-outs in 7
-   * rounds with 7 people who joined at the same instant. The debt makes the rotation independent
-   * of the tie-break — most sat out lead the queue until the count is level.
+   * How many rounds each attendee has sat out in total while in this queue — cumulative, not a
+   * streak. When a roomful joins together (the crew opens networking and everyone presses Join)
+   * every joinedAt is effectively identical, the sort falls back to a stable tie-break, and a debt
+   * that was cleared on being matched simply handed the tail of that tie-break back and forth:
+   * measured over 12 rounds of simultaneous joins, two people took all 12 sit-outs at 3, 5, 7 and
+   * 9 waiting and nobody else sat out at all. Carried forward, the debt levels the counts to
+   * within one — the most-owed lead the queue and the least-owed is who the round holds back.
+   * Pruned to the people actually in the queue, so it cannot grow for an event that never ends.
    */
   satOutCounts: Record<string, number>;
   metEveryoneAttendeeIds: string[];
@@ -250,19 +251,33 @@ export async function runNetworkingMatcher(eventId: string, options: { random?: 
     created.push(match);
   }
 
-  // The odd one out leads the next round, and a repeat opt-in is spent once it has been honoured.
+  // The people this round could not seat lead the next one, and a repeat opt-in is spent once it
+  // has been honoured.
   const stillNeedsARepeat = roundState.repeatOptInAttendeeIds.filter((attendeeId) => !created.some((match) => match.attendeeAId === attendeeId || match.attendeeBId === attendeeId));
-  // The sit-out debt only grows for the person a round could not seat, and only when there WAS a
-  // round: an empty queue must not quietly hand somebody a permanent place at the front.
-  const satOutCounts = { ...roundState.satOutCounts };
-  if (plan.oddOneOut) satOutCounts[plan.oddOneOut.attendeeId] = (satOutCounts[plan.oddOneOut.attendeeId] || 0) + 1;
-  for (const match of created) {
-    // Paired at last: the debt is paid, so they take their ordinary place at the back of the queue.
-    delete satOutCounts[match.attendeeAId];
-    delete satOutCounts[match.attendeeBId];
+  // The sit-out debt grows for everyone a round left unpaired, and only when there WAS a round: an
+  // empty queue must not quietly hand somebody a permanent place at the front. It is NOT cleared
+  // when they are finally matched — a debt that resets says only "did you sit out last round",
+  // which is what let the same two people take every sit-out in a simultaneous-join queue. The
+  // "never twice running" half of the rotation is priorityAttendeeIds, which does reset.
+  // Kept for everyone still in the queue, waiting OR in a match: pruning to the people waiting
+  // right now would throw the debt away the moment somebody was paired, which is the same bug as
+  // clearing it. It goes only when they leave.
+  const inQueue = new Set(entries.filter((entry) => entry.status === "waiting" || entry.status === "matched").map((entry) => entry.attendeeId));
+  const satOutCounts: Record<string, number> = {};
+  for (const [attendeeId, count] of Object.entries(roundState.satOutCounts)) {
+    if (inQueue.has(attendeeId)) satOutCounts[attendeeId] = count;
   }
+  // A ROUND is a tick that actually seated somebody. The matcher runs on every read, so counting a
+  // sit-out per read would charge whoever is waiting once per poll — the same person would owe
+  // more the more often their phone asked.
+  if (created.length) {
+    for (const candidate of plan.unmatched) satOutCounts[candidate.attendeeId] = (satOutCounts[candidate.attendeeId] || 0) + 1;
+  }
+  // Told "you are next" only if they can actually be next: somebody who has met everyone here is
+  // unmatched for a reason the next round cannot fix, and is told THAT instead.
+  const metEveryoneIds = new Set(plan.metEveryone.map((candidate) => candidate.attendeeId));
   const nextRoundState: SpeedNetworkingRoundState = {
-    priorityAttendeeIds: plan.oddOneOut ? [plan.oddOneOut.attendeeId] : [],
+    priorityAttendeeIds: plan.unmatched.filter((candidate) => !metEveryoneIds.has(candidate.attendeeId)).map((candidate) => candidate.attendeeId),
     satOutCounts,
     metEveryoneAttendeeIds: plan.metEveryone.map((candidate) => candidate.attendeeId),
     repeatOptInAttendeeIds: stillNeedsARepeat,

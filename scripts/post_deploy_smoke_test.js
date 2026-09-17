@@ -47,6 +47,18 @@ async function run() {
       else if (health.seedEvents !== 5) failures.push(`${check.path} expected 5 compiled seed events got ${health.seedEvents}`);
       // The crew deck's and networking page's reads against a REAL runtime event: a mis-shaped table (16 Sep 2026) fails here by name.
       else if (health.crewPageReads && !health.crewPageReads.ok) failures.push(`${check.path} NAMED STOP — crew page reads failed on ${health.crewPageReads.eventId || "runtime event"}: ${(health.crewPageReads.reads || []).filter((r) => !r.ok).map((r) => `${r.name}: ${r.detail || "failed"}`).join("; ")}`);
+      // Every entry in RUNTIME_TABLE_MIGRATIONS against the live database. Its own branch, not another
+      // `else if`: a deploy whose database is behind its migrations must fail even when everything above
+      // it passed, because that is exactly what 0030, 0037 and 0023 looked like from the outside — green.
+      if (health && typeof health === "object") {
+        const coverage = health.migrationCoverage;
+        if (!coverage) failures.push(`${check.path} NAMED STOP — migrationCoverage missing from runtime health; the deployed build predates the migration coverage probe and cannot prove its database is current`);
+        else if (!coverage.checked) failures.push(`${check.path} NAMED STOP — migration coverage checked 0 objects: ${coverage.detail || "no detail"}. A probe that examines nothing is a failure, not a pass.`);
+        else if (!coverage.ok) {
+          const named = (coverage.missing || []).map((row) => `${row.object} (apply ${row.migrationFile}${row.detail ? ` — ${row.detail}` : ""})`).join("; ");
+          failures.push(`${check.path} NAMED STOP — the deployed database is missing ${(coverage.missing || []).length} of ${coverage.checked} objects its migrations create: ${named || coverage.detail || "unknown"}. Paste the named file(s) into the Supabase SQL editor (docs/manual-notes/migration-assurance.md).`);
+        }
+      }
     }
   }
   if (failures.length) {

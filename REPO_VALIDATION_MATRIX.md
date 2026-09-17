@@ -272,6 +272,13 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Purpose: the Supabase GitHub integration applies `supabase/migrations/` only. Every mirror check in the repo used to name one migration by hand, so a new migration with no mirror passed everything — which is how `0030_contact_archive.sql` shipped unapplied and "Archive test rows" silently did nothing. From `MIRROR_FLOOR = 24` on (0001–0023 predate the integration), every canonical migration must have exactly one byte-identical mirror, and the mirror filenames must sort in canonical order. Hard-fails on zero migrations examined.
 - Proof behind it: negative proof on 16 Sep 2026 (removing the 0030 mirror fails by name); `tests/unit/migrationMirrorAndWatchdog.test.ts`.
 
+## Migration map coverage and the Supabase apply signal — 2026-09-17
+
+- Validators: `npm run validate:migration-map-coverage`, `npm run validate:migration-mirror-parity`
+- Included in: `npm run validate` through `validate:deploy-parity`
+- Purpose: `RUNTIME_TABLE_MIGRATIONS` in `types/runtimeEvent.ts` is the map `/api/runtime/health` probes, and it was hand-maintained — an author who added a migration and forgot an entry got no warning, and the object went unprobed forever. 0023, 0031, 0032, 0035 and 0038 had no entry at all. The validator parses `db/migrations/` and fails if any table created or column added from 0023 on is absent from the map, or points at the wrong file, or is in the map without any migration supplying it; exemptions must be explicit and reasoned, and a stale one fails. The map is now complete: 53 objects. `/api/runtime/health` checks all 53 against the live database (`migrationCoverage`, one PostgREST read per table, thirteen requests) and `postdeploy:smoke` turns a database behind its migrations into a failing deploy step naming the file to paste into the SQL editor. Separately, the Supabase GitHub integration's own result on a push to `main` — which went red twice on 16 Sep 2026 where nobody could see it — is now read by the `Supabase applied the migrations` job in `.github/workflows/validation.yml`.
+- Proof behind it: negative proof on 17 Sep 2026 — deleting a `RUNTIME_TABLE_MIGRATIONS` entry, pointing one at the wrong migration, adding an unsupplied entry, emptying the map, and dropping a mirror each fail by name; restored, each passes. `docs/manual-notes/migration-assurance.md` records the evidence for how the integration actually behaves.
+
 ## Production workspace spine — 2026-09-16
 
 - Validators: `npm run validate:event-workspace-spine`, `npm run validate:v7-operator-launchpad`

@@ -127,7 +127,7 @@ check("services/speed-networking/speedNetworkingTiers.ts", [
 check("services/speed-networking/speedNetworkingService.ts", [
   "planSpeedNetworkingRound({ eventId, waiting: candidates",
   "export async function allowRepeatNetworkingMatch",
-  "priorityAttendeeIds: plan.oddOneOut ? [plan.oddOneOut.attendeeId] : []",
+  "priorityAttendeeIds: plan.unmatched.filter(",
   "metEveryoneAttendeeIds: plan.metEveryone.map",
 ]);
 check("lib/actions/networkingActions.ts", ["export async function allowRepeatSpeedNetworkingMatchAction", "allowRepeatNetworkingMatch(eventId, identity.attendeeId)"]);
@@ -142,7 +142,7 @@ check("types/speedNetworking.ts", [
   "tokenLeadSeconds: 2",
   "transitionPollMs: 1_000",
 ]);
-check("services/speed-networking/speedNetworkingTiers.ts", ["cycle: SPEED_NETWORKING_CYCLE", "timesSatOut", "(b.timesSatOut || 0) - (a.timesSatOut || 0)"]);
+check("services/speed-networking/speedNetworkingTiers.ts", ["cycle: SPEED_NETWORKING_CYCLE", "timesSatOut", "function owedSeats"]);
 check("services/speed-networking/speedNetworkingService.ts", [
   "const startsAt = new Date(nowMs + SPEED_NETWORKING_CYCLE.setupGapSeconds * 1_000);",
   "export function matchIsInSetup",

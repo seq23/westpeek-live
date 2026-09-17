@@ -1,13 +1,25 @@
 # Supabase GitHub integration anchor for westpeek.live.
 #
-# The Supabase GitHub app is connected to this repository (it reports a
-# "Supabase Preview" check on every commit). With this file present it treats
-# `supabase/migrations/` as the migration source for the production branch
-# (`main`). The SQL here mirrors db/migrations/0024_runtime_events.sql, which
-# stays the human-readable source of truth; the numbered db/migrations history
-# before 0024 was applied by hand and is deliberately not mirrored.
+# The Supabase GitHub app is connected to this repository and, with this file
+# present, treats `supabase/migrations/` as the migration source for the
+# production branch (`main`). db/migrations stays the human-readable source of
+# truth; every file from 0023 on is mirrored here byte-for-byte
+# (npm run validate:migration-mirror-parity).
 #
-# Verified 2026-09-16: merging the 0024 mirror to main created the tables in
-# the live project (see /api/runtime/health). New migrations: add the SQL to
-# db/migrations/, mirror it here with a timestamp name, and keep both identical.
+# What the "Supabase Preview" check means — confirmed against the check-run API
+# on 17 Sep 2026, because the repo had believed otherwise:
+#   * on a push to `main` it is the real apply. It reported `failure` on cf50aff
+#     and 78f6847 with `relation "public.request_event_intake" does not exist`,
+#     because 0023 had no mirror here, which also blocked 0036, 0037 and 0038.
+#     Nothing surfaced that red, so three migrations sat unapplied for days.
+#     The "Supabase applied the migrations" job in .github/workflows/validation.yml
+#     now fails the build on it.
+#   * on a pull request it reports SKIPPED. That is Supabase Branching (preview
+#     databases), which is off, and is unrelated to whether main applies. It is
+#     not a fault and does not need fixing.
+#
+# New migration: add the SQL to db/migrations/, mirror it here with a timestamp
+# that sorts last, keep both identical, and run
+# `npm run validate:migration-map-coverage` for the RUNTIME_TABLE_MIGRATIONS
+# entries. See docs/manual-notes/migration-assurance.md.
 project_id = "lqxzpwtvolojashknseb"
