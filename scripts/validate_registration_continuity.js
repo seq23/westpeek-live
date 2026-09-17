@@ -17,8 +17,12 @@ let examined = 0;
 function check(file, tokens) { const body = read(file); examined += 1; const missing = tokens.filter((t) => !body.includes(t)); if (missing.length) throw new Error(`${file} missing: ${missing.join(" | ")}`); return body; }
 
 // 1 · The lifetime is named, defaulted, clamped, and per-event.
+// The 14-day floor moved to types/attendeeSession.ts on 16 Sep 2026 so the house default in
+// Settings could read it without importing the policy service, which reads the event repository.
+// It is still one named number, still re-exported from here, and still the only place it is written.
+check("types/attendeeSession.ts", ["export const DEFAULT_ATTENDEE_SESSION_DAYS = 14", "export const MIN_ATTENDEE_SESSION_DAYS", "export const MAX_ATTENDEE_SESSION_DAYS"]);
 const policy = check("services/attendees/attendeeSessionPolicy.ts", [
-  "export const DEFAULT_ATTENDEE_SESSION_DAYS = 14",
+  "export { DEFAULT_ATTENDEE_SESSION_DAYS, MIN_ATTENDEE_SESSION_DAYS, MAX_ATTENDEE_SESSION_DAYS } from \"@/types/attendeeSession\"",
   "export const RETURN_HINT_DAYS",
   "export const EXPIRING_SOON_HOURS",
   "export function clampSessionDays",
