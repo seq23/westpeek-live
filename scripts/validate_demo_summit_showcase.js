@@ -121,17 +121,27 @@ check(/SPEED_NETWORKING_CYCLE/.test(explainer) && /setupGapSeconds/.test(explain
 check(/SPEED_NETWORKING_DEFAULT_MINUTES/.test(explainer), "The round length must come from the setting that governs it, so retuning the cycle cannot leave a false promise on the page.");
 check(/SPEED_NETWORKING_ROOM_CAPACITY/.test(explainer), "The two-person room claim must be read from the guard's own capacity constant.");
 check(/SPEED_NETWORKING_MATCHING_CONFIG/.test(explainer), "The matching claims must be read from the matcher's config, which has its own fairness-contract validator.");
-check(/Your match sees your name and your company\. Nothing else\./.test(explainer), "The privacy promise must survive verbatim; it is the sentence people actually want answered.");
+// The privacy promise moved to where it is wanted — beside the button — on 17 Sep 2026, and is now
+// written once as SPEED_NETWORKING_PRIVACY_PROMISE. It must survive verbatim, and it must be
+// rendered with the action; validate_networking_page_design owns the "one copy, beside the button"
+// half. Here we only insist the sentence itself still exists and has not been softened.
+check(/SPEED_NETWORKING_PRIVACY_PROMISE = "Your match sees your name and your company\. Nothing else\."/.test(read("types/speedNetworking.ts")), "The privacy promise must survive verbatim; it is the sentence people actually want answered.");
+check(/speed-networking-privacy-promise/.test(read("components/venue/SpeedNetworkingQueuePanel.tsx")), "The privacy promise must be rendered with the action, not filed in a constant nothing reads.");
 check(/<svg/.test(explainer) && /<title/.test(explainer), "The cycle must be drawn, with a title an assistive reader gets; a sentence cannot carry \"this repeats and you can leave\".");
 // Judged on the markup, not the comment that explains the rule.
 const explainerCode = explainer.replace(/\/\*[\s\S]*?\*\//g, "").replace(/^\s*\/\/.*$/gm, "");
 // url(#…) is an in-document SVG reference, not an image; anything else loading a picture is.
 check(!/<img|backgroundImage|url\((?!#)/i.test(explainerCode) && !/unsplash|getty|shutterstock|pexels/i.test(explainerCode), "No photograph of a person on the networking page: a stock photo here is a stranger presented as an attendee of this event.");
 
+// The hero carries the promise and the action; the explainer carries the loop and the four
+// answers. Both are exported from the same file and both must be rendered (17 Sep 2026).
+check(/export function SpeedNetworkingHero/.test(explainer), "The explainer file must export the hero that carries the promise and the action.");
+
 const lobby = read("components/venue/NetworkingLobby.tsx");
 // The RENDER, not the import: an import left behind after the element was deleted is exactly the
 // shape this has to catch (caught here 17 Sep 2026 while proving the guard negatively).
 check(/<SpeedNetworkingExplainer[\s/>]/.test(lobby), "NetworkingLobby must RENDER the explainer, or the page keeps its old one-line copy.");
+check(/<SpeedNetworkingHero[\s/>]/.test(lobby), "NetworkingLobby must RENDER the hero, which is what puts the promise and the action above the fold.");
 check(/matchMinutes=\{/.test(lobby), "The explainer must be rendered with the event's real round length.");
 check(/getNetworkingSettings/.test(lobby), "The explainer must be handed the event's real round length, not the platform default in every case.");
 check(/catch/.test(lobby), "Reading the networking settings must fail soft; a store hiccup may not take the networking page down.");
@@ -146,7 +156,7 @@ check(/\[eventId\]/.test("app/venue/[eventId]/networking/page.tsx"), "The networ
 const live = read("components/venue/SpeedNetworkingLive.tsx");
 check(!/Meet other attendees, one at a time\./.test(live), "SpeedNetworkingLive still carries the old vague line; what networking is gets said once, in the explainer.");
 
-if (examined < 45) fail(`validate_demo_summit_showcase examined only ${examined} things; it must not pass on an empty loop.`);
+if (examined < 48) fail(`validate_demo_summit_showcase examined only ${examined} things; it must not pass on an empty loop.`);
 
 if (failures.length) {
   console.error("validate_demo_summit_showcase: FAIL");

@@ -24,6 +24,7 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 import { getCrewViewer } from "@/lib/auth/crewViewer";
 import { getEventHealthReport } from "@/services/venue/eventHealthService";
+import { isDemonstrationEvent } from "@/services/events/eventConfigRepository";
 import { healthSummary, settle, settleAll, worstLevel, type HealthSignal } from "@/lib/venue/eventHealth";
 import { commandBarVisibleTo, switchEventPath, surfaceForPath } from "@/lib/navigation/eventCommandSurfaces";
 
@@ -123,6 +124,52 @@ describe("the health report on a real event", () => {
     const report = await getEventHealthReport({ eventId: event.id });
     expect(report.signals).toHaveLength(9);
     expect(report.log).toEqual([]);
+  });
+});
+
+/**
+ * A demonstration event is not a failing event, and a failing event is still a failing event.
+ *
+ * The Nova Founder Summit demo is marked live so the venue looks like a real show, with no stream
+ * behind it, so the owner's command bar read "1 failing: webhook" through every demonstration
+ * (17 Sep 2026). Both halves of the fix are proved here against the real service: the fiction
+ * stops reporting a production failure, and a REAL live event in exactly that state still goes red.
+ */
+describe("a demonstration event and a real one are told apart", () => {
+  it("a real live event with no webhook and no poll still reads red", async () => {
+    const event = await createEventRecord({ name: "Real live show", when: "now" }, owner);
+    expect(event.status).toBe("live");
+    const report = await getEventHealthReport({ eventId: event.id });
+    expect(report.demonstration).toBe(false);
+    const webhook = report.signals.find((item) => item.key === "webhook");
+    expect(webhook?.level).toBe("red");
+    expect(webhook?.detail).toContain("nothing is telling us what the feed is doing");
+    expect(report.level).toBe("red");
+    expect(healthSummary(report.signals)).toContain("webhook");
+  });
+
+  it("the demo event is measured, says it is a demonstration, and does not report a failure", async () => {
+    const report = await getEventHealthReport({ eventId: "event-summit" });
+    expect(report.status).toBe("live");
+    expect(report.demonstration).toBe(true);
+    // Nothing is suppressed: all nine signals are still measured and still named.
+    expect(report.signals.map((item) => item.key)).toEqual(["feed", "stage", "webhook", "fallback", "database", "chat", "attendees", "build", "capacity"]);
+    for (const item of report.signals) expect(item.source.length).toBeGreaterThan(0);
+    const webhook = report.signals.find((item) => item.key === "webhook");
+    expect(webhook?.level).not.toBe("red");
+    // And it says why, in its own words, rather than going quietly green.
+    expect(webhook?.detail).toContain("demonstration event");
+    expect(webhook?.detail).toContain("A real event live with this reading is failing");
+    expect(report.signals.some((item) => item.level === "red")).toBe(false);
+  });
+
+  it("a real event can never become a demonstration by accident", async () => {
+    const event = await createEventRecord({ name: "Not a demo", when: "now" }, owner);
+    expect((await getEventHealthReport({ eventId: event.id })).demonstration).toBe(false);
+    expect(isDemonstrationEvent(event.id)).toBe(false);
+    expect(isDemonstrationEvent("event-summit")).toBe(true);
+    expect(isDemonstrationEvent(undefined)).toBe(false);
+    expect(isDemonstrationEvent("an-event-nobody-has-heard-of")).toBe(false);
   });
 });
 
