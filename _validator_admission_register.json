@@ -4992,6 +4992,27 @@
       "simplificationDisposition": "KEEP"
     },
     {
+      "script": "validate:group-email-composer",
+      "command": "node scripts/validate_group_email_composer.js",
+      "status": "ACTIVE",
+      "admission": "umbrella_or_legacy_chain",
+      "parentOrMatrixAuthority": "validate:deploy-parity",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "static validation",
+      "whatItProves": "The group email composer is honest and safe to point at a list: audiences resolve from the real rows (attendee registrations, current VIP grants, guest identities, the event's booked contractors, the client record) rather than a typed list, a person in two groups is emailed once, somebody with no address on file is counted rather than dropped, an empty group is refused instead of reported as a successful send to nobody, every group send carries a signed non-guessable unsubscribe link plus the List-Unsubscribe and List-Unsubscribe-Post headers, the unsubscribe list is per person across every event and is applied to group sends and never to a transactional message addressed to one named person, the daily Resend allowance is checked before the first message so nothing is half-sent, the usage figure says it is counted from our own log, the one-click unsubscribe page and endpoint work with no login, and nothing sends without a person pressing a button.",
+      "whatItDoesNotProve": "Static contract only. That a real message leaves Resend carrying the List-Unsubscribe headers, and that Gmail renders its native control, are proven by a live send; the audience arithmetic and the suppression boundary are proven at runtime by tests/unit/groupEmail.test.ts.",
+      "failureHandling": "Record and repair without blocking unrelated runtime validation.",
+      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
+      "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",
+      "runtimeCost": "Varies; heavy/browser/provider/postdeploy lanes remain selectable by tier.",
+      "maintenanceCost": "Review on each feature/provider/deploy change.",
+      "removalConditions": "Retire only if group email is removed from the product, or replaced by a sender that cannot resolve an audience or send without an unsubscribe.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "HARD FAIL blocks when selected by the active tier/profile.",
+      "simplificationDisposition": "KEEP"
+    },
+    {
       "script": "validate:contractors-and-vendors-real",
       "command": "node scripts/validate_contractors_and_vendors_real.js",
       "status": "ACTIVE",

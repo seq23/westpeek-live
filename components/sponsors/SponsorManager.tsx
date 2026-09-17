@@ -1,6 +1,7 @@
 import { getEvent, getSponsorBoothsForEvent, getSponsorsForEvent } from "@/lib/runtime/getRuntimeData";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ComposeLink } from "@/components/email/ComposeLink";
 
 export function SponsorManager({ eventId }: { eventId: string }) {
   const event = getEvent(eventId);
@@ -9,6 +10,8 @@ export function SponsorManager({ eventId }: { eventId: string }) {
 
   return (
     <SectionCard title={`${event.name} sponsors`} eyebrow="Expo readiness">
+      {/* Straight to the composer with this event and the sponsors already picked. */}
+      <p className="mb-4"><ComposeLink eventId={eventId} audience="sponsors" label="Email sponsors" /></p>
       <div className="grid gap-4 md:grid-cols-2">
         {sponsors.map((sponsor) => {
           const booth = booths.find((item) => item.sponsorId === sponsor.id);

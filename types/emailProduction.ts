@@ -18,6 +18,8 @@ export interface ProductionEmailRequest {
   text: string;
   actionUrl?: string;
   metadata?: Record<string, unknown>;
+  /** Set only by the group sender: the List-Unsubscribe pair. Transactional sends leave it empty. */
+  headers?: Record<string, string>;
 }
 
 export interface EmailSendLog {
@@ -34,6 +36,12 @@ export interface EmailSendLog {
   status: EmailDeliveryStatus;
   actionUrl?: string;
   failureReason?: string;
+  /**
+   * The group send this row belongs to (migration 0044), or undefined for a transactional message
+   * to one named person. This is how the Email page tells a 47-line announcement from 47 separate
+   * decisions somebody made.
+   */
+  groupSendId?: string;
   queuedAt: string;
   sentAt?: string;
   failedAt?: string;

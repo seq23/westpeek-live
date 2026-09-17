@@ -12,6 +12,7 @@ import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } fro
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
 import type { EventAssetRecord } from "@/types/eventAssets";
 import type { SupplierEventLink, SupplierRecord } from "@/types/suppliers";
+import type { EmailGroupSend, EmailUnsubscribeRecord } from "@/types/emailAudience";
 import type { EmailSendLog } from "@/types/emailProduction";
 import type { EventTemplateRecord } from "@/types/eventTemplates";
 import type { ContactRecord } from "@/types/attendeeRegistration";
@@ -567,6 +568,35 @@ export class FileRuntimeStore implements RuntimeStore {
       .slice()
       .sort((a: EmailSendLog, b: EmailSendLog) => b.queuedAt.localeCompare(a.queuedAt))
       .slice(0, limit);
+  }
+
+  async appendEmailGroupSend(send: EmailGroupSend) {
+    const snapshot = this.read();
+    snapshot.emailGroupSends = [...(snapshot.emailGroupSends || []).filter((item: EmailGroupSend) => item.id !== send.id), send];
+    this.write(snapshot);
+    return send;
+  }
+
+  async listEmailGroupSends(limit = 200) {
+    return (this.read().emailGroupSends || [])
+      .slice()
+      .sort((a: EmailGroupSend, b: EmailGroupSend) => b.createdAt.localeCompare(a.createdAt))
+      .slice(0, limit);
+  }
+
+  async listEmailUnsubscribes() {
+    return (this.read().emailUnsubscribes || []).slice();
+  }
+
+  async getEmailUnsubscribe(email: string) {
+    return (this.read().emailUnsubscribes || []).find((item: EmailUnsubscribeRecord) => item.email === email);
+  }
+
+  async upsertEmailUnsubscribe(record: EmailUnsubscribeRecord) {
+    const snapshot = this.read();
+    snapshot.emailUnsubscribes = [...(snapshot.emailUnsubscribes || []).filter((item: EmailUnsubscribeRecord) => item.email !== record.email), record];
+    this.write(snapshot);
+    return record;
   }
 
   async upsertEventTemplate(template: EventTemplateRecord) {

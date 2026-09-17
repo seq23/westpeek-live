@@ -6,6 +6,7 @@ import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/a
 import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
 import type { SupplierEventLink, SupplierRecord } from "@/types/suppliers";
+import type { EmailGroupSend, EmailUnsubscribeRecord } from "@/types/emailAudience";
 import type { EmailSendLog } from "@/types/emailProduction";
 import type { EventTemplateRecord } from "@/types/eventTemplates";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
@@ -127,6 +128,8 @@ export interface V6RuntimeSnapshot {
   suppliers: SupplierRecord[];
   supplierEventLinks: SupplierEventLink[];
   emailSendLogs: EmailSendLog[];
+  emailGroupSends: EmailGroupSend[];
+  emailUnsubscribes: EmailUnsubscribeRecord[];
   eventTemplates: EventTemplateRecord[];
   runtimeEvents: RuntimeEventRecord[];
   runtimeClients: RuntimeClientRecord[];
@@ -181,6 +184,13 @@ export interface RuntimeStore {
   appendEmailSendLog(log: EmailSendLog & { sentBy?: string }): Promise<EmailSendLog>;
   listEmailSendLogs(eventId: string, limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
   listAllEmailSendLogs(limit?: number): Promise<Array<EmailSendLog & { sentBy?: string }>>;
+  // Group email (migration 0044): the summary row per group send, and West Peek's unsubscribe list.
+  appendEmailGroupSend(send: EmailGroupSend): Promise<EmailGroupSend>;
+  listEmailGroupSends(limit?: number): Promise<EmailGroupSend[]>;
+  /** The whole business's list, not one event's: every address ever unsubscribed, resubscribes included. */
+  listEmailUnsubscribes(): Promise<EmailUnsubscribeRecord[]>;
+  getEmailUnsubscribe(email: string): Promise<EmailUnsubscribeRecord | undefined>;
+  upsertEmailUnsubscribe(record: EmailUnsubscribeRecord): Promise<EmailUnsubscribeRecord>;
   // Event templates (migration 0033): a starting point for an event, saved from a real one.
   upsertEventTemplate(template: EventTemplateRecord): Promise<EventTemplateRecord>;
   getEventTemplate(id: string): Promise<EventTemplateRecord | undefined>;
@@ -295,6 +305,8 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     suppliers: [],
     supplierEventLinks: [],
     emailSendLogs: [],
+    emailGroupSends: [],
+    emailUnsubscribes: [],
     eventTemplates: [],
     runtimeEvents: [],
     runtimeClients: [],

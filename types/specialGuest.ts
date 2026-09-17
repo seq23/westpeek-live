@@ -16,6 +16,12 @@ export interface SpecialGuestProfile {
   name: string;
   company: string;
   title: string;
+  /**
+   * How the crew reaches them (migration 0044). Optional, because the role code admits a guest
+   * before anybody has an address for them — a speaker who has not given one is reported as
+   * unreachable by the email composer rather than silently left out of a "Speakers" send.
+   */
+  email?: string;
   createdAt: string;
   updatedAt: string;
 }

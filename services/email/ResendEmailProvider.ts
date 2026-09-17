@@ -28,6 +28,7 @@ export class ResendEmailProvider implements EmailProvider {
         html: message.html,
         text: message.text,
         reply_to: message.replyTo || getEmailReplyTo(env),
+        headers: message.headers,
       }),
     });
 

@@ -3,6 +3,7 @@ import { LocalTime } from "@/components/shared/LocalTime";
 import { decideAttendeeLiveAccess } from "@/lib/actions/attendeeLiveActions";
 import { silenceLiveChatAttendee } from "@/lib/actions/liveChatActions";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
+import { ComposeLink } from "@/components/email/ComposeLink";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { VipRowControl } from "@/components/moderation/VipRowControl";
 import { listVipStanding, vipCodeFor } from "@/services/guests/vipGrantService";
@@ -77,6 +78,8 @@ export async function AttendeeLiveRoster({ eventId, roomKind = "main_stage", roo
       <h2 className="mt-2 text-xl font-black text-slate-950">{roster.total} registered · {roster.pending.length} pending stage request{roster.pending.length === 1 ? "" : "s"}</h2>
       <p className="mt-2 text-sm text-slate-600">Permit lets an attendee watch the live stage when join approval is on. Approve to publish grants camera and microphone on the stage. Revoke removes both and drops them from the LiveKit room. Silence stops their chat in this room. Nothing here needs an attendee id typed by hand. <strong>Diagnose</strong> answers &ldquo;I can&rsquo;t see it&rdquo; — whether they never connected, are connected but receiving nothing (ours), or are receiving it badly (their network) — and <strong>See their view</strong> opens the stage with their real state, read-only.</p>
       <DeniedNote viewer={viewer} action="manage_stage_access" className="mt-3" />
+      {/* Straight to the composer with this event and every registered attendee already picked. */}
+      <p className="mt-3"><ComposeLink eventId={eventId} audience="attendees" label="Email all registered attendees" /></p>
 
       <div className="mt-4 rounded-2xl border border-amber-200 bg-amber-50 p-4" data-testid="pending-stage-requests">
         <p className="text-xs font-black uppercase tracking-wide text-amber-800">Pending requests</p>

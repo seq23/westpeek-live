@@ -42,6 +42,7 @@ export async function sendProductionEmail(
       subject: request.subject,
       html: request.html,
       text: request.text,
+      headers: request.headers,
     });
 
     return {

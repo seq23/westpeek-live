@@ -1,6 +1,7 @@
 import { getEvent, getSpeakersForEvent } from "@/lib/runtime/getRuntimeData";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ComposeLink } from "@/components/email/ComposeLink";
 
 export function SpeakerManager({ eventId }: { eventId: string }) {
   const event = getEvent(eventId);
@@ -8,6 +9,8 @@ export function SpeakerManager({ eventId }: { eventId: string }) {
 
   return (
     <SectionCard title={`${event.name} speakers`} eyebrow="Readiness">
+      {/* Straight to the composer with this event and the speakers already picked. */}
+      <p className="mb-4"><ComposeLink eventId={eventId} audience="speakers" label="Email speakers" /></p>
       <div className="grid gap-4 md:grid-cols-2">
         {speakers.map((speaker) => (
           <div key={speaker.id} className="rounded-2xl border border-slate-200 p-4">

@@ -46,7 +46,7 @@ export function cleanGuestField(value: unknown, max = 120) {
 }
 
 /** First entry: the guest gives name / company / title once. Re-entry with the cookie updates the same row. */
-export async function registerGuestIdentity(input: { eventId: string; role: SpecialGuestRole; name: string; company?: string; title?: string; existingGuestId?: string }) {
+export async function registerGuestIdentity(input: { eventId: string; role: SpecialGuestRole; name: string; company?: string; title?: string; email?: string; existingGuestId?: string }) {
   refusePreviewWrite(input.existingGuestId, "become a stored guest");
   const name = cleanGuestField(input.name);
   if (!name) throw new Error("Your name is required.");
@@ -60,6 +60,9 @@ export async function registerGuestIdentity(input: { eventId: string; role: Spec
     name,
     company: cleanGuestField(input.company),
     title: cleanGuestField(input.title),
+    // Blank leaves whatever address they gave last time alone: re-entry re-renders the form with
+    // every field, and a guest tabbing past this one must not wipe the way the crew reaches them.
+    email: cleanGuestField(input.email, 200).toLowerCase() || existing?.email,
     createdAt: existing?.createdAt || now,
     updatedAt: now,
   };
