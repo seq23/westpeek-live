@@ -4,6 +4,7 @@ import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
 import type { EventBackupRoomRecord } from "@/types/backupRoom";
+import type { SupersededCodeRecord } from "@/types/supersededCode";
 import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
@@ -185,6 +186,10 @@ function mapAttendeeSession(row: Record<string, unknown>): AttendeeSession {
 
 function mapAttendeeAgendaIntent(row: Record<string, unknown>): AttendeeAgendaIntent {
   return { id: String(row.id || ""), attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), plannedSessionIds: Array.isArray(row.planned_session_ids) ? row.planned_session_ids.map(String) : [], plannedBreakoutIds: Array.isArray(row.planned_breakout_ids) ? row.planned_breakout_ids.map(String) : [], plannedSponsorBoothIds: Array.isArray(row.planned_sponsor_booth_ids) ? row.planned_sponsor_booth_ids.map(String) : [], wantsSessionReminders: Boolean(row.wants_session_reminders), updatedAt: String(row.updated_at || "") };
+}
+
+function supersededCodeFromRow(row: Record<string, unknown>): SupersededCodeRecord {
+  return { id: String(row.id || ""), eventId: String(row.event_id || ""), field: String(row.field || "join") as SupersededCodeRecord["field"], code: String(row.code || ""), codeKey: String(row.code_key || ""), replacedAt: String(row.replaced_at || ""), replacedBy: row.replaced_by ? String(row.replaced_by) : undefined, reason: String(row.reason || "rotate") as SupersededCodeRecord["reason"] };
 }
 
 function fail(message: string): never {
@@ -726,6 +731,34 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     }, { onConflict: "event_id,stage_id" });
     if (error) failOrSchemaMissing("event_backup_rooms", error);
     return record;
+  }
+
+  async appendSupersededCode(record: SupersededCodeRecord) {
+    const { error } = await this.client.from("event_code_history").upsert({
+      id: record.id,
+      event_id: record.eventId,
+      field: record.field,
+      code: record.code,
+      code_key: record.codeKey,
+      replaced_at: record.replacedAt,
+      replaced_by: record.replacedBy ?? null,
+      reason: record.reason,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("event_code_history", error);
+    return record;
+  }
+
+  // Newest first: a value replaced more than once answers for the change that killed it last.
+  async findSupersededCode(codeKey: string) {
+    const { data, error } = await this.client.from("event_code_history").select("*").eq("code_key", codeKey).order("replaced_at", { ascending: false }).limit(1).maybeSingle();
+    if (error) failOrSchemaMissing("event_code_history", error);
+    return data ? supersededCodeFromRow(data as Record<string, unknown>) : undefined;
+  }
+
+  async listSupersededCodes(eventId: string) {
+    const { data, error } = await this.client.from("event_code_history").select("*").eq("event_id", eventId).order("replaced_at", { ascending: false });
+    if (error) failOrSchemaMissing("event_code_history", error);
+    return (data || []).map((row) => supersededCodeFromRow(row as Record<string, unknown>));
   }
 
   async getStageStreamState(key: string) {

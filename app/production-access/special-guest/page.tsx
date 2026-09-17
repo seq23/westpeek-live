@@ -14,6 +14,7 @@ import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { grantOwnerOverrideIfMatched } from "@/lib/auth/ownerAccessOverride";
 import type { V4SpecialGuestRole } from "@/types/v4";
 import { getAccessCodeVersions } from "@/services/events/accessCodeService";
+import { SupersededGateNotice, supersededGateQuery } from "@/components/access/SupersededGateNotice";
 
 // Day 1 special guest defaults are registry-managed; do not display or hardcode role codes here.
 async function enterGuest(formData: FormData) {
@@ -26,7 +27,8 @@ async function enterGuest(formData: FormData) {
   const access = await resolveSpecialGuestAccess(eventCode, roleCode);
   if (!access.ok || !access.destination || !access.eventId || !access.role) {
     await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: access.eventId, role: String(access.role || "unknown"), reason: access.reason, route: "/production-access/special-guest" });
-    redirect(`/production-access/special-guest?error=${access.reason ?? "invalid"}`);
+    // A code we rotated is still refused; it just stops sounding like a typo.
+    redirect(`/production-access/special-guest?${supersededGateQuery(access) || `error=${access.reason ?? "invalid"}`}`);
   }
   const env = getEnv();
   const { specialGuestCookieName } = getV5AccessCookieNames(env);
@@ -40,7 +42,7 @@ async function enterGuest(formData: FormData) {
 }
 
 /** `?event=<code>&code=<role code>` PREFILLS the form (a guest link the crew copied); the guest still presses Continue. */
-export default async function SpecialGuestAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; retry?: string; next?: string; event?: string; code?: string }> }) {
+export default async function SpecialGuestAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; retry?: string; next?: string; event?: string; code?: string; codeField?: string; on?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const prefilledEvent = String(resolvedSearchParams?.event || "").trim().slice(0, 80);
   const prefilledCode = String(resolvedSearchParams?.code || "").trim().slice(0, 120);
@@ -73,7 +75,7 @@ export default async function SpecialGuestAccessPage({ searchParams }: { searchP
           </div>
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Continue to assigned portal</button>
         </form>
-        {resolvedSearchParams?.error === "too_many" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="gate-too-many">Too many wrong codes from here. Wait about {resolvedSearchParams?.retry || "60"} seconds and try again — the invitation link fills the code in for you.</p> : resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="guest-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
+        {resolvedSearchParams?.error === "superseded" ? <SupersededGateNotice field={resolvedSearchParams?.codeField} replacedAt={resolvedSearchParams?.on} testId="guest-code-superseded" /> : resolvedSearchParams?.error === "too_many" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="gate-too-many">Too many wrong codes from here. Wait about {resolvedSearchParams?.retry || "60"} seconds and try again — the invitation link fills the code in for you.</p> : resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="guest-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
         <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>

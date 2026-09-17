@@ -4,6 +4,8 @@ import { readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { codesFromStem, freeCodeStem, mintAccessCodes, mintJoinCode } from "@/services/events/eventRepository";
 import { revokeHostLinks } from "@/services/events/hostLinkService";
+import { recordSupersededCode } from "@/services/events/supersededCodeService";
+import type { SupersededCodeReason } from "@/types/supersededCode";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
@@ -45,8 +47,19 @@ export function codeIsFree(input: { field: AccessCodeField; stored: string; even
 
 export type SetCodeResult = { ok: true; event: RuntimeEventRecord; field: AccessCodeField; code: string } | { ok: false; reason: string };
 
-/** Set (or regenerate) one code. Rotates whatever depended on the old one. */
-export async function setEventAccessCode(eventId: string, field: AccessCodeField, input: { value?: string; regenerate?: boolean }, actor: string): Promise<SetCodeResult> {
+/**
+ * Set (or regenerate) one code. Rotates whatever depended on the old one, and — since 17 Sep 2026 —
+ * remembers what the old one WAS before overwriting it.
+ *
+ * Every way a code changes comes through here: Rotate, a hand-set custom code, and each field
+ * "Adopt the readable codes" replaces. That is why the history is written here and nowhere else. A
+ * new path that writes `joinCode` or `accessCodes` directly would silently skip the record and put
+ * the product straight back to answering an old link with "that code did not match an event", so a
+ * validator holds this funnel shut.
+ *
+ * `reason` says which press it was, for the owner reading the history later.
+ */
+export async function setEventAccessCode(eventId: string, field: AccessCodeField, input: { value?: string; regenerate?: boolean; reason?: SupersededCodeReason }, actor: string): Promise<SetCodeResult> {
   const store = getRuntimeStore();
   const event = await store.getRuntimeEvent(eventId);
   if (!event) return { ok: false, reason: "Only a runtime-created event has codes to change." };
@@ -62,10 +75,16 @@ export async function setEventAccessCode(eventId: string, field: AccessCodeField
   if (codeKey(current) === codeKey(stored)) return { ok: true, event, field, code: displayCode(stored) };
   const allEvents = await store.listRuntimeEvents();
   if (!codeIsFree({ field, stored, event, allEvents })) return { ok: false, reason: field === "join" ? "Another event already uses that join code." : "This event already uses that code for another role." };
+  const reason = input.reason || (input.regenerate ? "rotate" : "custom");
+  // The crew code is overwritten inside revokeHostLinks and nowhere else, so that is where its
+  // history row is written; recording it here as well would double it.
   if (field === "crew") {
-    const { event: rotated } = await revokeHostLinks(eventId, actor, stored);
+    const { event: rotated } = await revokeHostLinks(eventId, actor, stored, reason);
     return { ok: true, event: rotated, field, code: displayCode(stored) };
   }
+  // Written before the overwrite, and only once the change is certain to go ahead: a code refused
+  // for a collision has not been replaced and must not appear in the history as though it had.
+  await recordSupersededCode({ eventId, field, previousCode: current, replacedBy: actor, reason });
   const updated: RuntimeEventRecord = field === "join" ? { ...event, joinCode: stored, updatedAt: new Date().toISOString() } : { ...event, accessCodes: { ...event.accessCodes, [field]: stored }, updatedAt: new Date().toISOString() };
   await store.upsertRuntimeEvent(updated);
   if (field !== "join") await bumpAccessCodeVersion(eventId, field);
@@ -126,7 +145,7 @@ export async function adoptReadableCodes(eventId: string, actor: string, options
     // Ours to replace: the derived code for another stem, or one of the old generated shapes.
     const custom = !isLegacyGeneratedCode(current, field) && (currentStem ? !isDerivedCode(current, currentStem, field) : !stemFromCode(current));
     if (custom && !options.includeCustom) { kept.push(field); continue; }
-    const result = await setEventAccessCode(eventId, field, { value: next }, actor);
+    const result = await setEventAccessCode(eventId, field, { value: next, reason: "adopt" }, actor);
     if (result.ok) changed.push(field); else kept.push(field);
   }
   return { ok: true, stem, changed, kept };

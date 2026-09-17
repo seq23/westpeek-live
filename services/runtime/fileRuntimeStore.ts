@@ -2,6 +2,7 @@ import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
 import type { EventBackupRoomRecord } from "@/types/backupRoom";
+import type { SupersededCodeRecord } from "@/types/supersededCode";
 import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
@@ -105,6 +106,7 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
     houseDefaults: Array.isArray(parsed.houseDefaults) ? parsed.houseDefaults : [],
     eventRequests: Array.isArray(parsed.eventRequests) ? parsed.eventRequests : [],
     howItWorksPages: Array.isArray(parsed.howItWorksPages) ? parsed.howItWorksPages : [],
+    eventCodeHistory: Array.isArray(parsed.eventCodeHistory) ? parsed.eventCodeHistory : [],
   };
 }
 
@@ -312,6 +314,26 @@ export class FileRuntimeStore implements RuntimeStore {
     snapshot.eventBackupRooms = [...(snapshot.eventBackupRooms || []).filter((item: EventBackupRoomRecord) => !(item.eventId === record.eventId && item.stageId === record.stageId)), record];
     this.write(snapshot);
     return record;
+  }
+
+  async appendSupersededCode(record: SupersededCodeRecord) {
+    const snapshot = this.read();
+    snapshot.eventCodeHistory = [...(snapshot.eventCodeHistory || []).filter((item: SupersededCodeRecord) => item.id !== record.id), record];
+    this.write(snapshot);
+    return record;
+  }
+
+  // Newest first: a code reused and replaced twice should answer for the change that killed it last.
+  async findSupersededCode(codeKey: string) {
+    return [...(this.read().eventCodeHistory || [])]
+      .sort((left: SupersededCodeRecord, right: SupersededCodeRecord) => right.replacedAt.localeCompare(left.replacedAt))
+      .find((item: SupersededCodeRecord) => item.codeKey === codeKey);
+  }
+
+  async listSupersededCodes(eventId: string) {
+    return (this.read().eventCodeHistory || [])
+      .filter((item: SupersededCodeRecord) => item.eventId === eventId)
+      .sort((left: SupersededCodeRecord, right: SupersededCodeRecord) => right.replacedAt.localeCompare(left.replacedAt));
   }
 
   async getStageStreamState(key: string) {

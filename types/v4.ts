@@ -15,6 +15,12 @@ export interface V4JoinResolution {
   publicState?: V4PublicEventState;
   destination?: string;
   reason?: "missing_code" | "invalid_code" | "not_public" | "registration_required" | "ended" | "archived";
+  /**
+   * Set when the code typed is one this event USED to answer to (migration 0046). The event was
+   * found through the history rather than through its current code, so the person is in the right
+   * place holding an out-of-date invitation and has to be told so once, plainly.
+   */
+  supersededCode?: string;
   message: string;
 }
 
@@ -25,7 +31,11 @@ export interface V4AccessResolution {
   clientSlug?: string;
   role?: V4SpecialGuestRole | V4CrewRole;
   destination?: string;
-  reason?: "missing_code" | "invalid_event" | "invalid_role_code" | "invalid_password" | "expired" | "forbidden";
+  reason?: "missing_code" | "invalid_event" | "invalid_role_code" | "invalid_password" | "expired" | "forbidden" | "superseded_code";
+  /** For "superseded_code": the day the credential was replaced, so the refusal can name it. */
+  supersededAt?: string;
+  /** For "superseded_code": which credential it was, so the refusal can name that too. */
+  supersededField?: "crew" | "speaker" | "sponsor" | "vip" | "client";
   message: string;
 }
 

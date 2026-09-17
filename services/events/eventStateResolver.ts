@@ -1,5 +1,7 @@
 import { findEventIndexRecord, getAttendeeConfig, getEventConfig } from "@/services/events/eventConfigRepository";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
+import { findSupersededCode } from "@/services/events/supersededCodeService";
+import { displayCode } from "@/lib/access/accessCodes";
 import type { EventStatus } from "@/types/core";
 import type { V4JoinResolution, V4PublicEventState } from "@/types/v4";
 
@@ -64,5 +66,15 @@ export async function resolveEventJoinCode(rawCode: string | undefined): Promise
   // A typed code may be mangled (no prefix, capitals, a space); the record found tells us the real
   // code, and the hydrated lookup must use THAT, not what was typed.
   const runtime = code ? await ensureRuntimeEvent(code) : undefined;
-  return resolveHydratedEventJoinCode(runtime?.joinCode ?? code);
+  const direct = resolveHydratedEventJoinCode(runtime?.joinCode ?? code);
+  if (!code || direct.reason !== "invalid_code") return direct;
+
+  // Only now, on a genuine miss: is this a code the event used to answer to? An event code is an
+  // invitation, not a credential — when we changed it we broke a link somebody else had already
+  // sent, so the holder is taken to their event and told once that the code moved. A current code
+  // always wins; the history is never consulted while a live event still answers.
+  const superseded = await findSupersededCode(code);
+  if (!superseded || superseded.record.field !== "join") return direct;
+  await ensureRuntimeEvent(superseded.event.id);
+  return { ...resolveHydratedEventJoinCode(superseded.event.joinCode), supersededCode: displayCode(superseded.record.code) };
 }

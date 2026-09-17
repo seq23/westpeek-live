@@ -5,6 +5,8 @@ import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 import { displayCode } from "@/lib/access/accessCodes";
+import { recordSupersededCode } from "@/services/events/supersededCodeService";
+import type { SupersededCodeReason } from "@/types/supersededCode";
 
 /**
  * "Changing host should be super easy." The host of an event is the executive_producer crew role
@@ -59,10 +61,17 @@ export async function mintHostLink(eventId: string, grantedBy: string) {
 
 /** Rotates the event's crew code, bumps the version, and marks every outstanding link revoked. */
 /** `newCode`: a custom crew code chosen on the Access page; otherwise a fresh random one. Either way every link and cookie minted with the old code stops working. */
-export async function revokeHostLinks(eventId: string, revokedBy: string, newCode?: string) {
+/**
+ * This is the ONLY place the crew code is ever overwritten — the Access page's Set and Regenerate
+ * come through `setEventAccessCode`, which delegates here, and "Revoke host link" calls it direct.
+ * So the old value is recorded here rather than in the caller: recording upstream would have missed
+ * the revoke button entirely and left a rotated crew code answering "that did not match" again.
+ */
+export async function revokeHostLinks(eventId: string, revokedBy: string, newCode?: string, reason: SupersededCodeReason = "rotate") {
   const store = getRuntimeStore();
   const event = await store.getRuntimeEvent(eventId);
   if (!event) throw new Error("Only a runtime-created event has a crew code to rotate.");
+  await recordSupersededCode({ eventId, field: "crew", previousCode: event.accessCodes.crew, replacedBy: revokedBy, reason });
   const rotated: RuntimeEventRecord = { ...event, accessCodes: { ...event.accessCodes, crew: newCode || mintAccessCodes().crew }, updatedAt: new Date().toISOString() };
   await store.upsertRuntimeEvent(rotated);
   const state = await getHostLinkState(eventId);

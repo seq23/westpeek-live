@@ -4,6 +4,7 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
 import { missingAccessEnv } from "@/lib/env/safeEnv";
 import { ownerOverrideResponseIfMatched, redirectTo } from "@/lib/auth/accessGateResponse";
 import { resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
+import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { checkGateAttempts, clearGateAttempts, gateAttemptKeyFor, recordGateFailure, requestIpHash } from "@/services/access/gateAttemptLimiter";
 import type { V4SpecialGuestRole } from "@/types/v4";
@@ -34,7 +35,8 @@ export async function POST(request: NextRequest) {
     const limit = recordGateFailure(attemptKey);
     await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: access.eventId || eventCode || undefined, role: String(access.role || "unknown"), reason: limit.cooling ? "rate_limited_after_failures" : access.reason, route: "/production-access/special-guest", ipHash });
     if (limit.cooling) return redirectTo(request, `/production-access/special-guest?error=too_many&retry=${limit.retryInSeconds}`);
-    return redirectTo(request, `/production-access/special-guest?error=${access.reason ?? "invalid"}`);
+    // Refused either way; a code we rotated says which credential went and when.
+    return redirectTo(request, `/production-access/special-guest?${supersededGateQuery(access) || `error=${access.reason ?? "invalid"}`}`);
   }
 
   const env = getEnv();

@@ -181,7 +181,9 @@ const tokenRoute = read("app/api/video/livekit-token/route.ts");
 if (!tokenRoute.includes("WATCHABLE_ROOMS")) fail("The video token route must serve a watch-only token to a viewer with no attendee session.");
 if (!tokenRoute.includes('displayName = "Guest"')) fail("An anonymous viewer's token must be issued as a guest, with no publish permission.");
 examined += 1;
-if (!read("app/join/page.tsx").includes("redirect(resolution.destination)")) fail("A join link with a code that resolves must redirect straight to the show, not render a Continue card.");
+// Since 0046 the redirect also carries the old code when the person arrived on one we replaced, so
+// an out-of-date invitation goes straight in as well and is explained on arrival. Still one hop.
+if (!read("app/join/page.tsx").includes("redirect(withSupersededCode(resolution.destination, resolution.supersededCode))")) fail("A join link with a code that resolves must redirect straight to the show, not render a Continue card - including a code we have since replaced.");
 
 if (examined < 40) fail(`validate_venue_attendee_ux_contract examined only ${examined} things; it must not pass on an empty loop.`);
 
