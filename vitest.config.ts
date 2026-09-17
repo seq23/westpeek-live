@@ -11,7 +11,7 @@ export default defineConfig({
   },
   // tsconfig keeps jsx: "preserve" for Next's own build, so vite is told here how to compile the
   // .tsx a test imports. Without it a test that renders a server component cannot even parse it.
-  oxc: { jsx: "automatic" },
+  oxc: { jsx: { runtime: "automatic" } },
   resolve: {
     alias: {
       "@": path.resolve(__dirname, "."),
