@@ -1,4 +1,5 @@
 "use client";
+import { RegisterPointOfUse } from "@/components/venue/RegisterPointOfUse";
 import { useAttendeeStageStatus, type AttendeeStageStatusSnapshot } from "@/components/video/useAttendeeStageStatus";
 import type { AttendeeStageStatusKind } from "@/services/venue/attendeeStageStatus";
 
@@ -9,6 +10,10 @@ import type { AttendeeStageStatusKind } from "@/services/venue/attendeeStageStat
  *   "Removed by the crew". When the crew has closed requests it says so; it never goes silent.
  * Polls the attendee's own status (~5s) so the line changes without a reload; the request itself
  * is the same server action as before (records `requested`, grants nothing).
+ *
+ * An unregistered viewer gets the same Request to Join Stage control, not a second register card:
+ * the page's one register card is beside the chat, and pressing this control is what opens the ask
+ * for the one thing raising a hand needs.
  */
 const TEST_IDS: Record<AttendeeStageStatusKind, string> = {
   unregistered: "stage-join-registration-required",
@@ -42,7 +47,7 @@ export function AttendeeStageJoinControls({ eventId, roomId, attendeeId, initial
       <p className="text-base font-black" data-testid="attendee-stage-status-headline">{status.headline}</p>
       <p className="mt-1 text-sm">{status.detail}</p>
       {status.status === "approved" ? <p className="mt-1 text-xs">The crew can revoke or restore access at any time.</p> : null}
-      {status.primary === "register" ? <a href={`/events/${eventId}/register`} className="mt-3 inline-block min-h-12 rounded-full bg-brand-orange px-6 py-3 text-base font-black text-white" data-testid="stage-register-cta">Register</a> : null}
+      {status.status === "unregistered" ? <div className="mt-3"><RegisterPointOfUse eventId={eventId} need="stage-request" label="Request to Join Stage" returnTo={`/venue/${eventId}/stage`} /></div> : null}
       {status.primary === "request" && attendeeId ? (
         <form action={requestAction} className="mt-3" data-testid="attendee-stage-request-form">
           <input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="roomKind" value="main_stage" /><input type="hidden" name="roomId" value={roomId} /><input type="hidden" name="attendeeId" value={attendeeId} />

@@ -35,7 +35,10 @@ check("services/speed-networking/speedNetworkingRoomGuard.ts", ["tokenAllowedFor
 check("app/api/networking/mine/route.ts", ["getCurrentAttendeeIdentity(eventId)", "getMyNetworkingState(eventId, identity?.attendeeId)"]);
 if (read("app/api/networking/mine/route.ts").includes('searchParams.get("attendeeId")')) throw new Error("/api/networking/mine must read only the caller's own state.");
 check("lib/actions/networkingActions.ts", ["joinNetworkingQueue(eventId, {", "export async function nextSpeedNetworkingMatchAction", "export async function leaveSpeedNetworkingQueueAction", 'requireLiveEventControlAccessForRequest(eventId, "manage_stage_access")', "setNetworkingSettings("]);
-check("components/venue/SpeedNetworkingLive.tsx", ["Looking for your match…", 'roomType: "speed_networking"', "<LiveKitRoom", "connect audio video", "<ControlBar", "networking-partner-name", "networking-timer", "Next match", "End networking", "The crew has closed networking for now", "networking-register-link"]);
+// An unregistered viewer still reaches registration from networking, but through the one shared
+// moment-of-intent ask (Join queue opens it) rather than a second Register card beside the page's
+// one register invitation. validate_one_register_prompt owns that rule.
+check("components/venue/SpeedNetworkingLive.tsx", ["Looking for your match…", 'roomType: "speed_networking"', "<LiveKitRoom", "connect audio video", "<ControlBar", "networking-partner-name", "networking-timer", "Next match", "End networking", "The crew has closed networking for now", "networking-registration-required", 'need="networking"']);
 check("components/venue/SpeedNetworkingQueuePanel.tsx", ["joinSpeedNetworkingQueueAction", 'type="submit"', "<SpeedNetworkingLive"]);
 check("components/moderation/NetworkingCrewCard.tsx", ["crewNetworkingSummary(eventId)", "networking-toggle-open", "networking-minutes-input", 'action="manage_stage_access"']);
 check("components/moderation/CrewLiveModerationDeck.tsx", ["=> NetworkingCrewCard({ eventId"]);

@@ -3,6 +3,7 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { LiveKitRoom, RoomAudioRenderer, ControlBar, VideoTrack, isTrackReference, useLocalParticipant, useRemoteParticipants, useTracks } from "@livekit/components-react";
 import { Track } from "livekit-client";
 import type { TrackReference } from "@livekit/components-core";
+import { RegisterPointOfUse } from "@/components/venue/RegisterPointOfUse";
 import type { MyNetworkingState } from "@/services/speed-networking/speedNetworkingService";
 import { SPEED_NETWORKING_CYCLE } from "@/types/speedNetworking";
 
@@ -253,14 +254,14 @@ export function SpeedNetworkingLive({ eventId, initial, serverJoinForm = false, 
     document.addEventListener("visibilitychange", onVisible);
     return () => { window.clearInterval(interval); document.removeEventListener("visibilitychange", onVisible); };
   }, [refresh, pollMs]);
-  const registerHref = `/events/${eventId}/register?reason=networking`;
   return (
     <div className="space-y-4" data-testid="networking-live" data-networking-status={snapshot.registered ? snapshot.status : "unregistered"} data-queue-size={snapshot.queueSize} data-poll-ms={pollMs} data-setup-gap={snapshot.setupGapSeconds}>
       {!snapshot.registered ? (
         <section className="rounded-3xl bg-white p-6" data-testid="networking-registration-required">
-          <p className="text-sm font-black text-slate-950">Register once to meet other attendees.</p>
-          <p className="mt-1 text-sm text-slate-600">Your match sees your name and your company. Nothing else.</p>
-          <a href={registerHref} className="mt-4 inline-block min-h-12 rounded-full bg-brand-orange px-6 py-3 text-base font-black text-white" data-testid="networking-register-link">Register</a>
+          <p className="text-sm font-black text-slate-950">Meet other attendees, one at a time.</p>
+          <p className="mt-1 mb-4 text-sm text-slate-600">Your match sees your name and your company. Nothing else.</p>
+          {/* The page's one register card is above this. Pressing Join queue is the moment of intent. */}
+          <RegisterPointOfUse eventId={eventId} need="networking" label="Join queue" returnTo={`/venue/${eventId}/networking`} />
         </section>
       ) : snapshot.status === "closed" ? (
         <section className="rounded-3xl bg-white p-6" data-testid="networking-closed"><p className="text-sm font-black text-slate-950">The crew has closed networking for now.</p><p className="mt-1 text-sm text-slate-600">Come back when they open it; this page updates on its own.</p></section>

@@ -21,10 +21,12 @@ describe("attendee stage status line", () => {
 
   it("an unregistered visitor keeps watching and is invited, never walled off", () => {
     const status = attendeeStageStatus({ control, registered: false });
-    expect(status).toMatchObject({ status: "unregistered", primary: "register" });
+    // `primary` is never "register": the page carries exactly one register card, so this line is
+    // the raise-hand explanation and not a second Register button (the owner, 16 Sep 2026).
+    expect(status).toMatchObject({ status: "unregistered", primary: "none" });
     // Watching is open to anyone holding the link; registering is only what lets a person take part,
     // and the line says both in plain words rather than naming an approval model.
-    expect(status.detail).toMatch(/Watching costs you nothing/);
+    expect(status.detail).toMatch(/Watching needs nothing/);
     expect(status.detail).toMatch(/crew/);
     expect(status.canPublishAudio).toBe(false);
     expect(status.canPublishVideo).toBe(false);

@@ -13,7 +13,10 @@ import type { VirtualVenueModel } from "@/types/virtualVenue";
  */
 export async function MyAgendaPanel({ model }: { model: VirtualVenueModel }) {
   const profile = await getCurrentAttendeeProfile(model.eventId);
-  if (!profile) return <section className="rounded-3xl border border-slate-200 bg-white p-4 text-sm text-slate-600" data-testid="my-agenda-signed-out"><h2 className="text-lg font-black text-slate-950">My plan</h2><p className="mt-1"><a href={`/events/${model.eventId}/register`} className="font-bold text-brand-orange underline">Register</a> to keep a list of what you want to catch.</p></section>;
+  // Nothing at all for someone who has not registered. A shortlist is not a reason to register,
+  // and the page's one register card already says what registering unlocks; this panel used to be
+  // the third ask inside one phone screen (the owner, 16 Sep 2026).
+  if (!profile) return null;
   const intent = await getAttendeeAgendaIntent(model.eventId, profile.attendeeId).catch(() => undefined);
   const plannedSessions = model.sessions.filter((session) => intent?.plannedSessionIds.includes(session.id));
   const plannedBreakouts = model.breakouts.filter((breakout) => intent?.plannedBreakoutIds.includes(breakout.id));

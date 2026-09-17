@@ -1,4 +1,5 @@
 import { LiveChatComposer } from "@/components/venue/LiveChatComposer";
+import { RegisterPointOfUse } from "@/components/venue/RegisterPointOfUse";
 import { LiveRoomChatStream } from "@/components/venue/LiveRoomChatStream";
 import { sendLiveRoomChatMessage } from "@/lib/actions/liveChatActions";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
@@ -48,7 +49,12 @@ export async function LiveRoomChat({ eventId, roomKind, roomId, title, descripti
           <LiveChatComposer action={sendLiveRoomChatMessage} eventId={eventId} roomKind={roomKind} roomId={roomId} identityLine={`Posting as ${identity.displayName} · ${identity.company}`} slowModeSeconds={room.slowModeSeconds} nextPostAllowedAt={postWindow.nextPostAllowedAt} cooldownUntil={postWindow.cooldownUntil} exempt={postWindow.exempt} />
         )
       ) : (
-        <div className="border-t border-slate-100 p-4 text-sm text-slate-600" data-testid="chat-registration-required"><p className="font-bold text-slate-900">Read along as long as you like.</p><p className="mt-1">To post, we need your name, email and company. About fifteen seconds, and it brings you straight back here.</p><a href={`/events/${eventId}/register`} className="mt-3 inline-flex min-h-11 items-center rounded-full bg-brand-orange px-5 text-sm font-black text-white">Register to join the conversation</a></div>
+        /* The composer still looks open, because reading along is open. Pressing it is the moment
+           of intent, and only then does the ask appear; the page's one register card is elsewhere. */
+        <div className="border-t border-slate-100 p-4 text-sm text-slate-600" data-testid="chat-registration-required">
+          <p className="mb-2 text-xs text-slate-500">Read along as long as you like.</p>
+          <RegisterPointOfUse eventId={eventId} need="chat" label="Message this room…" variant="field" />
+        </div>
       )}
     </aside>
   );

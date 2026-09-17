@@ -22,7 +22,9 @@ check("components/moderation/VipRowControl.tsx", ["makeVipAction", "removeVipAct
 check("components/moderation/AttendeeLiveRoster.tsx", ["VipRowControl", "listVipStanding(", "vipCodeFor("]);
 check("components/owner/VipRow.tsx", ["listVipStanding(", "getVipInviteList(", "console-vip-", "code v", "pre-authorisation of the code"]);
 check("components/owner/OwnerConsole.tsx", ['id="vips"', "VipRow({ event })"]);
-check("components/venue/VipCodeCard.tsx", ["redeemVipCodeAction", "vip-code-input", "Register first"]);
+// An unregistered person is still told the code needs an identity, but through the one shared
+// moment-of-intent ask that opens on the press, not a second Register link on the lobby.
+check("components/venue/VipCodeCard.tsx", ["redeemVipCodeAction", "vip-code-input", 'need="vip"', "vip-code-register"]);
 check("app/venue/[eventId]/lobby/page.tsx", ["VipCodeCard", "vipStandingFor("]);
 check("services/attendees/attendeeRegistrationService.ts", ["admitInvitedVip("]);
 check("types/specialGuest.ts", ['"vip_grant"', '"vip_invites"', "VipGrantSource", "codeVersion: number"]);
