@@ -111,11 +111,41 @@ describe("a database behind its migrations is a failure, never a warning", () =>
   });
 
   it("CI reads the Supabase integration's own verdict on a push to main", () => {
-    const workflow = fs.readFileSync(".github/workflows/validation.yml", "utf8");
-    expect(workflow).toContain("supabase-migration-apply");
-    expect(workflow).toContain('select(.app.slug=="supabase")');
+    const workflow = fs.readFileSync(".github/workflows/supabase-migration-apply.yml", "utf8");
+    expect(workflow).toContain("scripts/supabase_apply_verdict.js");
+    expect(workflow).toContain("branches: [main]");
+    const verdict = fs.readFileSync("scripts/supabase_apply_verdict.js", "utf8");
+    expect(verdict).toContain('select(.app.slug=="supabase")');
     // Every terminal state matched, so a crash cannot read as "still running".
-    expect(workflow).toContain("failure|timed_out|cancelled|action_required|stale");
-    expect(workflow).toContain("Supabase never applied this migration");
+    expect(verdict).toContain('"failure", "timed_out", "cancelled", "action_required", "stale"');
+    expect(verdict).toContain("Supabase never applied this migration");
+  });
+
+  it("the verdict rule is replayed on every pull request, so it cannot rot unexercised", () => {
+    const workflow = fs.readFileSync(".github/workflows/supabase-migration-apply.yml", "utf8");
+    for (const state of ["--verdict success", "--verdict failure --changed-migrations true", "--verdict skipped --changed-migrations true", "--verdict skipped --changed-migrations false", "--verdict something_new"]) {
+      expect(workflow, `the replay job does not cover ${state}`).toContain(state);
+    }
+  });
+
+  it("the verdict script decides every terminal state the same way CI replays it", () => {
+    const cases: Array<[number, string[]]> = [
+      [0, ["--verdict", "success"]],
+      [0, ["--verdict", "neutral"]],
+      [1, ["--verdict", "failure", "--changed-migrations", "true"]],
+      [1, ["--verdict", "failure", "--changed-migrations", "false"]],
+      [1, ["--verdict", "skipped", "--changed-migrations", "true"]],
+      [0, ["--verdict", "skipped", "--changed-migrations", "false"]],
+      [1, ["--verdict", "something_new", "--changed-migrations", "false"]],
+    ];
+    for (const [want, args] of cases) {
+      let code = 0;
+      try {
+        execFileSync("node", ["scripts/supabase_apply_verdict.js", ...args], { encoding: "utf8", stdio: "pipe" });
+      } catch (error) {
+        code = (error as { status?: number }).status ?? 1;
+      }
+      expect(code, `${args.join(" ")} should exit ${want}`).toBe(want);
+    }
   });
 });

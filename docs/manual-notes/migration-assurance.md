@@ -59,8 +59,8 @@ visible.** This branch adds that.
 
 ### After the merge to `main`
 
-The **Supabase applied the migrations** job in `.github/workflows/validation.yml` reads the Supabase
-check run for the merge commit and fails the `Repository validation` workflow if it is anything but
+The **Supabase migration apply** workflow (`.github/workflows/supabase-migration-apply.yml`) reads
+the Supabase check run for the merge commit and fails if it is anything but
 green — and fails it too if the push changed `supabase/migrations/` and Supabase reported nothing at
 all. That is the red signal, in the Actions tab and in the failure email.
 
@@ -89,7 +89,8 @@ Then re-run the deploy's post-deploy smoke, or just load
 | --- | --- | --- |
 | `npm run validate:migration-map-coverage` | A migration whose tables/columns are not in `RUNTIME_TABLE_MIGRATIONS`, so the health probe would never look for them. Also a map entry no migration supplies. | Every PR, in `npm run validate`. |
 | `npm run validate:migration-mirror-parity` | A `db/migrations/*.sql` from 0023 on with no byte-identical `supabase/migrations/` twin, or mirrors that sort out of order. | Every PR, in `npm run validate`. |
-| `Repository validation` → **Supabase applied the migrations** | The integration itself reporting failure, or silently skipping a push that changed migrations. | Every push to `main`. |
+| `Supabase migration apply` → **Supabase applied the migrations** | The integration itself reporting failure, or silently skipping a push that changed migrations. `workflow_dispatch` can re-read any commit. | Every push to `main`. |
+| `Supabase migration apply` → **The verdict rule still decides red from green** | The rule above rotting: all ten terminal states are replayed through `scripts/supabase_apply_verdict.js`. | Every pull request. |
 | `/api/runtime/health` → `migrationCoverage` | The **live database** missing any object in the map, named with the migration file that supplies it. | On request, any time. |
 | `npm run postdeploy:smoke` | The above, as a failing deploy step with the file to paste into the SQL editor. | Every deploy, in `Deploy Cloudflare Worker`. |
 
