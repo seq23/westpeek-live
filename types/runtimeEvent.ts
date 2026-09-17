@@ -116,6 +116,7 @@ export const EVENT_TEMPLATES_MIGRATION_FILE = "db/migrations/0035_event_template
 export const PLAN_AN_EVENT_MIGRATION_FILE = "db/migrations/0036_plan_an_event_pipeline.sql";
 export const ATTENDEE_CLIENT_TELEMETRY_MIGRATION_FILE = "db/migrations/0037_attendee_client_telemetry.sql";
 export const ATTENDEE_SESSION_LIFETIME_MIGRATION_FILE = "db/migrations/0038_attendee_session_lifetime.sql";
+export const GROUP_EMAIL_MIGRATION_FILE = "db/migrations/0044_email_group_sends_and_unsubscribes.sql";
 export const HOUSE_DEFAULTS_MIGRATION_FILE = "db/migrations/0043_house_defaults.sql";
 
 /**
@@ -220,6 +221,14 @@ export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = {
   // 0038 - how many days one browser's attendee session lasts for this event.
   "runtime_events.attendee_session_days": ATTENDEE_SESSION_LIFETIME_MIGRATION_FILE,
 
+  // 0044 - group email. Unapplied, the unsubscribe list reads as empty, which would mail every
+  // person who has asked West Peek to stop: the one object here that must never fail quietly.
+  runtime_email_unsubscribes: GROUP_EMAIL_MIGRATION_FILE,
+  runtime_email_group_sends: GROUP_EMAIL_MIGRATION_FILE,
+  "runtime_email_sends.group_send_id": GROUP_EMAIL_MIGRATION_FILE,
+  // Without this, a speaker's address has nowhere to be written and every guest audience resolves
+  // to nobody — the composer would report the group as empty rather than as unmigrated.
+  "special_guest_profiles.email": GROUP_EMAIL_MIGRATION_FILE,
   // 0043 - the house defaults: the from and reply-to addresses, the logo, and what a new event
   // inherits for timezone, networking match length, session lifetime and registration questions.
   runtime_house_defaults: HOUSE_DEFAULTS_MIGRATION_FILE,

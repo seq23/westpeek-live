@@ -1,5 +1,6 @@
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ComposeLink } from "@/components/email/ComposeLink";
 import { WorkspaceEmptyState } from "@/components/workspace/WorkspaceEmptyState";
 import { SponsorManagerSeedView } from "@/components/sponsors/SponsorManagerSeedView";
 import { realRuntimeEvent } from "@/lib/workspace/realEvent";
@@ -19,6 +20,8 @@ export async function SponsorManager({ eventId }: { eventId: string }) {
   return (
     <SectionCard title={`${event.name} sponsors`} eyebrow={`${sponsors.length} sponsor${sponsors.length === 1 ? "" : "s"} · ${published} booth${published === 1 ? "" : "s"} published`}>
       <div data-testid="sponsor-manager" data-count={sponsors.length}>
+        {/* Straight to the composer with this event and the sponsors already picked. */}
+        {sponsors.length ? <p className="mb-4"><ComposeLink eventId={event.id} audience="sponsors" label="Email sponsors" /></p> : null}
         {sponsors.length ? (
           <div className="grid gap-4 md:grid-cols-2">
             {sponsors.map((sponsor) => (

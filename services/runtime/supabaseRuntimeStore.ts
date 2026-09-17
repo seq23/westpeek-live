@@ -16,6 +16,7 @@ import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/ty
 import type { ContactRecord, RegistrationQuestion } from "@/types/attendeeRegistration";
 import type { EventAssetRecord } from "@/types/eventAssets";
 import type { SupplierEventLink, SupplierKind, SupplierRateKind, SupplierRecord, SupplierStatus } from "@/types/suppliers";
+import type { EmailGroupSend, EmailUnsubscribeRecord } from "@/types/emailAudience";
 import type { EmailSendLog } from "@/types/emailProduction";
 import type { EventTemplateRecord } from "@/types/eventTemplates";
 import { emptyRuntimeSnapshot, type RuntimeStore, type V5AccessAttemptRuntimeEvent, type V5FallbackRuntimeEvent, type V6EmailRuntimeEvent, type V6IncidentRuntimeEvent, type V6RegistrationRuntimeEvent, type V6RunOfShowRuntimeEvent, type V6RuntimeSnapshot, type V6SupportRequestRuntimeEvent } from "./runtimeStore";
@@ -41,7 +42,7 @@ function mapLiveChatMessage(row: Record<string, unknown>): LiveChatMessage {
 }
 
 function mapSpecialGuestProfile(row: Record<string, unknown>): SpecialGuestProfile {
-  return { guestId: String(row.guest_id), eventId: String(row.event_id), role: row.role as SpecialGuestRole, name: String(row.name || ""), company: String(row.company || ""), title: String(row.title || ""), createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+  return { guestId: String(row.guest_id), eventId: String(row.event_id), role: row.role as SpecialGuestRole, name: String(row.name || ""), company: String(row.company || ""), title: String(row.title || ""), email: row.email ? String(row.email) : undefined, createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
 }
 
 function mapSpeedNetworkingEntry(row: Record<string, unknown>): SpeedNetworkingQueueEntry {
@@ -95,10 +96,40 @@ function mapEmailSendLog(row: Record<string, unknown>): EmailSendLog & { sentBy?
     status: (row.status as EmailSendLog["status"]) || "queued",
     actionUrl: row.action_url ? String(row.action_url) : undefined,
     failureReason: row.failure_reason ? String(row.failure_reason) : undefined,
+    groupSendId: row.group_send_id ? String(row.group_send_id) : undefined,
     sentBy: row.sent_by ? String(row.sent_by) : undefined,
     queuedAt: String(row.queued_at || ""),
     sentAt: row.sent_at ? String(row.sent_at) : undefined,
     failedAt: row.failed_at ? String(row.failed_at) : undefined,
+  };
+}
+
+function mapEmailGroupSend(row: Record<string, unknown>): EmailGroupSend {
+  return {
+    id: String(row.id),
+    eventId: row.event_id ? String(row.event_id) : undefined,
+    audience: row.audience as EmailGroupSend["audience"],
+    audienceLabel: String(row.audience_label || ""),
+    workflowType: row.workflow_type as EmailGroupSend["workflowType"],
+    subject: String(row.subject || ""),
+    recipientCount: Number(row.recipient_count || 0),
+    sentCount: Number(row.sent_count || 0),
+    failedCount: Number(row.failed_count || 0),
+    suppressedCount: Number(row.suppressed_count || 0),
+    sentBy: row.sent_by ? String(row.sent_by) : undefined,
+    createdAt: String(row.created_at || ""),
+  };
+}
+
+function mapEmailUnsubscribe(row: Record<string, unknown>): EmailUnsubscribeRecord {
+  return {
+    email: String(row.email || ""),
+    emailHash: String(row.email_hash || ""),
+    unsubscribedAt: String(row.unsubscribed_at || ""),
+    unsubscribedSource: (row.unsubscribed_source as EmailUnsubscribeRecord["unsubscribedSource"]) || "one_click",
+    lastEventId: row.last_event_id ? String(row.last_event_id) : undefined,
+    resubscribedAt: row.resubscribed_at ? String(row.resubscribed_at) : undefined,
+    resubscribedBy: row.resubscribed_by ? String(row.resubscribed_by) : undefined,
   };
 }
 
@@ -813,7 +844,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
   }
 
   async upsertSpecialGuestProfile(profile: SpecialGuestProfile) {
-    const { error } = await this.client.from("special_guest_profiles").upsert({ guest_id: profile.guestId, event_id: profile.eventId, role: profile.role, name: profile.name, company: profile.company, title: profile.title, created_at: profile.createdAt, updated_at: profile.updatedAt }, { onConflict: "event_id,guest_id" });
+    const { error } = await this.client.from("special_guest_profiles").upsert({ guest_id: profile.guestId, event_id: profile.eventId, role: profile.role, name: profile.name, company: profile.company, title: profile.title, email: profile.email ?? null, created_at: profile.createdAt, updated_at: profile.updatedAt }, { onConflict: "event_id,guest_id" });
     if (error) failOrSchemaMissing("special_guest_profiles", error);
     return profile;
   }
@@ -955,7 +986,7 @@ export class SupabaseRuntimeStore implements RuntimeStore {
       id: log.id, event_id: log.eventId ?? null, agency_id: log.agencyId ?? null, client_id: log.clientId ?? null,
       workflow_type: log.workflowType, recipient_email: log.recipientEmail, recipient_name: log.recipientName ?? null,
       subject: log.subject, provider: log.provider, provider_message_id: log.providerMessageId ?? null, status: log.status,
-      action_url: log.actionUrl ?? null, failure_reason: log.failureReason ?? null, sent_by: log.sentBy ?? null,
+      action_url: log.actionUrl ?? null, failure_reason: log.failureReason ?? null, group_send_id: log.groupSendId ?? null, sent_by: log.sentBy ?? null,
       queued_at: log.queuedAt, sent_at: log.sentAt ?? null, failed_at: log.failedAt ?? null,
     }, { onConflict: "id" });
     if (error) failOrSchemaMissing("runtime_email_sends", error);
@@ -972,6 +1003,45 @@ export class SupabaseRuntimeStore implements RuntimeStore {
     const { data, error } = await this.client.from("runtime_email_sends").select("*").order("queued_at", { ascending: false }).limit(limit);
     if (error) failOrSchemaMissing("runtime_email_sends", error);
     return ((data || []) as Record<string, unknown>[]).map(mapEmailSendLog);
+  }
+
+  async appendEmailGroupSend(send: EmailGroupSend) {
+    const { error } = await this.client.from("runtime_email_group_sends").upsert({
+      id: send.id, event_id: send.eventId ?? null, audience: send.audience, audience_label: send.audienceLabel,
+      workflow_type: send.workflowType, subject: send.subject, recipient_count: send.recipientCount,
+      sent_count: send.sentCount, failed_count: send.failedCount, suppressed_count: send.suppressedCount,
+      sent_by: send.sentBy ?? null, created_at: send.createdAt,
+    }, { onConflict: "id" });
+    if (error) failOrSchemaMissing("runtime_email_group_sends", error);
+    return send;
+  }
+
+  async listEmailGroupSends(limit = 200) {
+    const { data, error } = await this.client.from("runtime_email_group_sends").select("*").order("created_at", { ascending: false }).limit(limit);
+    if (error) failOrSchemaMissing("runtime_email_group_sends", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEmailGroupSend);
+  }
+
+  async listEmailUnsubscribes() {
+    const { data, error } = await this.client.from("runtime_email_unsubscribes").select("*").limit(10000);
+    if (error) failOrSchemaMissing("runtime_email_unsubscribes", error);
+    return ((data || []) as Record<string, unknown>[]).map(mapEmailUnsubscribe);
+  }
+
+  async getEmailUnsubscribe(email: string) {
+    const { data, error } = await this.client.from("runtime_email_unsubscribes").select("*").eq("email", email).maybeSingle();
+    if (error) failOrSchemaMissing("runtime_email_unsubscribes", error);
+    return data ? mapEmailUnsubscribe(data as Record<string, unknown>) : undefined;
+  }
+
+  async upsertEmailUnsubscribe(record: EmailUnsubscribeRecord) {
+    const { error } = await this.client.from("runtime_email_unsubscribes").upsert({
+      email: record.email, email_hash: record.emailHash, unsubscribed_at: record.unsubscribedAt,
+      unsubscribed_source: record.unsubscribedSource, last_event_id: record.lastEventId ?? null,
+      resubscribed_at: record.resubscribedAt ?? null, resubscribed_by: record.resubscribedBy ?? null,
+    }, { onConflict: "email" });
+    if (error) failOrSchemaMissing("runtime_email_unsubscribes", error);
+    return record;
   }
 
   async upsertEventTemplate(template: EventTemplateRecord) {

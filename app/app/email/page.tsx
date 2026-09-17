@@ -1,5 +1,6 @@
 import { CrossEventSendPanel } from "@/components/email/CrossEventSendPanel";
 import { EmailAcrossEvents } from "@/components/email/EmailAcrossEvents";
+import { GroupEmailOverview } from "@/components/email/GroupEmailOverview";
 import { EmailStatusPanel } from "@/components/email/EmailStatusPanel";
 import { TestEmailPanel } from "@/components/email/TestEmailPanel";
 import { SafeSection } from "@/components/system/SafeSection";
@@ -19,6 +20,7 @@ export default async function EmailPage({ searchParams }: { searchParams?: Promi
     <main className="space-y-6">
       <SafeSection label="Send an email" render={() => CrossEventSendPanel({ sent: query?.sent, workflowSent: query?.workflow, error: query?.emailError })} />
       <SafeSection label="Email across events" render={() => EmailAcrossEvents()} />
+      <SafeSection label="Group email" render={() => GroupEmailOverview()} />
       <EmailStatusPanel />
       <TestEmailPanel />
     </main>

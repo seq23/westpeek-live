@@ -1,5 +1,6 @@
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
+import { ComposeLink } from "@/components/email/ComposeLink";
 import { WorkspaceEmptyState } from "@/components/workspace/WorkspaceEmptyState";
 import { SpeakerManagerSeedView } from "@/components/speakers/SpeakerManagerSeedView";
 import { realRuntimeEvent } from "@/lib/workspace/realEvent";
@@ -22,6 +23,8 @@ export async function SpeakerManager({ eventId }: { eventId: string }) {
   return (
     <SectionCard title={`${event.name} speakers`} eyebrow={`${speakers.length} speaker${speakers.length === 1 ? "" : "s"}`}>
       <div data-testid="speaker-manager" data-count={speakers.length}>
+        {/* Straight to the composer with this event and the speakers already picked. */}
+        {speakers.length ? <p className="mb-4"><ComposeLink eventId={event.id} audience="speakers" label="Email speakers" /></p> : null}
         {speakers.length ? (
           <div className="grid gap-4 md:grid-cols-2">
             {speakers.map((speaker) => (

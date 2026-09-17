@@ -25,7 +25,7 @@ function revalidateGuestSurfaces(eventId: string) {
   for (const path of [`/speaker/events/${eventId}`, `/speaker/events/${eventId}/green-room`, `/speaker/events/${eventId}/tech-check`, `/speaker/events/${eventId}/teleprompter`, `/speaker/events/${eventId}/backstage`, `/speaker/events/${eventId}/onboarding`, `/sponsor/events/${eventId}`, `/sponsor/events/${eventId}/booth`, `/venue/${eventId}/expo`, `/venue/${eventId}/lobby`, `/crew/events/${eventId}`, `/app/events/${eventId}`, `/admin/testing/${eventId}`]) revalidatePath(path);
 }
 
-/** First entry through a role code: name / company / title once. */
+/** First entry through a role code: name / company / title / address once. */
 export async function registerGuestIdentityAction(formData: FormData): Promise<void> {
   const eventId = field(formData, "eventId");
   const role = field(formData, "role") as SpecialGuestRole;
@@ -35,7 +35,7 @@ export async function registerGuestIdentityAction(formData: FormData): Promise<v
   const existing = await getCurrentGuestIdentity(eventId, role);
   let error = "";
   try {
-    await registerGuestIdentity({ eventId, role, name: field(formData, "name"), company: field(formData, "company"), title: field(formData, "title"), existingGuestId: existing?.guestId });
+    await registerGuestIdentity({ eventId, role, name: field(formData, "name"), company: field(formData, "company"), title: field(formData, "title"), email: field(formData, "email"), existingGuestId: existing?.guestId });
   } catch (caught) {
     error = caught instanceof Error ? caught.message : "Could not save your details.";
   }

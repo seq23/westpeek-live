@@ -5,6 +5,12 @@ export interface EmailMessage {
   text?: string;
   from?: string;
   replyTo?: string;
+  /**
+   * Extra RFC headers. Group email needs List-Unsubscribe and List-Unsubscribe-Post so Gmail and
+   * Apple Mail show their own unsubscribe control at the top of the message; a transactional send
+   * passes none, which is how the two stay distinguishable at the wire.
+   */
+  headers?: Record<string, string>;
 }
 
 export interface EmailSendResult {
