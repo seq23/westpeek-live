@@ -220,8 +220,12 @@ describe("the networking cycle", () => {
       await runNetworkingMatcher(EVENT);
       const waiting = (await store.listSpeedNetworkingEntries(EVENT)).filter((entry) => entry.status === "waiting");
       if (waiting.length === 1) satOut.push(waiting[0].attendeeId);
-      // The debt is persisted between rounds rather than recomputed from queue order — that is what rotates it.
-      expect(Object.keys((await getNetworkingRoundState(EVENT)).satOutCounts).length).toBeLessThanOrEqual(1);
+      // The debt is persisted between rounds rather than recomputed from queue order — that is what
+      // rotates it — and it is carried, not cleared on being matched, so it stays level across the
+      // room instead of ping-ponging between whoever is last in the tie-break.
+      const debts = (await getNetworkingRoundState(EVENT)).satOutCounts;
+      expect(Object.keys(debts).length).toBeLessThanOrEqual(seven.length);
+      expect(Math.max(0, ...Object.values(debts)) - (Object.keys(debts).length < seven.length ? 0 : Math.min(...Object.values(debts)))).toBeLessThanOrEqual(1);
       vi.advanceTimersByTime(SPEED_NETWORKING_DEFAULT_MINUTES * 60_000 + 30_000);
     }
     expect(satOut.length).toBeGreaterThanOrEqual(6);
