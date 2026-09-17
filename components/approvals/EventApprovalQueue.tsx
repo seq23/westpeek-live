@@ -14,7 +14,7 @@ import { listEventAssets } from "@/services/assets/eventAssetService";
  * a place to go and act on them.
  *
  * There is no generic approvals table, so nothing else is claimed here. The page used to render two
- * demo approval items ("Drake Speaker show-day script v3") and the demo's last-minute change
+ * demo approval items ("Drake Mensah show-day script v3") and the demo's last-minute change
  * requests on every event.
  */
 export async function EventApprovalQueue({ eventId }: { eventId: string }) {
