@@ -1,30 +1,55 @@
-import { getEvent, getSpeakersForEvent } from "@/lib/runtime/getRuntimeData";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ComposeLink } from "@/components/email/ComposeLink";
+import { WorkspaceEmptyState } from "@/components/workspace/WorkspaceEmptyState";
+import { SpeakerManagerSeedView } from "@/components/speakers/SpeakerManagerSeedView";
+import { realRuntimeEvent } from "@/lib/workspace/realEvent";
+import { listWorkspaceSpeakers } from "@/services/events/eventWorkspaceReadModel";
 
-export function SpeakerManager({ eventId }: { eventId: string }) {
-  const event = getEvent(eventId);
-  const speakers = getSpeakersForEvent(event.id);
+const STAGE_LABEL: Record<string, string> = { backstage: "backstage", invited: "invited to stage", on_stage: "on stage" };
+const TECH_LABEL: Record<string, string> = { not_recorded: "not recorded", not_ready: "not ready", ready: "ready", warnings: "warnings" };
+
+/**
+ * The event's real speakers: the people who entered with the speaker code and gave their name. Who
+ * they are, where they are (backstage / invited / on stage), their recorded tech check and whether
+ * their cue deck is approved. Until 16 Sep 2026 this page showed the demo summit's speakers on
+ * every event, the owner's own included.
+ */
+export async function SpeakerManager({ eventId }: { eventId: string }) {
+  const event = realRuntimeEvent(eventId);
+  if (!event) return <SpeakerManagerSeedView eventId={eventId} />;
+  const speakers = await listWorkspaceSpeakers(event.id);
 
   return (
-    <SectionCard title={`${event.name} speakers`} eyebrow="Readiness">
-      {/* Straight to the composer with this event and the speakers already picked. */}
-      <p className="mb-4"><ComposeLink eventId={eventId} audience="speakers" label="Email speakers" /></p>
-      <div className="grid gap-4 md:grid-cols-2">
-        {speakers.map((speaker) => (
-          <div key={speaker.id} className="rounded-2xl border border-slate-200 p-4">
-            <div className="flex items-start justify-between">
-              <div>
-                <p className="font-semibold">{speaker.name}</p>
-                <p className="text-sm text-slate-500">{speaker.title}, {speaker.company}</p>
+    <SectionCard title={`${event.name} speakers`} eyebrow={`${speakers.length} speaker${speakers.length === 1 ? "" : "s"}`}>
+      <div data-testid="speaker-manager" data-count={speakers.length}>
+        {/* Straight to the composer with this event and the speakers already picked. */}
+        {speakers.length ? <p className="mb-4"><ComposeLink eventId={event.id} audience="speakers" label="Email speakers" /></p> : null}
+        {speakers.length ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {speakers.map((speaker) => (
+              <div key={speaker.guestId} className="rounded-2xl border border-slate-200 p-4" data-testid={`speaker-row-${speaker.guestId}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{speaker.name}</p>
+                    <p className="text-sm text-slate-500">{[speaker.title, speaker.company].filter(Boolean).join(", ") || "No title or company given"}</p>
+                  </div>
+                  <StatusBadge status={STAGE_LABEL[speaker.stage]} tone={speaker.stage === "on_stage" ? "good" : "neutral"} />
+                </div>
+                <p className="mt-3 text-sm text-slate-500">Tech check: {TECH_LABEL[speaker.techCheck]}</p>
+                <p className="mt-1 text-sm text-slate-500">Cue deck: {speaker.cueDeckPending ? "a version is waiting for your approval" : speaker.cueDeckApproved ? "approved" : "none yet"}</p>
               </div>
-              <StatusBadge status={speaker.readinessStatus} tone={speaker.readinessStatus === "ready" ? "good" : "warn"} />
-            </div>
-            <p className="mt-3 text-sm text-slate-600">{speaker.sessionTitle}</p>
-            <p className="mt-2 text-sm text-slate-500">Tech check: {speaker.techCheckStatus}</p>
+            ))}
           </div>
-        ))}
+        ) : (
+          <WorkspaceEmptyState
+            testId="speakers-empty"
+            title="No speaker has arrived yet"
+            line="Speakers appear here the moment one enters with this event's speaker code and gives their name — no invite list to keep, no accounts to create. Their tech check, stage state and cue cards then fill in on their own. Copy the speaker link from Access and send it to them."
+            actionHref={`/app/events/${event.id}/access`}
+            actionLabel="Get the speaker link"
+          />
+        )}
       </div>
     </SectionCard>
   );

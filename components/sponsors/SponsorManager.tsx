@@ -1,37 +1,52 @@
-import { getEvent, getSponsorBoothsForEvent, getSponsorsForEvent } from "@/lib/runtime/getRuntimeData";
 import { SectionCard } from "@/components/shared/SectionCard";
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { ComposeLink } from "@/components/email/ComposeLink";
+import { WorkspaceEmptyState } from "@/components/workspace/WorkspaceEmptyState";
+import { SponsorManagerSeedView } from "@/components/sponsors/SponsorManagerSeedView";
+import { realRuntimeEvent } from "@/lib/workspace/realEvent";
+import { listWorkspaceSponsors } from "@/services/events/eventWorkspaceReadModel";
 
-export function SponsorManager({ eventId }: { eventId: string }) {
-  const event = getEvent(eventId);
-  const sponsors = getSponsorsForEvent(event.id);
-  const booths = getSponsorBoothsForEvent(event.id);
+/**
+ * The event's real sponsors: the people who entered with the sponsor code, and the booth each one
+ * has written for the expo. A sponsor with no published booth has nothing for an attendee to walk
+ * into yet, and the row says so. Until 16 Sep 2026 every event showed the demo summit's sponsors.
+ */
+export async function SponsorManager({ eventId }: { eventId: string }) {
+  const event = realRuntimeEvent(eventId);
+  if (!event) return <SponsorManagerSeedView eventId={eventId} />;
+  const sponsors = await listWorkspaceSponsors(event.id);
+  const published = sponsors.filter((sponsor) => sponsor.booth?.published).length;
 
   return (
-    <SectionCard title={`${event.name} sponsors`} eyebrow="Expo readiness">
-      {/* Straight to the composer with this event and the sponsors already picked. */}
-      <p className="mb-4"><ComposeLink eventId={eventId} audience="sponsors" label="Email sponsors" /></p>
-      <div className="grid gap-4 md:grid-cols-2">
-        {sponsors.map((sponsor) => {
-          const booth = booths.find((item) => item.sponsorId === sponsor.id);
-          return (
-            <div key={sponsor.id} className="rounded-2xl border border-slate-200 p-4">
-              <div className="flex items-start justify-between">
-                <div>
-                  <p className="font-semibold">{sponsor.name}</p>
-                  <p className="text-sm text-slate-500">{sponsor.tier} sponsor · {sponsor.primaryContactName}</p>
+    <SectionCard title={`${event.name} sponsors`} eyebrow={`${sponsors.length} sponsor${sponsors.length === 1 ? "" : "s"} · ${published} booth${published === 1 ? "" : "s"} published`}>
+      <div data-testid="sponsor-manager" data-count={sponsors.length}>
+        {/* Straight to the composer with this event and the sponsors already picked. */}
+        {sponsors.length ? <p className="mb-4"><ComposeLink eventId={event.id} audience="sponsors" label="Email sponsors" /></p> : null}
+        {sponsors.length ? (
+          <div className="grid gap-4 md:grid-cols-2">
+            {sponsors.map((sponsor) => (
+              <div key={sponsor.guestId} className="rounded-2xl border border-slate-200 p-4" data-testid={`sponsor-row-${sponsor.guestId}`}>
+                <div className="flex items-start justify-between gap-3">
+                  <div className="min-w-0">
+                    <p className="font-semibold">{sponsor.booth?.boothName || sponsor.company || sponsor.name}</p>
+                    <p className="text-sm text-slate-500">{[sponsor.name, sponsor.title].filter(Boolean).join(" · ")}</p>
+                  </div>
+                  <StatusBadge status={sponsor.booth?.published ? "booth live" : "no booth yet"} tone={sponsor.booth?.published ? "good" : "warn"} />
                 </div>
-                <StatusBadge status={sponsor.status} tone={sponsor.status === "live" ? "good" : "warn"} />
+                <p className="mt-3 text-sm text-slate-600">{sponsor.booth?.blurb || "This sponsor has not written their booth copy yet. They write it themselves from the sponsor portal."}</p>
+                {sponsor.booth?.link ? <p className="mt-2 truncate text-sm text-slate-500">{sponsor.booth.link}</p> : null}
               </div>
-              <p className="mt-3 text-sm text-slate-600">{booth?.description}</p>
-              <div className="mt-3 flex gap-2">
-                <StatusBadge status={booth?.approvalStatus ?? "draft"} />
-                <StatusBadge status={`${booth?.leadCount ?? 0} leads`} tone="good" />
-              </div>
-            </div>
-          );
-        })}
+            ))}
+          </div>
+        ) : (
+          <WorkspaceEmptyState
+            testId="sponsors-empty"
+            title="No sponsor has arrived yet"
+            line="Sponsors appear here when one enters with this event's sponsor code and gives their name. They write their own booth name, blurb and link from the sponsor portal, and the booth goes into the expo as soon as they save it. Copy the sponsor link from Access and send it to them."
+            actionHref={`/app/events/${event.id}/access`}
+            actionLabel="Get the sponsor link"
+          />
+        )}
       </div>
     </SectionCard>
   );
