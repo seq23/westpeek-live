@@ -110,8 +110,10 @@ check("docs/manual-notes/networking-fairness.md", ["sit-out", "spread", "simulta
 
 // 7. And it is RUN, not merely present. A contract validator that only reads source would pass on
 //    a matcher that had every one of these lines and still rotated badly.
-const rounds = spawnSync("npx", ["vitest", "run", "tests/unit/speedNetworkingFairness.test.ts"], { encoding: "utf8", env: { ...process.env, VITE_CJS_IGNORE_WARNING: "true" } });
-const output = `${rounds.stdout || ""}${rounds.stderr || ""}`;
+const rounds = spawnSync("npx", ["vitest", "run", "tests/unit/speedNetworkingFairness.test.ts"], { encoding: "utf8", env: { ...process.env, VITE_CJS_IGNORE_WARNING: "true", NO_COLOR: "1", FORCE_COLOR: "0" } });
+// CI runs vitest with colour on, and the summary line then carries ANSI codes this match cannot see.
+// Strip them rather than trusting the environment to stay quiet.
+const output = `${rounds.stdout || ""}${rounds.stderr || ""}`.replace(/\u001b\[[0-9;]*m/g, "");
 const passed = /Tests {2}(\d+) passed \(\1\)/.exec(output);
 if (rounds.status !== 0 || !passed) {
   failures.push(`the simultaneous-join simulation did not pass:\n${output.split("\n").slice(-30).join("\n")}`);
