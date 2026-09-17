@@ -2,6 +2,7 @@ import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState, V4VideoProvider } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
 import type { EventBackupRoomRecord } from "@/types/backupRoom";
+import type { SupersededCodeRecord } from "@/types/supersededCode";
 import type { LiveChatMessage, LiveChatModerationState, LiveChatRateState } from "@/types/liveChat";
 import type { AttendeeLiveCapability, AttendeeLiveControlState } from "@/types/attendeeLive";
 import type { AttendeeProfile, ContactRecord } from "@/types/attendeeRegistration";
@@ -116,6 +117,7 @@ export interface V6RuntimeSnapshot {
   runOfShowEvents: V6RunOfShowRuntimeEvent[];
   stageStreamStates: StageStreamState[];
   eventBackupRooms: EventBackupRoomRecord[];
+  eventCodeHistory: SupersededCodeRecord[];
   stageStreamEvents: StageStreamEvent[];
   liveChatMessages: LiveChatMessage[];
   liveChatModerationStates: LiveChatModerationState[];
@@ -217,6 +219,16 @@ export interface RuntimeStore {
    */
   getEventBackupRoom(eventId: string, stageId: string): Promise<EventBackupRoomRecord | undefined>;
   setEventBackupRoom(record: EventBackupRoomRecord): Promise<EventBackupRoomRecord>;
+  /**
+   * What a code used to be (migration 0046). Written whenever any of the six codes is replaced, so
+   * an old link can be answered with the truth instead of "that code did not match an event".
+   * `findSupersededCode` matches on the flattened key, which is why a phone's capitals and spaces
+   * still find the row; the caller decides whether the window has closed and whether the field is
+   * an invitation to honour or a credential to refuse.
+   */
+  appendSupersededCode(record: SupersededCodeRecord): Promise<SupersededCodeRecord>;
+  findSupersededCode(codeKey: string): Promise<SupersededCodeRecord | undefined>;
+  listSupersededCodes(eventId: string): Promise<SupersededCodeRecord[]>;
   getStageStreamState(key: string): Promise<StageStreamState | undefined>;
   setStageStreamState(key: string, state: StageStreamState): Promise<StageStreamState>;
   appendStageStreamEvent(event: StageStreamEvent): Promise<StageStreamEvent>;
@@ -306,6 +318,7 @@ export function emptyRuntimeSnapshot(): V6RuntimeSnapshot {
     runOfShowEvents: [],
     stageStreamStates: [],
     eventBackupRooms: [],
+    eventCodeHistory: [],
     stageStreamEvents: [],
     liveChatMessages: [],
     liveChatRateStates: [],

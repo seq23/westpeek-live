@@ -4,6 +4,8 @@ import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { displayCode, guestGatePath, type AccessCodeField } from "@/lib/access/accessCodes";
 import { setEventAccessCodeAction } from "@/lib/actions/accessCodeActions";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
+import { describeCodeChangeImpact, liveSupersededCodesFor } from "@/services/events/supersededCodeService";
+import { SUPERSEDED_CODE_WINDOW_DAYS, supersededOnLabel } from "@/types/supersededCode";
 import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
@@ -38,7 +40,7 @@ function CodeEditor({ eventId, field, viewer, current }: { eventId: string; fiel
  * a change rotates the old code out at once.
  */
 export async function EventAccessCodesPanel({ event, notice }: { event: RuntimeEventRecord; notice?: { saved?: string; error?: string; field?: string } }) {
-  const [joinLink, base, viewer] = await Promise.all([joinLinkFor(event), appBaseUrl(), getCrewViewer(event.id)]);
+  const [joinLink, base, viewer, impact, superseded] = await Promise.all([joinLinkFor(event), appBaseUrl(), getCrewViewer(event.id), describeCodeChangeImpact(event.id), liveSupersededCodesFor(event.id)]);
   return (
     <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm" data-testid="generated-event-role-codes">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Access codes for {event.name}</p>
@@ -46,6 +48,19 @@ export async function EventAccessCodesPanel({ event, notice }: { event: RuntimeE
       {notice?.saved ? <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-900" data-testid="code-saved-notice">The {notice.saved === "join" ? "join" : notice.saved} code is set. The old one stopped working{notice.saved === "crew" ? "; every crew link and crew session minted with it is over" : notice.saved === "join" ? "" : "; anyone who entered with it is sent back to the gate"}.</p> : null}
       {notice?.error ? <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-900" data-testid="code-error-notice">{notice.field ? `${notice.field} code: ` : ""}{notice.error}</p> : null}
       <DeniedNote viewer={viewer} action="manage_access_codes" className="mt-3" />
+      {superseded.length ? (
+        <details className="mt-3 rounded-2xl bg-brand-ash p-3 text-xs" data-testid="superseded-codes" data-count={superseded.length}>
+          <summary className="cursor-pointer font-black">Codes this event has retired ({superseded.length})</summary>
+          <p className="mt-1 text-brand-muted">Kept for {SUPERSEDED_CODE_WINDOW_DAYS} days so an old link can be answered honestly. An old event code still lands attendees here; an old role code is refused and told when it changed.</p>
+          <ul className="mt-2 space-y-1">
+            {superseded.map((record) => (
+              <li key={record.id} data-testid={`superseded-code-${record.field}`}>
+                <code className="font-mono font-bold">{record.code}</code> — the {record.field === "join" ? "event" : record.field} code until {supersededOnLabel(record.replacedAt)}.
+              </li>
+            ))}
+          </ul>
+        </details>
+      ) : null}
       <div className="mt-4 rounded-2xl bg-brand-ash p-4" data-testid="access-code-row-join">
         <p className="text-xs font-black uppercase tracking-wide text-brand-muted">Attendee join</p>
         <div className="mt-2 flex flex-wrap items-center gap-3">
@@ -53,6 +68,7 @@ export async function EventAccessCodesPanel({ event, notice }: { event: RuntimeE
           <CopyButton value={displayCode(event.joinCode)} label="Copy code" />
           <CopyButton value={joinLink} label="Copy join link" testId="copy-join-link" />
         </div>
+        <p className="mt-2 text-xs text-brand-muted" data-testid="access-impact-join">{impact.lines.join} For {SUPERSEDED_CODE_WINDOW_DAYS} days after a change the old event code still lands them here, with a line saying it changed.</p>
         <CodeEditor eventId={event.id} field="join" viewer={viewer} current={event.joinCode} />
       </div>
       <dl className="mt-4 grid gap-3 md:grid-cols-2">
@@ -67,6 +83,7 @@ export async function EventAccessCodesPanel({ event, notice }: { event: RuntimeE
                 <CopyButton value={link} label="Copy link" testId={`copy-${row.key}-link`} />
               </dd>
               <p className="mt-2 text-xs text-brand-muted">{row.who} The link opens the gate prefilled → lands on {row.lands(event)}.</p>
+              <p className="mt-1 text-xs text-brand-muted" data-testid={`access-impact-${row.key}`}>{impact.lines[row.key]} A replaced role code is refused from then on; the holder is told it changed and to ask the producer.</p>
               <CodeEditor eventId={event.id} field={row.key} viewer={viewer} current={event.accessCodes[row.key]} />
             </div>
           );

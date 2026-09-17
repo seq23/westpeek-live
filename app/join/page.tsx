@@ -1,6 +1,7 @@
 import { redirect } from "next/navigation";
 import { WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
 import { resolveEventJoinCode } from "@/services/events/eventStateResolver";
+import { SupersededCodeNotice, withSupersededCode } from "@/components/access/SupersededCodeNotice";
 
 export const dynamic = "force-dynamic";
 
@@ -23,7 +24,9 @@ export default async function JoinEventPage({ searchParams }: { searchParams?: P
   const typedCode = resolvedSearchParams?.code?.trim();
   const resolution = await resolveEventJoinCode(typedCode);
   // Straight in. redirect() throws, so it has to sit outside any try.
-  if (typedCode && resolution.ok && resolution.destination) redirect(resolution.destination);
+  // An out-of-date event code goes straight in too, carrying the old value so the destination can
+  // say the code changed. They hold a real invitation; making them retype anything is the bug.
+  if (typedCode && resolution.ok && resolution.destination) redirect(withSupersededCode(resolution.destination, resolution.supersededCode));
   const trouble = TROUBLE[resolution.reason || "missing_code"] || TROUBLE.invalid_code;
   return (
     <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
@@ -41,6 +44,7 @@ export default async function JoinEventPage({ searchParams }: { searchParams?: P
         </form>
         {typedCode ? (
           <div className="mt-6 rounded-2xl border border-amber-200 bg-amber-50 p-5" data-testid="join-trouble" data-join-reason={resolution.reason || "unknown"}>
+            <SupersededCodeNotice oldCode={resolution.supersededCode} />
             <h2 className="text-xl font-black">{trouble.heading}</h2>
             {resolution.eventName ? <p className="mt-1 text-sm font-bold text-slate-700">{resolution.eventName}</p> : null}
             <p className="mt-2 text-sm leading-6 text-slate-700">{trouble.line}</p>

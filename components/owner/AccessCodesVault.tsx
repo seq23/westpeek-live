@@ -6,6 +6,7 @@ import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import { getEnv } from "@/lib/env";
 import { listEventRecords } from "@/services/events/eventRepository";
 import { codeSchemeSummary } from "@/services/events/accessCodeService";
+import { describeCodeChangeImpact } from "@/services/events/supersededCodeService";
 
 /**
  * The access-codes vault: every code for every event, behind the owner gate, so nobody has to keep
@@ -35,22 +36,30 @@ export async function AccessCodesVault() {
   const value = (key: string) => String((env as unknown as Record<string, string | undefined> | undefined)?.[key] || "").trim();
   const base = await appBaseUrl();
   const events = await listEventRecords({ includeArchived: true, includeSeed: false }).catch(() => []);
-  const rows: VaultEvent[] = events.map((event) => ({
-    id: event.id,
-    name: event.name,
-    status: event.status,
-    group: event.status === "archived" ? "archived" as const : ["ended", "replay_available"].includes(event.status) ? "ended" as const : "current" as const,
-    stem: codeSchemeSummary(event).stem,
-    onScheme: codeSchemeSummary(event).onScheme,
-    codes: [
-      { field: "join", label: "Event code", code: displayCode(event.joinCode), link: `${base}/events/${event.id}/register` },
-      { field: "crew", label: "Crew", code: displayCode(event.accessCodes.crew), link: `${base}${guestGatePath(event, "crew")}` },
-      { field: "speaker", label: "Speaker", code: displayCode(event.accessCodes.speaker), link: `${base}${guestGatePath(event, "speaker")}` },
-      { field: "sponsor", label: "Sponsor", code: displayCode(event.accessCodes.sponsor), link: `${base}${guestGatePath(event, "sponsor")}` },
-      { field: "vip", label: "VIP", code: displayCode(event.accessCodes.vip), link: `${base}${guestGatePath(event, "vip")}` },
-      { field: "client", label: "Client", code: displayCode(event.accessCodes.client), link: `${base}${guestGatePath(event, "client")}` },
-    ].filter((code) => Boolean(code.code)),
-  }));
+  // What each press will cost, counted per event before the rows are built: the confirms name real
+  // numbers instead of "links already handed out stop working", which said nothing about how many.
+  const impacts = new Map(await Promise.all(events.map(async (event) => [event.id, await describeCodeChangeImpact(event.id)] as const)));
+  const rows: VaultEvent[] = events.map((event) => {
+    const impact = impacts.get(event.id);
+    const lineFor = (field: keyof NonNullable<typeof impact>["lines"]) => impact?.lines[field] || "We could not read how many people this affects. Treat it as though links are out.";
+    return {
+      id: event.id,
+      name: event.name,
+      status: event.status,
+      group: event.status === "archived" ? "archived" as const : ["ended", "replay_available"].includes(event.status) ? "ended" as const : "current" as const,
+      stem: codeSchemeSummary(event).stem,
+      onScheme: codeSchemeSummary(event).onScheme,
+      adoptImpact: [lineFor("join"), lineFor("crew"), lineFor("speaker")].join(" "),
+      codes: [
+        { field: "join", label: "Event code", code: displayCode(event.joinCode), link: `${base}/events/${event.id}/register`, impact: lineFor("join") },
+        { field: "crew", label: "Crew", code: displayCode(event.accessCodes.crew), link: `${base}${guestGatePath(event, "crew")}`, impact: lineFor("crew") },
+        { field: "speaker", label: "Speaker", code: displayCode(event.accessCodes.speaker), link: `${base}${guestGatePath(event, "speaker")}`, impact: lineFor("speaker") },
+        { field: "sponsor", label: "Sponsor", code: displayCode(event.accessCodes.sponsor), link: `${base}${guestGatePath(event, "sponsor")}`, impact: lineFor("sponsor") },
+        { field: "vip", label: "VIP", code: displayCode(event.accessCodes.vip), link: `${base}${guestGatePath(event, "vip")}`, impact: lineFor("vip") },
+        { field: "client", label: "Client", code: displayCode(event.accessCodes.client), link: `${base}${guestGatePath(event, "client")}`, impact: lineFor("client") },
+      ].filter((code) => Boolean(code.code)),
+    };
+  });
   const gates = SHOWN_GATES.map(([key, label, blurb]) => ({ key, label, blurb, value: value(key) }));
   const spareSet = Boolean(value(SPARE_GATE[0]));
   return (
