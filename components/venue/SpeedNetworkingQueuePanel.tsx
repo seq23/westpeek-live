@@ -30,7 +30,7 @@ export async function SpeedNetworkingQueuePanel({ eventId }: { eventId: string }
   return (
     <section data-testid="networking-queue-panel" className="space-y-4">
       {/* The one place networking is explained. An empty queue is an invitation, not a dead end. */}
-      {identity ? null : <RegisterToTakePart eventId={eventId} registered={false} context="networking" returnTo={`/venue/${eventId}/networking`} />}
+      {identity ? null : <RegisterToTakePart eventId={eventId} registered={false} returnTo={`/venue/${eventId}/networking`} />}
       {showJoinForm ? (
         <form action={joinSpeedNetworkingQueueAction} className="rounded-3xl bg-white p-6" data-testid="attendee-networking-queue-form">
           <input type="hidden" name="eventId" value={eventId} />

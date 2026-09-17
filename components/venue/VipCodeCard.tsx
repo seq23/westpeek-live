@@ -1,4 +1,5 @@
 import { redeemVipCodeAction } from "@/lib/actions/vipActions";
+import { RegisterPointOfUse } from "@/components/venue/RegisterPointOfUse";
 
 /**
  * "Have a VIP code?" on the lobby, for someone already registered as an attendee. Typing the code
@@ -19,7 +20,9 @@ export function VipCodeCard({ eventId, registered, result }: { eventId: string; 
           <button className="rounded-full bg-brand-black px-4 py-2 text-sm font-black text-white" data-testid="vip-code-submit">Use the code</button>
         </form>
       ) : (
-        <p className="mt-3 text-sm"><a href={`/events/${eventId}/register?reason=vip`} className="font-black underline" data-testid="vip-code-register">Register first</a>. The VIP code attaches to you, so we need to know who you are.</p>
+        /* Pressing the code control is the moment of intent; the lobby's one register card, not a
+           second link here, is where an unregistered person is invited in. */
+        <div className="mt-3"><RegisterPointOfUse eventId={eventId} need="vip" label="Use the code" returnTo={`/venue/${eventId}/lobby`} testId="vip-code-register" /></div>
       )}
     </section>
   );

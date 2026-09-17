@@ -61,7 +61,10 @@ describe("a join code typed on a phone still finds the Room", () => {
 describe("a guest inside the venue can find registration", () => {
   it("every 'register' notice in the venue links to the event's registration form", async () => {
     const { readFileSync } = await import("node:fs");
-    for (const file of ["RegisterToTakePart", "LiveRoomChat", "AttendeeStageJoinControls", "MyAgendaPanel"]) {
+    // Two components, and only two: the one register card, and the ask that folds open where a
+    // person presses the composer, Join queue, Raise your hand or Use the code. Everything else
+    // used to carry its own Register button, which is how one phone screen ended up with three.
+    for (const file of ["RegisterToTakePart", "RegisterPointOfUse"]) {
       const src = readFileSync(new URL(`../../components/venue/${file}.tsx`, import.meta.url), "utf8");
       // The path may carry a returnTo, so the match is on the registration route, not the whole attribute.
       expect(src, file).toMatch(/`\/events\/\$\{[a-zA-Z.]+\}\/register/);

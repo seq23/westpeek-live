@@ -320,7 +320,9 @@ A read-only overview: approvals, assets, reports, run of show, timeline. Clients
 
 **Watching needs nothing.** The video plays and the chat is readable with no account, no code and no registration. That is deliberate: anyone holding the link can watch.
 
-**Registering is what buys you a voice** — posting in chat, joining networking, raising a hand, appearing on the People page. Name, email, company. The ask sits beside the chat from the moment you arrive, becomes prominent once after about forty-five seconds of watching, and is never in front of the video. Once you have registered it never appears again.
+**Registering is what buys you a voice**: posting in chat, joining networking, raising a hand, appearing on the People page. Name, email, company. The ask sits beside the chat from the moment you arrive, becomes prominent once after about forty-five seconds of watching, and is never in front of the video. Once you have registered it never appears again.
+
+**You will only ever see one of those asks on a page.** There is one card, in one place, and it says the whole thing: what watching costs, what registering unlocks, and that it takes about fifteen seconds. The controls you cannot use yet are still there and still look usable. Press the chat box, Join queue, Raise your hand or Use the code and that one control explains the one thing it needs, then offers registration. Nothing else on the page asks a second time.
 
 **Your registration lasts 14 days on that device.** Leave and come back and you are still in. On a second device, open the same link and enter the email you used — nothing else to retype. Privileged standing does not travel that way: a VIP re-enters the VIP code on the new device, and the crew re-approves anyone who was on stage.
 

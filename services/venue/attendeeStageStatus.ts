@@ -21,8 +21,10 @@ export interface AttendeeStageStatus {
   status: AttendeeStageStatusKind;
   headline: string;
   detail: string;
-  /** The one button. `request` renders the request form; `register` links to registration; none otherwise. */
-  primary: "request" | "register" | "none";
+  /** The one button. `request` renders the request form; none otherwise. There is deliberately no
+   * `register` primary: the page's single register card owns that ask, and the raise-hand control
+   * folds its own ask open only when an unregistered person presses it. */
+  primary: "request" | "none";
   canPublishAudio: boolean;
   canPublishVideo: boolean;
   reason?: string;
@@ -31,8 +33,11 @@ export interface AttendeeStageStatus {
 export function attendeeStageStatus(input: { control: AttendeeLiveControlState; capability?: AttendeeLiveCapability; registered: boolean }): AttendeeStageStatus {
   const { control, capability, registered } = input;
   const none = { canPublishAudio: false, canPublishVideo: false };
-  // Watching is open to everyone. Registering is only what lets a person take part.
-  if (!registered) return { status: "unregistered", headline: "Keep watching. Want to join in?", detail: "Watching costs you nothing. Register with your name, email and company and you can post in the chat and ask the crew to bring you on stage.", primary: "register", ...none };
+  // Watching is open to everyone. Registering is only what lets a person take part. This line is
+  // NOT a second register pitch: the page carries exactly one register card (RegisterToTakePart),
+  // so the raise-hand control here only explains what asking to speak needs, and the ask itself
+  // appears when the person presses it. `primary: "none"` is what keeps the second button away.
+  if (!registered) return { status: "unregistered", headline: "Want to speak? Ask the crew to bring you on stage", detail: "The crew sees your request on their roster and approves it when it is your moment. Watching needs nothing; asking to speak needs your name, email and company.", primary: "none", ...none };
   const access = evaluateAttendeeLiveAccess({ control, capability, roomKind: "main_stage" });
   if (access.status === "revoked") return { status: "removed", headline: "Removed by the crew", detail: access.reason, primary: "none", reason: access.reason, ...none };
   if (!access.canJoin) return { status: "waiting_to_watch", headline: "Waiting for the crew to let you in", detail: "The crew is permitting people into the live stage one by one. Stay on this page; it updates on its own.", primary: "none", ...none };
