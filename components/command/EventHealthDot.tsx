@@ -18,7 +18,7 @@ import { COMMAND_PANEL } from "@/components/command/commandChrome";
 
 const POLL_MS = 15_000;
 
-interface Tick { ok: boolean; signals?: HealthSignal[]; log?: HealthLogEntry[]; generatedAt?: string; error?: string }
+interface Tick { ok: boolean; signals?: HealthSignal[]; log?: HealthLogEntry[]; generatedAt?: string; demonstration?: boolean; error?: string }
 
 export function EventHealthDot({ eventId, stageId = "main-stage", goLiveHref, crewDeckHref }: { eventId: string; stageId?: string; goLiveHref: string; crewDeckHref: string }) {
   const [tick, setTick] = useState<Tick | undefined>();
@@ -55,6 +55,9 @@ export function EventHealthDot({ eventId, stageId = "main-stage", goLiveHref, cr
       <div className={`${COMMAND_PANEL} p-3 xl:right-0 xl:max-h-[32rem] xl:w-[26rem] xl:max-w-[90vw]`}>
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-muted">Health</p>
         <p className="mt-1 text-sm font-bold text-brand-black" data-testid="command-bar-health-summary">{signals.length ? healthSummary(signals) : "Nothing measured yet — the first tick has not landed."}</p>
+        {/* Said out loud rather than quietly assumed: the probes below judge this event against a
+            demonstration's expectations, and the person reading the panel has to know that. */}
+        {tick?.demonstration ? <p className="mt-2 rounded-xl bg-brand-orangeSoft p-2 text-xs font-bold text-brand-black" data-testid="command-bar-health-demonstration">Demonstration event. It is shown live with no stream behind it, so the feed and webhook signals are read against that. A real event with this reading is failing.</p> : null}
         {failedAt ? <p className="mt-2 rounded-xl bg-amber-50 p-2 text-xs font-bold text-amber-900" data-testid="command-bar-health-tick-failed">The last health tick failed (<LocalTime iso={failedAt} />). These readings are the last good ones.</p> : null}
 
         <ul className="mt-3 space-y-2">
