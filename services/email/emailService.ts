@@ -1,4 +1,5 @@
 import { isResendConfigured } from "@/lib/env";
+import { BRAND_REPLY_TO, resolveSendingIdentity } from "@/lib/brand";
 import { getHouseDefaults } from "@/services/agencies/houseDefaultsService";
 import type { EmailMessage, EmailProvider, EmailSendResult } from "./EmailProvider";
 import { MockEmailProvider } from "./MockEmailProvider";
@@ -23,8 +24,10 @@ export function createEmailProvider(): EmailProvider {
  */
 export async function withHouseAddresses(message: EmailMessage): Promise<EmailMessage> {
   const house = await getHouseDefaults().catch(() => undefined);
-  if (!house) return message;
-  return { ...message, from: message.from || house.fromEmail, replyTo: message.replyTo || house.replyToEmail };
+  // resolveSendingIdentity is applied even when the house row cannot be read, so a store outage
+  // cannot be the reason a message goes out with no from at all.
+  const replyTo = message.replyTo || house?.replyToEmail || BRAND_REPLY_TO;
+  return { ...message, from: resolveSendingIdentity(message.from || house?.fromEmail), replyTo };
 }
 
 export async function sendEmail(message: EmailMessage, provider: EmailProvider = createEmailProvider()): Promise<EmailSendResult> {
