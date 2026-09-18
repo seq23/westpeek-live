@@ -95,7 +95,10 @@ if (!wordmark.includes("-rotate-6")) failures.push("Wordmark does not skew Live!
 const logoChecks = [
   ["components/brand/WestPeekLogo.tsx", "/brand/wp-mark-white.png", "the logo component must reference the white monogram for dark shells"],
   ["components/brand/WestPeekLogo.tsx", "/brand/wp-mark-black.png", "the logo component must reference the dark monogram for white surfaces"],
-  ["components/brand/WestPeekLogo.tsx", "https://westpeek.live", "the logo must link back to the West Peek home page"],
+  // The href moved into the ONE home link on 17 Sep 2026 (every mark in the app now goes through
+  // it), so the assertion follows it rather than staying pointed at a file that no longer owns it.
+  ["components/brand/WestPeekHomeLink.tsx", "https://westpeek.live", "the one home link must point back at the West Peek home page"],
+  ["components/brand/WestPeekLogo.tsx", "<WestPeekHomeLink", "the logo's home link must RENDER the one home link, not hand-roll an anchor"],
   // "<WestPeekLogoHomeLink", not the bare name: the import alone contains the identifier, so a
   // substring check would keep passing after the element was deleted from the markup.
   ["components/venue/VenueHeader.tsx", "<WestPeekLogoHomeLink", "the venue header must RENDER the real logo, not the wordmark alone"],

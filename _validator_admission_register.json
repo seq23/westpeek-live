@@ -5326,6 +5326,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "Blocks validate:v5-hard and therefore the release.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:logo-home-links",
+      "command": "node scripts/validate_logo_home_links.js",
+      "status": "ACTIVE",
+      "admission": "registered_support_lane",
+      "parentOrMatrixAuthority": "validate:v5-hard",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "a visitor lands on a West Peek page, sees the crest, clicks it and nothing happens - the product has no way back to its own front door",
+      "whatItProves": "Parses the JSX element tree of every .tsx under app/ and components/, with comments blanked first, and asserts on RENDERED ELEMENTS: 23 named surfaces each still render a way home; no bare mark or wordmark renders outside components/brand/WestPeekHomeLink.tsx except the six exceptions declared by file and element with a written reason; no home link is nested inside another anchor; the one home link carries href={WEST_PEEK_HOME_HREF}, aria-label={WEST_PEEK_HOME_LABEL} and a focus:ring-2 brand-orange ring; and every home-link component renders that primitive rather than a bare <Link>. A declared exception that stops matching a rendered element is itself a failure, so the exception list cannot rot. Hard-fails when it examines zero marks or zero home links.",
+      "whatItDoesNotProve": "Does not click the link in a browser, does not prove westpeek.live resolves, and does not check contrast or focus-ring visibility against a rendered pixel - those are DNS and browser-suite concerns. It does not read pages composed entirely at runtime from data, only the JSX that ships.",
+      "failureHandling": "Block the release. An inert crest is the exact defect the owner reported on 17 Sep 2026 and it is visible on every public page.",
+      "ownerDecisionNeeded": "NO. The destination is the product's own domain.",
+      "expectedFailureFrequency": "Low; fires when a new page is added with a crest and no link, or when someone hand-rolls an anchor around a mark.",
+      "runtimeCost": "Negligible; a single pass over the .tsx files under app/ and components/.",
+      "maintenanceCost": "Add the file to REQUIRED_HOME_LINK_SURFACES when a new branded surface ships; add a named exception with a reason when one genuinely must not link.",
+      "removalConditions": "Retire only if the marks stop being rendered from these components and an equivalent element-level proof is admitted.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "Blocks validate:v5-hard and therefore the release.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",
