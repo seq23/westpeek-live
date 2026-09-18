@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LegalFooter } from "@/components/legal/LegalFooter";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 import { LaunchpadCard } from "@/components/production/LaunchpadCard";
 import { ConsoleSection, ConsoleToc } from "@/components/owner/ConsoleSection";
 import { SafeSection } from "@/components/system/SafeSection";
@@ -135,7 +135,7 @@ export function OperatorLaunchpad() {
           <section className="rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
             <div className="flex flex-col gap-5 md:flex-row md:items-center md:justify-between">
               <div>
-                <WestPeekProductionsLogo size="md" />
+                <WestPeekProductionsLogoHomeLink size="md" />
                 <p className="mt-5 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Operator launchpad</p>
                 <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">Everything internal starts here.</h1>
                 <p className="mt-4 max-w-3xl text-sm leading-6 text-brand-muted">Your events first, then the three things you do with them. Every section folds and remembers; the demo is kept for practice, out of the way.</p>

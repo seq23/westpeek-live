@@ -26,6 +26,19 @@ export function VenueHeader({ model, attendee, activity, subordinate = false }: 
       data-venue-sub-bar={subordinate ? "true" : "false"}
     >
       <div className="mx-auto flex w-full max-w-7xl items-center gap-2">
+        {/* LEFT, on BOTH variants, and outside the nav.
+            The demo venue is the surface the owner named as having no way home at all
+            (17 Sep 2026). She sees it as an owner, which means the command bar is above and this
+            row is `subordinate` — and the subordinate branch dropped the wordmark, the event name
+            and with them the only link home in the venue chrome.
+            It goes here rather than on the command bar because that bar is one horizontally
+            scrolling line: a mark placed in it scrolls out of reach on a phone. Here it is the
+            fixed first child, so it holds the same column on both variants and is always visible.
+            Position is the owner's explicit "wherever is convenient, right or left"; left is where
+            the non-subordinate row already puts it, so the two variants do not disagree.
+            16px of monogram, no wordmark: the width the subordinate row saved for the nav stays
+            saved. */}
+        {subordinate ? <WestPeekLogoHomeLink size="sm" inverse /> : null}
         {subordinate ? null : (
           <>
             <WestPeekLogoHomeLink size="sm" inverse />

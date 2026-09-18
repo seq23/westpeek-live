@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 import { BrandedSetupError } from "@/components/system/BrandedSetupError";
 import { accessDefaultLines, missingAccessEnv } from "@/lib/env/safeEnv";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
@@ -79,7 +79,7 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
       <section className="mx-auto max-w-2xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
-        <WestPeekProductionsLogo size="md" />
+        <WestPeekProductionsLogoHomeLink size="md" />
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Crew gate</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Crew workspace access</h1>
         <p className="mt-4 text-sm leading-6 text-brand-muted">Use the internal crew password from the Day 1 Operator Packet or your secure production vault, then choose the crew role you are operating as today. This public gate never displays the password.</p>

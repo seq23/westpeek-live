@@ -1,7 +1,7 @@
 import Link from "next/link";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 import { BrandedSetupError } from "@/components/system/BrandedSetupError";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieSecret } from "@/lib/env";
@@ -30,7 +30,7 @@ export default async function OperatorPacketRoute() {
   return (
     <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
       <article className="mx-auto max-w-5xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
-        <WestPeekProductionsLogo size="md" />
+        <WestPeekProductionsLogoHomeLink size="md" />
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Day 1 Operator Packet</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">West Peek Live operator guide</h1>
         <p className="mt-4 max-w-3xl text-sm leading-6 text-brand-muted">This in-app version summarizes the full packet. The repo includes the complete Markdown packet at docs/AGENCY_EVENT_OS_DAY1_OPERATOR_PACKET.md and the sendable DOCX packet.</p>

@@ -1,5 +1,5 @@
 import Link from "next/link";
-import { WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
+import { BrandHomeLink } from "@/components/brand/BrandHomeLink";
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 
 export async function Topbar() {
@@ -8,7 +8,9 @@ export async function Topbar() {
     <header className="sticky top-0 z-10 border-b border-brand-line bg-white/90 px-4 py-3 backdrop-blur sm:px-6 lg:px-8">
       <div className="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div className="min-w-0">
-          <div className="lg:hidden"><WestPeekLiveWordmark size="sm" /></div>
+          {/* Phone only: the sidebar (which carries the linked monogram) is collapsed here, so this
+              wordmark is the only West Peek mark on screen — and it is the way home. */}
+          <div className="lg:hidden"><BrandHomeLink size="sm" /></div>
           <p className="hidden text-xs font-black uppercase tracking-[0.28em] text-brand-orange lg:block">Production workspace</p>
           <p className="mt-1 text-sm text-brand-muted">Plan, produce, run, and report on West Peek Rooms and client events.</p>
         </div>

@@ -4,7 +4,7 @@ export const dynamic = "force-dynamic";
 
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 import { BrandedSetupError } from "@/components/system/BrandedSetupError";
 import { accessDefaultLines, missingAccessEnv } from "@/lib/env/safeEnv";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
@@ -59,7 +59,7 @@ export default async function SpecialGuestAccessPage({ searchParams }: { searchP
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
       <section className="mx-auto max-w-2xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
-        <WestPeekProductionsLogo size="md" />
+        <WestPeekProductionsLogoHomeLink size="md" />
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Special guest gate</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Client, speaker, sponsor, crew-lite, or VIP</h1>
         <p className="mt-4 text-sm leading-6 text-brand-muted">Enter the event code and your role-scoped access password from production. For real events, create these in Event Setup → Access.</p>

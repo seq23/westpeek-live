@@ -1,7 +1,7 @@
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 import { GuestPreviewList } from "@/components/guests/GuestPreviewLinks";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
@@ -39,7 +39,7 @@ export default async function PreviewGuestPage({ searchParams }: { searchParams?
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
         <section className="mx-auto max-w-3xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10" data-testid="preview-guest-page" data-event-id={eventId || ""}>
-          <WestPeekProductionsLogo size="md" />
+          <WestPeekProductionsLogoHomeLink size="md" />
           <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Preview a guest</p>
           <h1 className="mt-3 text-4xl font-black tracking-tight">{event ? event.name : "Which event?"}</h1>
           <p className="mt-4 text-sm leading-6 text-brand-muted">You entered with the owner master password. Rather than the workspace, here is every special guest of {event ? "this event" : "the event"} with a link that opens their real page as them — read-mostly, with a banner only you see.</p>
