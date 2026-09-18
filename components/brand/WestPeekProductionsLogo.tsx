@@ -38,10 +38,14 @@ export function WestPeekProductionsLogo({ size = "md", className = "", src, deco
  *
  * `rounded-2xl` rather than the primitive's default, because the artwork itself is `rounded-xl` —
  * the focus ring should follow the corner it is drawn around rather than cut across it.
+ *
+ * `inverse` is the surface under it, not a theme: the artwork is a white tile, so on the dark
+ * dashboard panel the ring's offset has to be the panel rather than white, or the gap between ring
+ * and tile disappears. There is no dark theme in this product.
  */
-export function WestPeekProductionsLogoHomeLink({ size = "md", className = "" }: { size?: "sm" | "md" | "lg"; className?: string }) {
+export function WestPeekProductionsLogoHomeLink({ size = "md", inverse = false, className = "" }: { size?: "sm" | "md" | "lg"; inverse?: boolean; className?: string }) {
   return (
-    <WestPeekHomeLink radius="rounded-2xl" className={className}>
+    <WestPeekHomeLink radius="rounded-2xl" inverse={inverse} className={className}>
       <WestPeekProductionsLogo size={size} decorative />
     </WestPeekHomeLink>
   );
