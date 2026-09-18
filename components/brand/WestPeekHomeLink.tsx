@@ -28,13 +28,11 @@ export function WestPeekHomeLink({
   inverse = false,
   radius = "rounded-lg",
   className = "",
-  testId,
   children,
 }: {
   inverse?: boolean;
   radius?: string;
   className?: string;
-  testId?: string;
   children: ReactNode;
 }) {
   return (
@@ -42,7 +40,6 @@ export function WestPeekHomeLink({
       href={WEST_PEEK_HOME_HREF}
       aria-label={WEST_PEEK_HOME_LABEL}
       data-home-link="west-peek"
-      data-testid={testId}
       className={`inline-flex shrink-0 items-center ${radius} focus:outline-none focus:ring-2 focus:ring-brand-orange focus:ring-offset-1 ${inverse ? "focus:ring-offset-brand-black" : "focus:ring-offset-white"} ${className}`}
     >
       {children}
