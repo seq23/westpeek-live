@@ -3,7 +3,7 @@ import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { CapacityReadout } from "@/components/capacity/CapacityReadout";
 import { LegalFooter } from "@/components/legal/LegalFooter";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 import { SafeSection } from "@/components/system/SafeSection";
 import { BrandedSetupError } from "@/components/system/BrandedSetupError";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
@@ -40,7 +40,7 @@ export default async function CapacityPage() {
       <main className="min-h-screen bg-brand-ash px-5 py-8 text-brand-black sm:px-8 lg:px-12">
         <div className="mx-auto max-w-7xl space-y-6">
           <section className="rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
-            <WestPeekProductionsLogo size="md" />
+            <WestPeekProductionsLogoHomeLink size="md" />
             <p className="mt-5 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Plans &amp; capacity</p>
             <h1 className="mt-3 text-4xl font-black tracking-tight sm:text-5xl">What the month has cost so far.</h1>
             <p className="mt-4 max-w-3xl text-sm leading-6 text-brand-muted">Transcode minutes first, because that is the cliff we reach first. Anything the provider will not tell the app says <strong>unknown</strong> and points at the dashboard that knows — no page here will ever show you a reassuring zero it made up.</p>

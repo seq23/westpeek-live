@@ -1,5 +1,5 @@
 import Image from "next/image";
-import Link from "next/link";
+import { WestPeekHomeLink } from "@/components/brand/WestPeekHomeLink";
 
 /**
  * The West Peek monogram — the real asset, not a drawn stand-in.
@@ -52,20 +52,17 @@ export function WestPeekLogo({ size = "sm", inverse = false, className = "", alt
 
 /**
  * The monogram as the way back to westpeek.live, which is the owner's ask: the logo is a hyperlink
- * to the first homepage. The focus ring is the same one BrandHomeLink uses, offset against the dark
- * shells it sits on, so a keyboard user can see where they are.
+ * to the first homepage. The href, the accessible name and the focus ring all come
+ * from WestPeekHomeLink, which is the single home link in the app, so this cannot drift from the
+ * other ~20 surfaces that carry a mark.
  *
- * `aria-label` carries the destination and the image's own alt is emptied, so a screen reader
- * announces the link once rather than announcing "West Peek" and then the label.
+ * The image's own alt is emptied because the LINK carries the name: a screen reader announces the
+ * destination once rather than announcing "West Peek" and then the label.
  */
 export function WestPeekLogoHomeLink({ size = "sm", inverse = false, className = "" }: { size?: WestPeekLogoSize; inverse?: boolean; className?: string }) {
   return (
-    <Link
-      href="https://westpeek.live"
-      className={`inline-flex shrink-0 items-center rounded-lg focus:outline-none focus:ring-2 focus:ring-brand-orange focus:ring-offset-1 ${inverse ? "focus:ring-offset-brand-black" : "focus:ring-offset-white"} ${className}`}
-      aria-label="West Peek home page"
-    >
+    <WestPeekHomeLink inverse={inverse} className={className}>
       <WestPeekLogo size={size} inverse={inverse} alt="" />
-    </Link>
+    </WestPeekHomeLink>
   );
 }

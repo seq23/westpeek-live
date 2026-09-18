@@ -2,6 +2,11 @@ type WordmarkProps = {
   size?: "sm" | "md" | "lg";
   inverse?: boolean;
   className?: string;
+  /**
+   * Set when the wordmark is the content of a link that already carries the accessible name.
+   * It only drops the redundant aria-label; nothing about what renders changes.
+   */
+  decorative?: boolean;
 };
 
 const sizeMap = {
@@ -22,13 +27,13 @@ const sizeMap = {
   },
 };
 
-export function WestPeekLiveWordmark({ size = "md", inverse = false, className = "" }: WordmarkProps) {
+export function WestPeekLiveWordmark({ size = "md", inverse = false, className = "", decorative = false }: WordmarkProps) {
   const sizes = sizeMap[size];
 
   return (
     <span
       className={`inline-flex items-baseline ${sizes.gap} whitespace-nowrap leading-none ${className}`}
-      aria-label="West Peek Live!"
+      aria-label={decorative ? undefined : "West Peek Live!"}
     >
       <span className={`${sizes.west} font-black tracking-[-0.06em] ${inverse ? "text-white" : "text-brand-black"}`}>
         West Peek

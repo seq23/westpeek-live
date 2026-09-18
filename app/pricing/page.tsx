@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LegalFooter } from "@/components/legal/LegalFooter";
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 
 export const metadata = {
   title: "What event production costs | West Peek Live",
@@ -43,7 +43,7 @@ export default function PricingPage() {
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
         <section className="mx-auto max-w-3xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
-          <WestPeekProductionsLogo size="md" />
+          <WestPeekProductionsLogoHomeLink size="md" />
           <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">What it costs</p>
           <h1 className="mt-3 text-4xl font-black tracking-tight">What does event production cost?</h1>
           <p className="mt-4 text-sm leading-6 text-brand-muted">

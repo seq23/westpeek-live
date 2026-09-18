@@ -1,4 +1,4 @@
-import { WestPeekProductionsLogo } from "@/components/brand/WestPeekProductionsLogo";
+import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 
 export function BrandedSetupError({
   title,
@@ -16,7 +16,7 @@ export function BrandedSetupError({
   return (
     <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
       <section className="mx-auto max-w-3xl rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10">
-        <WestPeekProductionsLogo size="md" />
+        <WestPeekProductionsLogoHomeLink size="md" />
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Internal setup required</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">{title}</h1>
         <p className="mt-4 text-sm leading-6 text-brand-muted">{message}</p>

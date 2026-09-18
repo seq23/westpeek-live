@@ -8,6 +8,11 @@ export default function HomePage() {
     <>
       <main className="min-h-screen bg-brand-ash px-5 py-10 text-brand-black sm:px-8 lg:px-12">
       <section className="mx-auto flex min-h-[80vh] max-w-6xl flex-col justify-center rounded-[2rem] border border-brand-line bg-white p-6 shadow-brand sm:p-10 lg:p-14">
+        {/* DECLARED EXCEPTION — the only rendered mark in the app that is not a link home.
+            This file IS https://westpeek.live/ (docs/DEPLOYMENT_ENV_CHECKLIST.md: "westpeek.live is
+            the West Peek Live! app and public product domain"), so the crest and the wordmark below
+            it would link the home page to itself: a control that looks actionable and does nothing.
+            Named in scripts/validate_logo_home_links.js rather than pattern-matched away. */}
         <WestPeekProductionsLogo size="lg" />
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">West Peek Live</p>
         <h1 className="mt-5"><WestPeekLiveWordmark size="lg" /></h1>
