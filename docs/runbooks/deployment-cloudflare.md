@@ -7,17 +7,18 @@ Deployment target: Cloudflare Worker through OpenNext.
 
 ## Automatic push deploy path
 
-This repo includes `.github/workflows/deploy-cloudflare-worker.yml`.
+Production deploys through **Cloudflare Workers Builds** (the Git integration on the `west-peek-live`
+Worker): every push to `main` is built and deployed, and reported as the check-run
+"Workers Builds: west-peek-live" on that commit. Pull requests get a Workers Builds preview URL.
+Nothing needs to be run by hand. (Corrected 23 Sep 2026: this section used to say the GitHub
+Actions workflow below ran on push; it has been `workflow_dispatch`-only since the move to Workers Builds.)
 
-On push to `main`, GitHub Actions will:
+`.github/workflows/deploy-cloudflare-worker.yml` is a **manual fallback** (`workflow_dispatch` only). When
+dispatched it installs with `npm ci`, runs `npm run release:prepush:container`, builds with
+`npm run cf:build:recoverable`, deploys with `npm run cf:deploy -- --keep-vars`, and runs the postdeploy smoke.
+Do not dispatch it while Workers Builds is healthy.
 
-1. install dependencies with `npm ci`
-2. run `npm run validate:everything -- --tier=1`
-3. run `NODE_OPTIONS=--max-old-space-size=3072 npm run cf:build`
-4. deploy with Cloudflare Wrangler
-5. run postdeploy smoke if `POSTDEPLOY_BASE_URL` is configured as a repository variable/secret
-
-Required GitHub Secrets:
+The fallback needs these GitHub Secrets:
 
 - `CLOUDFLARE_API_TOKEN`
 - `CLOUDFLARE_ACCOUNT_ID`

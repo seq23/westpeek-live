@@ -87,6 +87,7 @@ This index classifies documentation without deleting historical evidence. Only r
 - `docs/archive/superseded/docs__PERSISTENCE_BATCH_3B.md`
 
 ## Operational runbooks and proof contracts
+- `RUNBOOK.md` — plan-time entry for AI employees and operators: what the repo is, standing rules, how to make and land a change (guard: `scripts/validate_runbook.mjs`)
 - `AUTHENTICATED_ROUTE_MANIFEST.md`
 - `AUTONOMOUS_TERMINAL_RUNBOOK.md`
 - `DIAGNOSTICS_STANDARD.md`

@@ -80,7 +80,7 @@ Purpose: single operator entrypoint that prevents doc sprawl. If a document is n
 
 The active doc set is intentionally split into four lanes only:
 
-1. **Operator entry** — `README.md`, `TERMINAL_RELEASE_RUNBOOK.md`, `docs/START_HERE_FOR_FUTURE_CHATS.md`.
+1. **Operator entry** — `RUNBOOK.md` (plan-time page for AI employees), `README.md`, `TERMINAL_RELEASE_RUNBOOK.md`, `docs/START_HERE_FOR_FUTURE_CHATS.md`.
 2. **Validation authority** — `REPO_VALIDATION_MATRIX.md`, `_repo_validation_matrix.json`, `VALIDATOR_ADMISSION_REGISTER.md`, `_validator_admission_register.json`, `TESTING_SEQUENCE.md`.
 3. **Runtime/provider proof** — `TIER_VALIDATION_MODEL.md`, `REAL_PROVIDER_LANE_MATRIX.md`, `LIVE_PROVIDER_EVIDENCE_TEMPLATE.md`, `RUNTIME_CONTEXT_TRACE_MATRIX.md`.
 4. **Product/role proof** — `USER_JOURNEY_TEST_MATRIX.md`, `docs/product/*`, and `docs/runbooks/*`.

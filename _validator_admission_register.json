@@ -5347,6 +5347,27 @@
       "owner": "Repo owner / release operator",
       "blockerPolicy": "Blocks validate:v5-hard and therefore the release.",
       "simplificationDisposition": "KEEP"
+    },
+    {
+      "script": "validate:runbook",
+      "command": "node scripts/validate_runbook.mjs",
+      "status": "ACTIVE",
+      "admission": "registered_support_lane",
+      "parentOrMatrixAuthority": "validate:v5-hard",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "the West Peek OS web-property lane refuses to plan a partner's change without RUNBOOK.md, and an AI employee reading a RUNBOOK.md that names a moved file or a deleted npm script plans the change against the wrong place",
+      "whatItProves": "RUNBOOK.md exists at the repo root; every backticked path under a top-level source dir (app, components, lib, services, types, scripts, supabase, db, docs, tests, config, deployment, data, public, .github) and every backticked root file it names exists; every `npm run <script>` it names is defined in package.json. Hard-fails when it names no paths or no scripts.",
+      "whatItDoesNotProve": "Does not prove the prose is true (deploy mechanism, hosts, owner decisions), that the named commands pass, or that URLs resolve.",
+      "failureHandling": "Block the release. Update RUNBOOK.md to the new path or script name in the same PR that moved it.",
+      "ownerDecisionNeeded": "NO.",
+      "expectedFailureFrequency": "Low; fires when a file or script the runbook names is renamed or deleted.",
+      "runtimeCost": "Negligible; one read of RUNBOOK.md and package.json.",
+      "maintenanceCost": "Add a top-level dir to the DIRS pattern if the runbook starts naming paths under a new one.",
+      "removalConditions": "Retire only if RUNBOOK.md stops being the plan-time contract for AI employees.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "Blocks validate:v5-hard and therefore the release.",
+      "simplificationDisposition": "KEEP"
     }
   ],
   "zeroWarningPolicy": "ACTIVE: advisory severity states are retired in the admission register.",
