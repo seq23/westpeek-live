@@ -163,3 +163,78 @@ Purpose: every Markdown document is classified so active documentation stays int
 
 - `WEST_PEEK_BRAND_SYSTEM.md` — canonical cross-suite visual authority; active and locked.
 - `docs/manual-notes/migration-assurance.md` — how a migration actually reaches production: what the Supabase GitHub integration does and does not do, the guards that catch a forgotten one, and the named manual step when it goes red.
+
+
+## Admitted 2026-09-23 — root RUNBOOK.md and previously unmapped docs
+
+`npm run validate:docs-consolidation` had been failing on every document below (none was mapped). Each is now
+classified; status follows its section in `DOCUMENTATION_AUTHORITY_INDEX.md` where it has one.
+
+| Document | Status | Reason | Active replacement |
+|---|---|---|---|
+| `RUNBOOK.md` | ACTIVE_VALIDATOR_REFERENCED | Plan-time operator page an AI employee reads before changing this repo; paths and scripts it names are pinned by `scripts/validate_runbook.mjs`. | None |
+| `AGENCY_EVENT_OS_LIFECYCLE_REMEDIATION_2026-06-15.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `AGENTS.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `AUTHENTICATED_PRODUCT_AUDIT.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `AUTHENTICATED_ROUTE_MANIFEST.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `AUTH_STATE_VAULT.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `AUTONOMOUS_ENGINEERING_IMPLEMENTATION_REPORT_2026-06-14.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `AUTONOMOUS_TERMINAL_RUNBOOK.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `DIAGNOSTICS_ROUTING_MATRIX.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `DIAGNOSTICS_STANDARD.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `DISPLAY_NORMALIZATION_CONTRACT.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `DOCUMENTATION_AND_VALIDATOR_SIMPLIFICATION_2026-06-14.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `DOCUMENTATION_AUTHORITY_INDEX.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `ENTITY_LIFECYCLE_MATRIX.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `FINAL_PROOF_COVERAGE_MATRIX.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `HALLMARK_ROUTE_COVERAGE.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `HOSTILE_CODE_REVIEW_TIER4_ATTENDEE_LIVE_CONSUMPTION_2026-06-12.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `HOSTILE_CODE_REVIEW_TIER4_LIVE_EVENT_FALLBACK_2026-06-12.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `HOSTILE_FIXLOOP_FINAL_2026-06-14.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `HOSTILE_REVIEW_TIER4_ATTENDEE_SURFACE_FINAL_2026-06-12.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `IMPLEMENTATION_REPORT_2026-06-14.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `MAINTENANCE_SCALE_AND_PLATFORM_LIMITS.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `MASTER_GAUNTLET.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `PREDEPLOY_POSTDEPLOY_RUNBOOK.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `PRODUCTION_SHAPED_FIXTURES.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `QUICK_APPLY_ZIP_CHEAT_SHEET.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `REAL_RUNTIME_PROOF_MATRIX.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `REPO_MASTER_CONTRACT_ADDENDUM_AUTHENTICATED_PRODUCT_USABILITY_2026-06-13.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `REPO_UPDATE_LIFECYCLE.md` | ACTIVE | Listed under "Repository update lifecycle" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `ROLLBACK_AND_CONTAINMENT_RUNBOOK.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `Repo_and_Project_Instructions_Master_Operating_Contract_v5.0.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `SECRETS_AND_VAULT_ARCHITECTURE.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `SECURITY_DEPENDENCY_REMEDIATION_2026-06-13.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `TESTING_ARCHITECTURE.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `TEST_FIXTURE_LIFECYCLE.md` | ACTIVE | Listed under "Operational runbooks and proof contracts" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `TIER4_DATA_TRACE_REVIEW_2026-06-12.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `TIER4_E2E_DATA_TRACE_FINAL_REVIEW_2026-06-12.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `TIER4_FALLBACK_LADDER_EXPANSION_2026-06-12.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `TIER4_LIVE_ATTENDEE_CONSUMPTION_GAUNTLET_2026-06-12.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `TIER4_LIVE_PROVIDER_OPERATIONAL_PROOF.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `VALIDATOR_RISK_RECLASSIFICATION_2026-06-14.md` | HISTORICAL_EVIDENCE | Dated report; evidence, not operating authority (DOCUMENTATION_AUTHORITY_INDEX.md, historical evidence). | None |
+| `VISIBLE_CONTROL_INVENTORY.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `WEST_PEEK_SUITE_MASTER_CONTRACT_REMEDIATION_PLAN_2026-06-14_REV3.md` | ACTIVE | Listed under "Active authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `docs/CAPACITY.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `docs/manual-notes/capacity.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/chat-at-scale.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/command-bar-and-health.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/contractors-vendors.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/email-composer.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/networking-fairness.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/plan-an-event.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/preview-personas.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/real-event-workspace.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/registration-continuity.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/speed-networking-fix.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/templates-email-assets.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/venue-attendee-ux.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/venue-chrome.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/manual-notes/work-templates-real.md` | ACTIVE | Feature note behind the in-app manual; current operator reference. | None |
+| `docs/plans/OWNER_ONE_PLACE_AND_VIEW_AS.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `docs/runbooks/DUAL_PREPUSH_AND_ARTIFACT_PARITY_CONTRACT.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `docs/runbooks/FIRST_COMMAND_GREEN_DELIVERY_CONTRACT.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `docs/runbooks/PRE_UPDATER_BASELINE_CHECKLIST.md` | ACTIVE | Listed under "Canonical West Peek brand authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `docs/runbooks/QUICK_APPLY_ZIP_CHEAT_SHEET.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
+| `docs/runbooks/SUITE_RELEASE_LIFECYCLE_CONTRACT.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
