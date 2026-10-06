@@ -171,6 +171,13 @@ export async function expectVisibleRoute(page: Page, route: RouteExpectation) {
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
   });
+  // The local run registers no LiveKit provider (VIDEO_PROVIDER=mock), so the stage's attendee token
+  // request is refused with a named 503 (proven safe by video-provider-safe-failure.spec). Only that
+  // response, counted one for one, is excused, and only locally; any other 5xx stays an error.
+  const providerRefusals: string[] = [];
+  page.on("response", (response) => {
+    if (response.status() === 503 && response.request().method() === "POST" && new URL(response.url()).pathname === "/api/video/livekit-token") providerRefusals.push(response.url());
+  });
 
   await gotoAndAssert(page, route.path);
   const body = (await page.locator("body").innerText()).toLowerCase();
@@ -195,8 +202,10 @@ export async function expectVisibleRoute(page: Page, route: RouteExpectation) {
     await expect(page.getByText(new RegExp(action, "i")).first(), `${route.label} action ${action} should be visible`).toBeVisible();
   }
 
+  let excusedRefusals = isDeployedBrowserRun() ? 0 : providerRefusals.length;
   const materialErrors = [...pageErrors, ...consoleErrors].filter((entry) => {
     const text = entry.toLowerCase();
+    if (excusedRefusals > 0 && text.includes("failed to load resource: the server responded with a status of 503")) { excusedRefusals -= 1; return false; }
     return !text.includes("favicon") && !text.includes("hydration") && !text.includes("failed to load resource: the server responded with a status of 404");
   });
 
@@ -243,5 +252,19 @@ export async function openVenueSection(section: Locator) {
   await expect(async () => {
     if ((await section.getAttribute("data-open")) !== "true") await section.locator(":scope > button").click();
     await expect(section).toHaveAttribute("data-open", "true", { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+}
+
+/**
+ * The stage chat on a phone is a bottom sheet behind one button (16 Sep 2026); on a wide screen it
+ * is the rail. Opens the sheet when the button is showing (after hydration, pressing until the sheet
+ * is up), so a spec reaches the chat the way the person on that screen does. A no-op on the rail.
+ */
+export async function openStageChat(page: Page) {
+  const opener = page.getByTestId("stage-chat-open");
+  if (!(await opener.isVisible())) return;
+  await expect(async () => {
+    if (!(await page.getByTestId("stage-chat-sheet").isVisible())) await opener.click();
+    await expect(page.getByTestId("stage-chat-sheet")).toBeVisible({ timeout: 1_000 });
   }).toPass({ timeout: 15_000 });
 }

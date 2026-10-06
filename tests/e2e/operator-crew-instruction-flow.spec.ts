@@ -9,7 +9,14 @@ test("operator can find crew instructions and crew can consume them without oper
   await page.getByRole("button", { name: /enter operator launchpad/i }).click();
 
   await expect(page).toHaveURL(/\/production-access\/launchpad/);
-  // Crew briefing is a card in the launchpad's "Set up an event" section, for the event in hand.
+  // Crew briefing is a card in the launchpad's "Set up an event" section, for the event in hand;
+  // make sure there is one, however empty the store is.
+  await gotoAndAssert(page, "/app/events/new");
+  await page.getByTestId("when-now").check();
+  await page.locator('[name="name"]').fill(`Crew Brief ${Date.now()}`);
+  await page.getByTestId("create-event-submit").click();
+  await expect(page).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?created=1/);
+  await gotoAndAssert(page, "/production-access/launchpad");
   const setUp = await openConsoleSection(page, "set-up");
   await setUp.getByRole("link", { name: /^Crew briefing/ }).click();
 

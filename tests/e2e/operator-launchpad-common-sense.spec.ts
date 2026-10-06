@@ -16,7 +16,14 @@ test("operator launchpad exposes useful Day 1 actions without obvious dead-end l
   await loginOperator(page);
 
   // The reorganised launchpad (16 Sep 2026): real events first, then folded sections that each
-  // hold the cards for one job. Every Day 1 action is still one click from here.
+  // hold the cards for one job. Every Day 1 action is still one click from here. The show-day
+  // cards belong to an event, so there is one on the books first.
+  await gotoAndAssert(page, "/app/events/new");
+  await page.getByTestId("when-now").check();
+  await page.locator('[name="name"]').fill(`Launchpad Room ${Date.now()}`);
+  await page.getByTestId("create-event-submit").click();
+  await expect(page).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?created=1/);
+  await gotoAndAssert(page, "/production-access/launchpad");
   const body = page.locator("body");
   await expect(body).toContainText(/Operator Launchpad/i);
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Everything internal starts here.");

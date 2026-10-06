@@ -87,6 +87,10 @@ const localE2EEnv = {
   EVENT_DEMO_SPEAKER_CODE: day1Default("EVENT_DEMO_SPEAKER_CODE"),
   EVENT_DEMO_SPONSOR_CODE: day1Default("EVENT_DEMO_SPONSOR_CODE"),
   EVENT_DEMO_VIP_CODE: day1Default("EVENT_DEMO_VIP_CODE"),
+  // The client and crew-lite demo codes too: without them the server refused the client and
+  // crew-lite logins the role journeys make (invalid_role_code), and those specs passed on the gate.
+  EVENT_DEMO_CLIENT_CODE: day1Default("EVENT_DEMO_CLIENT_CODE"),
+  EVENT_DEMO_CREW_LITE_CODE: day1Default("EVENT_DEMO_CREW_LITE_CODE"),
   LIVEKIT_URL: day1Default("LIVEKIT_URL"),
   LIVEKIT_API_KEY: day1Default("LIVEKIT_API_KEY"),
   LIVEKIT_API_SECRET: day1Default("LIVEKIT_API_SECRET"),

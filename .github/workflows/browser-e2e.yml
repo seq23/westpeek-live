@@ -1,0 +1,97 @@
+name: Browser suite
+
+# The full Playwright suite (tests/e2e, desktop + phone projects) against a production build with
+# the local file store. It is NOT a merge gate: "Repository validation" is the fast check that
+# gates merges and the deploy. This runs after every merge to main, nightly, and on demand, so a
+# red browser run is a fault found within hours, not a merge blocked for half an hour.
+#
+# A failed run opens (or comments on) one issue labelled browser-suite-red, with the run link; a
+# green run closes it. It never blocks the deploy by itself: the deploy is triggered by the
+# validation run of the same commit, and holding it for this suite would make every fix wait for
+# the whole suite before reaching production.
+on:
+  push:
+    branches: [main]
+  schedule:
+    # 07:17 UTC = 02:17 Central, after the day's merges.
+    - cron: "17 7 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: read
+  issues: write
+
+concurrency:
+  group: browser-suite-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  browser-suite:
+    name: Playwright (desktop + mobile, production build)
+    runs-on: ubuntu-latest
+    # About 4x a normal run (the full suite takes ~20 minutes on a runner): a fault detector for a
+    # hung run, never a budget to grow into.
+    timeout-minutes: 80
+    env:
+      CI: true
+      PLAYWRIGHT_DISABLE_VIDEO: "1"
+    steps:
+      - uses: actions/checkout@v5
+
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+
+      - run: npm ci --no-audit --no-fund
+
+      - name: Cache Playwright browsers
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('package-lock.json') }}
+
+      - name: Install Chromium and its system libraries
+        run: npx playwright install --with-deps chromium
+
+      - name: Run the browser suite
+        run: npx playwright test --reporter=list,html
+
+      - name: Upload the report and traces
+        if: failure()
+        uses: actions/upload-artifact@v4
+        with:
+          name: playwright-report-${{ github.run_id }}
+          path: |
+            playwright-report/
+            test-results/
+          retention-days: 14
+
+      - name: Open or update the red-suite issue
+        if: failure()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          gh label create browser-suite-red --color d73a4a --description "The post-merge Playwright suite is red" 2>/dev/null || true
+          body="The browser suite failed on \`${GITHUB_SHA::12}\` (${GITHUB_EVENT_NAME}): ${RUN_URL}. Report and traces are attached to the run. Fix at source; this issue closes itself on the next green run."
+          existing=$(gh issue list --label browser-suite-red --state open --json number --jq '.[0].number // empty')
+          if [ -n "$existing" ]; then
+            gh issue comment "$existing" --body "$body"
+          else
+            gh issue create --title "Browser suite is red on main" --label browser-suite-red --body "$body"
+          fi
+
+      - name: Close the red-suite issue
+        if: success()
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        shell: bash
+        run: |
+          set -Eeuo pipefail
+          for number in $(gh issue list --label browser-suite-red --state open --json number --jq '.[].number' 2>/dev/null || true); do
+            gh issue close "$number" --comment "Green again on \`${GITHUB_SHA::12}\`: ${RUN_URL}"
+          done

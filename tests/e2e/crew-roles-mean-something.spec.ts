@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { asRegisteredAttendee } from "./helpers/persona";
-import { grantCrewAccess, isDeployedBrowserRun, loginAsOperator } from "./helpers/roleJourney";
+import { grantCrewAccess, isDeployedBrowserRun, loginAsOperator, openStageChat } from "./helpers/roleJourney";
 
 /**
  * Crew roles mean something and say so:
@@ -18,6 +18,12 @@ const EVENT = "event-summit";
 const CREW = `/crew/events/${EVENT}`;
 const STAGE = `/venue/${EVENT}/stage`;
 
+/** The stage, with its chat reachable: the rail on a wide screen, the opened sheet on a phone. */
+async function gotoStage(page: Page) {
+  await gotoAndAssert(page, STAGE);
+  await openStageChat(page);
+}
+
 async function crewAs(browser: Browser, role: string) {
   const context = await browser.newContext();
   const page = await context.newPage();
@@ -30,7 +36,7 @@ async function attendeePosts(browser: Browser, text: string) {
   const context = await browser.newContext();
   const page = await context.newPage();
   await asRegisteredAttendee(page, EVENT);
-  await gotoAndAssert(page, STAGE);
+  await gotoStage(page);
   const form = page.getByTestId("attendee-identity-chat-form");
   await form.locator('input[name="message"]').fill(text);
   await form.getByRole("button", { name: "Send" }).click();
@@ -94,7 +100,7 @@ test("moderator: every section renders, the stream controls are disabled with th
   await expect(row.getByRole("button", { name: "Hide" })).toBeEnabled();
   await row.getByRole("button", { name: "Hide" }).click();
   await expect(queue.getByTestId("chat-moderation-row").filter({ hasText: rude }).first().getByTestId("chat-hidden-tag")).toContainText(/hidden by crew/i);
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await expect(attendee.page.getByTestId("main_stage-live-chat")).not.toContainText(rude);
   await queue.getByTestId("chat-moderation-row").filter({ hasText: rude }).first().getByRole("button", { name: "Restore" }).click();
   await attendee.context.close();

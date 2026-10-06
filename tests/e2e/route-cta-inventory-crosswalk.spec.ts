@@ -20,10 +20,12 @@ test('public, venue, access, and operator CTA crosswalk routes render with first
   // and every card stays first-party.
   await expect(page.getByTestId('operator-launchpad').getByRole('link', { name: 'New event', exact: true }).first()).toHaveAttribute('href', '/app/events/new');
   for (const [section, label, href] of [
+    // The cards that exist with or without events on the books (the per-event cards are proven by
+    // operator-crew-instruction-flow and operator-launchpad-common-sense, which make their own).
     ['demo', 'Demo venue', '/venue/demo/lobby'],
-    ['set-up', 'Crew briefing', /^\/app\/events\/[a-z0-9-]+\/crew$/],
+    ['set-up', 'New event', '/app/events/new'],
     ['diagnostics', 'Testing console', '/admin/testing'],
-    ['run-a-show', 'Run of show', /^\/app\/events\/[a-z0-9-]+\/run-of-show$/],
+    ['people-data', 'People across events', '/app/people'],
   ] as const) {
     const body = await openConsoleSection(page, section);
     await expect(body.getByRole('link', { name: new RegExp(`^${label}`) }).first(), `${label} CTA should exist`).toHaveAttribute('href', href);

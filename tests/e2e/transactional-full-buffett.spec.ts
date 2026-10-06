@@ -3,7 +3,7 @@ import { createPairHistoryRecord, normalizedSpeedNetworkingPairKey, selectNextSp
 import type { SpeedNetworkingEntry, SpeedNetworkingMatch, SpeedNetworkingPairHistory } from "@/types/speedNetworkingEngine";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { asRegisteredAttendee } from "./helpers/persona";
-import { grantAgencySession, grantOperatorAccess, loginAsOperator } from "./helpers/roleJourney";
+import { grantAgencySession, grantOperatorAccess, loginAsOperator, openVenueSection } from "./helpers/roleJourney";
 import { expectEventuallyRuntime, expectEventuallyRuntimeEvent, readRuntimeSnapshot, resetRuntimeTraceFiles } from "./helpers/runtimeTrace";
 
 const unique = Date.now();
@@ -60,7 +60,7 @@ transactionalDescribe("Transactional Full Buffett E2E", () => {
     await expect(page).toHaveURL(/\/venue\/event-summit\/lobby\?registered=1/);
     // The rich profile fields are added from "Tell us more" inside the venue, through the one profile write path.
     const card = page.getByTestId("attendee-profile-panel");
-    await card.locator("summary").click();
+    await openVenueSection(card);
     await card.getByTestId("tell-website").fill("https://westpeek.live");
     await card.getByTestId("tell-social").fill("https://linkedin.com/in/westpeekqa");
     await card.getByTestId("tell-reason").fill("Validate the event venue transactionally before deployment.");
@@ -95,7 +95,8 @@ transactionalDescribe("Transactional Full Buffett E2E", () => {
     // The networking gate asks for topics inline when the profile has none.
     const gate = page.getByTestId("networking-topics-gate");
     if (await gate.count()) await gate.getByTestId("networking-topics-input").fill("AI, fundraising");
-    await page.getByRole("button", { name: /join queue/i }).click();
+    await expect(page.getByTestId("networking-join")).toHaveText("Join the queue");
+    await page.getByTestId("networking-join").click();
     await expect(page).toHaveURL(/\/venue\/event-summit\/networking\?state=waiting&queued=1/);
     await expectEventuallyRuntime(
       (snapshot) => (snapshot.analyticsEvents || []).some((event: any) => event.kind === "networking_joined" && event.metadata?.queueState === "waiting"),

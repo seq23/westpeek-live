@@ -3,7 +3,7 @@ import { expect, test, type APIRequestContext, type Page } from "@playwright/tes
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { day1Default } from "./helpers/day1AccessDefaults";
 import { asRegisteredAttendee } from "./helpers/persona";
-import { grantCrewAccess, isDeployedBrowserRun, loginAsOperator } from "./helpers/roleJourney";
+import { grantCrewAccess, isDeployedBrowserRun, loginAsOperator, openStageChat } from "./helpers/roleJourney";
 
 /**
  * The venue follows the event's state (the owner ended the show, refreshed /venue/<id>/stage,
@@ -61,8 +61,9 @@ test("End the show reaches an open attendee stage tab within 15s; every venue pa
   const crew = await crewContext.newPage();
   await grantCrewAccess(crew, "technical_director", eventId);
   await gotoAndAssert(crew, `/crew/events/${eventId}`);
-  await crew.getByTestId("end-show-button").first().click();
-  await expect(crew.getByTestId("end-show-control").first()).toHaveAttribute("data-show-ended", "true");
+  // The deck's End-the-show card (the command bar carries a chip with the same id).
+  await crew.locator('section[data-testid="end-show-control"]').getByTestId("end-show-button").click();
+  await expect(crew.locator('section[data-testid="end-show-control"]')).toHaveAttribute("data-show-ended", "true");
 
   // The attendee's open tab flips on its own.
   await expect(attendee.getByTestId("venue-state-notice")).toHaveAttribute("data-gate", "ended", { timeout: 15_000 });
@@ -78,7 +79,9 @@ test("End the show reaches an open attendee stage tab within 15s; every venue pa
   }
   await gotoAndAssert(attendee, `/venue/${eventId}/replay`);
   await expect(attendee.locator("main")).toHaveAttribute("data-venue-gate", "open");
-  await expect(attendee.locator("body")).toContainText("Replay center");
+  // The replay page (one venue design system, 16 Sep 2026): "Watch it again", with this show's recording.
+  await expect(attendee.getByRole("heading", { name: "Watch it again" })).toBeVisible();
+  await expect(attendee.locator("body")).toContainText("Recordings appear here after the show, once they have finished processing.");
   // The host sees the same ended state, with a way back to the command center.
   await gotoAndAssert(page, `/venue/${eventId}/stage`);
   await expect(page.getByTestId("venue-state-notice")).toHaveAttribute("data-gate", "ended");
@@ -126,6 +129,7 @@ test("build-version watchdog: a changed build id on the poll reloads the page, b
   const attendee = await attendeeContext.newPage();
   await asRegisteredAttendee(attendee, eventId);
   await gotoAndAssert(attendee, `/venue/${eventId}/stage`);
+  await openStageChat(attendee);
   const loaded = await attendee.getByTestId("build-version-watchdog").getAttribute("data-loaded-build");
   expect(loaded).toBeTruthy();
 

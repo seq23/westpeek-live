@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { asRegisteredAttendee } from "./helpers/persona";
-import { grantOperatorAccess, isDeployedBrowserRun } from "./helpers/roleJourney";
+import { grantOperatorAccess, isDeployedBrowserRun, openStageChat } from "./helpers/roleJourney";
 
 /**
  * Crew chat moderation, end to end, through the real pages:
@@ -15,6 +15,12 @@ test.skip(isDeployedBrowserRun(), "local runtime-store journey; deployed proof i
 
 const EVENT = "event-summit";
 const STAGE = `/venue/${EVENT}/stage`;
+
+/** The stage, with its chat reachable: the rail on a wide screen, the opened sheet on a phone. */
+async function gotoStage(page: Page) {
+  await gotoAndAssert(page, STAGE);
+  await openStageChat(page);
+}
 const COMMAND = `/app/events/${EVENT}`;
 
 async function attendeeContext(browser: Browser) {
@@ -32,7 +38,7 @@ async function crewContext(browser: Browser) {
 }
 
 async function attendeePosts(page: Page, text: string) {
-  await gotoAndAssert(page, STAGE);
+  await gotoStage(page);
   const form = page.getByTestId("attendee-identity-chat-form");
   await expect(form).toBeVisible();
   await form.locator('input[name="message"]').fill(text);
@@ -58,14 +64,14 @@ test("crew hides, silences, locks; the attendee sees each outcome and the write 
   // 2. Hide → gone for the attendee, tagged for the crew; restore → back.
   await row.getByRole("button", { name: "Hide" }).click();
   await expect(queue.getByTestId("chat-moderation-row").filter({ hasText: rude }).first().getByTestId("chat-hidden-tag")).toContainText(/hidden by (operator|owner|crew)/i);
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await expect(attendee.page.getByTestId("main_stage-live-chat")).not.toContainText(rude);
   await queue.getByTestId("chat-moderation-row").filter({ hasText: rude }).first().getByRole("button", { name: "Restore" }).click();
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await expect(attendee.page.getByTestId("main_stage-live-chat")).toContainText(rude);
 
   // 3. Silence → the attendee's stale form still cannot post; the input is replaced by the notice.
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   const staleForm = attendee.page.getByTestId("attendee-identity-chat-form");
   await expect(staleForm).toBeVisible();
   await gotoAndAssert(crew.page, COMMAND);
@@ -80,7 +86,7 @@ test("crew hides, silences, locks; the attendee sees each outcome and the write 
   // Unsilence from the silenced list.
   await queue.getByTestId("chat-silenced-attendees").getByRole("button", { name: "Unsilence" }).first().click();
   await expect(queue.getByTestId("chat-silenced-attendees")).toHaveCount(0);
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await expect(attendee.page.getByTestId("attendee-identity-chat-form")).toBeVisible();
 
   // 4. Lock → attendee cannot post; unlock → can.
@@ -101,7 +107,7 @@ test("crew hides, silences, locks; the attendee sees each outcome and the write 
 
 test("an attendee cannot invoke crew moderation: the queue never renders on the venue and the actions refuse", async ({ browser }) => {
   const attendee = await attendeeContext(browser);
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await expect(attendee.page.getByTestId("chat-moderation-queue")).toHaveCount(0);
   await expect(attendee.page.getByTestId("chat-hidden-tag")).toHaveCount(0);
   await attendee.context.close();

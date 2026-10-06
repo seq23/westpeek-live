@@ -113,7 +113,11 @@ test("speaker: identity → green room → tech check → cue cards → paste/ap
   await expect(speaker.page.getByTestId("teleprompter-card-title")).toHaveText("My opener");
 
   // Crew pushes a live cue → banner within ~5s.
-  await crew.getByTestId(`speaker-cue-editor-${speakerId}`).locator("summary").click();
+  // The cue editor is still open from writing the deck (a <details> keeps its open state across the
+  // approve round trip); pressing its summary again would fold it shut.
+  const cueEditor = crew.getByTestId(`speaker-cue-editor-${speakerId}`);
+  if (!(await cueEditor.evaluate((element) => (element as HTMLDetailsElement).open))) await cueEditor.locator("summary").click();
+  await expect(crew.getByTestId(`live-cue-input-${speakerId}`)).toBeVisible();
   await crew.getByTestId(`live-cue-input-${speakerId}`).fill("wrap in 2 min");
   await crew.getByTestId(`push-live-cue-${speakerId}`).click();
   await expect(speaker.page.getByTestId("live-cue-banner")).toContainText("wrap in 2 min", { timeout: 15_000 });
