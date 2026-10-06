@@ -113,13 +113,16 @@ check("components/moderation/AttendeeLiveRoster.tsx", ["<AttendeeDiagnosePanel",
 // ---- 8. Audited, and the columns exist in both copies of the migration --------------------
 check("services/venue/previewAuditService.ts", ['"attendee_diagnosed"', '"attendee_view_mirrored"', "NEVER an IP"]);
 check("services/audit/auditTypes.ts", ['| "attendee_diagnosed"', '| "attendee_view_mirrored"']);
-for (const file of ["db/migrations/0037_attendee_client_telemetry.sql", "supabase/migrations/20260917050000_attendee_client_telemetry.sql"]) {
-  const sql = check(file, ["client_build_id", "client_browser", "client_connection_quality", "client_subscribed_tracks", "last_chat_poll_at"]);
-  if (/\bip_address\b|\bgeo\b|\blatitude\b/.test(sql)) throw new Error(`${file} must not add an IP or location column.`);
+{
+  const { d1Table, requireD1 } = require("./lib/d1Schema");
+  const failures = requireD1("attendee_sessions", ["  client_build_id TEXT,", "  client_browser TEXT,", "  client_connection_quality TEXT,", "  client_subscribed_tracks INTEGER,", "  last_chat_poll_at TEXT,"]);
+  if (failures.length) throw new Error(failures.join("; "));
+  examined += 1;
+  if (/\bip_address\b|\bgeo\b|\blatitude\b/.test(d1Table("attendee_sessions").sql)) throw new Error("attendee_sessions must not carry an IP or location column.");
 }
 check("services/runtime/runtimeStore.ts", ["listAttendeeSessions(eventId: string"]);
 check("services/runtime/fileRuntimeStore.ts", ["async listAttendeeSessions("]);
-check("services/runtime/supabaseRuntimeStore.ts", ["async listAttendeeSessions(", "client_subscribed_tracks"]);
+check("services/runtime/d1RuntimeStore.ts", ["async listAttendeeSessions(", "client_subscribed_tracks"]);
 
 // ---- 9. The proofs exist ------------------------------------------------------------------
 check("tests/unit/previewPersonas.test.ts", [

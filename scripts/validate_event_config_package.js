@@ -21,7 +21,7 @@ const expected = [
   "data/access/event-access-config.json",
 ];
 for (const rel of expected) if (!fs.existsSync(path.join(root, rel))) fail(`Package missing ${rel}`);
-const secretPattern = /(sk_live_[A-Za-z0-9]|SUPABASE_SERVICE_ROLE_KEY[ \t]*=[ \t]*[^\n#]+|RESEND_API_KEY[ \t]*=[ \t]*[^\n#]+|LIVEKIT_API_SECRET[ \t]*=[ \t]*[^\n#]+|-----BEGIN PRIVATE KEY-----)/;
+const secretPattern = /(sk_live_[A-Za-z0-9]|CLOUDFLARE_API_TOKEN[ \t]*=[ \t]*[^\n#]+|RESEND_API_KEY[ \t]*=[ \t]*[^\n#]+|LIVEKIT_API_SECRET[ \t]*=[ \t]*[^\n#]+|-----BEGIN PRIVATE KEY-----)/;
 function walk(dir) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = path.join(dir, entry.name);

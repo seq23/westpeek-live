@@ -41,7 +41,7 @@ export default async function SettingsPage({ searchParams }: { searchParams?: Pr
           </div>
           <div>
             <p className="text-sm font-black text-slate-950">Members</p>
-            <p className="mt-1 text-xs text-slate-500">Names, emails, and roles for the people who run West Peek Live. This is a roster, not a login list: the owner enters with the owner master password and staff logins are the app's own self-serve accounts (/login).</p>
+            <p className="mt-1 text-xs text-slate-500">Names, emails, and roles for the people who run West Peek Live. This is a roster, not a login list: the owner enters with the owner master password and staff logins are self-serve accounts on this site (/login).</p>
             <div className="mt-3 space-y-2">
               {rows.map((member, index) => (
                 <div key={index} className="grid gap-2 md:grid-cols-3">

@@ -23,9 +23,9 @@ check("components/email/EmailAcrossEvents.tsx", ["listAllEmailLog", "email-acros
 check("app/app/events/[eventId]/communications/page.tsx", ["EventEmailCenter"]);
 check("app/app/email/page.tsx", ["EmailAcrossEvents"]);
 if (fs.existsSync("components/email/EmailWorkflowMatrix.tsx")) throw new Error("The placeholder workflow matrix must be gone.");
-check("db/migrations/0032_email_send_log.sql", ["create table if not exists public.runtime_email_sends", "sent_by", "provider"]);
-if (read("db/migrations/0032_email_send_log.sql").includes("create table if not exists public.email_send_logs")) throw new Error("0017 already owns email_send_logs with uuid keys: the runtime log needs its own table name.");
-for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) check(store, ["appendEmailSendLog", "listEmailSendLogs", "listAllEmailSendLogs"]);
+{ const { requireD1, d1Sql } = require("./lib/d1Schema"); const f = requireD1("runtime_email_sends", ["  sent_by TEXT,", "  provider TEXT", "  group_send_id TEXT,"]); examined += 1; if (f.length) throw new Error(f.join("; "));
+  if (d1Sql().includes("CREATE TABLE IF NOT EXISTS email_send_logs")) throw new Error("The runtime log is runtime_email_sends; a second email_send_logs table would split it."); }
+for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) check(store, ["appendEmailSendLog", "listEmailSendLogs", "listAllEmailSendLogs"]);
 check("tests/unit/eventEmail.test.ts", ["refuses to send to nobody", "a send writes one row per recipient"]);
 if (examined < 10) throw new Error(`validate_event_email_real examined only ${examined} files`);
 console.log(`validate_event_email_real: PASS — ${examined} files examined; every send is logged, the page reads the log, and nothing sends on a timer.`);

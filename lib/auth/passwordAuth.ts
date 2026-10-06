@@ -2,7 +2,7 @@ import { getDbClient } from "@/lib/d1/binding";
 import type { DbClient } from "@/lib/d1/query";
 
 /**
- * App-owned self-serve login (replaced Supabase Auth, 6 Oct 2026). Everything lives in D1:
+ * App-owned self-serve login (replaced the hosted auth service, 6 Oct 2026 — docs/SUPABASE_TO_CLOUDFLARE.md). Everything lives in D1:
  *
  *  - auth_users: email (lowercased, unique), PBKDF2-SHA256 hash, per-user 16-byte random salt and the
  *    iteration count used, so the count can be raised later and old rows still verify.

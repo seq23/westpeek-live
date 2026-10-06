@@ -59,8 +59,8 @@ function missingTier3Inputs(row) {
   if (/LiveKit|real-streamyard|livekit/i.test(text)) {
     for (const key of ['LIVEKIT_URL','LIVEKIT_API_KEY','LIVEKIT_API_SECRET','LIVEKIT_WEBHOOK_SECRET']) if (!process.env[key]) missing.push(key);
   }
-  if (/Supabase|persistence|created/i.test(text)) {
-    for (const key of ['NEXT_PUBLIC_SUPABASE_URL','NEXT_PUBLIC_SUPABASE_ANON_KEY','SUPABASE_SERVICE_ROLE_KEY']) if (!process.env[key]) missing.push(key);
+  if (/D1|persistence|created/i.test(text)) {
+    for (const key of ['CLOUDFLARE_API_TOKEN','CLOUDFLARE_ACCOUNT_ID']) if (!process.env[key]) missing.push(key);
   }
   return [...new Set(missing)];
 }

@@ -1,6 +1,12 @@
 name: Deploy Cloudflare Worker
 
+# Deploys itself on green main: after "Repository validation" succeeds for a push to main, this
+# applies the D1 migrations and then deploys THAT commit. Dispatch stays for a manual redeploy.
 on:
+  workflow_run:
+    workflows: ["Repository validation"]
+    types: [completed]
+    branches: [main]
   workflow_dispatch:
 
 permissions:
@@ -12,7 +18,9 @@ concurrency:
 
 jobs:
   deploy:
-    name: Manual Cloudflare deploy
+    name: Cloudflare deploy (D1 migrations, then Worker)
+    # Only a green validation of a push to main, never a pull request's run or a red one.
+    if: github.event_name == 'workflow_dispatch' || (github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push')
     runs-on: ubuntu-latest
     timeout-minutes: 45
 
@@ -27,6 +35,9 @@ jobs:
     steps:
       - name: Checkout
         uses: actions/checkout@v5
+        with:
+          # The exact commit validation passed on, not whatever main is by the time this starts.
+          ref: ${{ github.event.workflow_run.head_sha || github.sha }}
 
       - name: Require Cloudflare credentials
         shell: bash
@@ -72,6 +83,11 @@ jobs:
           test -f .open-next/worker.js
           test -d .open-next/assets
 
+      # Schema before code, every time: a Worker never reaches production ahead of its tables.
+      # Recorded per file in d1_migrations, so an applied file never runs twice.
+      - name: Apply D1 migrations
+        run: timeout --signal=TERM 5m npx wrangler d1 migrations apply west-peek-live --remote
+
       - name: Deploy Cloudflare worker
         run: timeout --signal=TERM 5m npm run cf:deploy -- --keep-vars
 
@@ -84,7 +100,7 @@ jobs:
         run: |
           {
             echo "## West Peek Live Cloudflare deployment"
-            echo "- Commit: $GITHUB_SHA"
+            echo "- Commit: ${{ github.event.workflow_run.head_sha || github.sha }}"
             echo "- Worker: west-peek-live"
             echo "- Conclusion: ${{ job.status }}"
             echo "- Postdeploy target: $POSTDEPLOY_BASE_URL"

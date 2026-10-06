@@ -68,7 +68,7 @@ async function runAction(data: FormData) {
 }
 
 const stored = { ok: true as const, record: { id: "request-1" } };
-const dropped = { ok: false as const, record: { id: "request-1" }, reason: "supabase_not_configured" };
+const dropped = { ok: false as const, record: { id: "request-1" }, reason: "database_not_bound" };
 
 describe("request-event intake", () => {
   beforeEach(() => {
@@ -189,7 +189,7 @@ describe("request-event store", () => {
 
     // The old implementation returned the record here, which read as success.
     expect(result.ok).toBe(false);
-    if (!result.ok) expect(result.reason).toBe("supabase_not_configured");
+    if (!result.ok) expect(result.reason).toBe("database_not_bound");
   });
 
   it("never throws out of the intake path", async () => {

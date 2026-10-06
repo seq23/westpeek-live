@@ -8,7 +8,7 @@ const fs = require("fs");
  *
  * What this validator holds, and why each one is here rather than a comment:
  *  - budget is required on the public form and refused server-side, so a request is always priceable;
- *  - one row runs the whole path (migration 0036 extends request_event_intake, it does not shadow it);
+ *  - one row runs the whole path (request_event_intake, one table in migrations-d1, never shadowed);
  *  - every route to "paid" goes through recordSettlement, which is the seam a provider drops into;
  *  - the instruction emails link to /how-it-works/<audience> and never carry the page's text;
  *  - the pages are editable by owner and operator, and the rule is checked in the action, not by
@@ -42,20 +42,13 @@ const types = read("types/eventRequest.ts");
 needs("types/eventRequest.ts", types, ["BUDGET_RANGES", "EventRequestState", "requested", "approved", "confirmed", "paid", "declined"]);
 
 // 2 — one row, one list. The migration extends the intake table rather than shadowing it.
-const migration = read("db/migrations/0036_plan_an_event_pipeline.sql");
-needs("db/migrations/0036_plan_an_event_pipeline.sql", migration, [
-  "alter table public.request_event_intake add column if not exists budget_range",
-  "add column if not exists state",
-  "add column if not exists confirm_token",
-  "add column if not exists settlement_method",
-  "add column if not exists instructions_sent_at",
-  "create table if not exists public.how_it_works_pages",
-  "request_event_intake_confirm_token_idx",
-]);
-if (/create table if not exists public\.request_event_intake/.test(migration)) failures.push("0036 must EXTEND request_event_intake (0023 owns it). A second table would be a second list that drifts.");
-const mirror = "supabase/migrations/20260917040000_plan_an_event_pipeline.sql";
-if (!fs.existsSync(mirror)) failures.push(`${mirror} is missing; only supabase/migrations reaches production.`);
-else { examined += 1; if (fs.readFileSync(mirror, "utf8") !== migration) failures.push(`${mirror} drifted from the canonical migration.`); }
+{
+  const { requireD1, d1Sql } = require("./lib/d1Schema");
+  failures.push(...requireD1("request_event_intake", ["  budget_range TEXT,", "  state TEXT NOT NULL", "  confirm_token TEXT,", "  settlement_method TEXT,", "  instructions_sent_at TEXT,", "request_event_intake_confirm_token_idx"]));
+  failures.push(...requireD1("how_it_works_pages", ["  slug TEXT NOT NULL,"]));
+  examined += 1;
+  if ((d1Sql().match(/CREATE TABLE IF NOT EXISTS request_event_intake \(/g) || []).length !== 1) failures.push("request_event_intake must be created exactly once in migrations-d1. A second table would be a second list that drifts.");
+}
 
 // 3 — the state machine, and the ONE function that writes "paid".
 const pipeline = read("services/event-intake/eventRequestPipeline.ts");

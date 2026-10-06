@@ -1,6 +1,6 @@
 const fs = require("fs");
 /**
- * Real speed networking (16 Sep 2026). Static contract: the 0027 migration and its Supabase mirror
+ * Real speed networking (16 Sep 2026). Static contract: the D1 networking tables (migrations-d1/0005)
  * are byte-identical and probed by the health endpoint; both runtime stores implement the queue and
  * match rows; the matcher runs on every read through the existing pure engine with the match
  * history (no repeats); a networking room token goes only to the two matched attendees; the
@@ -9,22 +9,20 @@ const fs = require("fs");
 function read(file) { if (!fs.existsSync(file)) throw new Error(`Missing ${file}`); return fs.readFileSync(file, "utf8"); }
 let examined = 0;
 function check(file, tokens) { const body = read(file); examined += 1; const missing = tokens.filter((t) => !body.includes(t)); if (missing.length) throw new Error(`${file} missing: ${missing.join(" | ")}`); return body; }
-const canonical = "db/migrations/0027_speed_networking.sql";
-const mirror = "supabase/migrations/20260916140000_speed_networking.sql";
-if (read(canonical) !== read(mirror)) throw new Error(`${mirror} must be byte-identical to ${canonical}`);
-examined += 2;
+const canonical = "migrations-d1/0005_networking_email.sql";
+examined += 1;
 // The live project carries legacy speed_networking_* tables (0010: uuid ids, foreign keys). A new table
 // must never reuse those names: "create table if not exists" would silently keep the old shape.
 for (const legacy of ["speed_networking_entries", "speed_networking_matches", "speed_networking_queues", "speed_networking_reports", "speed_networking_skips"]) {
-  for (const file of [canonical, "services/runtime/supabaseRuntimeStore.ts", "scripts/validate_supabase_schema_parity.js", "services/events/eventRepository.ts"]) {
+  for (const file of ["migrations-d1/0001_core.sql", "migrations-d1/0002_approvals_inbox.sql", "migrations-d1/0003_runtime.sql", "migrations-d1/0004_attendees_live.sql", canonical, "migrations-d1/0006_events_audit_auth.sql", "lib/d1/schema.generated.ts", "services/runtime/d1RuntimeStore.ts", "services/events/eventRepository.ts"]) {
     if (read(file).includes(legacy)) throw new Error(`${file} must not touch the legacy table ${legacy}; the runtime queue lives in networking_queue_*.`);
   }
 }
-check(canonical, ["create table if not exists public.networking_queue_entries", "create table if not exists public.networking_queue_matches", "unique (event_id, attendee_id)", "normalized_pair_key"]);
-check("types/runtimeEvent.ts", ['SPEED_NETWORKING_MIGRATION_FILE = "db/migrations/0027_speed_networking.sql"', "networking_queue_entries: SPEED_NETWORKING_MIGRATION_FILE", "networking_queue_matches: SPEED_NETWORKING_MIGRATION_FILE"]);
+check(canonical, ["CREATE TABLE IF NOT EXISTS networking_queue_entries (", "CREATE TABLE IF NOT EXISTS networking_queue_matches (", "UNIQUE (event_id, attendee_id)", "  normalized_pair_key TEXT NOT NULL,"]);
+check("types/runtimeEvent.ts", ['SPEED_NETWORKING_MIGRATION_FILE = "migrations-d1/0005_networking_email.sql"']);
 check("services/events/eventRepository.ts", ['["networking_queue_entries", () => store.listSpeedNetworkingEntries("__schema_probe__")]', '["networking_queue_matches", () => store.listSpeedNetworkingMatches("__schema_probe__")]']);
-check("scripts/validate_supabase_schema_parity.js", ["networking_queue_entries:", "networking_queue_matches:"]);
-for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) check(store, ["upsertSpeedNetworkingEntry", "getSpeedNetworkingEntry", "listSpeedNetworkingEntries", "upsertSpeedNetworkingMatch", "getSpeedNetworkingMatch", "listSpeedNetworkingMatches"]);
+check("lib/d1/schema.generated.ts", ['"networking_queue_entries": {\n    "file": "migrations-d1/0005_networking_email.sql"', '"networking_queue_matches": {\n    "file": "migrations-d1/0005_networking_email.sql"']);
+for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) check(store, ["upsertSpeedNetworkingEntry", "getSpeedNetworkingEntry", "listSpeedNetworkingEntries", "upsertSpeedNetworkingMatch", "getSpeedNetworkingMatch", "listSpeedNetworkingMatches"]);
 check("services/runtime/runtimeStore.ts", ["speedNetworkingEntries: SpeedNetworkingQueueEntry[]", "speedNetworkingMatches: SpeedNetworkingMatchRecord[]"]);
 check("services/speed-networking/speedNetworkingService.ts", ["planSpeedNetworkingRound({ eventId, waiting: candidates", "export async function runNetworkingMatcher", 'await endMatch(eventId, match.id, "expired")', "speedNetworkingRoomName(eventId, matchId)", "settings.matchMinutes * 60_000", "export function tokenAllowedForRoom", "match.attendeeAId === attendeeId || match.attendeeBId === attendeeId", "export async function getMyNetworkingState"]);
 check("types/speedNetworking.ts", ["SPEED_NETWORKING_DEFAULT_MINUTES = 4", "-net-"]);

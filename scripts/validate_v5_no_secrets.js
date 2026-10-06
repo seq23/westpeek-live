@@ -61,7 +61,7 @@ const hardFailSecretPatterns = [
 ];
 
 const sourceSecretPatterns = [
-  /SUPABASE_SERVICE_ROLE_KEY[ \t]*=[ \t]*[^\n#]+/,
+  /CLOUDFLARE_API_TOKEN[ \t]*=[ \t]*[^\n#]+/,
   /RESEND_API_KEY[ \t]*=[ \t]*[^\n#]+/,
   /LIVEKIT_API_SECRET[ \t]*=[ \t]*[^\n#]+/,
   /CLOUDFLARE_API_TOKEN[ \t]*=[ \t]*[^\n#]+/

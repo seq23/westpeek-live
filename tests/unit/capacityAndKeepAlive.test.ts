@@ -1,13 +1,16 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
-import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, LIVEKIT_TIERS, SUPABASE_PLAN, fractionUsed, livekitAllowance, livekitPlan, livekitTier } from "@/lib/capacity/capacityPlans";
-import { readLiveKitLiveSnapshot } from "@/services/capacity/capacityReadingService";
-import { KEEP_ALIVE_PROBE_KEY, pingRuntimeStore } from "@/services/runtime/supabaseKeepAlive";
+import { execSync } from "node:child_process";
+import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, D1_PLAN, LIVEKIT_TIERS, R2_PLAN, fractionUsed, livekitAllowance, livekitPlan, livekitTier } from "@/lib/capacity/capacityPlans";
+import { pingDatabase, readLiveKitLiveSnapshot } from "@/services/capacity/capacityReadingService";
+import { setD1ForTests } from "@/lib/d1/binding";
+import { createTestD1 } from "./helpers/d1";
 
 /**
  * The plans were read off the provider dashboards on 16 Sep 2026. Three things have to stay true:
  * the allowances are what the dashboards said, an allowance nobody confirmed reports unknown rather
- * than a comfortable zero, and the keep-alive is registered somewhere that actually runs it.
+ * than a comfortable zero, and the database reading is a real read (D1 never pauses, so the old
+ * keep-alive is gone rather than kept alive for nothing).
  */
 describe("LiveKit plan allowances", () => {
   it("Ship carries the numbers the dashboard showed, transcode minutes first", () => {
@@ -45,7 +48,8 @@ describe("LiveKit plan allowances", () => {
   it("the other three plans live here too, so no number is retyped into prose", () => {
     expect(CLOUDFLARE_WORKERS_PLAN).toMatchObject({ monthlyUsd: 5, includedRequests: 10_000_000, cpuMsPerInvocation: 30_000, variablesPerWorker: 128, repoVariableBudget: 60 });
     expect(CLOUDFLARE_STREAM_PLAN).toMatchObject({ usdPerThousandMinutesStored: 5, usdPerThousandMinutesDelivered: 1, liveInputName: "westpeek-fallback" });
-    expect(SUPABASE_PLAN).toMatchObject({ databaseMb: 500, egressGb: 5, autoPauseIdleDays: 7, backups: false });
+    expect(D1_PLAN).toMatchObject({ databaseGb: 5, rowsReadPerMonth: 25_000_000_000, rowsWrittenPerMonth: 50_000_000, idlePause: false });
+    expect(R2_PLAN).toMatchObject({ storageGbMonth: 10, classAOpsPerMonth: 1_000_000, classBOpsPerMonth: 10_000_000, egressFees: false });
   });
 });
 
@@ -85,49 +89,49 @@ describe("a reading we could not take", () => {
   });
 });
 
-describe("the Supabase keep-alive", () => {
-  it("is registered on a schedule that names the route it calls", () => {
-    const workflow = fs.readFileSync(".github/workflows/supabase-keep-alive.yml", "utf8");
-    expect(workflow).toMatch(/^\s+- cron: /m);
-    expect(workflow).toContain("/api/runtime/keep-alive");
-    // A green run against the file store would have kept nothing awake.
-    expect(workflow).toContain('"store":"supabase"');
-    expect(fs.existsSync("app/api/runtime/keep-alive/route.ts")).toBe(true);
+describe("the database reading (D1, no keep-alive)", () => {
+  it("the keep-alive workflow, route and service are gone, and nothing calls them", () => {
+    expect(fs.existsSync(".github/workflows/supabase-keep-alive.yml")).toBe(false);
+    expect(fs.existsSync("app/api/runtime/keep-alive/route.ts")).toBe(false);
+    expect(fs.existsSync("services/runtime/supabaseKeepAlive.ts")).toBe(false);
+    const callers = execSync("git grep -l -e '/api/runtime/keep-alive' -e 'pingRuntimeStore' -e 'KEEP_ALIVE_PROBE_KEY' -- app components lib services .github || true", { encoding: "utf8" }).trim();
+    expect(callers).toBe("");
   });
 
-  it("is idempotent: it only reads, and two pings leave the same state", async () => {
-    const service = fs.readFileSync("services/runtime/supabaseKeepAlive.ts", "utf8");
-    for (const write of ["upsert", "insert", "set", "append", "delete"]) {
-      expect(service.includes(`store.${write}`)).toBe(false);
+  it("a real read against a migrated D1 answers yes with the database size", async () => {
+    const env = await createTestD1();
+    setD1ForTests(env.db);
+    try {
+      const first = await pingDatabase();
+      const second = await pingDatabase();
+      expect(first).toMatchObject({ ok: true, detail: "single read succeeded" });
+      expect(second.ok).toBe(true);
+      expect(typeof first.sizeMb).toBe("number");
+      // Reading is all it does: two pings leave the same database.
+      expect(second.sizeMb).toBe(first.sizeMb);
+    } finally {
+      setD1ForTests(undefined);
+      await env.dispose();
     }
-    expect(service).not.toMatch(/console\.(log|warn|error|info)/);
-    const first = await pingRuntimeStore();
-    const second = await pingRuntimeStore();
-    expect(first.ok).toBe(true);
-    expect(second.ok).toBe(true);
-    expect(second.store).toBe(first.store);
-    // The probe key must never become a real contact row.
-    expect(KEEP_ALIVE_PROBE_KEY).toContain("__");
-  });
+  }, 30_000);
 
-  it("the route answers, twice, with the same shape and no new state", async () => {
-    const { GET } = await import("@/app/api/runtime/keep-alive/route");
-    const first = await GET();
-    const second = await GET();
-    expect(first.status).toBe(200);
-    expect(second.status).toBe(200);
-    expect(first.headers.get("cache-control")).toBe("no-store");
-    const firstBody = await first.json();
-    const secondBody = await second.json();
-    expect(firstBody.ok).toBe(true);
-    expect(secondBody.store).toBe(firstBody.store);
-    expect(secondBody.detail).toBeUndefined();
-  });
+  it("no binding, or a database that cannot be read, is a no — never a pass", async () => {
+    setD1ForTests(undefined);
+    expect(await pingDatabase()).toMatchObject({ ok: false, sizeMb: null });
+    const bare = await createTestD1({ migrate: false });
+    setD1ForTests(bare.db);
+    try {
+      expect(await pingDatabase()).toMatchObject({ ok: false, detail: expect.stringMatching(/no such table/) });
+    } finally {
+      setD1ForTests(undefined);
+      await bare.dispose();
+    }
+  }, 30_000);
 
-  it("the route hands back the store it pinged, so an inert ping is visible", () => {
-    const route = fs.readFileSync("app/api/runtime/keep-alive/route.ts", "utf8");
-    expect(route).toContain("pingRuntimeStore");
-    expect(route).toContain("store: ping.store");
-    expect(route).not.toMatch(/console\.(log|warn|error|info)/);
+  it("the readout labels the database section from the D1/R2 plans and links the health probe", () => {
+    const readout = fs.readFileSync("components/capacity/CapacityReadout.tsx", "utf8");
+    expect(readout).toContain("position.database.map");
+    expect(readout).toContain('href="/api/runtime/health"');
+    expect(readout).toContain('reading.key === "databaseAnswering"');
   });
 });

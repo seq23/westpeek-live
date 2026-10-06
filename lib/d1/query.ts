@@ -36,10 +36,15 @@ type Mode = "select" | "insert" | "upsert" | "update" | "delete";
 
 const IDENT = /^[a-z_][a-z0-9_]*$/;
 
+/**
+ * Backtick-quoted on purpose: SQLite reads an unknown "double-quoted" name as a STRING LITERAL, so a
+ * missing column would select its own name and a filter on it would silently match nothing. A
+ * backticked name has no such fallback — an unknown column is an error, as it was in Postgres.
+ */
 function ident(name: string) {
   const trimmed = name.trim();
   if (!IDENT.test(trimmed)) throw new Error(`d1: refused identifier "${name}"`);
-  return `"${trimmed}"`;
+  return `\`${trimmed}\``;
 }
 
 function kindOf(table: string, column: string): D1ColumnKind | undefined {
@@ -117,6 +122,8 @@ export class D1Query<T = any> implements PromiseLike<DbResult<T>> {
   private orders: string[] = [];
   private limitCount?: number;
   private singleMode: "many" | "single" | "maybe" = "many";
+  /** A chain that could not be built answers with an error value, like a database error would. */
+  private buildError?: string;
 
   constructor(private readonly db: D1DatabaseLike, private readonly table: string) {
     ident(table);
@@ -192,7 +199,11 @@ export class D1Query<T = any> implements PromiseLike<DbResult<T>> {
   }
 
   or(expression: string) {
-    this.filters.push(parseOr(this.table, expression));
+    try {
+      this.filters.push(parseOr(this.table, expression));
+    } catch (error) {
+      this.buildError = error instanceof Error ? error.message : String(error);
+    }
     return this;
   }
 
@@ -272,6 +283,7 @@ export class D1Query<T = any> implements PromiseLike<DbResult<T>> {
   }
 
   async execute(): Promise<DbResult<T>> {
+    if (this.buildError) return { data: null, error: { message: this.buildError } };
     try {
       const table = ident(this.table);
       if (this.mode === "select") {

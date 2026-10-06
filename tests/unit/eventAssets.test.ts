@@ -28,10 +28,10 @@ describe("event assets", () => {
     expect(assetUploadRefusal({ mimeType: "application/pdf", sizeBytes: 0 })).toContain("empty");
   });
 
-  it("without Supabase storage the upload is refused with the reason and the link path is offered", async () => {
+  it("without the R2 bucket bound the upload is refused with the reason and the link path is offered", async () => {
     const ticket = await requestAssetUpload({ eventId: "event-a", fileName: "deck.pdf", mimeType: "application/pdf", sizeBytes: 1000 });
     expect(ticket.ok).toBe(false);
-    if (!ticket.ok) expect(ticket.reason).toMatch(/Paste a link|not configured/i);
+    if (!ticket.ok) expect(ticket.reason).toMatch(/not bound on this deployment \(R2 binding ASSETS_BUCKET\)\. Paste a link/);
   });
 
   it("a speaker's upload waits in review; production's own does not", async () => {

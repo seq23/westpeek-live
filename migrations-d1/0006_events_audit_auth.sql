@@ -125,7 +125,7 @@ CREATE TABLE IF NOT EXISTS v6_support_requests (
   CHECK ((status IN ('open', 'triaged', 'resolved')))
 );
 CREATE INDEX IF NOT EXISTS v6_support_requests_event_status_idx ON v6_support_requests (event_id, status, created_at DESC);
--- App-owned self-serve login (replaces Supabase Auth). Passwords: PBKDF2-SHA256 via Web Crypto,
+-- App-owned self-serve login (replaces the hosted auth service; docs/SUPABASE_TO_CLOUDFLARE.md). Passwords: PBKDF2-SHA256 via Web Crypto,
 -- per-user random salt, iteration count stored per row so it can be raised later without a reset.
 -- Sessions and reset tokens are stored only as SHA-256 hashes of the random value in the cookie/link.
 CREATE TABLE IF NOT EXISTS auth_users (

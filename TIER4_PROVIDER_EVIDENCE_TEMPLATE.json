@@ -28,7 +28,7 @@
     "cleanupAttempted": true,
     "cleanupDeleted": true
   },
-  "supabaseProductionPersistence": {
+  "d1ProductionPersistence": {
     "writeReadbackVerified": true,
     "createdRecordIdRedacted": "REDACTED_OR_TRUNCATED_ID_ONLY",
     "refreshReentryVerified": true,

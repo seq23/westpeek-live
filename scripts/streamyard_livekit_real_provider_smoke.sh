@@ -54,7 +54,7 @@ if [[ ! -f "$TIER4_STREAMYARD_LIVE_EVIDENCE_PATH" ]]; then
   exit 2
 fi
 
-if grep -Eiq 'LIVEKIT_API_SECRET|LIVEKIT_WEBHOOK_SECRET|SUPABASE_SERVICE_ROLE_KEY|RESEND_API_KEY|DAILY_API_KEY|ZOOM_MEETING_SDK_SECRET|V5_ACCESS_COOKIE_SECRET|rtmps?://|Bearer[[:space:]]+[A-Za-z0-9._~+/=-]{16,}' "$TIER4_STREAMYARD_LIVE_EVIDENCE_PATH"; then
+if grep -Eiq 'LIVEKIT_API_SECRET|LIVEKIT_WEBHOOK_SECRET|CLOUDFLARE_API_TOKEN|RESEND_API_KEY|DAILY_API_KEY|ZOOM_MEETING_SDK_SECRET|V5_ACCESS_COOKIE_SECRET|rtmps?://|Bearer[[:space:]]+[A-Za-z0-9._~+/=-]{16,}' "$TIER4_STREAMYARD_LIVE_EVIDENCE_PATH"; then
   echo "streamyard_livekit_real_provider_smoke: FAIL — evidence file appears to contain unredacted secret/provider material. Redact before continuing."
   exit 1
 fi

@@ -167,14 +167,15 @@ describe("the stage shows publishers only, and reset drops the participant", () 
 });
 
 describe("speed networking tables are the runtime ones, and a failing card never takes a page down", () => {
-  it("migration 0028 moves the legacy uuid tables aside before creating the runtime ones, and the supabase mirror is byte-identical", async () => {
+  it("the D1 schema carries only the runtime networking tables, with text ids, and none of the legacy uuid ones", async () => {
     const { readFileSync } = await import("node:fs");
-    const a = readFileSync(new URL("../../db/migrations/0028_speed_networking_runtime_tables.sql", import.meta.url), "utf8");
-    const b = readFileSync(new URL("../../supabase/migrations/20260916160000_speed_networking_runtime_tables.sql", import.meta.url), "utf8");
-    expect(a).toBe(b);
-    expect(a).toMatch(/rename to speed_networking_matches_legacy_v1/);
-    expect(a).toMatch(/rename to speed_networking_entries_legacy_v1/);
-    expect(a.indexOf("rename to")).toBeLessThan(a.indexOf("create table if not exists public.speed_networking_entries"));
+    const sql = readFileSync(new URL("../../migrations-d1/0005_networking_email.sql", import.meta.url), "utf8");
+    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS networking_queue_entries \(\n  id TEXT NOT NULL/);
+    expect(sql).toMatch(/CREATE TABLE IF NOT EXISTS networking_queue_matches \(\n  id TEXT NOT NULL/);
+    expect(sql).toMatch(/CHECK \(\(status IN \('waiting', 'matched', 'done', 'left'\)\)\)/);
+    const all = ["0001_core", "0002_approvals_inbox", "0003_runtime", "0004_attendees_live", "0005_networking_email", "0006_events_audit_auth"].map((f) => readFileSync(new URL(`../../migrations-d1/${f}.sql`, import.meta.url), "utf8")).join("\n");
+    expect(all).not.toMatch(/speed_networking_(entries|matches)/);
+    expect(all).not.toMatch(/legacy_v1/);
   });
   it("the crew networking card and the attendee queue panel catch store failures", async () => {
     const { readFileSync } = await import("node:fs");

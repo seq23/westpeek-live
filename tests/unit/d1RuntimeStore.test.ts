@@ -180,17 +180,17 @@ describe("D1RuntimeStore against migrations-d1 on a real D1", () => {
   });
 
   it("runs live chat: post, moderate, delta-poll, clear, rate and moderation state", async () => {
-    await store.appendLiveChatMessage({ id: "m1", eventId: EVENT, roomKind: "stage", roomId: "main", attendeeId: "a1", displayName: "Ada", message: "hello", moderationStatus: "visible", createdAt: T0 });
-    await store.appendLiveChatMessage({ id: "m2", eventId: EVENT, roomKind: "stage", roomId: "main", attendeeId: "a2", displayName: "Bo", message: "spam", moderationStatus: "visible", createdAt: T1 });
+    await store.appendLiveChatMessage({ id: "m1", eventId: EVENT, roomKind: "main_stage" as never, roomId: "main", attendeeId: "a1", displayName: "Ada", message: "hello", moderationStatus: "visible", createdAt: T0 });
+    await store.appendLiveChatMessage({ id: "m2", eventId: EVENT, roomKind: "main_stage" as never, roomId: "main", attendeeId: "a2", displayName: "Bo", message: "spam", moderationStatus: "visible", createdAt: T1 });
     const hidden = await store.updateLiveChatMessageModeration({ id: "m2", eventId: EVENT, moderationStatus: "hidden", moderatedBy: "crew", moderatedAt: T2 });
     expect(hidden).toMatchObject({ id: "m2", moderationStatus: "hidden", moderatedBy: "crew" });
-    expect((await store.listLiveChatMessages(EVENT, "stage", "main")).map((m) => m.id)).toEqual(["m1"]);
-    expect((await store.listLiveChatMessages(EVENT, "stage", "main", { includeHidden: true })).map((m) => m.id)).toEqual(["m1", "m2"]);
+    expect((await store.listLiveChatMessages(EVENT, "main_stage", "main")).map((m) => m.id)).toEqual(["m1"]);
+    expect((await store.listLiveChatMessages(EVENT, "main_stage", "main", { includeHidden: true })).map((m) => m.id)).toEqual(["m1", "m2"]);
     // The delta poll sees the hide (moderated_at after T1) though m2 was created at T1.
-    expect((await store.listLiveChatMessagesSince(EVENT, "stage", "main", T1)).map((m) => m.id)).toEqual(["m2"]);
+    expect((await store.listLiveChatMessagesSince(EVENT, "main_stage", "main", T1)).map((m) => m.id)).toEqual(["m2"]);
     expect((await store.listRecentLiveChatMessages(EVENT, 1)).map((m) => m.id)).toEqual(["m2"]);
-    expect(await store.archiveLiveChatRoomMessages({ eventId: EVENT, roomKind: "stage", roomId: "main", archivedAt: T2, archivedBy: "crew" })).toBe(2);
-    expect(await store.listLiveChatMessages(EVENT, "stage", "main", { includeHidden: true })).toEqual([]);
+    expect(await store.archiveLiveChatRoomMessages({ eventId: EVENT, roomKind: "main_stage", roomId: "main", archivedAt: T2, archivedBy: "crew" })).toBe(2);
+    expect(await store.listLiveChatMessages(EVENT, "main_stage", "main", { includeHidden: true })).toEqual([]);
 
     const rate = { key: `${EVENT}:a1`, eventId: EVENT, attendeeId: "a1", recent: [T0], updatedAt: T0 } as never;
     await store.setLiveChatRateState(rate);

@@ -56,7 +56,7 @@ if (staleProviderFound.length) {
 }
 
 const providerSecretPatterns = [
-  /SUPABASE_SERVICE_ROLE_KEY\s*=\s*eyJ/i,
+  /CLOUDFLARE_API_TOKEN\s*=\s*[A-Za-z0-9_-]{20,}/i,
   /LIVEKIT_API_SECRET\s*=\s*\S+/i,
   /DAILY_API_KEY\s*=\s*\S+/i,
   /RESEND_API_KEY\s*=\s*re_/i,

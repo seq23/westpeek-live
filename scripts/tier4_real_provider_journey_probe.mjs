@@ -17,7 +17,7 @@ const trace = [];
 const secrets = new Map();
 
 for (const key of [
-  'LIVEKIT_API_SECRET', 'LIVEKIT_WEBHOOK_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'RESEND_API_KEY', 'DAILY_API_KEY', 'ZOOM_MEETING_SDK_SECRET', 'V5_ACCESS_COOKIE_SECRET', 'CLOUDFLARE_STREAM_API_TOKEN', 'CLOUDFLARE_API_TOKEN'
+  'LIVEKIT_API_SECRET', 'LIVEKIT_WEBHOOK_SECRET', 'CLOUDFLARE_API_TOKEN', 'RESEND_API_KEY', 'DAILY_API_KEY', 'ZOOM_MEETING_SDK_SECRET', 'V5_ACCESS_COOKIE_SECRET', 'CLOUDFLARE_STREAM_API_TOKEN', 'CLOUDFLARE_API_TOKEN'
 ]) {
   if (process.env[key]) secrets.set(key, process.env[key]);
 }
@@ -171,7 +171,7 @@ async function roleBoundaryLane() {
   const unauthZoom = await postJson('/api/video/zoom-signature', payload, undefined);
   const unauthDaily = await postJson('/api/video/daily-token', payload, undefined);
   const denied = [unauthIngress.response.status, unauthZoom.response.status, unauthDaily.response.status].every((status) => [400, 401, 403, 409, 500, 502].includes(status));
-  const noSecrets = [unauthIngress.text, unauthZoom.text, unauthDaily.text].every((text) => !/LIVEKIT_API_SECRET|LIVEKIT_WEBHOOK_SECRET|DAILY_API_KEY|ZOOM_MEETING_SDK_SECRET|SUPABASE_SERVICE_ROLE_KEY|stream[_\s-]*key|rtmps?:\/\//i.test(text));
+  const noSecrets = [unauthIngress.text, unauthZoom.text, unauthDaily.text].every((text) => !/LIVEKIT_API_SECRET|LIVEKIT_WEBHOOK_SECRET|DAILY_API_KEY|ZOOM_MEETING_SDK_SECRET|CLOUDFLARE_API_TOKEN|stream[_\s-]*key|rtmps?:\/\//i.test(text));
   if (!denied || !noSecrets) return addLane('role boundary private provider APIs', 'FAIL', { error: `unexpected unauth statuses/secrets: ingress=${unauthIngress.response.status}, zoom=${unauthZoom.response.status}, daily=${unauthDaily.response.status}` });
   const operatorState = await fetchJson(`${baseUrl}/api/video/stage-stream-state?eventId=${encodeURIComponent(eventId)}&stageId=${encodeURIComponent(stageId)}&view=operator`, { headers: { cookie } });
   if (![200, 401, 403, 409, 503].includes(operatorState.response.status)) return addLane('role boundary private provider APIs', 'FAIL', { error: `operator state returned ${operatorState.response.status}` });
@@ -238,20 +238,31 @@ async function livekitLane() {
   addLane('LiveKit real ingress via deployed app', 'PASS', { eventId, stageId, roomName: ingress.roomName, ingressIdRedacted: redact(ingress.ingressId), rtmpUrlPresent: Boolean(ingress.rtmpUrl), streamKeyPresent: Boolean(ingress.streamKey), status: ingress.status, providerResourceCreated: true, ...cleanup });
 }
 
-async function supabaseLane() {
-  const missing = ['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'].filter((key) => !process.env[key]);
-  if (missing.length) return addLane('Supabase production persistence readback', 'BLOCKED', { reason: `missing ${missing.join(', ')}` });
-  const table = process.env.TIER4_SUPABASE_PROOF_TABLE || 'v5_analytics_events';
+/** The production D1 id is wrangler.jsonc's, so the probe can never write to a database the Worker does not use. */
+function productionD1Id() {
+  const text = fs.readFileSync(new URL('../wrangler.jsonc', import.meta.url), 'utf8');
+  return /"database_name":\s*"west-peek-live"[\s\S]*?"database_id":\s*"([0-9a-f-]{36})"/.exec(text)?.[1] || /"database_id":\s*"([0-9a-f-]{36})"[\s\S]*?"database_name":\s*"west-peek-live"/.exec(text)?.[1];
+}
+
+async function d1Lane() {
+  const missing = ['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'].filter((key) => !process.env[key]);
+  if (missing.length) return addLane('D1 production persistence readback', 'BLOCKED', { reason: `missing ${missing.join(', ')}` });
+  const databaseId = productionD1Id();
+  if (!databaseId) return addLane('D1 production persistence readback', 'FAIL', { error: 'wrangler.jsonc names no database_id for west-peek-live' });
+  const table = process.env.TIER4_D1_PROOF_TABLE || 'v5_analytics_events';
+  if (!/^[a-z_][a-z0-9_]*$/.test(table)) return addLane('D1 production persistence readback', 'FAIL', { error: `refused table name ${table}` });
   const id = `tier4-${crypto.randomUUID()}`;
-  const url = `${process.env.NEXT_PUBLIC_SUPABASE_URL.replace(/\/$/, '')}/rest/v1/${table}`;
-  const headers = { apikey: process.env.SUPABASE_SERVICE_ROLE_KEY, authorization: `Bearer ${process.env.SUPABASE_SERVICE_ROLE_KEY}`, 'content-type': 'application/json', prefer: 'return=representation' };
-  const payload = { id, event_id: eventId, kind: 'tier4_provider_proof', subject_id: 'tier4', metadata: { tier: 4, generatedAt: nowIso(), noDemoFallback: true }, created_at: nowIso() };
-  const inserted = await fetchJson(url, { method: 'POST', headers, body: JSON.stringify(payload) });
-  if (![200, 201].includes(inserted.response.status)) return addLane('Supabase production persistence readback', 'FAIL', { error: `insert ${table} returned ${inserted.response.status}: ${inserted.text.slice(0, 300)}` });
-  const selected = await fetchJson(`${url}?id=eq.${encodeURIComponent(id)}&select=id,event_id,kind,subject_id,metadata,created_at`, { headers });
-  if (!selected.response.ok || !Array.isArray(selected.json) || selected.json[0]?.id !== id || selected.json[0]?.event_id !== eventId) return addLane('Supabase production persistence readback', 'FAIL', { error: `readback failed ${selected.response.status}: ${selected.text.slice(0, 300)}` });
-  const deleted = await fetchText(`${url}?id=eq.${encodeURIComponent(id)}`, { method: 'DELETE', headers });
-  addLane('Supabase production persistence readback', 'PASS', { table, insertedId: redact(id), eventId, readbackVerified: true, cleanupStatus: deleted.response.ok ? 'deleted' : `delete returned ${deleted.response.status}` });
+  const url = `https://api.cloudflare.com/client/v4/accounts/${process.env.CLOUDFLARE_ACCOUNT_ID}/d1/database/${databaseId}/query`;
+  const headers = { authorization: `Bearer ${process.env.CLOUDFLARE_API_TOKEN}`, 'content-type': 'application/json' };
+  const query = (sql, params) => fetchJson(url, { method: 'POST', headers, body: JSON.stringify({ sql, params }) });
+  const metadata = JSON.stringify({ tier: 4, generatedAt: nowIso(), noDemoFallback: true });
+  const inserted = await query(`INSERT INTO ${table} (id, event_id, kind, subject_id, metadata, created_at) VALUES (?, ?, ?, ?, ?, ?)`, [id, eventId, 'tier4_provider_proof', 'tier4', metadata, nowIso()]);
+  if (!inserted.response.ok || inserted.json?.success !== true) return addLane('D1 production persistence readback', 'FAIL', { error: `insert ${table} returned ${inserted.response.status}: ${inserted.text.slice(0, 300)}` });
+  const selected = await query(`SELECT id, event_id, kind FROM ${table} WHERE id = ?`, [id]);
+  const row = selected.json?.result?.[0]?.results?.[0];
+  if (!selected.response.ok || row?.id !== id || row?.event_id !== eventId) return addLane('D1 production persistence readback', 'FAIL', { error: `readback failed ${selected.response.status}: ${selected.text.slice(0, 300)}` });
+  const deleted = await query(`DELETE FROM ${table} WHERE id = ?`, [id]);
+  addLane('D1 production persistence readback', 'PASS', { table, insertedId: redact(id), eventId, readbackVerified: true, cleanupStatus: deleted.response.ok && deleted.json?.success === true ? 'deleted' : `delete returned ${deleted.response.status}` });
 }
 
 
@@ -400,7 +411,7 @@ async function run() {
   if (!failures.length || exerciseEveryConfiguredRung) await roleBoundaryLane().catch((error) => addLane('role boundary private provider APIs', 'FAIL', { error: error.message }));
   if (!failures.length || exerciseEveryConfiguredRung) await livekitLane().catch((error) => addLane('LiveKit real ingress via deployed app', 'FAIL', { error: error.message }));
   if (!failures.length || exerciseEveryConfiguredRung) await cloudflareStreamFallbackLane().catch((error) => addLane('Cloudflare Stream Live fallback provider', 'FAIL', { error: error.message }));
-  if (!failures.length || exerciseEveryConfiguredRung) await supabaseLane().catch((error) => addLane('Supabase production persistence readback', 'FAIL', { error: error.message }));
+  if (!failures.length || exerciseEveryConfiguredRung) await d1Lane().catch((error) => addLane('D1 production persistence readback', 'FAIL', { error: error.message }));
   if (!failures.length || exerciseEveryConfiguredRung) await dailyLane().catch((error) => addLane('Daily real fallback provider', 'FAIL', { error: error.message }));
   if (!failures.length || exerciseEveryConfiguredRung) await zoomLane().catch((error) => addLane('Zoom authorized manual escalation', 'FAIL', { error: error.message }));
   if (!failures.length || exerciseEveryConfiguredRung) await googleMeetLane().catch((error) => addLane('Google Meet manual fallback continuity', 'FAIL', { error: error.message }));

@@ -44,13 +44,12 @@ if (!/maxAge: sessionMaxAgeSeconds\(days\)/.test(session)) throw new Error("The 
 
 // The per-event value must actually reach the database, not stop at the type.
 check("types/runtimeEvent.ts", ["attendeeSessionDays?: number"]);
-check("services/runtime/supabaseRuntimeStore.ts", ["attendee_session_days: event.attendeeSessionDays ?? null", "attendeeSessionDays: row.attendee_session_days"]);
+check("services/runtime/d1RuntimeStore.ts", ["attendee_session_days: event.attendeeSessionDays ?? null", "attendeeSessionDays: row.attendee_session_days"]);
 check("services/events/eventRepository.ts", ['"attendeeSessionDays"']);
-for (const migration of ["db/migrations/0038_attendee_session_lifetime.sql", "supabase/migrations/20260917060000_attendee_session_lifetime.sql"]) {
-  check(migration, ["alter table public.runtime_events add column if not exists attendee_session_days integer;"]);
-}
-if (read("db/migrations/0038_attendee_session_lifetime.sql") !== read("supabase/migrations/20260917060000_attendee_session_lifetime.sql")) {
-  throw new Error("Migration 0039 and its Supabase mirror must be byte-identical.");
+{
+  const failures = require("./lib/d1Schema").requireD1("runtime_events", ["  attendee_session_days INTEGER,"]);
+  if (failures.length) throw new Error(failures.join("; "));
+  examined += 1;
 }
 
 // 2 · The second device: one field, rate-limited, and silent about who is registered.

@@ -154,11 +154,9 @@ if (/const CODE_SHAPES = \[\//.test(manualValidator)) failures.push("validate_ma
 
 // ─── 5. House defaults, each one consumed ───────────────────────────────────────────────────────
 requireTokens("types/houseDefaults.ts", ["HOUSE_DEFAULTS_ID", "starterTemplatesInstalledAt", "isSendableAddress"]);
-requireTokens("db/migrations/0043_house_defaults.sql", ["create table if not exists public.runtime_house_defaults", "default_registration_questions", "livekit_tier", "starter_templates_installed_at"]);
-const mirror = "supabase/migrations/20260917110000_house_defaults.sql";
+failures.push(...require("./lib/d1Schema").requireD1("runtime_house_defaults", ["  default_registration_questions TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(default_registration_questions))", "  livekit_tier TEXT", "  starter_templates_installed_at TEXT", "  logo_storage_path TEXT"]));
 examined += 1;
-if (!fs.existsSync(mirror) || fs.readFileSync(mirror, "utf8") !== fs.readFileSync("db/migrations/0043_house_defaults.sql", "utf8")) failures.push(`${mirror} must be a byte-identical mirror of db/migrations/0043_house_defaults.sql`);
-for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) requireTokens(store, ["getHouseDefaults", "setHouseDefaults"]);
+for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) requireTokens(store, ["getHouseDefaults", "setHouseDefaults"]);
 requireTokens("services/agencies/houseDefaultsService.ts", ["houseDefaultsFloor", "saveHouseDefaults", "houseLivekitTier", "setHouseLogo", "markStarterTemplatesInstalled"]);
 requireTokens("components/settings/HouseDefaultsPanel.tsx", ["house-from-email", "house-reply-to", "house-timezone", "house-livekit-tier", "house-networking-minutes", "house-session-days", "house-registration-questions", "verified"]);
 requireTokens("components/settings/HouseLogoUploader.tsx", ["requestHouseLogoUploadAction", "signedUrl", "confirmHouseLogoUploadAction"]);

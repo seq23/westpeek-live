@@ -28,7 +28,7 @@ if (!/Tier 4[\s\S]{0,1200}real StreamYard[\s\S]{0,1200}LiveKit/i.test(tierDoc)) 
 if (!/COMPLETE from Tier 3 when real provider proof is required/i.test(tierDoc)) failures.push('TIER_VALIDATION_MODEL.md must forbid COMPLETE from Tier 3 when Tier 4 is required.');
 
 const providerDoc = read('REAL_PROVIDER_LANE_MATRIX.md');
-for (const term of ['LiveKit media lifecycle', 'StreamYard live broadcast', 'Daily fallback', 'Zoom manual escalation', 'Supabase persistence', 'Email / Resend', 'Cloudflare/OpenNext Worker']) {
+for (const term of ['LiveKit media lifecycle', 'StreamYard live broadcast', 'Daily fallback', 'Zoom manual escalation', 'D1 persistence', 'Email / Resend', 'Cloudflare/OpenNext Worker']) {
   if (!providerDoc.includes(term)) failures.push(`REAL_PROVIDER_LANE_MATRIX.md missing provider lane: ${term}`);
 }
 if (!/Only Tier 4 may satisfy real live provider operational proof/i.test(providerDoc)) failures.push('REAL_PROVIDER_LANE_MATRIX.md must state only Tier 4 satisfies real live provider proof.');

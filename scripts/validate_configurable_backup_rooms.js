@@ -111,19 +111,13 @@ check("components/testing/StreamYardIngressPanel.tsx", ["BackupRoomsCard", "ladd
 check("components/stage/GoLiveCard.tsx", ["BackupRoomsCard"]);
 check("app/app/events/[eventId]/video/main-stage/page.tsx", ["BackupRoomsCard"]);
 
-const migration = check("db/migrations/0045_event_backup_rooms.sql", [
-  "create table if not exists public.event_backup_rooms",
-  "zoom_meeting_number",
-  "zoom_passcode",
-  "google_meet_url",
-  "primary key (event_id, stage_id)",
-]);
-const mirror = "supabase/migrations/20260917130000_event_backup_rooms.sql";
-must(fs.existsSync(mirror), `${mirror} is missing; the migration would never run in production.`);
-if (fs.existsSync(mirror)) { examined += 1; must(read(mirror) === migration, "The 0045 mirror drifted from the canonical migration."); }
-const map = check("types/runtimeEvent.ts", ["event_backup_rooms: EVENT_BACKUP_ROOMS_MIGRATION_FILE"]);
-must(map.includes("0045_event_backup_rooms.sql"), "event_backup_rooms must be registered against the migration that creates it, or /api/runtime/health cannot probe it.");
-for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) {
+// The table lives in migrations-d1 (applied before every deploy) and is in the generated map the
+// health probe reads, pointing at the file that creates it.
+for (const failure of require("./lib/d1Schema").requireD1("event_backup_rooms", ["  zoom_meeting_number TEXT,", "  zoom_passcode TEXT,", "  google_meet_url TEXT,", "  PRIMARY KEY (event_id, stage_id)"])) must(false, failure);
+examined += 1;
+check("lib/d1/schema.generated.ts", ['"event_backup_rooms": {\n    "file": "migrations-d1/0003_runtime.sql"']);
+check("types/runtimeEvent.ts", ['EVENT_BACKUP_ROOMS_MIGRATION_FILE = "migrations-d1/0003_runtime.sql"']);
+for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) {
   check(store, ["getEventBackupRoom", "setEventBackupRoom"]);
 }
 check("tests/unit/backupRooms.test.ts", [

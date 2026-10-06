@@ -124,23 +124,23 @@ const actions = check("lib/actions/groupEmailActions.ts", ['requireLiveEventCont
 must(!/setInterval|setTimeout|cron|scheduled/i.test(codeOnly(actions)), "Nothing may send on a timer.");
 must(actions.includes('viewer.kind !== "owner" && viewer.kind !== "operator"'), "A send with no event reaches people across every show and must take an owner or operator sign-in.");
 
-// 6 · the migration, and the mirror that actually reaches production ---------------------------
-const migration = check("db/migrations/0044_email_group_sends_and_unsubscribes.sql", [
-  "create table if not exists public.runtime_email_unsubscribes",
-  "create table if not exists public.runtime_email_group_sends",
-  "alter table public.runtime_email_sends add column if not exists group_send_id text",
-  "alter table public.special_guest_profiles add column if not exists email text",
-  "resubscribed_at",
-]);
-must(migration.includes("email text primary key"), "The unsubscribe list is keyed by person, not by event: one row per address.");
-const mirror = "supabase/migrations/20260917120000_email_group_sends_and_unsubscribes.sql";
-must(fs.existsSync(mirror), `${mirror} is missing; the migration would never run in production.`);
-if (fs.existsSync(mirror)) { examined += 1; must(read(mirror) === migration, "The 0044 mirror drifted from the canonical migration."); }
+// 6 · the schema, in migrations-d1 (applied before every deploy) ---------------------------------
+{
+  const { requireD1 } = require("./lib/d1Schema");
+  for (const failure of [
+    ...requireD1("runtime_email_unsubscribes", ["  resubscribed_at TEXT,", "  email_hash TEXT NOT NULL,"]),
+    ...requireD1("runtime_email_group_sends", ["  recipient_count INTEGER", "  suppressed_count INTEGER"]),
+    ...requireD1("runtime_email_sends", ["  group_send_id TEXT,"]),
+    ...requireD1("special_guest_profiles", ["  email TEXT,"]),
+  ]) must(false, failure);
+  examined += 1;
+  must(require("./lib/d1Schema").d1Table("runtime_email_unsubscribes").sql.includes("  PRIMARY KEY (email)\n"), "The unsubscribe list is keyed by person, not by event: one row per address.");
+}
 
 // A speaker had no address to email before today: the field and the form that fills it.
 check("types/specialGuest.ts", ["email?: string"]);
 check("components/guests/GuestIdentityForm.tsx", ['name="email"', "guest-email"]);
-for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) {
+for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) {
   check(store, ["appendEmailGroupSend", "listEmailGroupSends", "upsertEmailUnsubscribe", "listEmailUnsubscribes"]);
 }
 check("tests/unit/groupEmail.test.ts", [
