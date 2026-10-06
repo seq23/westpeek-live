@@ -6,7 +6,7 @@ if (!baseUrl) {
 
 /**
  * A deploy rolls out over seconds; checking the URL the moment `wrangler deploy` returns can read the
- * PREVIOUS version (6 Oct 2026: three 500s from the outgoing Supabase build, seconds after the D1
+ * PREVIOUS version (6 Oct 2026: three 500s from the outgoing pre-D1 build, seconds after the D1
  * build deployed). When SMOKE_EXPECT_BUILD_ID is set (the deploy workflow passes the commit), every
  * check below waits until /api/runtime/build-id answers that build five times in a row, and fails by
  * name if it never does — it never checks whichever version happens to answer.
