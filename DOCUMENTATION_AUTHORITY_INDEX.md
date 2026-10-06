@@ -33,6 +33,7 @@ This index classifies documentation without deleting historical evidence. Only r
 - `VISIBLE_CONTROL_INVENTORY.md`
 - `WEST_PEEK_SUITE_MASTER_CONTRACT_REMEDIATION_PLAN_2026-06-14_REV3.md`
 - `docs/ACTIVE_DOCS.md`
+- `docs/SUPABASE_TO_CLOUDFLARE.md`
 - `docs/AGENCY_EVENT_OS_DAY1_OPERATOR_PACKET.md`
 - `docs/BRANDING_ROLLOUT_CHECKLIST.md`
 - `docs/BRAND_SYSTEM_WEST_PEEK_LIVE.md`

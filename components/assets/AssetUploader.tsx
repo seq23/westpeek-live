@@ -4,9 +4,10 @@ import { confirmAssetUploadAction, requestAssetUploadAction } from "@/lib/action
 import { assetSizeLabel, assetUploadRefusal, EVENT_ASSET_MAX_BYTES } from "@/types/eventAssets";
 
 /**
- * Drag a file in or choose one. The bytes go straight from this browser to Supabase Storage through
- * a signed URL the server mints — the Worker never carries the file. Every refusal is said in
- * words, and when storage is not configured the page says so and offers the link instead.
+ * Drag a file in or choose one. The server mints a short-lived signed link to /api/assets/upload,
+ * which streams the bytes into the private R2 bucket; the row is written only once the object is
+ * there. Every refusal is said in words, and when storage is not bound the page says so and offers
+ * the link instead.
  */
 export function AssetUploader({ eventId, who = "production" }: { eventId: string; who?: string }) {
   const input = useRef<HTMLInputElement>(null);
@@ -30,7 +31,8 @@ export function AssetUploader({ eventId, who = "production" }: { eventId: string
       return;
     }
     startTransition(async () => {
-      await confirmAssetUploadAction({ eventId, assetId: ticket.assetId, storagePath: ticket.storagePath, fileName: file.name, mimeType: file.type || "application/octet-stream", sizeBytes: file.size });
+      const confirmed = await confirmAssetUploadAction({ eventId, assetId: ticket.assetId, storagePath: ticket.storagePath, fileName: file.name, mimeType: file.type || "application/octet-stream", sizeBytes: file.size });
+      if (!confirmed.ok) { setState({ kind: "error", message: confirmed.reason }); return; }
       setState({ kind: "done", message: `${file.name} is in the library.` });
     });
   }

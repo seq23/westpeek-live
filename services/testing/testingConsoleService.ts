@@ -1,14 +1,15 @@
 import type { DiagnosticCheck, DiagnosticStatus, TestingConsoleSnapshot } from "@/types/testing";
 import { baselineTestingConsoleSnapshot } from "./mockTestingData";
 import { getVideoFallbackPolicy } from "@/services/video";
-import { isDailyConfigured, isDailyFallbackEnabled, isResendConfigured, isSupabaseAdminConfigured } from "@/lib/env";
+import { isDailyConfigured, isDailyFallbackEnabled, isResendConfigured } from "@/lib/env";
+import { getD1 } from "@/lib/d1/binding";
 
 
 function buildRuntimeSmokeChecks(): DiagnosticCheck[] {
   const dailyReady = isDailyConfigured();
   const dailyEnabled = isDailyFallbackEnabled();
   const resendReady = isResendConfigured();
-  const supabaseReady = isSupabaseAdminConfigured();
+  const databaseReady = Boolean(getD1());
 
   return [
     {
@@ -34,13 +35,13 @@ function buildRuntimeSmokeChecks(): DiagnosticCheck[] {
       metadata: { resendReady },
     },
     {
-      id: "runtime-supabase-admin-config",
-      label: "Supabase write/read readiness",
+      id: "runtime-d1-binding",
+      label: "D1 write/read readiness",
       description: "Checks service-role configuration needed for server-side read/write smoke tests.",
-      status: supabaseReady ? "pass" : "fail",
+      status: databaseReady ? "pass" : "fail",
       severity: "critical",
-      recommendedAction: supabaseReady ? "Run write/read smoke after deploy." : "Set NEXT_PUBLIC_SUPABASE_URL and SUPABASE_SERVICE_ROLE_KEY.",
-      metadata: { supabaseReady },
+      recommendedAction: databaseReady ? "Run write/read smoke after deploy." : "Bind the D1 database as DB in wrangler.jsonc.",
+      metadata: { databaseReady },
     },
   ];
 }

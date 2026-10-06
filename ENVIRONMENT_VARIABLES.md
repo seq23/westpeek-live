@@ -43,8 +43,6 @@ Purpose: safe env contract for local, CI, Cloudflare Worker, postdeploy, and pro
 | `NEXT_PUBLIC_APP_URL` | Required production/Cloudflare secret or env value. |
 | `NEXT_PUBLIC_BUILD_ID` | Build-time stamp set by `next.config.js` (never a secret, never set by hand): `WORKERS_CI_COMMIT_SHA` on Workers Builds, else the git head, else the clock; `dev` under `next dev`. Inlined into the client bundle and the Worker so the venue polls can tell a stale page a new version is live and reload it (build-version watchdog). |
 | `NEXT_PUBLIC_SELF_SERVE_ENABLED` | Required production/Cloudflare secret or env value. |
-| `NEXT_PUBLIC_SUPABASE_ANON_KEY` | Required production/Cloudflare secret or env value. |
-| `NEXT_PUBLIC_SUPABASE_URL` | Required production/Cloudflare secret or env value. |
 | `OPERATOR_LAUNCHPAD_PASSWORD` | Required production/Cloudflare secret or env value. |
 | `OWNER_MASTER_ACCESS_PASSWORD` | Required production/Cloudflare secret or env value. |
 | `OWNER_MASTER_ACCESS_PASSWORD_2` | Optional second owner master password (≥12 chars, must differ from every other production password). Honoured everywhere the first is: /production-access/owner and the owner override on the operator, crew, and special-guest gates. The owner cookie records `ownerKey: "primary" \| "secondary"` so the access audit can tell them apart; both are full owners. Set with `npx wrangler secret put OWNER_MASTER_ACCESS_PASSWORD_2`; absent means only the first works. |
@@ -52,7 +50,6 @@ Purpose: safe env contract for local, CI, Cloudflare Worker, postdeploy, and pro
 | `SELF_SERVE_EVENT_CREATION_ENABLED` | Required production/Cloudflare secret or env value. |
 | `STAGE_STREAM_DEFAULT_SOURCE` | Required production/Cloudflare secret or env value. |
 | `STREAMYARD_PRIMARY_ENABLED` | Required production/Cloudflare secret or env value. |
-| `SUPABASE_SERVICE_ROLE_KEY` | Required production/Cloudflare secret or env value. |
 | `V5_ACCESS_COOKIE_SECRET` | Required production/Cloudflare secret or env value. |
 | `V5_CREW_COOKIE_NAME` | Required production/Cloudflare secret or env value. |
 | `V5_OPERATOR_COOKIE_NAME` | Required production/Cloudflare secret or env value. |
@@ -146,7 +143,6 @@ Do not commit `.env.local`.
 | `TIER4_EVENT_ID` | Local/operator-run proof control. Event id used for Tier 4 deployed provider/persistence/user-journey proof. |
 | `TIER4_STAGE_ID` | Local/operator-run proof control. Stage id used for Tier 4 StreamYard/LiveKit and fallback proof. |
 | `TIER4_ZOOM_MEETING_NUMBER` | Local/operator-run proof control. Non-secret Zoom meeting number used for authorized SDK signature proof. |
-| `TIER4_SUPABASE_PROOF_TABLE` | Local/operator-run proof control. Supabase table used for production write/readback proof; default is v5_analytics_events. |
 | `TIER4_RESEND_SEND_APPROVED` | Local/operator-run proof control. Must be 1 before Tier 4 sends exactly one approved Resend test email. |
 | `TIER4_CONTINUE_AFTER_FAILURE` | Local/operator-run diagnostic control. Set to 1 only when intentionally harvesting all Tier 4 failures in one run. |
 

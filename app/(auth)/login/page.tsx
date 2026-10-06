@@ -9,7 +9,7 @@ export default async function LoginPage({ searchParams }: { searchParams: Promis
       <div className="mx-auto max-w-md rounded-3xl border border-slate-200 bg-white p-6 shadow-sm">
         <p className="text-sm font-medium text-slate-500">West Peek Live!</p>
         <h1 className="mt-2 text-3xl font-semibold text-slate-950">Log in</h1>
-        <p className="mt-2 text-slate-600">Use your Supabase Auth account to access the correct agency, client, speaker, sponsor, or crew surface.</p>
+        <p className="mt-2 text-slate-600">Use your West Peek Live account to reach your agency, client, speaker, sponsor, or crew surface.</p>
         <AuthStatusBanner error={resolvedSearchParams.error} notice={resolvedSearchParams.notice} />
         <LoginForm next={resolvedSearchParams.next ?? "/app"} />
         <div className="mt-4 flex justify-between text-sm text-slate-500">

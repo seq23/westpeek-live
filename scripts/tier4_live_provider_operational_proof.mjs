@@ -11,7 +11,7 @@ fs.mkdirSync(reportsDir, { recursive: true });
 const redactionPatterns = [
   /LIVEKIT_API_SECRET/i,
   /LIVEKIT_WEBHOOK_SECRET/i,
-  /SUPABASE_SERVICE_ROLE_KEY/i,
+  /CLOUDFLARE_API_TOKEN/i,
   /RESEND_API_KEY/i,
   /DAILY_API_KEY/i,
   /ZOOM_MEETING_SDK_SECRET/i,
@@ -46,7 +46,7 @@ function sanitizeOutput(raw) {
   const envSecretKeys = [
     'LIVEKIT_API_SECRET',
     'LIVEKIT_WEBHOOK_SECRET',
-    'SUPABASE_SERVICE_ROLE_KEY',
+    'CLOUDFLARE_API_TOKEN',
     'RESEND_API_KEY',
     'DAILY_API_KEY',
     'ZOOM_MEETING_SDK_SECRET',
@@ -253,7 +253,7 @@ function inspectEvidence(file, failures) {
     'cleanupStatus',
     'deploymentIdentity',
     'livekitProviderApi',
-    'supabaseProductionPersistence',
+    'd1ProductionPersistence',
     'roleBoundaryProof'
   ];
   for (const key of required) {
@@ -283,9 +283,9 @@ function inspectEvidence(file, failures) {
     if (cleanupStatus === 'deleted' && evidence.cleanupDeleted !== true) failures.push('StreamYard/LiveKit: evidence.cleanupDeleted must be true when cleanupStatus=deleted.');
     if (cleanupStatus === 'deleted' && livekitProof.cleanupAttempted !== true) failures.push('StreamYard/LiveKit: livekitProviderApi.cleanupAttempted must be true when cleanupStatus=deleted.');
   }
-  const supabaseProof = evidence.supabaseProductionPersistence || {};
-  if (supabaseProof.writeReadbackVerified !== true) failures.push('StreamYard/LiveKit: supabaseProductionPersistence.writeReadbackVerified must be true.');
-  if (supabaseProof.noDemoFallback !== true) failures.push('StreamYard/LiveKit: supabaseProductionPersistence.noDemoFallback must be true.');
+  const d1Proof = evidence.d1ProductionPersistence || {};
+  if (d1Proof.writeReadbackVerified !== true) failures.push('StreamYard/LiveKit: d1ProductionPersistence.writeReadbackVerified must be true.');
+  if (d1Proof.noDemoFallback !== true) failures.push('StreamYard/LiveKit: d1ProductionPersistence.noDemoFallback must be true.');
   const roleProof = evidence.roleBoundaryProof || {};
   if (roleProof.privateProviderControlsDeniedToPublic !== true) failures.push('StreamYard/LiveKit: roleBoundaryProof.privateProviderControlsDeniedToPublic must be true.');
   if (roleProof.eventScopedAccessVerified !== true) failures.push('StreamYard/LiveKit: roleBoundaryProof.eventScopedAccessVerified must be true.');
@@ -376,7 +376,7 @@ requireAll(['LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'LIVEKIT_WEB
 
 const evidence = inspectEvidence(process.env.TIER4_STREAMYARD_LIVE_EVIDENCE_PATH, failures);
 
-requireAll(['NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY'], failures, 'Supabase production persistence');
+requireAll(['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'], failures, 'D1 production persistence');
 
 const cloudflareStreamEnabled = optionalLaneEnabled(['CLOUDFLARE_STREAM_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_STREAM_API_TOKEN', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_STREAM_FALLBACK_ENABLED']);
 if (cloudflareStreamEnabled) {
@@ -404,7 +404,7 @@ const envKeys = [
   'POSTDEPLOY_BASE_URL', 'SMOKE_BASE_URL', 'PLAYWRIGHT_BASE_URL', 'NEXT_PUBLIC_APP_URL',
   'TIER4_LIVE_PROVIDER_OPERATIONAL_PROOF', 'STREAMYARD_REAL_PROVIDER_SMOKE', 'STREAMYARD_OPERATOR_CONFIRMED_BROADCAST',
   'LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'LIVEKIT_WEBHOOK_SECRET', 'LIVEKIT_INGRESS_RTMP_BASE_URL',
-  'NEXT_PUBLIC_SUPABASE_URL', 'NEXT_PUBLIC_SUPABASE_ANON_KEY', 'SUPABASE_SERVICE_ROLE_KEY',
+  'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID',
   'CLOUDFLARE_STREAM_ACCOUNT_ID', 'CLOUDFLARE_ACCOUNT_ID', 'CLOUDFLARE_STREAM_API_TOKEN', 'CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_STREAM_FALLBACK_ENABLED', 'TIER4_CLOUDFLARE_STREAM_CONTROLLED_BROADCASTER',
   'DAILY_API_KEY', 'DAILY_DOMAIN', 'DAILY_API_BASE_URL', 'DAILY_FALLBACK_ENABLED',
   'ZOOM_MEETING_SDK_KEY', 'ZOOM_MEETING_SDK_SECRET',

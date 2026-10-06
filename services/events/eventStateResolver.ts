@@ -60,7 +60,7 @@ export function resolveHydratedEventJoinCode(rawCode: string | undefined): V4Joi
   };
 }
 
-/** Runtime store first (Supabase in production, file store locally), compiled seed JSON second. */
+/** Runtime store first (D1 in production, file store locally), compiled seed JSON second. */
 export async function resolveEventJoinCode(rawCode: string | undefined): Promise<V4JoinResolution> {
   const code = rawCode?.trim().toLowerCase();
   // A typed code may be mangled (no prefix, capitals, a space); the record found tells us the real

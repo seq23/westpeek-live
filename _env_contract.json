@@ -34,15 +34,12 @@
     "LIVEKIT_WEBHOOK_SECRET",
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_SELF_SERVE_ENABLED",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "NEXT_PUBLIC_SUPABASE_URL",
     "OPERATOR_LAUNCHPAD_PASSWORD",
     "OWNER_MASTER_ACCESS_PASSWORD",
     "RESEND_API_KEY",
     "SELF_SERVE_EVENT_CREATION_ENABLED",
     "STAGE_STREAM_DEFAULT_SOURCE",
     "STREAMYARD_PRIMARY_ENABLED",
-    "SUPABASE_SERVICE_ROLE_KEY",
     "V5_ACCESS_COOKIE_SECRET",
     "V5_CREW_COOKIE_NAME",
     "V5_OPERATOR_COOKIE_NAME",
@@ -116,7 +113,6 @@
     "TIER4_RESEND_SEND_APPROVED",
     "TIER4_STAGE_ID",
     "TIER4_STREAMYARD_LIVE_EVIDENCE_PATH",
-    "TIER4_SUPABASE_PROOF_TABLE",
     "TIER4_ZOOM_MEETING_NUMBER"
   ],
   "cloudflareSecretEnv": [
@@ -149,15 +145,12 @@
     "LIVEKIT_WEBHOOK_SECRET",
     "NEXT_PUBLIC_APP_URL",
     "NEXT_PUBLIC_SELF_SERVE_ENABLED",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-    "NEXT_PUBLIC_SUPABASE_URL",
     "OPERATOR_LAUNCHPAD_PASSWORD",
     "OWNER_MASTER_ACCESS_PASSWORD",
     "RESEND_API_KEY",
     "SELF_SERVE_EVENT_CREATION_ENABLED",
     "STAGE_STREAM_DEFAULT_SOURCE",
     "STREAMYARD_PRIMARY_ENABLED",
-    "SUPABASE_SERVICE_ROLE_KEY",
     "V5_ACCESS_COOKIE_SECRET",
     "V5_CREW_COOKIE_NAME",
     "V5_OPERATOR_COOKIE_NAME",
@@ -176,9 +169,6 @@
     "STAGE_STREAM_DEFAULT_SOURCE",
     "DAILY_API_KEY",
     "DAILY_DOMAIN",
-    "SUPABASE_SERVICE_ROLE_KEY",
-    "NEXT_PUBLIC_SUPABASE_URL",
-    "NEXT_PUBLIC_SUPABASE_ANON_KEY",
     "V5_ACCESS_COOKIE_SECRET",
     "OPERATOR_LAUNCHPAD_PASSWORD",
     "OWNER_MASTER_ACCESS_PASSWORD"
@@ -187,7 +177,6 @@
     "LIVEKIT_API_SECRET",
     "LIVEKIT_WEBHOOK_SECRET",
     "DAILY_API_KEY",
-    "SUPABASE_SERVICE_ROLE_KEY",
     "V5_ACCESS_COOKIE_SECRET",
     "RESEND_API_KEY",
     "ZOOM_MEETING_SDK_SECRET"
@@ -209,9 +198,9 @@
       "proof": "fallback smoke or UNPROVEN"
     },
     {
-      "provider": "Supabase",
-      "usage": "production persistence/auth-adjacent data.",
-      "proof": "provider integration tests with safe test data or UNPROVEN"
+      "provider": "Cloudflare D1 + R2",
+      "usage": "production persistence (binding DB), event assets and the house logo (binding ASSETS_BUCKET), self-serve login tables.",
+      "proof": "tests/unit/d1RuntimeStore.test.ts on a real D1 + /api/runtime/health migrationCoverage after deploy, or UNPROVEN"
     },
     {
       "provider": "Cloudflare Worker/OpenNext",

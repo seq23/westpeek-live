@@ -7,8 +7,10 @@ const fs = require("fs");
  *     lives in lib/capacity/capacityPlans.ts and nowhere else.
  *  2. A readout that shows 0 where it means "we could not read it". On the 28th of a busy month
  *     that zero reads as "600 minutes left" and is the most expensive lie the page could tell.
- *  3. A keep-alive that exists but nothing runs — Supabase pauses anyway and the app is dead on
- *     the next open. The schedule, the route and the store assertion are all checked here.
+ *  3. A database reading that passes without reading. D1 never pauses, so the hosted-Postgres
+ *     keep-alive is gone (6 Oct 2026); what is checked now is that the database row on the readout
+ *     comes from a real D1 read, that a missing binding or a failed read is a "no", and that nothing
+ *     resurrects the keep-alive.
  */
 let examined = 0;
 function read(file) { if (!fs.existsSync(file)) throw new Error(`Missing ${file}`); examined += 1; return fs.readFileSync(file, "utf8"); }
@@ -22,9 +24,9 @@ function check(file, tokens) {
 // 1. The allowances, in one place, with the Ship numbers the dashboard showed on 16 Sep 2026.
 const plans = check("lib/capacity/capacityPlans.ts", [
   "export type LiveKitTier", "export function livekitTier", "export function livekitPlan", "export function fractionUsed",
-  "CLOUDFLARE_WORKERS_PLAN", "CLOUDFLARE_STREAM_PLAN", "SUPABASE_PLAN", "LIVEKIT_TIER",
+  "CLOUDFLARE_WORKERS_PLAN", "CLOUDFLARE_STREAM_PLAN", "D1_PLAN", "R2_PLAN", "LIVEKIT_TIER",
 ]);
-for (const number of ["600", "150_000", "250", "1_000", "0.02", "0.0005", "0.12", "10_000_000", "128", "500", "autoPauseIdleDays: 7"]) {
+for (const number of ["600", "150_000", "250", "1_000", "0.02", "0.0005", "0.12", "10_000_000", "128", "databaseGb: 5", "rowsReadPerMonth: 25_000_000_000", "rowsWrittenPerMonth: 50_000_000", "storageGbMonth: 10", "idlePause: false", "egressFees: false"]) {
   if (!plans.includes(number)) throw new Error(`lib/capacity/capacityPlans.ts has lost the plan figure ${number}`);
 }
 if (!/included: null/.test(plans)) throw new Error("An allowance nobody read from the dashboard must be null, never 0.");
@@ -37,7 +39,7 @@ if (!/return used \/ included/.test(plans)) throw new Error("fractionUsed must d
 const service = check("services/capacity/capacityReadingService.ts", [
   "/twirp/livekit.", "normalizeLiveKitApiBaseUrl", "RoomService/ListRooms", "Ingress/ListIngress", "roomList: true",
   "export async function readCapacityPosition", "export async function readLiveKitLiveSnapshot",
-  "unknownReason", "pingRuntimeStore",
+  "unknownReason", "export async function pingDatabase", "size_after", "D1 binding DB is not available",
 ]);
 if (!/value: null/.test(service)) throw new Error("A reading that could not be taken must carry value: null.");
 if (/value: 0,\s*unit/.test(service)) throw new Error("A reading defaults to 0 somewhere — an unread number must be null.");
@@ -60,17 +62,16 @@ check("app/app/capacity/page.tsx", ["CapacityReadout", "readV5AccessCookie", 'op
 check("lib/auth/v5RouteAuthorization.ts", ['"/app/capacity"']);
 check("components/production/OperatorLaunchpad.tsx", ['href="/app/capacity"']);
 
-// 3. The keep-alive: a trivial read, no writes, no noise, and something that runs it.
-const keepAlive = check("services/runtime/supabaseKeepAlive.ts", ["export async function pingRuntimeStore", "getContact(KEEP_ALIVE_PROBE_KEY)", "KEEP_ALIVE_PROBE_KEY"]);
-if (/console\.(log|warn|error|info)/.test(keepAlive)) throw new Error("The keep-alive must log nothing: daily noise in the tail hides a real show-day error.");
-for (const write of ["upsert", "setStageStreamState", "append"]) {
-  if (keepAlive.includes(`store.${write}`) || keepAlive.includes(`.${write}(`)) throw new Error(`The keep-alive must only read; it calls ${write}.`);
+// 3. The database reading: a real read, never a pass without one; no keep-alive left behind.
+const ping = service.slice(service.indexOf("export async function pingDatabase"));
+if (/console\.(log|warn|error|info)/.test(ping)) throw new Error("The database reading must log nothing.");
+for (const write of ["INSERT", "UPDATE", "DELETE", ".run()"]) if (ping.includes(write)) throw new Error(`The database reading must only read; it uses ${write}.`);
+if (!/catch \(error\) \{\s*return \{ ok: false/.test(ping)) throw new Error("A failed database read must come back ok:false.");
+for (const gone of [".github/workflows/" + "supa" + "base-keep-alive.yml", "app/api/runtime/keep-alive/route.ts", "services/runtime/" + "supa" + "baseKeepAlive.ts"]) {
+  examined += 1;
+  if (fs.existsSync(gone)) throw new Error(`${gone} must stay deleted: D1 never pauses, so a keep-alive keeps nothing alive.`);
 }
-const route = check("app/api/runtime/keep-alive/route.ts", ["pingRuntimeStore", "store: ping.store", '"cache-control": "no-store"']);
-if (/console\.(log|warn|error|info)/.test(route)) throw new Error("The keep-alive route must log nothing.");
-const workflow = check(".github/workflows/supabase-keep-alive.yml", ["/api/runtime/keep-alive", "workflow_dispatch", '"store":"supabase"', "timeout-minutes:"]);
-if (!/^\s+- cron: /m.test(workflow)) throw new Error("The keep-alive workflow has no schedule — it would only ever run when somebody remembered to press the button.");
-if (/continue-on-error:\s*true/.test(workflow)) throw new Error("The keep-alive must not hide a paused project behind continue-on-error.");
+check("components/capacity/CapacityReadout.tsx", ["position.database.map", 'href="/api/runtime/health"']);
 
 // LIVEKIT_TIER is classified where every other env name is, so the registry validator can see it.
 const registry = JSON.parse(read("deployment/env-var-registry.json"));
@@ -83,7 +84,7 @@ check("docs/CAPACITY.md", ["600", "150,000", "250 GB", "1,000", "Transcode minut
 check("docs/manual-notes/capacity.md", ["/app/capacity", "keep-alive"]);
 
 // The behaviour is proven by tests, not by this file's reading of the source.
-check("tests/unit/capacityAndKeepAlive.test.ts", ["a tier nobody read off the dashboard reports unknown, never zero", "is idempotent: it only reads", "is registered on a schedule"]);
+check("tests/unit/capacityAndKeepAlive.test.ts", ["a tier nobody read off the dashboard reports unknown, never zero", "the keep-alive workflow, route and service are gone, and nothing calls them", "no binding, or a database that cannot be read, is a no — never a pass"]);
 
 if (examined < 12) throw new Error(`validate_capacity_and_keepalive_contract examined only ${examined} files — it cannot have checked the contract.`);
-console.log(`validate_capacity_and_keepalive_contract: PASS — ${examined} files examined; allowances, unknown-not-zero and the keep-alive schedule proven by tests/unit/capacityAndKeepAlive.test.ts.`);
+console.log(`validate_capacity_and_keepalive_contract: PASS — ${examined} files examined; allowances, unknown-not-zero and a real D1 read (no keep-alive) proven by tests/unit/capacityAndKeepAlive.test.ts.`);

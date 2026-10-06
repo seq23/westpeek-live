@@ -2,6 +2,7 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthCookieName, getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { isProtectedPath } from "@/lib/auth/routeAccess";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
+import { isValidSelfServeSession } from "@/lib/auth/selfServeSession";
 import { canCrewAccessPath, canOperatorAccessPath, canOwnerAccessPath, canSpecialGuestAccessPath, canViewAsAccessPath, specialGuestEntryPathFor } from "@/lib/auth/v5RouteAuthorization";
 
 async function readCrewAccess(request: NextRequest) {
@@ -57,9 +58,12 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (!isProtectedPath(pathname)) return NextResponse.next();
 
-  let sessionCookie: string | undefined;
-  try { sessionCookie = request.cookies.get(getAuthCookieName())?.value; } catch { sessionCookie = undefined; }
-  if (sessionCookie && (pathname.startsWith("/app") || pathname.startsWith("/admin"))) return noStore(NextResponse.next(), pathname);
+  // A self-serve session opens /app and /admin only when its token matches a live session row in D1.
+  if (pathname.startsWith("/app") || pathname.startsWith("/admin")) {
+    let sessionCookie: string | undefined;
+    try { sessionCookie = request.cookies.get(getAuthCookieName())?.value; } catch { sessionCookie = undefined; }
+    if (sessionCookie && (await isValidSelfServeSession(sessionCookie))) return noStore(NextResponse.next(), pathname);
+  }
 
   const ownerAccess = await readOwnerAccess(request);
   if (canOwnerAccessPath(pathname, ownerAccess)) return noStore(NextResponse.next(), pathname);

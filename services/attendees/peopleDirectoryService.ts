@@ -74,7 +74,7 @@ export async function archiveTestPeople(actorLabel: string) {
   const readBack = await listContacts(true).catch(() => [] as ContactRecord[]);
   const stillActive = archivedContacts.filter((email) => readBack.some((row) => row.email === email && !row.archivedAt));
   if (archivedContacts.length && stillActive.length === archivedContacts.length) {
-    throw new Error("The archive did not stick: contacts.archived_at is missing. Apply db/migrations/0030_contact_archive.sql (mirrored at supabase/migrations/20260916190000_contact_archive.sql) and try again.");
+    throw new Error("The archive did not stick: contacts.archived_at is missing. Apply migrations-d1 (npx wrangler d1 migrations apply west-peek-live --remotearchive.sql) and try again.");
   }
   // The hash is deterministic, so every attendee row for an archived contact is reachable without
   // scanning: archive the test ones, and never touch a row that belongs to a real event.

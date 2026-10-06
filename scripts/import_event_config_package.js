@@ -30,7 +30,7 @@ function copyTree(from, to) {
       copyTree(source, target);
     } else if (entry.isFile()) {
       const body = fs.readFileSync(source);
-      if (body.toString("utf8").match(/(sk_live_[A-Za-z0-9]|SUPABASE_SERVICE_ROLE_KEY[ \t]*=[ \t]*[^\n#]+|RESEND_API_KEY[ \t]*=[ \t]*[^\n#]+|LIVEKIT_API_SECRET[ \t]*=[ \t]*[^\n#]+|-----BEGIN PRIVATE KEY-----)/)) fail(`Secret-like value found in ${source}`);
+      if (body.toString("utf8").match(/(sk_live_[A-Za-z0-9]|CLOUDFLARE_API_TOKEN[ \t]*=[ \t]*[^\n#]+|RESEND_API_KEY[ \t]*=[ \t]*[^\n#]+|LIVEKIT_API_SECRET[ \t]*=[ \t]*[^\n#]+|-----BEGIN PRIVATE KEY-----)/)) fail(`Secret-like value found in ${source}`);
       fs.mkdirSync(path.dirname(target), { recursive: true });
       fs.writeFileSync(target, body);
     }

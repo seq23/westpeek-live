@@ -779,10 +779,7 @@
         "LIVEKIT_URL",
         "LIVEKIT_API_KEY",
         "LIVEKIT_API_SECRET",
-        "LIVEKIT_WEBHOOK_SECRET",
-        "NEXT_PUBLIC_SUPABASE_URL",
-        "NEXT_PUBLIC_SUPABASE_ANON_KEY",
-        "SUPABASE_SERVICE_ROLE_KEY"
+        "LIVEKIT_WEBHOOK_SECRET"
       ],
       "blockerPolicy": "HARD FAIL FOR COMPLETE WHEN APPLICABLE; does not block local structural validation without live inputs.",
       "productionRisk": "Real live-provider operational proof can create external state, leak secrets in evidence, or falsely claim live-event readiness if under-proven.",

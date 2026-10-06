@@ -7,5 +7,22 @@
   "assets": {
     "directory": ".open-next/assets",
     "binding": "ASSETS"
-  }
+  },
+  // The runtime store. Schema: migrations-d1/, applied by the deploy workflow before every deploy.
+  "d1_databases": [
+    {
+      "binding": "DB",
+      "database_name": "west-peek-live",
+      "database_id": "48e46056-cecf-4c08-990d-3ca7e8f2d518",
+      "migrations_dir": "migrations-d1"
+    }
+  ],
+  // Event assets and the house logo. Private: bytes move only through /api/assets/upload and
+  // /api/assets/file with links the Worker signed.
+  "r2_buckets": [
+    {
+      "binding": "ASSETS_BUCKET",
+      "bucket_name": "west-peek-live-assets"
+    }
+  ]
 }

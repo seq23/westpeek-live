@@ -15,9 +15,16 @@ export interface CrewPageReadsProbe {
 
 export async function probeCrewPageReads(): Promise<CrewPageReadsProbe> {
   const store = getRuntimeStore();
-  const events = await listEventRecords().catch(() => []);
+  // A store that cannot list events is a failed probe, never "nothing to probe yet": swallowing this
+  // read reported ok:true for a day while the database behind it was gone (6 Oct 2026).
+  let events: Awaited<ReturnType<typeof listEventRecords>>;
+  try {
+    events = await listEventRecords();
+  } catch (error) {
+    return { ok: false, reads: [{ name: "runtime_events", ok: false, detail: (error instanceof Error ? error.message : String(error)).slice(0, 200) }] };
+  }
   const event = events.filter((item) => item.source !== "seed" && item.status !== "archived").sort((a, b) => b.createdAt.localeCompare(a.createdAt))[0];
-  if (!event) return { ok: true, reads: [{ name: "runtime_event", ok: true, detail: "no runtime event to probe yet" }] };
+  if (!event) return { ok: true, reads: [{ name: "runtime_event", ok: true, detail: "no runtime event to probe yet (the event list itself was read)" }] };
   const reads: Array<[string, () => Promise<unknown>]> = [
     ["attendee_profiles", () => store.listAttendeeProfiles(event.id, 5)],
     ["attendee_live_capabilities", () => store.listAttendeeLiveCapabilities(event.id)],
@@ -29,7 +36,7 @@ export async function probeCrewPageReads(): Promise<CrewPageReadsProbe> {
     ["networking_queue_entries", () => store.listSpeedNetworkingEntries(event.id)],
     ["networking_queue_matches", () => store.listSpeedNetworkingMatches(event.id)],
     // contacts.archived_at (migration 0030): a COLUMN, not a table. A read of just that column
-    // fails by name when the Supabase mirror has not been applied — which is how "Archive test
+    // fails by name when the D1 migration has not been applied — which is how "Archive test
     // rows" came to press against a column that was not there.
     ["contacts_archived_at", () => store.probeContactsArchiveColumn()],
   ];

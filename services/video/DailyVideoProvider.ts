@@ -195,9 +195,6 @@ export class DailyVideoProvider implements VideoProvider {
 export function createDailyProviderFromEnv(env = process.env) {
   const daily = getDailyEnv({
     NEXT_PUBLIC_APP_URL: env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    NEXT_PUBLIC_SUPABASE_URL: env.NEXT_PUBLIC_SUPABASE_URL || "",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-    SUPABASE_SERVICE_ROLE_KEY: env.SUPABASE_SERVICE_ROLE_KEY || "",
     AUTH_SESSION_COOKIE_NAME: env.AUTH_SESSION_COOKIE_NAME || "agency_event_os_session",
     RESEND_API_KEY: env.RESEND_API_KEY || "",
     EMAIL_FROM: env.EMAIL_FROM || "",

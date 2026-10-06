@@ -20,9 +20,16 @@ const required=[
   'npm run cf:deploy -- --keep-vars',
   'npm run postdeploy:smoke',
   'timeout --signal=TERM',
-  'node scripts/read-wrangler-config.mjs'
+  'node scripts/read-wrangler-config.mjs',
+  // Deploys itself on green main (6 Oct 2026: it was dispatch-only), schema first.
+  'workflow_run:',
+  'workflows: ["Repository validation"]',
+  "github.event.workflow_run.conclusion == 'success'",
+  'ref: ${{ github.event.workflow_run.head_sha || github.sha }}',
+  'npx wrangler d1 migrations apply west-peek-live --remote'
 ];
 for(const token of required) if(!s.includes(token)) failures.push(`Cloudflare workflow missing: ${token}`);
+if(s.indexOf('d1 migrations apply west-peek-live --remote')>s.indexOf('npm run cf:deploy -- --keep-vars')) failures.push('The D1 migrations must be applied before the Worker deploys.');
 if(/npm run deploy:production:safe/.test(s)) failures.push('Workflow must not call the unbounded composite deploy:production:safe command.');
 if(/\bcontinue-on-error:\s*true\b/.test(s)) failures.push('Deployment workflow may not hide failures with continue-on-error.');
 let wrangler={};

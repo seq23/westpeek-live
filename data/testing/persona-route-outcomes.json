@@ -66,9 +66,9 @@
         "/production-access/launchpad"
       ],
       "forbiddenRoutes": [
-        "/supabase-admin"
+        "/database-admin"
       ],
-      "authExpectation": "operator password, not Supabase Auth",
+      "authExpectation": "operator password, not a self-serve login",
       "safeFailure": "operator gate",
       "persona": "operator/producer",
       "expectedOutcome": "operator launchpad or disclosed admin workspace login"

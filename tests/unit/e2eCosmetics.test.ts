@@ -14,7 +14,9 @@ vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
 import { formatEventDate } from "@/lib/utils/format";
 import { crewCallTimesFor, crewBriefing } from "@/lib/crew/crewBriefing";
 import { FileRuntimeStore } from "@/services/runtime/fileRuntimeStore";
-import { SupabaseRuntimeStore } from "@/services/runtime/supabaseRuntimeStore";
+import { D1RuntimeStore } from "@/services/runtime/d1RuntimeStore";
+import { createDbClient } from "@/lib/d1/query";
+import { createTestD1 } from "./helpers/d1";
 import { setRuntimeStoreForTests } from "@/services/runtime/runtimeStoreFactory";
 import { resetOverlayForTests } from "@/services/events/runtimeEventOverlay";
 import { createEventRecord } from "@/services/events/eventRepository";
@@ -115,23 +117,19 @@ describe("3. the fallback event log lists a runtime event's stage stream events"
     expect(panel).toMatch(/listStageStreamEvents\(eventId, "main-stage", 8\)/);
   });
 
-  it("supabase adapter: the query is filtered by event_id and stage_id at the database, newest first, limited", async () => {
-    const calls: Array<[string, unknown[]]> = [];
-    const rows = [{ state_event: { id: "a", eventId: "evt", stageId: "main-stage", signal: "ingress_ended", nextSource: "ENDED", failurePlane: "NONE", message: "", createdAt: "2026-09-16T02:00:00.000Z" } }];
-    const chain: Record<string, unknown> = {};
-    for (const method of ["select", "eq", "order", "limit"]) chain[method] = (...args: unknown[]) => { calls.push([method, args]); return chain; };
-    (chain as { then: (resolve: (value: unknown) => void) => void }).then = (resolve) => resolve({ data: rows, error: null });
-    const client = { from: (table: string) => { calls.push(["from", [table]]); return chain; } };
-    const store = new SupabaseRuntimeStore(client as never);
-    const listed = await store.listStageStreamEvents("evt", "main-stage", 8);
-    expect(listed.map((e) => e.signal)).toEqual(["ingress_ended"]);
-    expect(calls).toEqual([
-      ["from", ["stage_stream_events"]],
-      ["select", ["state_event"]],
-      ["eq", ["event_id", "evt"]],
-      ["eq", ["stage_id", "main-stage"]],
-      ["order", ["created_at", { ascending: false }]],
-      ["limit", [8]],
-    ]);
-  });
+  it("d1 adapter: the query is filtered by event_id and stage_id in SQL, newest first, limited — on a real D1", async () => {
+    const env = await createTestD1();
+    try {
+      const store = new D1RuntimeStore(createDbClient(env.db));
+      for (const [id, eventId, stageId, minute] of [["a", "evt", "main-stage", 1], ["b", "evt", "main-stage", 2], ["c", "evt", "breakout-a", 3], ["d", "other", "main-stage", 4]] as const) {
+        await store.appendStageStreamEvent({ id, eventId, stageId, signal: "ingress_ended", nextSource: "ENDED", failurePlane: "NONE", message: "", createdAt: new Date(Date.UTC(2026, 8, 16, 2, minute)).toISOString() } as never);
+      }
+      expect((await store.listStageStreamEvents("evt", "main-stage", 8)).map((e) => e.id)).toEqual(["b", "a"]);
+      expect((await store.listStageStreamEvents("evt", "main-stage", 1)).map((e) => e.id)).toEqual(["b"]);
+      const source = fs.readFileSync(new URL("../../services/runtime/d1RuntimeStore.ts", import.meta.url), "utf8");
+      expect(source).toContain('.from("stage_stream_events").select("state_event").eq("event_id", eventId).eq("stage_id", stageId).order("created_at", { ascending: false }).limit(Math.max(1, limit))');
+    } finally {
+      await env.dispose();
+    }
+  }, 30_000);
 });

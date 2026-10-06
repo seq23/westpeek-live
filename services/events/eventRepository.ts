@@ -13,7 +13,7 @@ import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 /**
  * The one event source every surface reads.
  *
- * Order of truth: the runtime store (Supabase in production, the file store in
+ * Order of truth: the runtime store (D1 in production, the file store in
  * local/e2e) first, then the compiled JSON seed events under data/events/*.
  * Seed events keep working — CI and the deployed proofs depend on `demo` — but
  * they are marked `source: "seed"` so the owner's lists can hide them.
@@ -165,13 +165,13 @@ export interface EventListOptions {
 
 export interface RuntimeSchemaStatus {
   ok: boolean;
-  store: "supabase" | "file";
+  store: "d1" | "file";
   missingTables: string[];
   migrationFile: string;
   detail?: string;
 }
 
-function storeKind(): "supabase" | "file" {
+function storeKind(): "d1" | "file" {
   return getRuntimeStore().kind;
 }
 

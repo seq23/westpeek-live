@@ -8,8 +8,8 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
  *
  * The owner enters with the owner master password, which sets the signed owner
  * cookie. That cookie is the identity for every server action the owner runs;
- * no Supabase Auth session is required anywhere on the owner's path. A real
- * Supabase session (future staff) is still accepted, and an operator cookie is
+ * no self-serve login session is required anywhere on the owner's path. A real
+ * self-serve session (lib/auth/passwordAuth.ts) is still accepted, and an operator cookie is
  * accepted for the surfaces the operator gate already opens.
  */
 export type WorkspaceActor =

@@ -62,11 +62,11 @@ The evidence packet must never include raw RTMP stream keys, API keys, service-r
 
 ## Required Tier 4 lanes
 
-The Tier 4 real provider journey probe must run through `npm run tier4:real-provider-journey-probe`. It performs deployed app route/provider checks for role boundaries, LiveKit ingress, Supabase production write/readback, Daily fallback, Zoom authorization-gated signature readiness, and Resend provider email where configured.
+The Tier 4 real provider journey probe must run through `npm run tier4:real-provider-journey-probe`. It performs deployed app route/provider checks for role boundaries, LiveKit ingress, D1 production write/readback, Daily fallback, Zoom authorization-gated signature readiness, and Resend provider email where configured.
 
 Zoom signature route is server-side authorization gated. Unauthenticated/public callers must receive denial before any SDK signature is issued.
 
-Supabase production write/readback is mandatory for Tier 4 COMPLETE. A static env check does not satisfy persistence proof.
+D1 production write/readback is mandatory for Tier 4 COMPLETE. A static env check does not satisfy persistence proof.
 
 Resend sends exactly one approved test email only when `TIER4_RESEND_SEND_APPROVED=1` is set.
 

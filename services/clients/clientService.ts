@@ -1,10 +1,10 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DbClient } from "@/lib/d1/query";
 import { clientInputSchema, normalizeOptional, type ClientInput } from "@/lib/validation/clientEventSchemas";
 import { createAuditLog } from "@/services/audit";
 import type { DbClientRecord } from "@/types/persistence";
 import { mapClientRecord } from "@/services/persistence/mapRecords";
 
-export async function listClientsForAgency(client: SupabaseClient, agencyId: string) {
+export async function listClientsForAgency(client: DbClient, agencyId: string) {
   const { data, error } = await client
     .from("clients")
     .select("*")
@@ -16,13 +16,13 @@ export async function listClientsForAgency(client: SupabaseClient, agencyId: str
   return { data: ((data ?? []) as DbClientRecord[]).map(mapClientRecord) };
 }
 
-export async function getClientByIdFromSupabase(client: SupabaseClient, clientId: string) {
+export async function getClientById(client: DbClient, clientId: string) {
   const { data, error } = await client.from("clients").select("*").eq("id", clientId).maybeSingle();
   if (error) return { error: error.message };
   return { data: data ? mapClientRecord(data as DbClientRecord) : undefined };
 }
 
-export async function createClientRecord(client: SupabaseClient, input: ClientInput, actorUserId: string) {
+export async function createClientRecord(client: DbClient, input: ClientInput, actorUserId: string) {
   const parsed = clientInputSchema.parse(input);
   const payload = {
     agency_id: parsed.agencyId,
@@ -55,7 +55,7 @@ export async function createClientRecord(client: SupabaseClient, input: ClientIn
   return { data: mapClientRecord(data as DbClientRecord) };
 }
 
-export async function updateClientRecord(client: SupabaseClient, clientId: string, input: ClientInput, actorUserId: string) {
+export async function updateClientRecord(client: DbClient, clientId: string, input: ClientInput, actorUserId: string) {
   const parsed = clientInputSchema.parse(input);
   const payload = {
     name: parsed.name,

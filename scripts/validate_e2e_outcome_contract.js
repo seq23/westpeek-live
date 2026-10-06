@@ -33,11 +33,11 @@ for (const [file, tokens] of Object.entries(suites)) {
 if (failures.length) { console.error('E2E OUTCOME CONTRACT FAIL\n' + failures.map(f => `- ${f}`).join('\n')); process.exit(1); }
 
 const config = read('playwright.config.ts');
-for (const token of ['webServer', 'PLAYWRIGHT_LOCAL_E2E', 'AGENCY_EVENT_OS_RUNTIME_STORE', 'SUPABASE_SERVICE_ROLE_KEY', 'VIDEO_PROVIDER']) {
+for (const token of ['webServer', 'PLAYWRIGHT_LOCAL_E2E', 'AGENCY_EVENT_OS_RUNTIME_STORE: "file"', 'AGENCY_EVENT_OS_RUNTIME_STORE_PATH', 'VIDEO_PROVIDER']) {
   if (!config.includes(token)) failures.push(`playwright.config.ts missing deterministic local E2E token: ${token}`);
 }
 const runner = read('scripts/run_predeploy_playwright.js');
-for (const token of ['PLAYWRIGHT_DEPLOYED', 'PLAYWRIGHT_BASE_URL', 'AGENCY_EVENT_OS_RUNTIME_STORE', 'VIDEO_PROVIDER', 'SUPABASE_SERVICE_ROLE_KEY']) {
+for (const token of ['PLAYWRIGHT_DEPLOYED', 'PLAYWRIGHT_BASE_URL', "AGENCY_EVENT_OS_RUNTIME_STORE: 'file'", 'AGENCY_EVENT_OS_RUNTIME_STORE_PATH', 'VIDEO_PROVIDER']) {
   if (!runner.includes(token)) failures.push(`scripts/run_predeploy_playwright.js missing safe env token: ${token}`);
 }
 if (failures.length) { console.error('E2E OUTCOME CONTRACT FAIL\n' + failures.map(f => `- ${f}`).join('\n')); process.exit(1); }

@@ -58,7 +58,7 @@
       "authExpectation": "operator password",
       "expectedOutcome": "operator launchpad",
       "forbiddenOutcomes": [
-        "Supabase Auth creation"
+        "self-serve account creation"
       ],
       "requiresAuthDisclosure": true
     },

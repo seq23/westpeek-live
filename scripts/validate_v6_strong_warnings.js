@@ -3,7 +3,7 @@ const checks = [
   ["components/testing/TestingConsole.tsx", "RouteHealthPanel"],
   ["components/testing/TestingConsole.tsx", "AccessGatePanel"],
   ["components/testing/TestingConsole.tsx", "PublishingPipelinePanel"],
-  ["components/testing/TestingConsole.tsx", "SupabaseRuntimePanel"],
+  ["components/testing/TestingConsole.tsx", "RuntimeStorePanel"],
   ["components/testing/TestingConsole.tsx", "AttendeeExperiencePanel"],
   // The communications surface is one panel now; the old EventCommunicationsDashboard was deleted
   // on 16 Sep 2026 because it stacked a second send log under the first.

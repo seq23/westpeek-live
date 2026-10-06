@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Crew chat moderation contract (hide / restore, silence / unsilence, lock / unlock, moderation queue).
-// Proves, statically, that: the 0025 migration and its Supabase mirror are byte-identical; both runtime
+// Proves, statically, that: the D1 schema carries the moderation columns and table; both runtime
 // stores implement every moderation method; the attendee listing excludes hidden messages by default;
 // silence and lock are enforced on the write path in the service (not only in the UI); every crew
 // action is guarded; the queue is rendered where the crew is; and the unit + e2e proofs exist.
@@ -24,24 +24,18 @@ function forbidTokens(file, tokens) {
   for (const token of tokens) if (text.includes(token)) failures.push(`${file} still contains forbidden token: ${token}`);
 }
 
-// 1. Migration and mirror.
-const canonical = "db/migrations/0025_live_chat_moderation.sql";
-const canonicalSql = read(canonical);
-const mirrorDir = "supabase/migrations";
-const mirrors = fs.existsSync(mirrorDir) ? fs.readdirSync(mirrorDir).filter((name) => name.endsWith("_live_chat_moderation.sql")) : [];
-if (mirrors.length !== 1) failures.push(`${mirrorDir} must contain exactly one *_live_chat_moderation.sql mirror (found ${mirrors.length})`);
-for (const name of mirrors) if (read(path.join(mirrorDir, name)) !== canonicalSql) failures.push(`${mirrorDir}/${name} drifted from ${canonical}; copy the canonical file over it`);
-for (const token of ["add column if not exists moderated_by", "add column if not exists moderated_at", "create table if not exists public.live_chat_moderation_states", "check (scope in ('room', 'attendee'))"]) {
-  if (!canonicalSql.includes(token)) failures.push(`${canonical} missing: ${token}`);
-}
-requireTokens("scripts/validate_supabase_schema_parity.js", ["live_chat_moderation_states", '"moderated_by"']);
+// 1. Schema (migrations-d1, applied before every deploy).
+const { requireD1 } = require("./lib/d1Schema");
+failures.push(...requireD1("live_chat_messages", ["  moderated_by TEXT,", "  moderated_at TEXT,"]));
+failures.push(...requireD1("live_chat_moderation_states", ["  scope TEXT NOT NULL,", "CHECK ((scope IN ('room', 'attendee')))"]));
+requireTokens("lib/d1/schema.generated.ts", ['"live_chat_moderation_states"', '"moderated_by"']);
 requireTokens("services/events/eventRepository.ts", ['["live_chat_moderation_states"']);
 
 // 2. Both stores implement the moderation surface; the attendee default excludes hidden.
 const storeMethods = ["listLiveChatMessages", "listRecentLiveChatMessages", "updateLiveChatMessageModeration", "setLiveChatModerationState", "getLiveChatModerationState", "listLiveChatModerationStates"];
 requireTokens("services/runtime/runtimeStore.ts", [...storeMethods, "liveChatModerationStates", "includeHidden"]);
 requireTokens("services/runtime/fileRuntimeStore.ts", [...storeMethods, 'options?.includeHidden || message.moderationStatus !== "hidden"']);
-requireTokens("services/runtime/supabaseRuntimeStore.ts", [...storeMethods, 'if (!options?.includeHidden) query = query.neq("moderation_status", "hidden")', "live_chat_moderation_states", "moderated_by"]);
+requireTokens("services/runtime/d1RuntimeStore.ts", [...storeMethods, 'if (!options?.includeHidden) query = query.neq("moderation_status", "hidden")', "live_chat_moderation_states", "moderated_by"]);
 
 // 3. Rules live in the service write path, and the crew listing is explicit.
 requireTokens("services/venue/liveChatService.ts", [

@@ -34,3 +34,5 @@ tmp/
 tsconfig.tsbuildinfo
 logs/
 *.log
+
+.dev.vars

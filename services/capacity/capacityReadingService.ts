@@ -1,8 +1,8 @@
 import { createHmac } from "crypto";
 import { getLiveKitEnv } from "@/lib/env";
 import { normalizeLiveKitApiBaseUrl } from "@/services/video/livekitIngressService";
-import { pingRuntimeStore } from "@/services/runtime/supabaseKeepAlive";
-import { CLOUDFLARE_WORKERS_PLAN, livekitPlan, type AllowanceKey, type LiveKitPlan } from "@/lib/capacity/capacityPlans";
+import { getD1 } from "@/lib/d1/binding";
+import { CLOUDFLARE_WORKERS_PLAN, D1_PLAN, livekitPlan, type AllowanceKey, type LiveKitPlan } from "@/lib/capacity/capacityPlans";
 import { houseLivekitTier } from "@/services/agencies/houseDefaultsService";
 import requiredSecrets from "@/deployment/cloudflare-required-secrets.json";
 
@@ -129,7 +129,7 @@ export interface CapacityPosition {
   /** What LiveKit is doing this instant, which the API does tell us. */
   livekitNow: CapacityReading[];
   cloudflare: CapacityReading[];
-  supabase: CapacityReading[];
+  database: CapacityReading[];
 }
 
 function livekitAllowanceLimit(plan: LiveKitPlan, key: AllowanceKey) {
@@ -140,7 +140,7 @@ export async function readCapacityPosition(): Promise<CapacityPosition> {
   // The tier is a setting now, because the owner changes plans and a redeploy is not how you record
   // that. It falls back to LIVEKIT_TIER, so an install that never opens Settings reads as before.
   const plan = livekitPlan(await houseLivekitTier());
-  const [snapshot, ping] = await Promise.all([readLiveKitLiveSnapshot(), pingRuntimeStore()]);
+  const [snapshot, ping] = await Promise.all([readLiveKitLiveSnapshot(), pingDatabase()]);
 
   const livekit: CapacityReading[] = [
     unknown("transcodeMinutes", "Transcode minutes this month", "min", livekitAllowanceLimit(plan, "transcodeMinutes"), DASHBOARD_ONLY, "month", "LiveKit Cloud dashboard"),
@@ -171,11 +171,26 @@ export async function readCapacityPosition(): Promise<CapacityPosition> {
     unknown("streamMinutes", "Cloudflare Stream minutes stored", "min", null, "Cloudflare Stream usage comes from the Stream dashboard; the Worker holds no Stream API token. Pay-as-you-go, so there is no allowance to run out of — only a bill.", "month", "Cloudflare dashboard"),
   ];
 
-  const supabase: CapacityReading[] = [
-    { key: "supabaseAwake", label: "Runtime store answering", value: ping.ok ? 1 : 0, unit: ping.ok ? "yes" : "no", unknownReason: "", limit: null, window: "now", source: `${ping.store} store · ${ping.detail || "single-row read succeeded"}` },
-    unknown("supabaseDatabaseMb", "Database size", "MB", 500, "Supabase reports database size through its management API, which needs a personal access token this deployment does not carry. Open the Supabase dashboard for the figure.", "now", "Supabase dashboard"),
-    unknown("supabaseEgressGb", "Egress this month", "GB", 5, "Supabase reports egress in its dashboard only.", "month", "Supabase dashboard"),
+  const database: CapacityReading[] = [
+    { key: "databaseAnswering", label: "Runtime store answering", value: ping.ok ? 1 : 0, unit: ping.ok ? "yes" : "no", unknownReason: "", limit: null, window: "now", source: `D1 · ${ping.detail}` },
+    ping.sizeMb === null
+      ? unknown("databaseMb", "Database size", "MB", D1_PLAN.databaseGb * 1000, ping.detail, "now", "D1 query metadata")
+      : { key: "databaseMb", label: "Database size", value: ping.sizeMb, unit: "MB", unknownReason: "", limit: D1_PLAN.databaseGb * 1000, window: "now", source: "D1 query metadata (size_after)" },
+    unknown("databaseRowsRead", "Rows read this month", "rows", D1_PLAN.rowsReadPerMonth, "Monthly row counts come from the Cloudflare analytics API, which needs an account API token this deployment does not carry. Open the D1 dashboard for the figure.", "month", "Cloudflare dashboard"),
   ];
 
-  return { readAt: new Date().toISOString(), plan, livekit, livekitNow, cloudflare, supabase };
+  return { readAt: new Date().toISOString(), plan, livekit, livekitNow, cloudflare, database };
+}
+
+/** One real read against D1; its metadata carries the database size. A throw is "no", never a pass. */
+export async function pingDatabase(): Promise<{ ok: boolean; detail: string; sizeMb: number | null }> {
+  const db = getD1();
+  if (!db) return { ok: false, detail: "D1 binding DB is not available on this deployment", sizeMb: null };
+  try {
+    const result = (await db.prepare('SELECT COUNT(*) AS n FROM "runtime_events"').all()) as { meta?: { size_after?: number } };
+    const bytes = result.meta?.size_after;
+    return { ok: true, detail: "single read succeeded", sizeMb: typeof bytes === "number" ? Math.round((bytes / 1_000_000) * 100) / 100 : null };
+  } catch (error) {
+    return { ok: false, detail: (error instanceof Error ? error.message : String(error)).slice(0, 160), sizeMb: null };
+  }
 }

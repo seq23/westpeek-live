@@ -18,7 +18,7 @@ export PLAYWRIGHT_RETRIES="${PLAYWRIGHT_RETRIES:-1}"
 export PLAYWRIGHT_DISABLE_VIDEO="${PLAYWRIGHT_DISABLE_VIDEO:-0}"
 export LOCAL_PLAYWRIGHT_GAUNTLET_AUTH="${LOCAL_PLAYWRIGHT_GAUNTLET_AUTH:-true}"
 # Local headed gauntlet runs a production Next server from a temporary ZIP unpack.
-# It must not require real Supabase credentials or mutate production data.
+# It must not require real database credentials or mutate production data.
 # Explicitly force the local file runtime store for this E2E-only process so
 # protected producer/sponsor/crew surfaces render real operational UI instead of
 # generic digest/500 pages caused by missing production persistence config.

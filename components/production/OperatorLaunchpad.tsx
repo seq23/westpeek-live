@@ -102,7 +102,7 @@ async function LaunchpadBody() {
 
       <ConsoleSection storagePrefix="wpl-launchpad" id="plans" title="Plans &amp; capacity" blurb="What the month has cost against the plans we are on, transcode minutes first — and what to upgrade when one of them runs out.">
         <div className="grid gap-4 md:grid-cols-2 xl:grid-cols-3">
-          <LaunchpadCard title="Plans &amp; capacity" href="/app/capacity">LiveKit transcode minutes, participant-minutes, bandwidth and concurrency, plus the Cloudflare and Supabase positions.</LaunchpadCard>
+          <LaunchpadCard title="Plans &amp; capacity" href="/app/capacity">LiveKit transcode minutes, participant-minutes, bandwidth and concurrency, plus the Cloudflare, D1 and R2 positions.</LaunchpadCard>
         </div>
       </ConsoleSection>
 

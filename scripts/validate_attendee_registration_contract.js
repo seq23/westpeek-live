@@ -1,4 +1,5 @@
 const fs = require('fs');
+const { requireD1 } = require('./lib/d1Schema');
 const required = [
   'types/attendeeRegistration.ts',
   'types/attendeeSession.ts',
@@ -10,7 +11,7 @@ const required = [
   'components/venue/RegistrationAgendaPlanner.tsx',
   'components/venue/MyAgendaPanel.tsx',
   'components/venue/EditAttendeeProfilePanel.tsx',
-  'db/migrations/0022_attendee_identity_and_agenda_intents.sql'
+  'migrations-d1/0004_attendees_live.sql'
 ];
 const failures = [];
 for (const file of required) if (!fs.existsSync(file)) failures.push(`Missing ${file}`);
@@ -45,15 +46,16 @@ if (/Here to learn, connect|Ask me what I am hoping/.test(read('components/venue
 if (!read('components/sponsors/SponsorPortalLive.tsx').includes('hiddenFromDirectory')) failures.push('Sponsor lead views must leave out hidden attendees.');
 if (!read('components/venue/SpeedNetworkingQueuePanel.tsx').includes('networking-topics-gate') || !read('lib/actions/networkingActions.ts').includes('mergeAttendeeProfile(profile, { topicsOfInterest')) failures.push('The networking gate must ask for topics inline and save through the one profile write path.');
 if (!read('lib/actions/attendeeProfileActions.ts').includes('mergeAttendeeProfile(profile, patch)')) failures.push('The profile action must write through mergeAttendeeProfile.');
-if (read('db/migrations/0029_attendee_profile_visibility.sql') !== read('supabase/migrations/20260916180000_attendee_profile_visibility.sql')) failures.push('0029 mirror drifted.');
-if (!read('services/runtime/supabaseRuntimeStore.ts').includes('hidden_from_directory: Boolean(profile.hiddenFromDirectory)')) failures.push('Supabase store must persist hidden_from_directory.');
+if (!read('services/runtime/d1RuntimeStore.ts').includes('hidden_from_directory: Boolean(profile.hiddenFromDirectory)')) failures.push('The D1 store must persist hidden_from_directory.');
 for (const proof of ['tests/unit/attendeeProfileMerge.test.ts', 'tests/unit/contactsAndQuestions.test.ts', 'tests/e2e/lighter-registration.spec.ts']) if (!fs.existsSync(proof)) failures.push(`Missing ${proof}`);
 // The attendee database gaps (16 Sep 2026): raw email stored; contacts across events; per-event questions.
 const registrationService = read('services/attendees/attendeeRegistrationService.ts');
 if (!registrationService.includes('email: input.email.trim().toLowerCase()')) failures.push('registerOrUpdateAttendee must store the raw email, lowercased and trimmed.');
 if (!registrationService.includes('await upsertContactFromProfile(profile)')) failures.push('registerOrUpdateAttendee must upsert the contact across events.');
-const migration = read('db/migrations/0029_attendee_profile_visibility.sql');
-for (const token of ['add column if not exists email text', 'add column if not exists extra_answers jsonb', 'create table if not exists public.contacts', 'add column if not exists registration_questions jsonb', 'BACKFILL IS']) if (!migration.includes(token)) failures.push(`0029 migration missing ${token}`);
+// The D1 schema carries the raw email, the per-event answers, contacts across events and per-event questions.
+failures.push(...requireD1('attendee_profiles', ['  email TEXT,', '  extra_answers TEXT NOT NULL DEFAULT \'{}\' CHECK (json_valid(extra_answers))', '  hidden_from_directory INTEGER NOT NULL DEFAULT 0 CHECK (hidden_from_directory IN (0, 1))']));
+failures.push(...requireD1('contacts', ['  email TEXT NOT NULL,', '  events_attended TEXT NOT NULL', '  archived_at TEXT,']));
+failures.push(...requireD1('runtime_events', ['  registration_questions TEXT CHECK (json_valid(registration_questions))']));
 // Registration questions render from event config, never a literal list; the default set is the legacy four.
 if (!card.includes('questionsForEvent(event)') || !card.includes('questions.map((question) =>')) failures.push('Tell-us-more must render the event\'s question list from config.');
 for (const literal of ['name="reasonForAttending"', 'name="interestingFact"', 'name="topicsOfInterest"', 'name="networkingGoals"']) if (card.includes(literal)) failures.push(`Tell-us-more must not hard-code ${literal}; questions come from the event.`);

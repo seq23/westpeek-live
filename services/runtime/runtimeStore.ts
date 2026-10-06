@@ -144,7 +144,7 @@ export interface V6RuntimeSnapshot {
   howItWorksPages: HowItWorksPageRecord[];
 }
 
-export type RuntimeStoreKind = "supabase" | "file";
+export type RuntimeStoreKind = "d1" | "file";
 
 export interface RuntimeStore {
   /** Explicit, because class names are minified in the Worker bundle and cannot identify the store. */
@@ -173,7 +173,7 @@ export interface RuntimeStore {
   listContacts(): Promise<ContactRecord[]>;
   /** Reads contacts.archived_at alone (migration 0030). Throws when the column is missing, so the health probe names it. */
   probeContactsArchiveColumn(): Promise<{ ok: true }>;
-  // Event assets (migration 0031): a real file in Supabase Storage, or a pasted link.
+  // Event assets (migration 0031): a real file in the R2 bucket, or a pasted link.
   upsertEventAsset(asset: EventAssetRecord): Promise<EventAssetRecord>;
   getEventAsset(id: string): Promise<EventAssetRecord | undefined>;
   listEventAssets(eventId: string, includeArchived?: boolean): Promise<EventAssetRecord[]>;

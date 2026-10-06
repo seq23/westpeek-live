@@ -41,9 +41,12 @@ async function run() {
       // Named stop, not a silent pass: the deployed app must say whether migration 0024 has been applied.
       let health;
       try { health = JSON.parse(body); } catch { health = undefined; }
-      if (response.status !== 200 || !health) failures.push(`${check.path} expected JSON runtime health got ${response.status}`);
-      else if (health.store !== "supabase") failures.push(`${check.path} store is ${health.store}; production must run the supabase runtime store`);
-      else if (!health.runtimeEvents?.ready) failures.push(`${check.path} NAMED STOP — runtime tables missing (${(health.runtimeEvents?.missingTables || []).join(", ") || health.runtimeEvents?.detail || "unknown"}); run ${health.runtimeEvents?.migrationFile} in the Supabase SQL editor`);
+      // 503 is the health route saying "not ok" (6 Oct 2026); read its body for the named stop.
+      if (![200, 503].includes(response.status) || !health) failures.push(`${check.path} expected JSON runtime health got ${response.status}`);
+      else if (response.status === 503 && health.ok !== false) failures.push(`${check.path} answered 503 without ok:false`);
+      else if (response.status === 200 && health.ok !== true) failures.push(`${check.path} answered 200 with ok:${health.ok}; the route must say 503 when it is not ok`);
+      else if (health.store !== "d1") failures.push(`${check.path} store is ${health.store}; production must run the d1 runtime store (binding DB)`);
+      else if (!health.runtimeEvents?.ready) failures.push(`${check.path} NAMED STOP — runtime tables missing (${(health.runtimeEvents?.missingTables || []).join(", ") || health.runtimeEvents?.detail || "unknown"}); apply ${health.runtimeEvents?.migrationFile} (npx wrangler d1 migrations apply west-peek-live --remote)`);
       else if (health.seedEvents !== 5) failures.push(`${check.path} expected 5 compiled seed events got ${health.seedEvents}`);
       // The crew deck's and networking page's reads against a REAL runtime event: a mis-shaped table (16 Sep 2026) fails here by name.
       else if (health.crewPageReads && !health.crewPageReads.ok) failures.push(`${check.path} NAMED STOP — crew page reads failed on ${health.crewPageReads.eventId || "runtime event"}: ${(health.crewPageReads.reads || []).filter((r) => !r.ok).map((r) => `${r.name}: ${r.detail || "failed"}`).join("; ")}`);
@@ -56,7 +59,7 @@ async function run() {
         else if (!coverage.checked) failures.push(`${check.path} NAMED STOP — migration coverage checked 0 objects: ${coverage.detail || "no detail"}. A probe that examines nothing is a failure, not a pass.`);
         else if (!coverage.ok) {
           const named = (coverage.missing || []).map((row) => `${row.object} (apply ${row.migrationFile}${row.detail ? ` — ${row.detail}` : ""})`).join("; ");
-          failures.push(`${check.path} NAMED STOP — the deployed database is missing ${(coverage.missing || []).length} of ${coverage.checked} objects its migrations create: ${named || coverage.detail || "unknown"}. Paste the named file(s) into the Supabase SQL editor (docs/manual-notes/migration-assurance.md).`);
+          failures.push(`${check.path} NAMED STOP — the deployed database is missing ${(coverage.missing || []).length} of ${coverage.checked} objects its migrations create: ${named || coverage.detail || "unknown"}. Apply them with npx wrangler d1 migrations apply west-peek-live --remote (docs/manual-notes/migration-assurance.md).`);
         }
       }
     }

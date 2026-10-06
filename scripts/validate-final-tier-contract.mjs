@@ -52,7 +52,7 @@ else {
   if (!tier3Rows.length) failures.push('_repo_validation_matrix.json must include Tier 3 rows.');
   const tier4Rows = rows.filter((row) => String(row.tier || '').toLowerCase().includes('4'));
   if (!tier4Rows.length) failures.push('_repo_validation_matrix.json must include Tier 4 rows.');
-  const providerRows = tier4Rows.filter((row) => `${row.name || ''} ${row.command || ''} ${row.proofLayer || ''} ${row.category || ''}`.match(/provider|live|streamyard|livekit|supabase|resend|daily|zoom|credential/i));
+  const providerRows = tier4Rows.filter((row) => `${row.name || ''} ${row.command || ''} ${row.proofLayer || ''} ${row.category || ''}`.match(/provider|live|streamyard|livekit|d1|resend|daily|zoom|credential/i));
   if (!providerRows.length) failures.push('_repo_validation_matrix.json Tier 4 must include live provider proof rows.');
 }
 const packagePath = path.join(root, 'package.json');

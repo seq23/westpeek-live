@@ -20,7 +20,7 @@ function requireTokens(file, tokens) {
 }
 
 // 1. Store listing in both implementations.
-for (const file of ["services/runtime/runtimeStore.ts", "services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) requireTokens(file, ["listAttendeeLiveCapabilities"]);
+for (const file of ["services/runtime/runtimeStore.ts", "services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) requireTokens(file, ["listAttendeeLiveCapabilities"]);
 
 // 2. Request → pending → decision are typed and pure.
 requireTokens("types/attendeeLive.ts", ['requestStatus?: AttendeeLiveRequestDecision', '"requested" | "approved" | "declined"', '"permit" | "approve_publish" | "revoke" | "decline" | "reset"']);

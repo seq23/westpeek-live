@@ -17,7 +17,9 @@ OpenNext into one Cloudflare **Worker** (not Pages):
 | Routes / pages | `app/` (e.g. `app/page.tsx` home, `app/venue/`, `app/events/`, `app/app/` workspace, `app/api/`) |
 | UI components | `components/` (brand marks in `components/brand/`) |
 | Domain logic | `lib/`, `services/`, `types/` |
-| Database | Supabase; migrations in `db/migrations/` (readable history) mirrored byte-for-byte into `supabase/migrations/` (what production applies) |
+| Database | Cloudflare D1 `west-peek-live` (binding `DB`); the one schema is `migrations-d1/`, applied by the deploy workflow before every deploy; history of the move: `docs/SUPABASE_TO_CLOUDFLARE.md` |
+| Files | Cloudflare R2 `west-peek-live-assets` (binding `ASSETS_BUCKET`), private; bytes move only through `app/api/assets/upload/route.ts` and `app/api/assets/file/route.ts` with links the Worker signed |
+| Self-serve login | app-owned, `lib/auth/passwordAuth.ts` (PBKDF2, hashed sessions, single-use reset links) |
 | Worker secrets | `deployment/cloudflare-required-secrets.json`, `_env_contract.json` |
 | Tests | `tests/unit/` (Vitest), `tests/e2e/` (Playwright) |
 
@@ -28,10 +30,11 @@ OpenNext into one Cloudflare **Worker** (not Pages):
 - **Brand is locked**: `WEST_PEEK_BRAND_SYSTEM.md` is CANONICAL / LOCKED (palette, logo). Every
   rendered West Peek mark links home through `components/brand/WestPeekHomeLink.tsx`
   (guard `npm run validate:logo-home-links`; brand `npm run validate:brand`).
-- **A migration only reaches production through `supabase/migrations/`** — the Supabase GitHub
-  integration applies it on merge to `main`. Add the canonical file under `db/migrations/` AND its
-  byte-identical mirror (guard `npm run validate:migration-mirror-parity`). Why, and what to do when
-  it goes red: `docs/manual-notes/migration-assurance.md`.
+- **A schema change is a NEW file in `migrations-d1/`** (next number; never edit an applied one —
+  D1 records each file once). Then `node scripts/generate_d1_schema_manifest.mjs` and commit the
+  regenerated `lib/d1/schema.generated.ts`. The deploy workflow applies it before the Worker ships
+  (guard `npm run validate:d1-schema`). Why, and what to do when it goes red:
+  `docs/manual-notes/migration-assurance.md`.
 - **Worker secret budget**: the required-secrets manifest stays at 60 or fewer
   (`npm run validate:worker-variable-budget`).
 - **Never a bare `wrangler deploy` or plain `next build` + wrangler** — see
@@ -58,19 +61,23 @@ OpenNext into one Cloudflare **Worker** (not Pages):
    Quick loop while editing: `npm run typecheck`, `npm run test`, the one guard you touched.
 4. Look at it: `npm run dev`, screenshot desktop and 390px. The PR also gets a Workers Builds
    preview (version URL `https://<hash>-west-peek-live.seq-taylor.workers.dev`, posted as a PR comment).
-5. Commit, push, open the PR with the change spelled out. CI (`.github/workflows/validation.yml`,
-   plus `.github/workflows/supabase-migration-apply.yml`) takes about 2–3 minutes.
+5. Commit, push, open the PR with the change spelled out. CI (`.github/workflows/validation.yml`)
+   takes about 2–3 minutes.
 6. `~/bin/land <pr>` — verifies green, squash-merges, watches `main` to a terminal state.
-7. Prove it live: the "Workers Builds: west-peek-live" check-run on the merge commit succeeded
-   (`gh api repos/seq23/westpeek-live/commits/<sha>/check-runs`), then
-   `curl -sI https://westpeek.live/` answers 200 and `SMOKE_BASE_URL=https://westpeek.live npm run postdeploy:smoke`
-   prints PASS (it prints SKIP, not PASS, if the URL is unset — that is not proof). A migration
-   also needs "Supabase Preview" green on the merge commit.
+7. Prove it live: the "Deploy Cloudflare Worker" run for the merge commit is green
+   (`gh run list --workflow deploy-cloudflare-worker.yml`), then
+   `curl -sI https://westpeek.live/` answers 200, `curl -s https://westpeek.live/api/runtime/health`
+   answers 200 with `"ok":true`, and `SMOKE_BASE_URL=https://westpeek.live npm run postdeploy:smoke`
+   prints PASS (it prints SKIP, not PASS, if the URL is unset — that is not proof).
 
 ## How it deploys
-Cloudflare **Workers Builds** (Git integration) builds and deploys `main` on every push; nothing
-else to run. `.github/workflows/deploy-cloudflare-worker.yml` is a manual `workflow_dispatch`
-fallback — do not dispatch it. Deeper procedure, rollback and postdeploy proof:
+Itself, on green `main`: when "Repository validation" passes for a push to `main`,
+`.github/workflows/deploy-cloudflare-worker.yml` checks out that exact commit, applies the D1
+migrations (`npx wrangler d1 migrations apply west-peek-live --remote`), builds with OpenNext and runs
+`npm run cf:deploy -- --keep-vars`, then the post-deploy smoke. Dispatch it only to redeploy by hand.
+Workers Builds (Git integration) still builds every branch and uploads a preview version, but it
+no longer promotes `main` (its default-branch deploy command is `npx wrangler versions upload` since
+6 Oct 2026), so a red or unmigrated commit never reaches production. Deeper procedure, rollback and postdeploy proof:
 `TERMINAL_RELEASE_RUNBOOK.md`, `PREDEPLOY_POSTDEPLOY_RUNBOOK.md`,
 `ROLLBACK_AND_CONTAINMENT_RUNBOOK.md`, `AUTONOMOUS_TERMINAL_RUNBOOK.md`, `docs/runbooks/postdeploy.md`,
 `docs/runbooks/environment-setup.md`, `docs/runbooks/validation-operations.md`.
@@ -78,11 +85,12 @@ fallback — do not dispatch it. Deeper procedure, rollback and postdeploy proof
 ## Guards, and what each pins
 | Script | Pins |
 |---|---|
-| `scripts/validate-cloudflare-workflow-contract.mjs` | the manual fallback deploy workflow keeps its timeout, gate, OpenNext build and smoke steps; `wrangler.jsonc` still targets the `west-peek-live` Worker |
+| `scripts/validate-cloudflare-workflow-contract.mjs` | the deploy workflow runs on green `main`, applies D1 migrations before deploying, and keeps its timeout, gate, OpenNext build and smoke steps; `wrangler.jsonc` still targets the `west-peek-live` Worker |
 | `scripts/validate-validator-admission.mjs` | every validation package script has an admission row |
 | `scripts/validate-deployed-route-manifest.mjs` | every route in `config/deployed-route-manifest.json` is fully described, unique, and covers desktop + mobile |
 | `scripts/validate_logo_home_links.js` | every rendered mark links home through the one home link |
-| `scripts/validate_migration_mirror_parity.js` | each migration since 0023 has exactly one byte-identical `supabase/migrations/` mirror |
+| `scripts/validate_d1_schema_parity.js` | `migrations-d1/` is SQLite, the generated manifest is current, every table and column the code names exists, migrations apply before deploy (`--self-test` proves four breakages) |
+| `scripts/validate_retired_backend_gone.js` | nothing that runs, builds, deploys or configures the app names the retired hosted backend (`--self-test`) |
 | `scripts/validate_worker_variable_budget.js` | Worker secrets stay under the per-Worker cap with headroom |
 | `scripts/post_deploy_smoke_test.js` | public pages 200 with markers, protected pages redirect, video APIs fail safe |
 | `scripts/validate_runbook.mjs` | this file names real paths and scripts |

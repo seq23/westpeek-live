@@ -28,7 +28,7 @@ let failureClass = 'UNKNOWN';
 const secretValues = new Map();
 
 for (const key of [
-  'LIVEKIT_API_SECRET', 'LIVEKIT_WEBHOOK_SECRET', 'SUPABASE_SERVICE_ROLE_KEY', 'RESEND_API_KEY', 'DAILY_API_KEY', 'ZOOM_MEETING_SDK_SECRET', 'V5_ACCESS_COOKIE_SECRET', 'CLOUDFLARE_STREAM_API_TOKEN', 'CLOUDFLARE_API_TOKEN'
+  'LIVEKIT_API_SECRET', 'LIVEKIT_WEBHOOK_SECRET', 'CLOUDFLARE_API_TOKEN', 'RESEND_API_KEY', 'DAILY_API_KEY', 'ZOOM_MEETING_SDK_SECRET', 'V5_ACCESS_COOKIE_SECRET', 'CLOUDFLARE_STREAM_API_TOKEN', 'CLOUDFLARE_API_TOKEN'
 ]) {
   if (process.env[key]) secretValues.set(key, process.env[key]);
 }
@@ -63,7 +63,7 @@ function markFailureClass(nextClass) {
 function classifyFailure(message) {
   const text = String(message || '');
   if (/Fetch API cannot load:\s*wss:\/\//i.test(text)) return 'DEPLOYED_APP_FAILURE_LIVEKIT_TWIRP_WSS_URL';
-  if (/missing .*LIVEKIT|missing .*SUPABASE|missing .*V5|missing .*RESEND|set TIER4_|ffmpeg is not available/i.test(text)) return 'ENV_OR_OPERATOR_GATE_BLOCK';
+  if (/missing .*LIVEKIT|missing .*CLOUDFLARE_|missing .*V5|missing .*RESEND|set TIER4_|ffmpeg is not available/i.test(text)) return 'ENV_OR_OPERATOR_GATE_BLOCK';
   if (/resource_exhausted|object limit|quota|concurrent ingress/i.test(text)) return 'REAL_PROVIDER_RESOURCE_QUOTA_OR_CLEANUP_FAILURE';
   if (/livekit.*failed|ingress|roomservice|twirp/i.test(text)) return 'PROVIDER_OR_APP_LIVEKIT_FAILURE';
   if (/postdeploy|playwright|probe|test:e2e|tier4:/i.test(text)) return 'TIER4_HARNESS_OR_TEST_FAILURE';
@@ -272,7 +272,7 @@ async function main() {
   if (retainIngress && !retainIngressReason.trim()) failures.push('TIER4_CONTROLLED_RTMP_RETAIN_INGRESS=1 requires TIER4_CONTROLLED_RTMP_RETAIN_REASON.');
   if (!nonLocalUrl(baseUrl)) failures.push('controlled RTMP broadcaster: set a non-local deployed base URL via POSTDEPLOY_BASE_URL, PLAYWRIGHT_BASE_URL, SMOKE_BASE_URL, or NEXT_PUBLIC_APP_URL.');
   requireEnv(['LIVEKIT_URL', 'LIVEKIT_API_KEY', 'LIVEKIT_API_SECRET', 'LIVEKIT_WEBHOOK_SECRET', 'V5_ACCESS_COOKIE_SECRET'], 'controlled RTMP broadcaster');
-  requireEnv(['NEXT_PUBLIC_SUPABASE_URL', 'SUPABASE_SERVICE_ROLE_KEY'], 'Supabase production persistence');
+  requireEnv(['CLOUDFLARE_API_TOKEN', 'CLOUDFLARE_ACCOUNT_ID'], 'D1 production persistence');
   if (process.env.RESEND_API_KEY || process.env.EMAIL_FROM || process.env.EMAIL_REPLY_TO) {
     if (process.env.TIER4_RESEND_SEND_APPROVED === '1' && !process.env.TIER4_EMAIL_TEST_TO) {
       process.env.TIER4_EMAIL_TEST_TO = process.env.EMAIL_REPLY_TO || process.env.EMAIL_FROM || '';
@@ -400,12 +400,12 @@ async function main() {
       cleanupAttempted: livekitCleanup.attempted,
       cleanupDeleted: livekitCleanup.deleted,
     },
-    supabaseProductionPersistence: {
-      writeReadbackVerified: lanePassed(journeyReport, 'Supabase production persistence'),
-      createdRecordIdRedacted: laneStatus(journeyReport, 'Supabase production persistence')?.insertedId || 'redacted_by_probe',
+    d1ProductionPersistence: {
+      writeReadbackVerified: lanePassed(journeyReport, 'D1 production persistence'),
+      createdRecordIdRedacted: laneStatus(journeyReport, 'D1 production persistence')?.insertedId || 'redacted_by_probe',
       refreshReentryVerified: true,
       noDemoFallback: true,
-      cleanupStatus: laneStatus(journeyReport, 'Supabase production persistence')?.cleanupStatus || 'deleted_or_retained_with_reason',
+      cleanupStatus: laneStatus(journeyReport, 'D1 production persistence')?.cleanupStatus || 'deleted_or_retained_with_reason',
     },
     roleBoundaryProof: {
       privateProviderControlsDeniedToPublic: lanePassed(journeyReport, 'role boundary private provider APIs'),

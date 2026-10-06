@@ -14,7 +14,7 @@ const pkg = JSON.parse(fs.readFileSync("package.json", "utf8"));
 
 // Backticked repo paths under this repo's top-level source dirs, plus backticked root files.
 // Anything with a <placeholder> is a template, not a path.
-const DIRS = "app|components|lib|services|types|scripts|supabase|db|docs|tests|config|deployment|data|public|\\.github";
+const DIRS = "app|components|lib|services|types|scripts|migrations-d1|db|docs|tests|config|deployment|data|public|\\.github";
 const dirPaths = [...md.matchAll(new RegExp("`((?:" + DIRS + ")/[^`#\\s]*?)`", "g"))].map((m) => m[1]);
 const rootFiles = [...md.matchAll(/`([A-Za-z0-9_.-]+\.(?:md|json|jsonc|ts|js|mjs|toml)|\.nvmrc)`/g)].map((m) => m[1]);
 const paths = [...new Set([...dirPaths, ...rootFiles])].filter((p) => !p.includes("<"));

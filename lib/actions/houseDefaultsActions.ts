@@ -5,7 +5,7 @@ import { redirect } from "next/navigation";
 import { requireWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { parseQuestionLines } from "@/services/attendees/registrationQuestions";
 import { saveHouseDefaults, setHouseLogo } from "@/services/agencies/houseDefaultsService";
-import { requestHouseLogoUpload } from "@/services/assets/eventAssetService";
+import { HOUSE_LOGO_PREFIX, requestHouseLogoUpload, storedObjectExists } from "@/services/assets/eventAssetService";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || "").trim();
@@ -45,6 +45,9 @@ export async function requestHouseLogoUploadAction(input: { fileName: string; mi
 /** Step two: record where it landed, so every surface that renders the wordmark can render this instead. */
 export async function confirmHouseLogoUploadAction(input: { storagePath: string; fileName: string }) {
   const actor = await requireWorkspaceActor();
+  // Only a logo path this site minted, and only once the bytes are really in the bucket.
+  if (!input.storagePath.startsWith(`${HOUSE_LOGO_PREFIX}/`)) return { ok: false as const, reason: "That is not a logo upload." };
+  if (!(await storedObjectExists(input.storagePath))) return { ok: false as const, reason: "The logo never reached storage. Upload it again." };
   await setHouseLogo(input, actor);
   revalidateHouseSurfaces();
   return { ok: true as const };

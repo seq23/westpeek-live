@@ -2,7 +2,7 @@
 // Chat at scale contract: slow mode, the per-person rate limit, delta polling, and Clear chat.
 //
 // Proves, statically, that the four controls exist where they have to exist rather than only in the
-// UI: the 0033 migration and its Supabase mirror are byte-identical and register the archive
+// UI: the D1 schema carries the archive columns and the rate table, and registers the archive
 // columns and the rate table; both runtime stores implement the delta read, the archive write, and
 // the rate row; slow mode and the flood guard are enforced in the SERVICE write path; the exemption
 // is read from cookies, never from a form field; Clear chat archives (there is no delete path); the
@@ -28,29 +28,21 @@ function forbidTokens(file, tokens) {
   for (const token of tokens) if (text.includes(token)) failures.push(`${file} still contains forbidden token: ${token}`);
 }
 
-// 1. Migration and mirror. Slow mode deliberately has no column — it rides the room's jsonb state.
-const canonical = "db/migrations/0034_live_chat_scale_controls.sql";
-const canonicalSql = read(canonical);
-const mirrorDir = "supabase/migrations";
-const mirrors = fs.existsSync(mirrorDir) ? fs.readdirSync(mirrorDir).filter((name) => name.endsWith("_live_chat_scale_controls.sql")) : [];
-if (mirrors.length !== 1) failures.push(`${mirrorDir} must contain exactly one *_live_chat_scale_controls.sql mirror (found ${mirrors.length})`);
-for (const name of mirrors) {
-  if (read(path.join(mirrorDir, name)) !== canonicalSql) failures.push(`${mirrorDir}/${name} drifted from ${canonical}; copy the canonical file over it`);
-  if (name.replace(/_.*$/, "") <= "20260916190000") failures.push(`${mirrorDir}/${name} must be timestamped after 20260916190000 or it applies out of order`);
-}
-for (const token of ["add column if not exists archived_at", "add column if not exists archived_by", "create table if not exists public.live_chat_post_rates", "live_chat_messages_moderated_idx"]) {
-  if (!canonicalSql.includes(token)) failures.push(`${canonical} missing: ${token}`);
-}
-requireTokens("scripts/validate_supabase_schema_parity.js", ["live_chat_post_rates", '"archived_at"']);
+// 1. Schema (migrations-d1, applied before every deploy). Slow mode deliberately has no column — it
+//    rides the room's JSON state.
+const { requireD1 } = require("./lib/d1Schema");
+failures.push(...requireD1("live_chat_messages", ["  archived_at TEXT,", "  archived_by TEXT,", "live_chat_messages_moderated_idx"]));
+failures.push(...requireD1("live_chat_post_rates", ["  key TEXT NOT NULL,", "  state TEXT NOT NULL"]));
+requireTokens("lib/d1/schema.generated.ts", ['"live_chat_post_rates"', '"archived_at"']);
 requireTokens("services/events/eventRepository.ts", ['["live_chat_post_rates"']);
-requireTokens("types/runtimeEvent.ts", ["LIVE_CHAT_SCALE_MIGRATION_FILE", "0034_live_chat_scale_controls.sql"]);
+requireTokens("types/runtimeEvent.ts", ["LIVE_CHAT_SCALE_MIGRATION_FILE", "migrations-d1/0004_attendees_live.sql"]);
 
 // 2. Both stores implement the delta read, the archive write, and the rate row; archived rows leave
 //    every listing, crew included.
 const storeMethods = ["listLiveChatMessagesSince", "archiveLiveChatRoomMessages", "getLiveChatRateState", "setLiveChatRateState"];
 requireTokens("services/runtime/runtimeStore.ts", [...storeMethods, "liveChatRateStates"]);
 requireTokens("services/runtime/fileRuntimeStore.ts", [...storeMethods, "!message.archivedAt"]);
-requireTokens("services/runtime/supabaseRuntimeStore.ts", [...storeMethods, '.is("archived_at", null)', "live_chat_post_rates", "archived_at.gt."]);
+requireTokens("services/runtime/d1RuntimeStore.ts", [...storeMethods, '.is("archived_at", null)', "live_chat_post_rates", "archived_at.gt."]);
 
 // 3. The rules live on the WRITE path. Slow mode, then the flood guard, then the append.
 requireTokens("services/venue/liveChatRateLimit.ts", ["LIVE_CHAT_RATE_BURST", "LIVE_CHAT_RATE_SUSTAINED", "LIVE_CHAT_RATE_COOLDOWN_MS", "export function applyLiveChatRate"]);

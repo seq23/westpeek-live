@@ -7,10 +7,10 @@ Status: ACTIVE. Supersedes `docs/archive/superseded/docs__West_Peek_Live_Day1_Co
 | Canonical domain | https://westpeek.live |
 | Worker fallback URL | https://west-peek-live.seq-taylor.workers.dev |
 | Hosting | Cloudflare Workers (**Paid**, $5/mo — 30 s CPU, 10M req/mo, 128 variables) |
-| Database | Supabase (Free tier — see §16) |
+| Database | Cloudflare D1 `west-peek-live` (Workers Paid — see §16) |
 | Video | LiveKit Cloud, project `westpeek-live` (**Ship**, $50/mo) |
 | Backup video | Cloudflare Stream Live, input `westpeek-fallback` (pay-as-you-go) |
-| Storage | Supabase Storage, private bucket `event-assets` |
+| Storage | Cloudflare R2, private bucket `west-peek-live-assets` (signed links only) |
 | Read this inside the app | `westpeek.live/manual` (owner + operator) |
 | Download it | **Assets → West Peek documents → Operator manual → Download .md**, or from the repo at `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md` |
 | Email | Resend — house addresses set in Settings |
@@ -538,15 +538,15 @@ Both are saved per event and both are optional. If what you type is not a meetin
 | LiveKit | **Ship** $50/mo | 600 transcode min, 150,000 participant-min, 1,000 concurrent | **Transcode minutes** — every minute of StreamYard feed burns one |
 | Cloudflare Workers | **Paid** $5/mo | 10M requests, 30 s CPU, 128 variables | Variable count (128) |
 | Cloudflare Stream | Pay as you go | — | $5 / 1,000 min stored, $1 / 1,000 min delivered |
-| Supabase | Free | 500 MB, shared compute, 5 GB egress | **Pauses after 7 days idle**; no backups |
+| Cloudflare D1 + R2 | Included in Workers Paid | D1: 5 GB, 25B rows read / 50M written a month. R2: 10 GB-month, no egress fees | None in sight; never pauses |
 
 ![Plans and capacity](images/manual/11-capacity.jpg)
 
 **`/app/capacity`** shows the month against these allowances, transcode minutes first because that is the cliff we reach first. Anything the provider will not tell the app reads **unknown** and points at the dashboard that knows — no bar is ever drawn against a number nobody checked.
 
-**Supabase no longer pauses.** A scheduled job reads one row every morning, which resets the seven-day idle clock. It fails loudly if the read does not succeed, and it fails if it pinged the wrong store — a green run that kept nothing awake is worse than no run.
+**The database never pauses.** D1 has no idle clock, so there is no keep-alive job; `/api/runtime/health` answers 503 the moment the database cannot be read.
 
-A 90-minute Room with 200 people costs roughly **nothing extra** on these plans. The practical ceiling today is Supabase's shared compute at around a thousand simultaneous chatters. Supabase Pro ($25/mo) buys daily backups and no auto-pause — worth it the first time a paying client's event is on the line.
+A 90-minute Room with 200 people costs roughly **nothing extra** on these plans: a 500-person, three-hour show polling chat every four seconds reads well under 1% of the monthly D1 allowance. D1 keeps 30 days of point-in-time recovery (Time Travel) at no extra cost.
 
 ---
 
@@ -554,18 +554,18 @@ A 90-minute Room with 200 people costs roughly **nothing extra** on these plans.
 
 Worth knowing, because it bit us three times in one day and every time it looked like something else.
 
-A schema change is written twice: once as `db/migrations/00NN_name.sql`, and once **byte-identically** as `supabase/migrations/<timestamp>_name.sql`. The Supabase GitHub integration applies the second one when the branch merges to `main`. The first is what the app reads to describe itself.
+A schema change is written once, as `migrations-d1/00NN_name.sql`. The deploy workflow runs `wrangler d1 migrations apply west-peek-live --remote` **before** it deploys the Worker, on every green `main`, so code never reaches production ahead of its tables. `node scripts/generate_d1_schema_manifest.mjs` turns the same files into the map the app reads to describe itself.
 
-**If the mirror is missing, nothing runs and nothing says so** — that was the root of all three incidents. Migration 0023 had no mirror, so its table never existed; 0036 then failed against the missing table; and 0037 and 0038, which sort after it, never ran at all. The integration *did* report the failure in red, on a push-to-main check run, which appears on no pull request and in no notification.
+**Until 6 Oct 2026 the schema lived in a hosted Postgres, written twice (a Postgres file and a mirror), and a missing mirror ran nothing and said nothing** — that was the root of all three incidents. Migration 0023 had no mirror, so its table never existed; 0036 then failed against the missing table; and 0037 and 0038, which sort after it, never ran at all. The integration *did* report the failure in red, on a push-to-main check run, which appears on no pull request and in no notification.
 
 **What now prevents it:**
 
-- Every table created and column added by any migration must be registered in the app's health map. A validator walks the migrations and fails the build if one is missing, so the map cannot be forgotten.
+- The app's health map is generated from the migration files themselves, and a validator fails the build if the generated map is stale, so no table or column can be left out.
 - `/api/runtime/health` proves the whole map against the live database and names the migration file for anything absent.
 - A deploy whose database is behind **fails loudly** instead of waiting for someone to click the thing that breaks.
 - The page that needs a missing table shows a **named stop** — what is missing, the file to run, and where to run it — rather than an error.
 
-**If you ever see a named stop:** open the Supabase project for westpeek.live, SQL editor, paste the file it names, run it, reload. The migrations are additive and safe to run twice.
+**If you ever see a named stop:** run `npx wrangler d1 migrations apply west-peek-live --remote` from the repository (or re-run the deploy workflow), then reload. Migrations are additive and recorded, so each runs once.
 
 ---
 
@@ -576,7 +576,7 @@ A schema change is written twice: once as `db/migrations/00NN_name.sql`, and onc
 | "Code not ready" on join | Unpublished event, or a typo | Matching is case-insensitive and prefix-tolerant; if it persists the event is a draft — publish it |
 | Attendees stuck on "Connecting…" | Stale browser bundle after a deploy | Hard refresh (⌘⇧R). This was a real regression once; it is fixed, but the refresh still clears a cached bundle |
 | Stage black, StreamYard says live | Feed not reaching LiveKit, or the ingress was not provisioned | Crew deck → Go live → regenerate credentials; if it will not recover, move down to Cloudflare |
-| Crew page shows a section as "unavailable" | A runtime table is missing | By design it fails soft instead of taking the page down. Check Supabase migrations |
+| Crew page shows a section as "unavailable" | A runtime table is missing | By design it fails soft instead of taking the page down. Check `/api/runtime/health` for the missing table |
 | Timestamps look wrong | — | Every time renders in the **viewer's** time zone. If it looks off, it is the data, not the display |
 | Venue still says "Event ended" after going live again | — | Fixed: taking an ended event live resets its stage |
 | Someone sees the stage who should not | — | Everyone is permitted to watch by default; that is intended. Only stage *access* is approved |
@@ -584,7 +584,7 @@ A schema change is written twice: once as `db/migrations/00NN_name.sql`, and onc
 | A page behaves as if you are not signed in, right after a deploy | Stale bundle in an open tab | The app should prompt and reload itself; if it does not, hard refresh (⌘⇧R) |
 | A privileged code stopped working | Someone rotated it, or set a custom one | Owner Console → Access codes shows the current one |
 | A gate says "too many attempts" | Six wrong tries from one place | Two minutes, then it answers again. A correct code clears the record |
-| "Events cannot be saved until one migration runs" | The database is behind the code | It is a named stop, not a crash. Run the file it names in the Supabase SQL editor and reload (§17) |
+| "Events cannot be saved until one migration runs" | The database is behind the code | It is a named stop, not a crash. Apply the D1 migrations and reload (§17) |
 | An attendee says they cannot see the stream | Three different causes | **Diagnose** on their roster row tells you which: never connected, receiving nothing (ours), or a poor line (theirs) |
 | Someone was emailed who asked not to be | — | Should be impossible for a group send. Transactional messages to one person are deliberately never suppressed — that is their invitation, not a mailing (§10) |
 | A speaker or sponsor cannot be emailed | They gave their name before 17 Sep 2026, when we started asking for an address | They fill in the next time they open their portal |

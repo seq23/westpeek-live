@@ -1,6 +1,6 @@
 #!/usr/bin/env node
 // Real special-guest flow contract (speaker green room, cue cards, sponsor / VIP / client).
-// Proves, statically, that: the 0026 migration and its mirror are byte-identical and probed by the
+// Proves, statically, that: the D1 schema carries both guest tables, probed by the
 // health endpoint; both stores implement guest identity and guest state; identity comes from the
 // role code (no speaker-drake on any speaker route); LiveKit grants are decided by one pure rule the
 // token route uses (speaker: green room always, stage only when brought up; attendee: never the
@@ -26,19 +26,18 @@ function forbidTokens(file, tokens) {
   for (const token of tokens) if (text.includes(token)) failures.push(`${file} still contains forbidden token: ${token}`);
 }
 
-// 1. Migration + mirror + probe.
-const canonical = "db/migrations/0026_special_guest_identity_and_state.sql";
-const canonicalSql = read(canonical);
-const mirrors = fs.existsSync("supabase/migrations") ? fs.readdirSync("supabase/migrations").filter((name) => name.endsWith("_special_guest_identity_and_state.sql")) : [];
-if (mirrors.length !== 1) failures.push(`supabase/migrations must contain exactly one *_special_guest_identity_and_state.sql mirror (found ${mirrors.length})`);
-for (const name of mirrors) if (read(path.join("supabase/migrations", name)) !== canonicalSql) failures.push(`supabase/migrations/${name} drifted from ${canonical}`);
-for (const token of ["create table if not exists public.special_guest_profiles", "create table if not exists public.event_guest_states", "check (role in ('speaker', 'sponsor', 'vip', 'client'))"]) if (!canonicalSql.includes(token)) failures.push(`${canonical} missing: ${token}`);
+// 1. Schema (migrations-d1, applied before every deploy) + probe.
+{
+  const { requireD1 } = require("./lib/d1Schema");
+  failures.push(...requireD1("special_guest_profiles", ["CHECK ((role IN ('speaker', 'sponsor', 'vip', 'client')))", "  PRIMARY KEY (event_id, guest_id)"]));
+  failures.push(...requireD1("event_guest_states", ["  key TEXT NOT NULL,", "  state TEXT NOT NULL"]));
+}
 requireTokens("services/events/eventRepository.ts", ['["special_guest_profiles"', '["event_guest_states"']);
-requireTokens("scripts/validate_supabase_schema_parity.js", ["special_guest_profiles", "event_guest_states"]);
+requireTokens("lib/d1/schema.generated.ts", ['"special_guest_profiles"', '"event_guest_states"']);
 
 // 2. Both stores.
 const storeMethods = ["upsertSpecialGuestProfile", "getSpecialGuestProfile", "listSpecialGuestProfiles", "setEventGuestState", "getEventGuestState", "listEventGuestStates"];
-for (const file of ["services/runtime/runtimeStore.ts", "services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) requireTokens(file, storeMethods);
+for (const file of ["services/runtime/runtimeStore.ts", "services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) requireTokens(file, storeMethods);
 
 // 3. Identity from the code; no mock speaker on the speaker routes.
 requireTokens("services/guests/guestIdentityService.ts", ['GUEST_IDENTITY_COOKIE = "wpl_guest_identity"', "export async function registerGuestIdentity", "export async function getCurrentGuestIdentity", "export async function getCurrentSpecialGuestAccess"]);

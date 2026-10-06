@@ -1,4 +1,4 @@
-import { isSupabaseAdminConfigured } from "@/lib/env";
+import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 
 /**
  * Public event-request intake.
@@ -22,7 +22,7 @@ import { isSupabaseAdminConfigured } from "@/lib/env";
  * Bumping the compatibility date would only convert that crash into a genuine
  * silent drop: workerd's filesystem is per-isolate and ephemeral, so a request
  * written to it is gone as soon as the isolate is recycled. Intake has to go
- * somewhere durable, so it goes to Supabase, which every other persisted
+ * somewhere durable, so it goes to D1, which every other persisted
  * surface in this app already uses.
  *
  * The contract this file now keeps: a caller can always tell whether the
@@ -74,8 +74,17 @@ export type RequestEventPersistResult =
  * inside the append path, so a working filesystem would have caused an append to
  * truncate every earlier record. Both problems disappear with a real insert.
  */
+/** Only D1 is durable here; the file store on a Worker is per-isolate and loses the row. */
+function durableStore() {
+  try {
+    return getRuntimeStore().kind === "d1";
+  } catch {
+    return false;
+  }
+}
+
 export async function readRequestEventRecords(): Promise<EventRequestRecord[]> {
-  if (!isSupabaseAdminConfigured()) return [];
+  if (!durableStore()) return [];
   return listEventRequests();
 }
 
@@ -88,8 +97,8 @@ export async function readRequestEventRecords(): Promise<EventRequestRecord[]> {
 export async function appendRequestEventRecord(
   record: RequestEventRecord,
 ): Promise<RequestEventPersistResult> {
-  if (!isSupabaseAdminConfigured()) {
-    return { ok: false, record, reason: "supabase_not_configured" };
+  if (!durableStore()) {
+    return { ok: false, record, reason: "database_not_bound" };
   }
 
   const result = await submitEventRequest(record);

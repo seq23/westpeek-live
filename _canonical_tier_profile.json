@@ -104,7 +104,7 @@
         "daily-fallback",
         "zoom-fallback",
         "meet-applicability",
-        "supabase-production-readback",
+        "d1-production-readback",
         "transactional-delivery",
         "attendee-consumption",
         "provider-cleanup"

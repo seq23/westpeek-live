@@ -12,7 +12,7 @@ function check(file, tokens) { const body = read(file); examined += 1; const mis
 // The one store method pair, implemented by both stores.
 check("services/runtime/runtimeStore.ts", ["listAttendeeProfilesByEmailHash(emailHash: string): Promise<AttendeeProfile[]>", "listAttendeeProfilesWithoutEmail(limit?: number): Promise<AttendeeProfile[]>"]);
 check("services/runtime/fileRuntimeStore.ts", ["async listAttendeeProfilesByEmailHash(", "async listAttendeeProfilesWithoutEmail("]);
-check("services/runtime/supabaseRuntimeStore.ts", ["async listAttendeeProfilesByEmailHash(", 'eq("email_hash", emailHash)', "async listAttendeeProfilesWithoutEmail(", 'is("email", null)']);
+check("services/runtime/d1RuntimeStore.ts", ["async listAttendeeProfilesByEmailHash(", 'eq("email_hash", emailHash)', "async listAttendeeProfilesWithoutEmail(", 'is("email", null)']);
 // The heal: backfill every hash sibling, union of events, earliest first_seen.
 check("services/attendees/contactsService.ts", ["listAttendeeProfilesByEmailHash(profile.emailHash)", "store.upsertAttendeeProfile(backfilled)", "merged.eventsAttended = Array.from(new Set(", "merged.firstSeenAt = earliest", "export async function listHashOnlyPeople", "export function groupHashOnlyProfiles", "listAttendeeProfilesWithoutEmail()", "EMAIL_NOT_CAPTURED_NOTE", 'hashOnly: HashOnlyPerson[] = []']);
 // Every write path with an email runs it.

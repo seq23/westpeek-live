@@ -10,7 +10,7 @@ const fs = require("fs");
  *
  * What this asserts, and why each piece is here rather than in a test:
  *
- *   1. The table exists, is mirrored, and is registered in RUNTIME_TABLE_MIGRATIONS — an unmirrored
+ *   1. The table exists in migrations-d1 and is in the generated RUNTIME_TABLE_MIGRATIONS — an unapplied
  *      or unprobed migration never reaches production and looks exactly like working software.
  *   2. The window is a NAMED constant, not a magic number, and nothing hardcodes 90 elsewhere.
  *   3. THE FUNNEL. Every write of joinCode or accessCodes on a runtime event goes through a
@@ -35,21 +35,19 @@ function check(file, tokens) {
 }
 
 // --- 1. The table reaches production and is probed --------------------------------------------
-const CANONICAL = "db/migrations/0046_superseded_access_codes.sql";
-const MIRROR = "supabase/migrations/20260917140000_superseded_access_codes.sql";
-const migration = check(CANONICAL, ["create table if not exists public.event_code_history", "code_key", "replaced_at", "reason", "event_code_history_code_key_idx"]);
-const mirror = read(MIRROR);
-examined += 1;
-if (mirror !== migration) throw new Error(`${MIRROR} is not byte-identical to ${CANONICAL}; the Supabase integration applies the mirror, so they must not drift.`);
-
-// The one real event this was found on. Backfilled, or the link already in the wild stays dead.
-for (const token of ["45-minute-ai-workshop", "wpl-ge43tu", "WPLGE43TU"]) {
-  if (!migration.includes(token)) throw new Error(`${CANONICAL} must backfill the superseded code for the owner's own event (missing ${token}); without it the link Scooter already sent never starts working again.`);
+const CANONICAL = "migrations-d1/0003_runtime.sql";
+{
+  const failures = require("./lib/d1Schema").requireD1("event_code_history", ["  code_key TEXT NOT NULL,", "  replaced_at TEXT NOT NULL", "  reason TEXT", "event_code_history_code_key_idx"]);
+  if (failures.length) throw new Error(failures.join("; "));
+  examined += 1;
 }
-if (!migration.includes("not exists")) throw new Error(`${CANONICAL} backfill must be idempotent; a migration that duplicates its row on re-run is not safe to re-apply.`);
+// The Postgres-era 0046 also backfilled one superseded code (45-minute-ai-workshop / WPL-GE43TU). That
+// event's row was lost with the deleted hosted-Postgres project on 6 Oct 2026, so there is nothing for a
+// backfill to point at; the D1 schema deliberately carries no data rows.
+if (/INSERT INTO/i.test(read(CANONICAL))) throw new Error(`${CANONICAL} must carry schema only; a data row in a migration re-creates history nobody can verify.`);
 
-const map = check("types/runtimeEvent.ts", ["SUPERSEDED_CODES_MIGRATION_FILE", "event_code_history: SUPERSEDED_CODES_MIGRATION_FILE"]);
-if (!map.includes(`"${CANONICAL}"`)) throw new Error(`RUNTIME_TABLE_MIGRATIONS must point event_code_history at ${CANONICAL}`);
+const map = check("types/runtimeEvent.ts", [`SUPERSEDED_CODES_MIGRATION_FILE = "${CANONICAL}"`]);
+check("lib/d1/schema.generated.ts", [`"event_code_history": {\n    "file": "${CANONICAL}"`]);
 
 // --- 2. The window is named, not a magic number ------------------------------------------------
 const types = check("types/supersededCode.ts", ["export const SUPERSEDED_CODE_WINDOW_DAYS = 90", "export function supersededCodeIsLive", "export function supersededPrivilegedMessage", "export function supersededAttendeeMessage", "Ask the producer for the current one."]);
@@ -79,7 +77,7 @@ for (const writer of CODE_WRITERS) {
   if (upsertAt < 0) throw new Error(`${writer.file}: expected ${writer.fn} to upsert after recording`);
 }
 
-const ALLOWED_CODE_WRITERS = new Set(["services/events/accessCodeService.ts", "services/events/hostLinkService.ts", "services/events/eventRepository.ts", "services/runtime/supabaseRuntimeStore.ts"]);
+const ALLOWED_CODE_WRITERS = new Set(["services/events/accessCodeService.ts", "services/events/hostLinkService.ts", "services/events/eventRepository.ts", "services/runtime/d1RuntimeStore.ts"]);
 function walk(dir, out = []) {
   for (const entry of fs.readdirSync(dir, { withFileTypes: true })) {
     const full = `${dir}/${entry.name}`;
@@ -145,7 +143,7 @@ check("components/events/EventAccessCodesPanel.tsx", ["describeCodeChangeImpact"
 // --- The store carries it end to end -----------------------------------------------------------
 check("services/runtime/runtimeStore.ts", ["appendSupersededCode", "findSupersededCode", "listSupersededCodes", "eventCodeHistory"]);
 check("services/runtime/fileRuntimeStore.ts", ["appendSupersededCode", "eventCodeHistory"]);
-check("services/runtime/supabaseRuntimeStore.ts", ['from("event_code_history")', "supersededCodeFromRow"]);
+check("services/runtime/d1RuntimeStore.ts", ['from("event_code_history")', "supersededCodeFromRow"]);
 
 // --- The behaviour is proven, not only shaped ---------------------------------------------------
 check("tests/unit/supersededCodes.test.ts", [
@@ -157,7 +155,7 @@ check("tests/unit/supersededCodes.test.ts", [
 ]);
 
 if (examined < 22) throw new Error(`validate_superseded_codes examined only ${examined} files`);
-console.log(`validate_superseded_codes: PASS — ${examined} files examined, ${scanned} scanned for stray code writes; 0046 mirrored, probed and backfilled with WPL-GE43TU, the ${SUPERSEDED_CODE_WINDOW_DAYS_LABEL()}-day window named once, every code change funnelled through a recorded path, attendees landed and privileged codes refused informatively, confirms carrying real counts.`);
+console.log(`validate_superseded_codes: PASS — ${examined} files examined, ${scanned} scanned for stray code writes; event_code_history in D1 and probed, the ${SUPERSEDED_CODE_WINDOW_DAYS_LABEL()}-day window named once, every code change funnelled through a recorded path, attendees landed and privileged codes refused informatively, confirms carrying real counts.`);
 
 function SUPERSEDED_CODE_WINDOW_DAYS_LABEL() {
   return (/SUPERSEDED_CODE_WINDOW_DAYS = (\d+)/.exec(types) || [, "?"])[1];

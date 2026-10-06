@@ -15,25 +15,25 @@ export const dynamic = "force-dynamic";
  * named, visible stop rather than a 500 on the crew page during a show.
  *
  * `migrationCoverage` is the whole of it: EVERY entry in RUNTIME_TABLE_MIGRATIONS —
- * every table and every column any migration from 0023 on introduces — checked
- * against the live database, each missing object reported with the migration file
- * that supplies it. The older checks covered fourteen hand-listed objects out of
- * fifty-three, which is how 0023, 0030 and 0037 stayed unapplied and unnoticed.
+ * every table and every column migrations-d1/ declares — checked against the live
+ * D1 database, each missing object reported with the migration file that supplies
+ * it. The status code is 503 whenever `ok` is false.
  */
 export async function GET() {
   let schema;
   try {
     schema = await getRuntimeSchemaStatus();
   } catch (error) {
-    schema = { ok: false, store: "unknown", missingTables: [], migrationFile: "db/migrations/0024_runtime_events.sql", detail: error instanceof Error ? error.message : String(error) };
+    schema = { ok: false, store: "unknown", missingTables: [], migrationFile: "migrations-d1/0003_runtime.sql", detail: error instanceof Error ? error.message : String(error) };
   }
   const seedEvents = listSeedEventRecords().length;
   const crewPageReads = await probeCrewPageReads().catch((error) => ({ ok: false, reads: [{ name: "probe", ok: false, detail: error instanceof Error ? error.message : String(error) }] }));
   // A thrown probe is a failed probe, never an absent one: `ok: false` so the smoke test still stops.
   const migrationCoverage = await probeMigrationCoverage().catch((error) => ({ ok: false, checked: 0, missing: [], detail: error instanceof Error ? error.message : String(error) }));
+  const ok = schema.ok && crewPageReads.ok && migrationCoverage.ok;
   return NextResponse.json(
     {
-      ok: schema.ok && crewPageReads.ok && migrationCoverage.ok,
+      ok,
       crewPageReads,
       migrationCoverage,
       store: schema.store,
@@ -41,6 +41,8 @@ export async function GET() {
       seedEvents,
       checkedAt: new Date().toISOString(),
     },
-    { status: 200, headers: { "cache-control": "no-store" } },
+    // 503 whenever any check fails: an uptime monitor reading only the status code must see the
+    // outage. Before 6 Oct 2026 this answered 200 with ok:false while the database was gone.
+    { status: ok ? 200 : 503, headers: { "cache-control": "no-store" } },
   );
 }

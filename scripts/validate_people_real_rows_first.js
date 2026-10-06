@@ -24,7 +24,7 @@ check("components/people/ArchiveTestRowsButton.tsx", ["archiveTestPeopleAction",
 check("lib/actions/peopleActions.ts", ['actor?.kind !== "owner"', "archiveTestPeople("]);
 check("app/api/contacts/export/route.ts", ["peopleDirectory()", "includeTest"]);
 check("components/owner/OwnerConsole.tsx", ["ContactsAcrossEvents({ compact: true })"]);
-check("db/migrations/0030_contact_archive.sql", ["add column if not exists archived_at", "contacts"]);
+{ const f = require("./lib/d1Schema").requireD1("contacts", ["  archived_at TEXT,", "contacts_archived_at_idx"]); examined += 1; if (f.length) throw new Error(f.join("; ")); }
 check("tests/unit/peopleTestRows.test.ts", ["classifies by domain and by event, never by name", "the default view is the three real people", "leaves the three real people and their attendee rows untouched"]);
 check("tests/e2e/people-test-rows.spec.ts", ["Show test rows", "example.invalid"]);
 if (examined < 10) throw new Error(`validate_people_real_rows_first examined only ${examined} files`);

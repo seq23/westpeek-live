@@ -57,9 +57,6 @@ const safeEnv = {
   EVENT_DEMO_SPEAKER_CODE: day1Default('EVENT_DEMO_SPEAKER_CODE'),
   EVENT_DEMO_SPONSOR_CODE: day1Default('EVENT_DEMO_SPONSOR_CODE'),
   EVENT_DEMO_VIP_CODE: day1Default('EVENT_DEMO_VIP_CODE'),
-  NEXT_PUBLIC_SUPABASE_URL: '',
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: '',
-  SUPABASE_SERVICE_ROLE_KEY: '',
   LIVEKIT_URL: '',
   LIVEKIT_API_KEY: '',
   LIVEKIT_API_SECRET: '',
@@ -73,7 +70,7 @@ console.log('Agency Event OS predeploy Playwright runner');
 console.log(`Suite: ${suite}`);
 console.log(`Base URL: ${baseURL}`);
 console.log(`Runtime store: ${runtimePath}`);
-console.log('Mode: local predeploy, file runtime, mock video, no Supabase/provider secrets');
+console.log('Mode: local predeploy, file runtime, mock video, no database/provider secrets');
 console.log(`Command: node ${path.relative(root, cli)} ${finalArgs.join(' ')}`);
 
 const result = spawnSync(process.execPath, [cli, ...finalArgs], {

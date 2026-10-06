@@ -23,7 +23,7 @@ const required = [
   "components/events/setup/EventSetupShell.tsx",
   "services/events/eventSetupCompletionService.ts",
   "services/runtime/fileRuntimeStore.ts",
-  "services/runtime/supabaseRuntimeStore.ts",
+  "services/runtime/d1RuntimeStore.ts",
   "lib/actions/videoFallbackActions.ts",
   "lib/actions/registrationActions.ts",
   "lib/actions/venueRuntimeActions.ts",
@@ -31,7 +31,7 @@ const required = [
   // dashboard behind it were deleted on 16 Sep 2026 because they stacked a second send log under the
   // first. Sending goes through lib/actions/eventEmailActions.ts.
   "lib/actions/eventEmailActions.ts",
-  "db/migrations/0020_v6_e2e_runtime_tables.sql"
+  "migrations-d1/0006_events_audit_auth.sql"
 ];
 const missing = required.filter((file) => !fs.existsSync(file));
 if (missing.length) {

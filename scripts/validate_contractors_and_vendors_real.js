@@ -4,8 +4,7 @@ const fs = require("fs");
  * no create, no edit, and no link to any event, so the owner could not put a camera op on a show.
  *
  * What must hold now: one table with a `kind` (never two drifting copies of the same fields), real
- * CRUD through the runtime store, a migration mirrored into supabase/migrations or it never reaches
- * production, attach/detach as a LINK so one person can be on many events, filters and a CSV that
+ * CRUD through the runtime store, the tables in migrations-d1 (applied before every deploy), attach/detach as a LINK so one person can be on many events, filters and a CSV that
  * exports exactly the filtered view, and an empty state that says what to add instead of showing
  * invented rows. The seed boards are gone, not merely unused.
  */
@@ -24,22 +23,25 @@ if (!/suppliersCsv\(\s*rows\.map/.test(repository)) throw new Error("suppliersCs
 
 check("lib/actions/supplierActions.ts", ["requireWorkspaceActor", "createSupplierAction", "updateSupplierAction", "setSupplierStatusAction", "archiveSupplierAction", "attachSupplierAction", "detachSupplierAction", "revalidatePath"]);
 
-for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) {
+for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) {
   check(store, ["upsertSupplier", "getSupplier", "listSuppliers", "upsertSupplierEventLink", "deleteSupplierEventLink", "listSupplierEventLinks"]);
 }
 check("services/runtime/runtimeStore.ts", ["suppliers: SupplierRecord[]", "supplierEventLinks: SupplierEventLink[]", "upsertSupplier(", "listSupplierEventLinks("]);
 // A missing table has to be a NAMED stop on the health probe, not a blank page.
 check("services/events/eventRepository.ts", ['["suppliers", () => store.listSuppliers()]', '["supplier_event_links", () => store.listSupplierEventLinks()]']);
-check("types/runtimeEvent.ts", ["SUPPLIERS_MIGRATION_FILE", "supplier_event_links: SUPPLIERS_MIGRATION_FILE"]);
+check("types/runtimeEvent.ts", ['SUPPLIERS_MIGRATION_FILE = "migrations-d1/0003_runtime.sql"']);
+check("lib/d1/schema.generated.ts", ['"suppliers": {\n    "file": "migrations-d1/0003_runtime.sql"', '"supplier_event_links": {\n    "file": "migrations-d1/0003_runtime.sql"']);
 
-const migration = check("db/migrations/0033_contractors_and_vendors.sql", ["create table if not exists public.suppliers", "create table if not exists public.supplier_event_links", "kind text", "role_or_service", "rate_kind", "rate_amount", "status text", "archived_at", "supplier_event_links_pair_idx"]);
-const mirror = "supabase/migrations/20260916230000_contractors_and_vendors.sql";
-if (!fs.existsSync(mirror)) throw new Error(`${mirror} is missing; the migration would never run in production.`);
-if (fs.readFileSync(mirror, "utf8") !== migration) throw new Error(`${mirror} drifted from the canonical 0033 migration.`);
+const { requireD1, d1Sql } = require("./lib/d1Schema");
+const schemaFailures = [
+  ...requireD1("suppliers", ["  kind TEXT NOT NULL", "  role_or_service TEXT", "  rate_kind TEXT", "  rate_amount REAL", "  status TEXT", "  archived_at TEXT,"]),
+  ...requireD1("supplier_event_links", ["  supplier_id TEXT NOT NULL,", "  event_id TEXT NOT NULL,", "CREATE UNIQUE INDEX IF NOT EXISTS supplier_event_links_pair_idx ON supplier_event_links (supplier_id, event_id)"]),
+];
+if (schemaFailures.length) throw new Error(schemaFailures.join("; "));
 examined += 1;
 
 // Two tables for the same fields is the thing this design refused; catch a later split.
-if (fs.existsSync("db/migrations") && fs.readdirSync("db/migrations").some((name) => /vendors_table|contractors_table/.test(name))) throw new Error("Contractors and vendors are one table with a kind; a second table would split the same fields.");
+if (/CREATE TABLE IF NOT EXISTS (vendors|contractors) /.test(d1Sql())) throw new Error("Contractors and vendors are one table with a kind; a second table would split the same fields.");
 
 const directory = check("components/suppliers/SupplierDirectory.tsx", ["listSuppliersWithEvents(", "supplierEventOptions(", "supplier-filter-status-", "supplier-filter-event-", "supplier-export-csv-", "EmptyState", "SupplierForm", "SupplierRow"]);
 if (directory.includes("getRuntimeData")) throw new Error("The Contractors/Vendors directory must never read the seed fixtures.");
@@ -79,4 +81,4 @@ const test = check("tests/unit/suppliers.test.ts", [
 if (!test.includes("detachSupplierFromEvent")) throw new Error("Detach must be proven by a test.");
 
 if (examined < 18) throw new Error(`validate_contractors_and_vendors_real examined only ${examined} files; the rule would pass on an empty loop`);
-console.log(`validate_contractors_and_vendors_real: PASS — ${examined} files examined; contractors and vendors are one table with a kind, real CRUD, mirrored migration 0033, event links, filtered CSV and honest empty states, proven by tests/unit/suppliers.test.ts.`);
+console.log(`validate_contractors_and_vendors_real: PASS — ${examined} files examined; contractors and vendors are one table with a kind, real CRUD, D1 tables, event links, filtered CSV and honest empty states, proven by tests/unit/suppliers.test.ts.`);

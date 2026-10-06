@@ -10,8 +10,8 @@ function read(file) { if (!fs.existsSync(file)) throw new Error(`Missing ${file}
 let examined = 0;
 function check(file, tokens) { const body = read(file); examined += 1; const missing = tokens.filter((t) => !body.includes(t)); if (missing.length) throw new Error(`${file} missing: ${missing.join(" | ")}`); return body; }
 
-check("db/migrations/0035_event_templates.sql", ["create table if not exists public.runtime_event_templates", "sessions", "registration_questions", "duration_minutes"]);
-for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/supabaseRuntimeStore.ts"]) check(store, ["upsertEventTemplate", "listEventTemplates", "getEventTemplate", "deleteEventTemplate"]);
+{ const f = require("./lib/d1Schema").requireD1("runtime_event_templates", ["  sessions TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(sessions))", "  registration_questions TEXT NOT NULL DEFAULT '[]' CHECK (json_valid(registration_questions))", "  duration_minutes INTEGER"]); examined += 1; if (f.length) throw new Error(f.join("; ")); }
+for (const store of ["services/runtime/fileRuntimeStore.ts", "services/runtime/d1RuntimeStore.ts"]) check(store, ["upsertEventTemplate", "listEventTemplates", "getEventTemplate", "deleteEventTemplate"]);
 const service = check("services/events/eventTemplateService.ts", ["export async function saveEventTemplate", "export async function templateFromEvent", "export async function listEventTemplates", "Math.max(15, Math.min(480"]);
 if (!service.includes("A template needs a name")) throw new Error("A nameless template must be refused in words.");
 

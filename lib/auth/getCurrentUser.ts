@@ -1,8 +1,9 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
-import { isSupabaseConfigured } from "@/lib/env";
 import type { PermissionUser } from "@/types/permissions";
+import { getD1 } from "@/lib/d1/binding";
+import { createDbClient } from "@/lib/d1/query";
 import { getAuthCookiePayload } from "./sessionCookie";
-import { resolvePermissionUserForSupabaseUser } from "./authService";
+import { resolvePermissionUserForUserId } from "./authService";
+import { PasswordAuth } from "./passwordAuth";
 
 function getLocalPlaywrightGauntletUser(sessionAccessToken?: string): PermissionUser | null {
   if (process.env.LOCAL_PLAYWRIGHT_GAUNTLET_AUTH !== "true" && process.env.PLAYWRIGHT_LOCAL_E2E !== "1") return null;
@@ -19,17 +20,16 @@ function getLocalPlaywrightGauntletUser(sessionAccessToken?: string): Permission
   };
 }
 
+/** The self-serve user behind the session cookie: the token must match a live row in auth_sessions. */
 export async function getCurrentUser(): Promise<PermissionUser | null> {
   const session = await getAuthCookiePayload();
   const localGauntletUser = getLocalPlaywrightGauntletUser(session?.accessToken);
   if (localGauntletUser) return localGauntletUser;
-
-  if (!isSupabaseConfigured()) return null;
   if (!session?.accessToken) return null;
 
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.auth.getUser(session.accessToken);
-
-  if (error || !data.user) return null;
-  return resolvePermissionUserForSupabaseUser(data.user.id);
+  const db = getD1();
+  if (!db) return null;
+  const userId = await new PasswordAuth(createDbClient(db)).resolveSession(session.accessToken).catch(() => undefined);
+  if (!userId) return null;
+  return resolvePermissionUserForUserId(userId);
 }

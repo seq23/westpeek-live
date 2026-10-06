@@ -5,7 +5,7 @@ import { realRuntimeEvent } from "@/lib/workspace/realEvent";
 import { getEventWorkspaceReadModel } from "@/services/events/eventWorkspaceReadModel";
 
 /**
- * Tasks and milestones have NO runtime table — nothing in Supabase stores a task the owner typed,
+ * Tasks and milestones have NO runtime table — nothing in D1 stores a task the owner typed,
  * and inventing a schema to fill this page is not the job. So a real event gets the truth: there is
  * no task list yet, and here is what is actually outstanding on the event, counted from the rows
  * that DO exist (files waiting for review, cue decks waiting for approval, tech checks not

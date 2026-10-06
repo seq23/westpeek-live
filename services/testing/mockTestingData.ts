@@ -245,9 +245,9 @@ export const baselineTestingConsoleSnapshot: TestingConsoleSnapshot = {
       recommendedAction: "Run after sender-domain or secret changes.",
     },
     {
-      id: "smoke-supabase",
-      label: "Supabase write/read smoke",
-      description: "Confirms service-role read/write against production Supabase succeeds.",
+      id: "smoke-d1",
+      label: "D1 write/read smoke",
+      description: "Confirms a write and read against the production D1 database succeed.",
       status: "pass",
       severity: "critical",
       recommendedAction: "Run after schema, RLS, or secret changes.",
