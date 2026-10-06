@@ -26,7 +26,10 @@ const required=[
   'workflows: ["Repository validation"]',
   "github.event.workflow_run.conclusion == 'success'",
   'ref: ${{ github.event.workflow_run.head_sha || github.sha }}',
-  'npx wrangler d1 migrations apply west-peek-live --remote'
+  'npx wrangler d1 migrations apply west-peek-live --remote',
+  // The smoke checks the version this run deployed, not whichever one answers during rollout.
+  'SMOKE_EXPECT_BUILD_ID: ${{ github.event.workflow_run.head_sha || github.sha }}',
+  'DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}'
 ];
 for(const token of required) if(!s.includes(token)) failures.push(`Cloudflare workflow missing: ${token}`);
 if(s.indexOf('d1 migrations apply west-peek-live --remote')>s.indexOf('npm run cf:deploy -- --keep-vars')) failures.push('The D1 migrations must be applied before the Worker deploys.');
