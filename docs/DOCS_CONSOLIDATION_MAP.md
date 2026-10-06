@@ -105,6 +105,7 @@ Purpose: every Markdown document is classified so active documentation stays int
 | `docs/STREAMYARD_LIVEKIT_DAILY_FAILOVER_ARCHITECTURE.md` | ARCHIVED | Moved to docs/archive/superseded/docs__STREAMYARD_LIVEKIT_DAILY_FAILOVER_ARCHITECTURE.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
 | `docs/SUPABASE_RLS_DEPLOYMENT_REVIEW.md` | ARCHIVED | Moved to docs/archive/superseded/docs__SUPABASE_RLS_DEPLOYMENT_REVIEW.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
 | `docs/SUPABASE_SETUP.md` | ARCHIVED | Moved to docs/archive/superseded/docs__SUPABASE_SETUP.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
+| `docs/SUPABASE_TO_CLOUDFLARE.md` | ACTIVE | The record of the 6 Oct 2026 move from Supabase to D1 + R2 + app-owned login: what moved where, the $0 check, and the commit that last held the Postgres schema (984ea43). | None |
 | `docs/TECH_DEBT_REGISTER.md` | ARCHIVED | Moved to docs/archive/superseded/docs__TECH_DEBT_REGISTER.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
 | `docs/TESTING_CONSOLE.md` | ACTIVE_VALIDATOR_REFERENCED | Current active operator/proof/runbook surface or validator-referenced source. | None |
 | `docs/TESTING_DEBUGGING_ENVIRONMENT_AUDIT.md` | ARCHIVED | Moved to docs/archive/superseded/docs__TESTING_DEBUGGING_ENVIRONMENT_AUDIT.md | docs/ACTIVE_DOCS.md / active runbooks / root ledgers |
