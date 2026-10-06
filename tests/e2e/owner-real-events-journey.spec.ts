@@ -208,12 +208,16 @@ test.describe("owner real events", () => {
     await expect(page).toHaveURL(/\/app\/events\/new\?when=later&clientId=/);
     const eventName = `Playwright Client Event ${Date.now()}`;
     await page.getByLabel(/^Event name/i).fill(eventName);
+    // "Your events" on the dashboard is the six soonest in motion; an early start puts this draft in
+    // that window however many live rooms the rest of the suite has opened.
+    await page.locator('input[name="startAt"]').fill("2026-01-05T09:00");
     await page.getByTestId("create-event-submit").click();
     await expect(page).toHaveURL(/\/app\/events\/[a-z0-9-]+\?created=1/);
     await expect(page.getByTestId("runtime-event-header")).toContainText(clientName);
 
     await gotoAndAssert(page, "/app");
     await expect(page.getByTestId("dashboard-events")).toContainText(eventName);
+    await expect(page.getByTestId("dashboard-events")).toContainText(clientName);
 
     await gotoAndAssert(page, "/app/settings");
     const agencyName = `West Peek ${Date.now() % 1000}`;

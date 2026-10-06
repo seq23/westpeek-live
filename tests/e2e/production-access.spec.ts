@@ -34,7 +34,7 @@ test("production access offers the Owner Access card and the owner gate lands on
   await expect(page).toHaveURL(/\/app\/events\/new$/);
   await expect(page.getByRole("heading", { name: /Start a Room now/i })).toBeVisible();
   await gotoAndAssert(page, "/production-access/launchpad");
-  await page.getByRole("link", { name: /Create Event in Admin Workspace/i }).first().click();
+  await page.getByTestId("operator-launchpad").getByRole("link", { name: "New event", exact: true }).first().click();
   await expect(page).toHaveURL(/\/app\/events\/new$/);
   await gotoAndAssert(page, "/production-access/owner?next=/app/settings");
   await expect(page).toHaveURL(/\/app\/settings$/);
