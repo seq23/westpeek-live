@@ -172,8 +172,7 @@ describe("request-event store", () => {
   });
 
   it("reports failure rather than success when there is nowhere to store", async () => {
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // No D1 binding: the file store on a Worker is per-isolate, so it is not a place to keep a request.
     vi.resetModules();
 
     const store = await vi.importActual<typeof import("@/services/events/requestEventStore")>(
@@ -192,9 +191,26 @@ describe("request-event store", () => {
     if (!result.ok) expect(result.reason).toBe("database_not_bound");
   });
 
+  it("stores the request in D1 and reads it back when the binding exists", async () => {
+    process.env.AGENCY_EVENT_OS_RUNTIME_STORE = "";
+    vi.resetModules();
+    const { createTestD1 } = await import("./helpers/d1");
+    const env = await createTestD1();
+    try {
+      const binding = await vi.importActual<typeof import("@/lib/d1/binding")>("@/lib/d1/binding");
+      binding.setD1ForTests(env.db);
+      const store = await vi.importActual<typeof import("@/services/events/requestEventStore")>("@/services/events/requestEventStore");
+      const record = { id: "request-d1", name: "TEST ROW", email: "test@westpeek.ventures", createdAt: new Date().toISOString() };
+      expect(await store.appendRequestEventRecord(record)).toMatchObject({ ok: true });
+      expect((await store.readRequestEventRecords()).map((row) => row.email)).toContain("test@westpeek.ventures");
+      binding.setD1ForTests(undefined);
+    } finally {
+      await env.dispose();
+    }
+  }, 30_000);
+
   it("never throws out of the intake path", async () => {
-    delete process.env.NEXT_PUBLIC_SUPABASE_URL;
-    delete process.env.SUPABASE_SERVICE_ROLE_KEY;
+    // No D1 binding: the file store on a Worker is per-isolate, so it is not a place to keep a request.
     vi.resetModules();
 
     const store = await vi.importActual<typeof import("@/services/events/requestEventStore")>(
