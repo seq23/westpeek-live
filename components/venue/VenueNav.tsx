@@ -37,12 +37,15 @@ export function VenueNav({ items, activity, attendeeName, tellUsMoreHref }: { it
           const marker = activity ? navMarkerFor(item.surface, activity) : undefined;
           const current = pathname === item.href || pathname.startsWith(`${item.href}/`);
           return (
+            // xl:px-2: at 1440 the whole row has to fit in whatever sans-serif the visitor's system
+            // gives it (Inter is named but not shipped); with DejaVu Sans, Linux's default, the
+            // 2.5 padding ran the row 18px past the edge with the overflow fade hidden at xl.
             <a
               key={item.surface}
               href={item.href}
               aria-current={current ? "page" : undefined}
               data-nav-surface={item.surface}
-              className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-black ${current ? "bg-white text-brand-black" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+              className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-black xl:px-2 ${current ? "bg-white text-brand-black" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
             >
               {item.label}
               {marker ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${current && marker.tone === "count" ? "bg-slate-200 text-slate-700" : TONE[marker.tone]}`} data-nav-marker={item.surface}>{marker.label}</span> : null}

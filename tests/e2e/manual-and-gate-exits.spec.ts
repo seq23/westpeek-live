@@ -44,7 +44,10 @@ test("the manual renders in the app for an operator, with its screenshots and no
   // The screenshots come from public/, so they actually load.
   const firstImage = body.locator("img").first();
   await expect(firstImage).toHaveAttribute("src", /^\/manual\/images\//);
-  expect(await firstImage.evaluate((image) => (image as HTMLImageElement).naturalWidth)).toBeGreaterThan(10);
+  // Read the size once the image has loaded: it is below the fold, and reading it straight after
+  // navigation raced the download (0 on a slower CI runner, 6 Oct 2026).
+  await firstImage.scrollIntoViewIfNeeded();
+  await expect.poll(() => firstImage.evaluate((image) => { const img = image as HTMLImageElement; return img.complete ? img.naturalWidth : 0; })).toBeGreaterThan(10);
   // No code values, ever — only the documented placeholders.
   const text = await body.innerText();
   expect(text).not.toMatch(/\bSPK-[A-Z0-9]{6}\b/);
