@@ -13,7 +13,7 @@ import { grantCrewAccess, isDeployedBrowserRun } from "./helpers/roleJourney";
  *   and the control bar appears → tap Turn on camera → the local camera track is captured and
  *   previewed (published to the room the moment it connects; there is no LiveKit server in this
  *   run, so the bar reports preview) → crew revokes → the camera is stopped at once and the reason
- *   shown. Also: the first-visit coach strips on the stage and the lobby, dismissed once.
+ *   shown. Also: the one first-visit venue welcome, dismissed once on the stage and gone from the lobby too.
  * Runs in both projects; the mobile-chromium (Pixel 5) run is the proof that matters here.
  */
 test.skip(isDeployedBrowserRun(), "local runtime-store journey; deployed proof is the owner's throwaway event");
@@ -90,14 +90,15 @@ test("approve → toggles appear → camera captured and previewed → revoke �
   await expect(attendee.page.getByTestId("attendee-livekit-room-surface")).toHaveAttribute("data-livekit-consumption-state", "token-issued", { timeout: 10_000 });
   await attendee.page.unroute("**/api/video/livekit-token");
 
-  // First visit: the coach strip, dismissed once.
-  const coach = attendee.page.getByTestId("coach-strip-stage");
-  await expect(coach).toBeVisible();
-  await expect(coach).toContainText(/Request to join the stage/);
-  await coach.getByTestId("coach-strip-stage-dismiss").click();
-  await expect(coach).toHaveCount(0);
+  // First visit: the one venue welcome (it replaced the per-page coach strips, 16 Sep 2026) names
+  // the three things that exist, and is dismissed once.
+  const welcome = attendee.page.getByTestId("venue-welcome");
+  await expect(welcome).toBeVisible();
+  for (const thing of ["Watch here", "Talk here", "Meet people there"]) await expect(welcome.getByRole("link", { name: thing })).toBeVisible();
+  await welcome.getByTestId("venue-welcome-dismiss").click();
+  await expect(welcome).toHaveCount(0);
   await attendee.page.reload();
-  await expect(attendee.page.getByTestId("coach-strip-stage")).toHaveCount(0);
+  await expect(attendee.page.getByTestId("venue-welcome")).toHaveCount(0);
 
   // 1. Requests are open by default: the line says so with one button.
   const line = attendee.page.getByTestId("attendee-stage-status-headline");
@@ -149,12 +150,18 @@ test("approve → toggles appear → camera captured and previewed → revoke �
   await expect(controls.getByTestId("attendee-stage-notice")).toContainText(/revoked/i);
   await expect(controls.getByTestId("stage-camera-toggle")).toBeDisabled();
 
-  // Lobby coach strip too.
+  // The dismissal is per event, not per page: dismissed on the stage means never shown in the lobby.
+  // The welcome mounts after hydration, so "absent" alone could pass on an unhydrated page: the
+  // stored per-event key proves the dismissal, and a fresh browser on the same lobby proves the
+  // lobby does render the welcome to anyone who has not dismissed it.
+  expect(await attendee.page.evaluate((key) => window.localStorage.getItem(key), `wpl-welcome-${EVENT}`)).toBe("dismissed");
   await gotoAndAssert(attendee.page, `/venue/${EVENT}/lobby`);
-  const lobbyCoach = attendee.page.getByTestId("coach-strip-lobby");
-  await expect(lobbyCoach).toContainText("Stage = watch and speak");
-  await lobbyCoach.getByTestId("coach-strip-lobby-dismiss").click();
-  await expect(lobbyCoach).toHaveCount(0);
+  const fresh = await browser.newContext();
+  const freshPage = await fresh.newPage();
+  await gotoAndAssert(freshPage, `/venue/${EVENT}/lobby`);
+  await expect(freshPage.getByTestId("venue-welcome")).toBeVisible();
+  await fresh.close();
+  await expect(attendee.page.getByTestId("venue-welcome")).toHaveCount(0);
 
   await resetAttendee(crew.page);
   await attendee.context.close();

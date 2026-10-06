@@ -27,10 +27,10 @@ test("register with three fields → stage → tell us more saves two fields →
   const ada = await context.newPage();
   await gotoAndAssert(ada, `/events/${eventId}/register`);
   // Only name, email, company are required; title is optional; nothing else is on the page.
-  await expect(ada.locator('form [required]')).toHaveCount(3);
+  await expect(ada.getByTestId("registration-form").locator("[required]")).toHaveCount(3);
   await expect(ada.locator('[name="reasonForAttending"], [name="topicsOfInterest"], [name="socialLinks"]')).toHaveCount(0);
   await ada.locator('[name="name"]').fill("Ada Lovelace");
-  await ada.locator('[name="email"]').fill(`ada-${Date.now()}@example.com`);
+  await ada.getByTestId("registration-form").locator('[name="email"]').fill(`ada-${Date.now()}@example.com`);
   await ada.locator('[name="company"]').fill("Analytical Engines");
   await ada.getByRole("button", { name: /submit registration/i }).click();
   await expect(ada).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?registered=1/);

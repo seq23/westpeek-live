@@ -9,11 +9,17 @@ import { displayCode } from "@/lib/access/accessCodes";
 import { listEventRecords } from "@/services/events/eventRepository";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
+const DIAGNOSTICS_CARDS = [
+  { title: "Testing console", href: "/admin/testing", line: "Routes, access gates, runtime tables, email, video providers — pick the event inside." },
+  { title: "The manual", href: "/manual", line: "Every door, every role, every step — the owner/operator/crew manual, inside the app." },
+  { title: "Runtime health", href: "/api/runtime/health", line: "The deployed truth: store, schema, and the reads every crew page makes." },
+] as const;
+
 /**
  * The operator launchpad, reorganised (16 Sep 2026). It used to be nine sections of cards, most of
  * them pointing at the same demo event and nine of them at the same diagnostics page. Now: the
  * operator's REAL events first, then the three things they do (run a show, set one up, look after
- * people and data), diagnostics as two cards, and the demo kept but folded away.
+ * people and data), diagnostics as three cards (the badge counts them), and the demo kept but folded away.
  */
 const SECTIONS = [
   { id: "your-events", label: "Your events" },
@@ -106,11 +112,10 @@ async function LaunchpadBody() {
         </div>
       </ConsoleSection>
 
-      <ConsoleSection storagePrefix="wpl-launchpad" id="diagnostics" title="Diagnostics" count={2} blurb="The testing console for everything scoped to an event, the live health of the deployment, and the manual.">
+      {/* The badge counts the cards it sits over: it said 2 after the manual became the third. */}
+      <ConsoleSection storagePrefix="wpl-launchpad" id="diagnostics" title="Diagnostics" count={DIAGNOSTICS_CARDS.length} blurb="The testing console for everything scoped to an event, the live health of the deployment, and the manual.">
         <div className="grid gap-4 md:grid-cols-3">
-          <LaunchpadCard title="Testing console" href="/admin/testing">Routes, access gates, runtime tables, email, video providers — pick the event inside.</LaunchpadCard>
-          <LaunchpadCard title="The manual" href="/manual">Every door, every role, every step — the owner/operator/crew manual, inside the app.</LaunchpadCard>
-          <LaunchpadCard title="Runtime health" href="/api/runtime/health">The deployed truth: store, schema, and the reads every crew page makes.</LaunchpadCard>
+          {DIAGNOSTICS_CARDS.map((card) => <LaunchpadCard key={card.href} title={card.title} href={card.href}>{card.line}</LaunchpadCard>)}
         </div>
       </ConsoleSection>
 
@@ -142,7 +147,7 @@ export function OperatorLaunchpad() {
               </div>
               <div className="flex flex-col gap-2">
                 <Link href="/app/events/new" className="rounded-full bg-brand-black px-5 py-3 text-center text-sm font-black text-white hover:bg-brand-orange">New event</Link>
-                <Link href="/production-access/logout" className="rounded-full border border-brand-black px-5 py-3 text-center text-sm font-bold hover:border-brand-orange hover:text-brand-orange">Log out access</Link>
+                <Link href="/production-access/logout" prefetch={false} className="rounded-full border border-brand-black px-5 py-3 text-center text-sm font-bold hover:border-brand-orange hover:text-brand-orange">Log out access</Link>
               </div>
             </div>
           </section>

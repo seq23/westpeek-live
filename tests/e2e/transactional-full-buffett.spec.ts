@@ -53,7 +53,7 @@ transactionalDescribe("Transactional Full Buffett E2E", () => {
     await gotoAndAssert(page, "/events/demo/register");
     const attendeeName = `Buffett Attendee ${unique}`;
     await page.locator('[name="name"]').fill(attendeeName);
-    await page.locator('[name="email"]').fill(`buffett-${unique}@example.com`);
+    await page.getByTestId("registration-form").locator('[name="email"]').fill(`buffett-${unique}@example.com`);
     await page.locator('[name="company"]').fill("West Peek QA Ventures");
     await page.locator('[name="title"]').fill("Show Readiness Operator");
     await page.getByRole("button", { name: /submit registration/i }).click();

@@ -82,7 +82,10 @@ test("slow mode paces attendees and exempts the crew; the write path refuses the
   await send(attendee.page, later);
   await expect(attendee.page.getByTestId("main_stage-live-chat")).toContainText(later);
 
-  // 5. The crew's own composer says it is exempt and never counts down.
+  // 5. The crew's own composer says it is exempt and never counts down. A chat post carries a name,
+  //    so the crew member posts as a registered person in the room; the exemption comes from the
+  //    crew cookie beside it, never from the form.
+  await asRegisteredAttendee(crew.page, EVENT);
   await gotoAndAssert(crew.page, STAGE);
   await expect(crew.page.getByTestId("attendee-identity-chat-form")).toHaveAttribute("data-slow-mode-exempt", "true");
   await expect(crew.page.getByTestId("chat-slow-mode-countdown")).toHaveCount(0);

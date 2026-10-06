@@ -13,7 +13,7 @@ test.describe('mobile critical journeys', () => {
     }
     await gotoAndAssert(page, '/events/demo/register');
     await expect(page.getByLabel(/^Name/i)).toBeVisible();
-    await expect(page.getByLabel(/^Email/i)).toBeVisible();
+    await expect(page.getByTestId("registration-form").getByLabel(/^Email/i)).toBeVisible();
     await expect(page.getByRole('button', { name: /submit registration/i })).toBeVisible();
   });
 

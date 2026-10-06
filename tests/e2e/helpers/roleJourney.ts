@@ -115,13 +115,23 @@ async function operatorGateIsShown(page: Page) {
   return /\/production-access\/operator/.test(page.url());
 }
 
+/**
+ * The gate posts, sets its cookie, and redirects. Waiting for "networkidle" resolved on the gate
+ * page itself before that redirect, so the next goto raced the cookie and landed back on the gate
+ * (?error=launchpad_required). Waiting for the URL to leave the gate waits for the cookie, and a
+ * refused password now fails here, by name, instead of three steps later.
+ */
+async function leftGate(page: Page, gatePath: string) {
+  await page.waitForURL((url) => url.pathname !== gatePath, { timeout: 15_000 });
+}
+
 export async function loginAsOperator(page: Page, nextPath?: string) {
   const target = nextPath ? `/production-access/operator?next=${encodeURIComponent(nextPath)}` : "/production-access/operator";
   await gotoAndAssert(page, target);
   if (await operatorGateIsShown(page)) {
     await page.getByLabel(/operator launchpad password/i).fill(process.env.E2E_OPERATOR_PASSWORD || process.env.OPERATOR_LAUNCHPAD_PASSWORD || requiredDay1Default("OPERATOR_LAUNCHPAD_PASSWORD"));
     await page.getByRole("button", { name: /enter operator launchpad/i }).click();
-    await page.waitForLoadState("networkidle").catch(() => undefined);
+    await leftGate(page, "/production-access/operator");
   }
   if (nextPath) await gotoAndAssert(page, nextPath);
 }
@@ -132,7 +142,7 @@ export async function loginAsMasterOperator(page: Page, nextPath?: string) {
   if (await operatorGateIsShown(page)) {
     await page.getByLabel(/operator launchpad password/i).fill(masterOperatorPassword());
     await page.getByRole("button", { name: /enter operator launchpad/i }).click();
-    await page.waitForLoadState("networkidle").catch(() => undefined);
+    await leftGate(page, "/production-access/operator");
   }
   if (nextPath) await gotoAndAssert(page, nextPath);
 }
@@ -150,7 +160,7 @@ export async function loginAsSpecialGuest(page: Page, role: "client" | "speaker"
   await page.getByLabel(/event code/i).fill(eventCode);
   await page.getByLabel(/special guest password/i).fill(passwordByRole[role]);
   await page.getByRole("button", { name: /continue to assigned portal/i }).click();
-  await page.waitForLoadState("networkidle").catch(() => undefined);
+  await leftGate(page, "/production-access/special-guest");
   if (nextPath) await gotoAndAssert(page, nextPath);
 }
 

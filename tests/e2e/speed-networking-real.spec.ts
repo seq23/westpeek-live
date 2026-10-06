@@ -28,7 +28,7 @@ async function registerAttendee(browser: Browser, eventId: string, who: { name: 
   const page = await context.newPage();
   await gotoAndAssert(page, `/events/${eventId}/register`);
   await page.locator('[name="name"]').fill(who.name);
-  await page.locator('[name="email"]').fill(`${who.name.toLowerCase().replace(/\s+/g, ".")}-${Date.now()}@example.com`);
+  await page.getByTestId("registration-form").locator('[name="email"]').fill(`${who.name.toLowerCase().replace(/\s+/g, ".")}-${Date.now()}@example.com`);
   await page.locator('[name="company"]').fill(who.company);
   await page.locator('[name="title"]').fill(who.title);
   await page.getByRole("button", { name: /submit registration/i }).click();

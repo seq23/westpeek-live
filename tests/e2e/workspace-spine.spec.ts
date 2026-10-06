@@ -4,7 +4,7 @@ import { isDeployedBrowserRun, loginAsOperator } from "./helpers/roleJourney";
 
 /**
  * The reorganised workspace: the launchpad opens on the operator's real events with a table of
- * contents, Diagnostics is two cards, Demo is folded away and remembers when opened; inside an
+ * contents, Diagnostics is three cards, Demo is folded away and remembers when opened; inside an
  * event, the left spine groups every page, "What's next" names the next real thing, readiness dots
  * flip when the thing is actually done, and the merged duplicate pages redirect.
  * Local file-store run only.
@@ -20,7 +20,7 @@ async function createNowEvent(page: Page, name: string) {
   return new URL(page.url()).pathname.split("/")[2];
 }
 
-test("the launchpad leads with real events, keeps diagnostics to two cards, folds the demo away and remembers", async ({ page }) => {
+test("the launchpad leads with real events, keeps diagnostics to three counted cards, folds the demo away and remembers", async ({ page }) => {
   test.setTimeout(150_000);
   const eventId = await createNowEvent(page, `Spine Room ${Date.now()}`);
   await gotoAndAssert(page, "/production-access/launchpad");
@@ -29,11 +29,14 @@ test("the launchpad leads with real events, keeps diagnostics to two cards, fold
   // Your events is open by default and carries the real event, not a demo id.
   await expect(page.getByTestId("console-section-your-events")).toHaveAttribute("data-open", "true");
   await expect(page.getByTestId(`launchpad-event-${eventId}`)).toContainText("Spine Room");
-  // Diagnostics: two cards.
+  // Diagnostics: three cards (testing console, the manual, runtime health), and the badge on the
+  // section says the same number the body shows.
   await expect(page.getByTestId("console-section-diagnostics")).toHaveAttribute("data-hydrated", "true");
+  await expect(page.getByTestId("console-section-diagnostics-count")).toHaveText("3");
   await page.getByTestId("console-section-diagnostics-toggle").click();
   const diagnostics = page.locator("#diagnostics-body");
-  await expect(diagnostics.locator("a")).toHaveCount(2);
+  await expect(diagnostics.locator("a")).toHaveCount(3);
+  for (const href of ["/admin/testing", "/manual", "/api/runtime/health"]) await expect(diagnostics.locator(`a[href="${href}"]`)).toHaveCount(1);
   // Demo is collapsed; opening it is remembered across a reload.
   await expect(page.getByTestId("console-section-demo")).toHaveAttribute("data-open", "false");
   await page.getByTestId("console-section-demo-toggle").click();

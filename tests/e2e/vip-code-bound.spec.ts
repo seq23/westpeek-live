@@ -31,7 +31,7 @@ test("the VIP code makes a VIP; the crew can issue it; rotating it takes everyon
   const guest = await context.newPage();
   await gotoAndAssert(guest, `/events/${eventId}/register`);
   await guest.locator('[name="name"]').fill("Cal VIP");
-  await guest.locator('[name="email"]').fill(`cal-${Date.now()}@realco.io`);
+  await guest.getByTestId("registration-form").locator('[name="email"]').fill(`cal-${Date.now()}@realco.io`);
   await guest.locator('[name="company"]').fill("Real Co");
   await guest.getByRole("button", { name: /submit registration/i }).click();
   await expect(guest).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?registered=1/);

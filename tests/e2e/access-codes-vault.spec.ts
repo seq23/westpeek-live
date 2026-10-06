@@ -86,7 +86,7 @@ test("owner sees every code masked-until-reveal, finds an event by a code, rotat
   await owner.getByTestId("vault-search").fill("");
 
   // Rotate it: the code changes and the OLD one no longer opens the gate.
-  owner.once("dialog", (dialog) => { expect(dialog.message()).toContain("stops working immediately"); void dialog.accept(); });
+  owner.once("dialog", (dialog) => { expect(dialog.message()).toContain("The old code is refused from now on; whoever holds it is told it was replaced and to ask the producer."); void dialog.accept(); });
   await owner.getByTestId(`vault-rotate-${eventId}-speaker`).click();
   await expect(owner).toHaveURL(/\/app\/events\/.*\/access\?codeSaved=speaker/);
   const guestContext = await browser.newContext();
@@ -95,7 +95,11 @@ test("owner sees every code masked-until-reveal, finds an event by a code, rotat
   await guest.getByLabel(/event code/i).fill(eventId);
   await guest.getByLabel(/special guest password/i).fill(speakerCode);
   await guest.getByRole("button", { name: /continue to assigned portal/i }).click();
-  await expect(guest.locator("body")).toContainText(/did not match a speaker, sponsor, client, or VIP access group/i);
+  // The old code is refused, and the refusal says why (the code was replaced) instead of reading
+  // like a guess: "Remember what a code used to be" (16 Sep 2026).
+  await expect(guest).toHaveURL(/\/production-access\/special-guest\?error=superseded&codeField=speaker/);
+  await expect(guest.getByTestId("guest-code-superseded")).toHaveAttribute("data-superseded-field", "speaker");
+  await expect(guest.getByTestId("guest-code-superseded")).toContainText(/^This speaker code was replaced on .+\. Ask the producer for the current one\.$/);
 
   await guestContext.close();
   await ownerContext.close();

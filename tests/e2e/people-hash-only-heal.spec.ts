@@ -78,7 +78,7 @@ test("hash-only people are listed and counted, exported with a blank email, then
   const cal = await calContext.newPage();
   await gotoAndAssert(cal, `/events/${fresh}/register`);
   await cal.locator('[name="name"]').fill("Cal Legacy");
-  await cal.locator('[name="email"]').fill(email);
+  await cal.getByTestId("registration-form").locator('[name="email"]').fill(email);
   await cal.locator('[name="company"]').fill("Legacy Co");
   await cal.getByRole("button", { name: /submit registration/i }).click();
   await expect(cal).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?registered=1/);

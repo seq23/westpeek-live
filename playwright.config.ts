@@ -2,7 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 import fs from "node:fs";
 import envRegistry from "./deployment/env-var-registry.json";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || process.env.POSTDEPLOY_BASE_URL || process.env.SMOKE_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || process.env.POSTDEPLOY_BASE_URL || process.env.SMOKE_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+// localhost, not 127.0.0.1: `next start` builds middleware redirects from "localhost" whatever Host
+// the browser sent, so a gate reached by redirect set its cookie on a host the next relative goto
+// never visited. One host for the browser, the server and the helpers' cookie URLs.
+process.env.PLAYWRIGHT_BASE_URL ||= baseURL;
 const systemChromium = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || "/usr/bin/chromium";
 const executablePath = fs.existsSync(systemChromium) ? systemChromium : undefined;
 const disableVideo = process.env.PLAYWRIGHT_DISABLE_VIDEO === "1" || process.env.PLAYWRIGHT_DISABLE_VIDEO === "true";
@@ -112,7 +116,7 @@ export default defineConfig({
         // Every server this config starts begins from an empty file runtime store, as CI does:
         // records left by an earlier local run (an attendee already registered, a code already
         // rotated) otherwise change what the pages say and fail specs on state, not on code.
-        command: `node -e "require('fs').rmSync(process.argv[1], { force: true })" ${JSON.stringify(localRuntimePath)} && npx next build && npx next start --hostname 127.0.0.1 --port ${new URL(baseURL).port || "3000"}`,
+        command: `node -e "require('fs').rmSync(process.argv[1], { force: true })" ${JSON.stringify(localRuntimePath)} && npx next build && npx next start --hostname localhost --port ${new URL(baseURL).port || "3000"}`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         // Covers the production build above (about 30 s locally, up to a few minutes on a cold
