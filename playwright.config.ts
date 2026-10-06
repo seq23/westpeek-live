@@ -60,7 +60,7 @@ const localE2EEnv = {
   LOCAL_PLAYWRIGHT_GAUNTLET_AUTH: "true",
   PLAYWRIGHT_DEPLOYED: "0",
   PLAYWRIGHT_BASE_URL: baseURL,
-  NODE_ENV: "development",
+  NODE_ENV: "production",
   NEXT_PUBLIC_APP_URL: baseURL,
   AGENCY_EVENT_OS_RUNTIME_STORE: "file",
   AGENCY_EVENT_OS_RUNTIME_STORE_PATH: localRuntimePath,
@@ -93,8 +93,6 @@ const localE2EEnv = {
 
 export default defineConfig({
   testDir: "./tests/e2e",
-  // Compiles the heavy routes once after the dev server is up (see the file for why).
-  globalSetup: shouldStartLocalServer ? "./tests/e2e-global-setup.ts" : undefined,
   timeout: 30_000,
   expect: {
     timeout: 10_000,
@@ -105,13 +103,21 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   webServer: shouldStartLocalServer
     ? {
+        // The suite runs against a production build (`next build` + `next start`), not `next dev`.
+        // Under `next dev` every route compiles on its first request and every render runs React's
+        // development build; with the venue's polls on top, a page took 2-4 s and a first visit
+        // 10-150 s (6 Oct 2026 full run), so multi-page journeys hit the 30 s test timeout on
+        // compiles, not on defects. A production build answers in milliseconds, compiles nothing at
+        // test time, and is the same code shape the Worker serves.
         // Every server this config starts begins from an empty file runtime store, as CI does:
         // records left by an earlier local run (an attendee already registered, a code already
         // rotated) otherwise change what the pages say and fail specs on state, not on code.
-        command: `node -e "require('fs').rmSync(process.argv[1], { force: true })" ${JSON.stringify(localRuntimePath)} && npm run dev -- --hostname 127.0.0.1 --port ${new URL(baseURL).port || "3000"}`,
+        command: `node -e "require('fs').rmSync(process.argv[1], { force: true })" ${JSON.stringify(localRuntimePath)} && npx next build && npx next start --hostname 127.0.0.1 --port ${new URL(baseURL).port || "3000"}`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        // Covers the production build above (about 30 s locally, up to a few minutes on a cold
+        // CI runner) plus the server start; it bounds only the server start, never a test.
+        timeout: 300_000,
         stdout: "pipe",
         stderr: "pipe",
         env: localE2EEnv,
