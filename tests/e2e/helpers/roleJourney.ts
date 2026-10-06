@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./assertNoAppError";
 import { day1Default, requiredDay1Default } from "./day1AccessDefaults";
 
@@ -115,13 +115,23 @@ async function operatorGateIsShown(page: Page) {
   return /\/production-access\/operator/.test(page.url());
 }
 
+/**
+ * The gate posts, sets its cookie, and redirects. Waiting for "networkidle" resolved on the gate
+ * page itself before that redirect, so the next goto raced the cookie and landed back on the gate
+ * (?error=launchpad_required). Waiting for the URL to leave the gate waits for the cookie, and a
+ * refused password now fails here, by name, instead of three steps later.
+ */
+async function leftGate(page: Page, gatePath: string) {
+  await page.waitForURL((url) => url.pathname !== gatePath, { timeout: 15_000 });
+}
+
 export async function loginAsOperator(page: Page, nextPath?: string) {
   const target = nextPath ? `/production-access/operator?next=${encodeURIComponent(nextPath)}` : "/production-access/operator";
   await gotoAndAssert(page, target);
   if (await operatorGateIsShown(page)) {
     await page.getByLabel(/operator launchpad password/i).fill(process.env.E2E_OPERATOR_PASSWORD || process.env.OPERATOR_LAUNCHPAD_PASSWORD || requiredDay1Default("OPERATOR_LAUNCHPAD_PASSWORD"));
     await page.getByRole("button", { name: /enter operator launchpad/i }).click();
-    await page.waitForLoadState("networkidle").catch(() => undefined);
+    await leftGate(page, "/production-access/operator");
   }
   if (nextPath) await gotoAndAssert(page, nextPath);
 }
@@ -132,7 +142,7 @@ export async function loginAsMasterOperator(page: Page, nextPath?: string) {
   if (await operatorGateIsShown(page)) {
     await page.getByLabel(/operator launchpad password/i).fill(masterOperatorPassword());
     await page.getByRole("button", { name: /enter operator launchpad/i }).click();
-    await page.waitForLoadState("networkidle").catch(() => undefined);
+    await leftGate(page, "/production-access/operator");
   }
   if (nextPath) await gotoAndAssert(page, nextPath);
 }
@@ -150,7 +160,7 @@ export async function loginAsSpecialGuest(page: Page, role: "client" | "speaker"
   await page.getByLabel(/event code/i).fill(eventCode);
   await page.getByLabel(/special guest password/i).fill(passwordByRole[role]);
   await page.getByRole("button", { name: /continue to assigned portal/i }).click();
-  await page.waitForLoadState("networkidle").catch(() => undefined);
+  await leftGate(page, "/production-access/special-guest");
   if (nextPath) await gotoAndAssert(page, nextPath);
 }
 
@@ -160,6 +170,13 @@ export async function expectVisibleRoute(page: Page, route: RouteExpectation) {
   page.on("pageerror", (error) => pageErrors.push(error.message));
   page.on("console", (message) => {
     if (message.type() === "error") consoleErrors.push(message.text());
+  });
+  // The local run registers no LiveKit provider (VIDEO_PROVIDER=mock), so the stage's attendee token
+  // request is refused with a named 503 (proven safe by video-provider-safe-failure.spec). Only that
+  // response, counted one for one, is excused, and only locally; any other 5xx stays an error.
+  const providerRefusals: string[] = [];
+  page.on("response", (response) => {
+    if (response.status() === 503 && response.request().method() === "POST" && new URL(response.url()).pathname === "/api/video/livekit-token") providerRefusals.push(response.url());
   });
 
   await gotoAndAssert(page, route.path);
@@ -185,8 +202,10 @@ export async function expectVisibleRoute(page: Page, route: RouteExpectation) {
     await expect(page.getByText(new RegExp(action, "i")).first(), `${route.label} action ${action} should be visible`).toBeVisible();
   }
 
+  let excusedRefusals = isDeployedBrowserRun() ? 0 : providerRefusals.length;
   const materialErrors = [...pageErrors, ...consoleErrors].filter((entry) => {
     const text = entry.toLowerCase();
+    if (excusedRefusals > 0 && text.includes("failed to load resource: the server responded with a status of 503")) { excusedRefusals -= 1; return false; }
     return !text.includes("favicon") && !text.includes("hydration") && !text.includes("failed to load resource: the server responded with a status of 404");
   });
 
@@ -209,4 +228,43 @@ export async function expectLinksStayFirstParty(page: Page, selector = "a[href]"
     if (!allowedHosts.includes(configuredHost)) allowedHosts.push(configuredHost);
     expect(allowedHosts, `first-party or local link expected: ${href}`).toContain(url.hostname);
   }
+}
+
+/**
+ * The launchpad and owner console fold every section (16 Sep 2026); a folded section's cards are
+ * `hidden`. Opens one after hydration (the stored open/closed state is applied on mount) and proves
+ * it is open, so a spec reaches a card the way an operator does.
+ */
+export async function openConsoleSection(page: Page, id: string) {
+  const section = page.getByTestId(`console-section-${id}`);
+  await expect(section).toHaveAttribute("data-hydrated", "true");
+  if ((await section.getAttribute("data-open")) !== "true") await page.getByTestId(`console-section-${id}-toggle`).click();
+  await expect(section).toHaveAttribute("data-open", "true");
+  return section;
+}
+
+/**
+ * Opens a venue section (VenueSection: a button toggle, remembered per browser). The toggle only
+ * works once React has hydrated, and the remembered state lands after mount, so this presses until
+ * the section reports open instead of trusting one early click.
+ */
+export async function openVenueSection(section: Locator) {
+  await expect(async () => {
+    if ((await section.getAttribute("data-open")) !== "true") await section.locator(":scope > button").click();
+    await expect(section).toHaveAttribute("data-open", "true", { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
+}
+
+/**
+ * The stage chat on a phone is a bottom sheet behind one button (16 Sep 2026); on a wide screen it
+ * is the rail. Opens the sheet when the button is showing (after hydration, pressing until the sheet
+ * is up), so a spec reaches the chat the way the person on that screen does. A no-op on the rail.
+ */
+export async function openStageChat(page: Page) {
+  const opener = page.getByTestId("stage-chat-open");
+  if (!(await opener.isVisible())) return;
+  await expect(async () => {
+    if (!(await page.getByTestId("stage-chat-sheet").isVisible())) await opener.click();
+    await expect(page.getByTestId("stage-chat-sheet")).toBeVisible({ timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
 }

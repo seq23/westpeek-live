@@ -37,6 +37,14 @@ async function createNowEvent(page: Page, name: string) {
   return new URL(page.url()).pathname.split("/")[2];
 }
 
+/**
+ * The End-the-show card on a page: exactly one (the Go-live card carries it; the command bar's chip
+ * shares the test id but is a form or a chip, not a section). A second card on the page fails here.
+ */
+function endShowCard(page: Page) {
+  return page.locator('section[data-testid="end-show-control"]');
+}
+
 async function publicStageStatus(request: APIRequestContext, eventId: string) {
   const response = await request.get(`/api/video/stage-stream-state?eventId=${eventId}&stageId=main-stage`);
   return (await response.json()).state as { streamStatus: string; activeStreamSource: string };
@@ -51,11 +59,11 @@ test("order A: End the show on the crew console, then ingress_ended → ENDED, e
   const crew = await crewContext.newPage();
   await grantCrewAccess(crew, "technical_director", eventId);
   await gotoAndAssert(crew, `/crew/events/${eventId}`);
-  const control = crew.getByTestId("end-show-control");
+  const control = endShowCard(crew);
   await expect(control).toHaveAttribute("data-show-ended", "false");
   await control.getByTestId("end-show-button").click();
-  await expect(crew.getByTestId("end-show-control")).toHaveAttribute("data-show-ended", "true");
-  await expect(crew.getByTestId("end-show-ended-badge")).toContainText("event ended");
+  await expect(endShowCard(crew)).toHaveAttribute("data-show-ended", "true");
+  await expect(endShowCard(crew).getByTestId("end-show-ended-badge")).toContainText("event ended");
 
   const after = await webhook(request, eventId, "ingress_ended");
   expect(after.streamStatus).toBe("ENDED");
@@ -65,7 +73,12 @@ test("order A: End the show on the crew console, then ingress_ended → ENDED, e
 
   // The operator sees the same on the command page and the testing console, with the webhook path named.
   await gotoAndAssert(page, `/app/events/${eventId}`);
-  await expect(page.getByTestId("end-show-control")).toHaveAttribute("data-show-ended", "true");
+  // The command page carries the show state in its command bar (one chrome stack, 16 Sep 2026):
+  // the status reads ended, End show is gone, and the one control left is Go live again.
+  const bar = page.getByTestId("event-command-bar");
+  await expect(bar.getByTestId("command-bar-status-pill")).toHaveText(/^ended$/i);
+  await expect(bar.getByTestId("end-show-control")).toHaveCount(0);
+  await expect(bar.getByTestId("command-bar-go-live-button")).toHaveText("Go live again");
   await gotoAndAssert(page, `/admin/testing/${eventId}`);
   await expect(page.getByTestId("livekit-webhook-url")).toContainText("/api/video/livekit-webhook");
   await expect(page.getByTestId("livekit-webhook-help")).toContainText("Settings → Webhooks");
@@ -80,7 +93,7 @@ test("order B: the event is ended from the publish page first, then ingress_ende
   expect((await webhook(request, eventId, "ingress_started")).streamStatus).toBe("LIVEKIT_INGRESS_LIVE");
 
   await gotoAndAssert(page, `/app/events/${eventId}/publish`);
-  await expect(page.getByTestId("end-show-control")).toHaveAttribute("data-show-ended", "false");
+  await expect(endShowCard(page)).toHaveAttribute("data-show-ended", "false");
   await page.getByTestId("publish-ended").click();
   await expect(page).toHaveURL(/updated=ended/);
 

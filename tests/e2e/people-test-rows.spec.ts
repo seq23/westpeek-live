@@ -23,7 +23,7 @@ async function createNowEvent(page: Page, name: string) {
 async function register(page: Page, eventId: string, name: string, email: string) {
   await gotoAndAssert(page, `/events/${eventId}/register`);
   await page.locator('[name="name"]').fill(name);
-  await page.locator('[name="email"]').fill(email);
+  await page.getByTestId("registration-form").locator('[name="email"]').fill(email);
   await page.locator('[name="company"]').fill("Proof Co");
   await page.getByRole("button", { name: /submit registration/i }).click();
   await expect(page).toHaveURL(/\/venue\/[a-z0-9-]+\/(lobby|stage)/);

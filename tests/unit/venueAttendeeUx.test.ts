@@ -33,6 +33,17 @@ describe("the profile card no longer sits inside the chat rail", () => {
   });
 });
 
+describe("the stage chat is mounted once, rail or sheet", () => {
+  it("StageChatSheet renders its children in exactly one place", () => {
+    // Twice meant a phone with the sheet open ran two chat polls and every chat control existed twice
+    // (found by the phone browser suite, 6 Oct 2026).
+    const sheet = source("components/venue/StageChatSheet.tsx");
+    expect(sheet.match(/\{children\}/g) || []).toHaveLength(1);
+    expect(sheet).toContain('data-testid="stage-chat-open"');
+    expect(sheet).toContain('"stage-chat-sheet"');
+  });
+});
+
 describe("no attendee-facing time renders a UTC suffix", () => {
   it("every venue surface formats through LocalTime or LocalTimeWindow", () => {
     const { readdirSync, statSync } = require("node:fs") as typeof import("node:fs");

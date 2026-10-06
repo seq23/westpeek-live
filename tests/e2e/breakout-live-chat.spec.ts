@@ -6,5 +6,5 @@ test("breakout rooms expose room-scoped live chat and camera controls", async ({
   const body = (await page.locator("body").innerText()).toLowerCase();
   expect(body).toContain("breakout room chat");
   expect(body).toContain("join breakout video");
-  expect(body).toContain("messages stay scoped to this breakout room");
+  expect(body).toContain("this chat is only the people in this breakout. the main stage chat is separate.");
 });

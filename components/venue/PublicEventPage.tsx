@@ -128,7 +128,7 @@ export async function EventRegistration({ slug, prefillEmail = "", waitSeconds }
       <div className="mx-auto mb-4 max-w-2xl">
         <ReturningAttendeeForm eventId={config.event.id} slug={config.event.slug} defaultEmail={prefillEmail} waitSeconds={waitSeconds} heading="Already registered for this event?" help="Enter the email you used and this device picks your registration up. Nothing else to fill in." />
       </div>
-      <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6">
+      <form action={submitEventRegistration} className="mx-auto max-w-2xl rounded-3xl border border-slate-200 bg-white p-6" data-testid="registration-form">
         <input type="hidden" name="eventId" value={config.event.id} />
         <input type="hidden" name="slug" value={config.event.slug} />
         <p className="text-sm text-slate-500">Registration</p>

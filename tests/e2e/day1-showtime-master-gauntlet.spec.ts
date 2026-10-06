@@ -93,12 +93,21 @@ async function postLiveKitWebhook(page: Page, event: "ingress_started" | "ingres
   return json.state;
 }
 
-async function assertPublicRoutesDoNotExposeStreamYardSecrets(page: Page, eventId = "demo") {
+/**
+ * What the PUBLIC sees: a fresh browser with no cookie. An operator's own browser carries the event
+ * command bar on venue pages (one chrome stack, 16 Sep 2026), whose credentials control is theirs
+ * to see, so checking through the operator's page tested the wrong person.
+ */
+async function assertPublicRoutesDoNotExposeStreamYardSecrets(operatorPage: Page, eventId = "demo") {
+  const publicContext = await operatorPage.context().browser()!.newContext();
+  const page = await publicContext.newPage();
   for (const route of ["/", `/events/${eventId}`, `/venue/${eventId}/lobby`, `/venue/${eventId}/stage`]) {
     await gotoAndAssert(page, route);
     const body = page.locator("body");
     await expect(body).not.toContainText(/livekitStreamKey|Click to Copy Stream Key|RTMP URL|Stream Key/i);
+    await expect(page.getByTestId("event-command-bar")).toHaveCount(0);
   }
+  await publicContext.close();
 }
 
 async function assertCannotAccess(page: Page, route: string, expectedGate: RegExp) {
@@ -116,16 +125,19 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
 
   await gotoAndAssert(attendee, "/events/demo");
   await assertUsefulPage(attendee, /Register|Preview venue|Agenda preview|Speakers|Sponsors/i);
+  // The public page lets anyone walk in and watch; registering is asked at the moment it is needed
+  // ("One register prompt on a page, ever", 16 Sep 2026), so the page leads into the venue.
+  await expect(attendee.getByRole("link", { name: "Enter venue" })).toHaveAttribute("href", /^\/venue\/(demo|event-summit)\/lobby$/);
 
-  await attendee.getByRole("link", { name: /register/i }).first().click();
-  await expect(attendee).toHaveURL(/\/events\/demo\/register/);
+  await gotoAndAssert(attendee, "/events/demo/register");
   await assertUsefulPage(attendee, /Registration|attendee identity|does not grant speaker, sponsor, client, crew, operator, admin, VIP/i);
 
-  await attendee.getByLabel(/^Name/i).fill("Playwright Attendee");
-  await attendee.getByLabel(/^Email/i).fill("playwright-attendee@example.com");
-  await attendee.getByLabel(/Company \/ affiliation/i).fill("West Peek QA");
-  await attendee.getByLabel(/Title \/ role/i).fill("Hostile Client Reviewer");
-  await attendee.getByRole("button", { name: /submit registration/i }).click();
+  const registration = attendee.getByTestId("registration-form");
+  await registration.getByLabel(/^Name/i).fill("Playwright Attendee");
+  await registration.getByLabel(/^Email/i).fill("playwright-attendee@example.com");
+  await registration.getByLabel(/Company \/ affiliation/i).fill("West Peek QA");
+  await registration.getByLabel(/Title \/ role/i).fill("Hostile Client Reviewer");
+  await registration.getByRole("button", { name: /submit registration/i }).click();
 
   await expect(attendee).toHaveURL(/\/venue\/(demo|event-summit)\/lobby/);
   await assertUsefulPage(attendee, /Lobby|Attendee venue|West Peek/i);
@@ -217,7 +229,12 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
     vip: (await operator.getByTestId("generated-vip-code").innerText()).trim(),
     crew_lite: (await operator.getByTestId("generated-crew-lite-code").innerText()).trim(),
   };
-  expect(generatedCodes.speaker).toMatch(/^SPK-[A-Z0-9]{6}$/);
+  // Readable codes (16 Sep 2026): WPL-ROLE-STEM, the stem from the event name, a digit when taken.
+  expect(generatedCodes.speaker).toMatch(/^WPL-SPEAKER-PLAYWR\d*$/);
+  const stem = generatedCodes.speaker.replace("WPL-SPEAKER-", "");
+  expect(generatedCodes.sponsor).toBe(`WPL-SPONSOR-${stem}`);
+  expect(generatedCodes.client).toBe(`WPL-CLIENT-${stem}`);
+  expect(generatedCodes.vip).toBe(`WPL-VIP-${stem}`);
   expect(new Set(Object.values(generatedCodes)).size).toBe(5);
 
   await gotoAndAssert(operator, `/events/${createdEventSlug}`);
@@ -225,11 +242,12 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
   await assertUsefulPage(operator, /Playwright Day 1 Showtime Master Event|Register|Preview venue|Agenda preview|Speakers|Sponsors/i);
   await gotoAndAssert(operator, `/events/${createdEventSlug}/register`);
   await assertUsefulPage(operator, /Registration|attendee identity|Playwright Day 1 Showtime Master Event/i);
-  await operator.getByLabel(/^Name/i).fill("Playwright Created Event Attendee");
-  await operator.getByLabel(/^Email/i).fill("playwright-created-event-attendee@example.com");
-  await operator.getByLabel(/Company \/ affiliation/i).fill("West Peek QA");
-  await operator.getByLabel(/Title \/ role/i).fill("Hostile Client Reviewer");
-  await operator.getByRole("button", { name: /submit registration/i }).click();
+  const createdRegistration = operator.getByTestId("registration-form");
+  await createdRegistration.getByLabel(/^Name/i).fill("Playwright Created Event Attendee");
+  await createdRegistration.getByLabel(/^Email/i).fill("playwright-created-event-attendee@example.com");
+  await createdRegistration.getByLabel(/Company \/ affiliation/i).fill("West Peek QA");
+  await createdRegistration.getByLabel(/Title \/ role/i).fill("Hostile Client Reviewer");
+  await createdRegistration.getByRole("button", { name: /submit registration/i }).click();
   await expect(operator).toHaveURL(createdVenueUrl);
   await assertUsefulPage(operator, /Lobby|Attendee venue|West Peek/i);
 
@@ -388,9 +406,12 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
   const producerReview = await isolatedPage(producerReviewContext);
   await loginOperator(producerReview);
   await gotoAndAssert(producerReview, `/app/events/${createdEventSlug}/approval-queue`);
-  await assertUsefulPage(producerReview, /Approvals, blockers, and final locks|Approval items/i);
-  // Runtime events: what the speaker pastes waits on the crew deck's speaker row (the approval queue points there).
-  await expect(producerReview.locator("body")).toContainText(/waits there for your approval/i);
+  // The approval queue lists only what really waits on the producer (16 Sep 2026): files in review
+  // and speaker cue decks. The speaker's pasted deck is here, and approving it happens on the crew deck.
+  await expect(producerReview.getByTestId("event-approval-queue")).toBeVisible();
+  await expect(producerReview.getByRole("heading", { level: 1 })).toHaveText("Playwright Day 1 Showtime Master Event: what is waiting on you");
+  await expect(producerReview.getByTestId("approval-cue-decks")).toContainText(/submitted a new cue deck version/);
+  await expect(producerReview.getByTestId("approval-cue-decks").getByRole("link", { name: "Approve on the crew deck" })).toHaveAttribute("href", `/app/events/${createdEventSlug}`);
   await gotoAndAssert(producerReview, `/crew/events/${createdEventSlug}`);
   const pendingCue = producerReview.getByTestId(/^speaker-pending-/).first();
   await expect(pendingCue).toContainText(/Playwright keynote timing note/i);

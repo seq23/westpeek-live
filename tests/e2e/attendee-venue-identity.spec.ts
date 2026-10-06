@@ -4,14 +4,18 @@ test("venue identity powers main-stage, breakout, networking, help, people, and 
   await page.goto("/venue/demo/stage");
   await expect(page.locator("body")).not.toContainText("current-attendee");
   await expect(page.locator("body")).not.toContainText("Conference Attendee");
-  await expect(page.locator("body")).toContainText(/Register to request|Posting as|My Agenda|my-agenda/i);
+  // A visitor who has not registered is told what registering unlocks, not shown a borrowed identity.
+  await expect(page.locator("body")).toContainText("Registering with your name, email and company is what lets you take part.");
 
   await page.goto("/venue/demo/breakouts");
   await expect(page.locator("body")).toContainText(/breakout|chat|Register/i);
   await expect(page.locator("body")).not.toContainText("current-attendee");
 
   await page.goto("/venue/demo/networking");
-  await expect(page.locator("body")).toContainText(/networking queue|Register for this event/i);
+  // A visitor who has not registered gets the one point-of-use ask; pressing it opens the register
+  // link, which carries why they were sent and where to come back to.
+  await page.getByTestId("register-point-of-use-networking").click();
+  await expect(page.getByTestId("register-point-of-use-networking-cta")).toHaveAttribute("href", /^\/events\/(demo|event-summit)\/register\?reason=networking&returnTo=%2Fvenue%2F(demo|event-summit)%2Fnetworking$/);
   await expect(page.locator("body")).not.toContainText("Local E2E Attendee");
 
   await page.goto("/venue/demo/help");

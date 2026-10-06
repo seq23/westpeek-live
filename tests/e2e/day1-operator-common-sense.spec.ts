@@ -11,7 +11,8 @@ test("operator Day 1 password unlocks create-event flow without a second auth wa
   await expect(page).toHaveURL(/\/production-access\/launchpad/);
   await expect(page.getByRole("heading", { name: /everything internal starts here/i })).toBeVisible();
 
-  await page.getByRole("link", { name: /create event in admin workspace/i }).first().click();
+  // The launchpad's one way to make an event is the "New event" link in its header (16 Sep 2026).
+  await page.getByTestId("operator-launchpad").getByRole("link", { name: "New event", exact: true }).first().click();
 
   await expect(page).toHaveURL(/\/app\/events\/new/);
   await expect(page.getByRole("heading", { name: /start a room now, or plan an event for later/i })).toBeVisible();

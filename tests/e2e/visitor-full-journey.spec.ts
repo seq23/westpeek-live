@@ -20,10 +20,16 @@ test("visitor can discover, evaluate, register, and reach safe first-party entry
   await expect(page.getByRole("link").first()).toBeVisible();
 });
 
-test("visitor registration form exposes all rich profile fields without writing production data", async ({ page }) => {
+test("visitor registration form asks for name, email, company and an optional title, and nothing richer", async ({ page }) => {
   await expectVisibleRoute(page, { path: "/events/demo/register", label: "registration", terms: ["registration"] });
-  for (const field of ["name", "email", "company", "title", "personalWebsite", "socialLinks", "reasonForAttending", "interestingFact"]) {
-    await expect(page.locator(`[name="${field}"]`), `${field} should be present`).toBeVisible();
+  // Lighter registration (16 Sep 2026): the rich profile fields live in "Tell us more" inside the
+  // venue, never on this form.
+  const form = page.getByTestId("registration-form");
+  for (const field of ["name", "email", "company", "title"]) {
+    await expect(form.locator(`[name="${field}"]`), `${field} should be present`).toBeVisible();
+  }
+  for (const field of ["personalWebsite", "socialLinks", "reasonForAttending", "interestingFact"]) {
+    await expect(page.locator(`[name="${field}"]`), `${field} must not be on the registration page`).toHaveCount(0);
   }
   await expect(page.getByRole("button", { name: /submit registration/i })).toBeVisible();
 });

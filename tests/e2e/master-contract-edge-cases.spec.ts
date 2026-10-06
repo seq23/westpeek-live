@@ -22,16 +22,19 @@ test.describe('Master Contract edge cases — access, duplicate, expired/revoked
     const email = `duplicate-e2e-${Date.now()}@example.com`;
     for (const pass of [1, 2]) {
       await gotoAndAssert(page, '/events/demo/register');
-      await page.getByLabel(/^Name/i).fill(`Duplicate E2E ${pass}`);
-      await page.getByLabel(/^Email/i).fill(email);
-      await page.getByLabel(/Company \/ affiliation/i).fill('West Peek QA');
-      await page.getByLabel(/Title \/ role/i).fill('Reviewer');
-      await page.getByLabel(/What brings you to the conference/i).fill(`Duplicate pass ${pass}`);
-      await page.getByLabel(/Networking goals/i).fill('Confirm duplicate behavior is explicit.');
-      await page.getByRole('button', { name: /submit registration/i }).click();
-      await expect(page).toHaveURL(/\/venue\/demo\/lobby|\/venue\/event-summit\/lobby/);
+      // Registration is name, email, company and an optional title (16 Sep 2026); the rich fields
+      // moved to "Tell us more" inside the venue.
+      const form = page.getByTestId("registration-form");
+      await form.getByLabel(/^Name/i).fill(`Duplicate E2E ${pass}`);
+      await form.getByLabel(/^Email/i).fill(email);
+      await form.getByLabel(/Company \/ affiliation/i).fill('West Peek QA');
+      await form.getByLabel(/Title \/ role/i).fill('Reviewer');
+      await form.getByRole('button', { name: 'Submit registration' }).click();
+      await expect(page).toHaveURL(/\/venue\/(demo|event-summit)\/lobby\?registered=1/);
     }
-    await expect(page.locator('body')).toContainText(/Lobby|Attendee venue|West Peek/i);
+    // The same email registering twice updates one attendee: the venue knows the second name only.
+    await expect(page.locator('body')).toContainText('Duplicate E2E 2');
+    await expect(page.locator('body')).not.toContainText('Duplicate E2E 1');
     await expect(page.locator('body')).not.toContainText(forbidden);
   });
 

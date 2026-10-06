@@ -2,7 +2,11 @@ import { defineConfig, devices } from "@playwright/test";
 import fs from "node:fs";
 import envRegistry from "./deployment/env-var-registry.json";
 
-const baseURL = process.env.PLAYWRIGHT_BASE_URL || process.env.POSTDEPLOY_BASE_URL || process.env.SMOKE_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://127.0.0.1:3000";
+const baseURL = process.env.PLAYWRIGHT_BASE_URL || process.env.POSTDEPLOY_BASE_URL || process.env.SMOKE_BASE_URL || process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000";
+// localhost, not 127.0.0.1: `next start` builds middleware redirects from "localhost" whatever Host
+// the browser sent, so a gate reached by redirect set its cookie on a host the next relative goto
+// never visited. One host for the browser, the server and the helpers' cookie URLs.
+process.env.PLAYWRIGHT_BASE_URL ||= baseURL;
 const systemChromium = process.env.PLAYWRIGHT_CHROMIUM_EXECUTABLE_PATH || "/usr/bin/chromium";
 const executablePath = fs.existsSync(systemChromium) ? systemChromium : undefined;
 const disableVideo = process.env.PLAYWRIGHT_DISABLE_VIDEO === "1" || process.env.PLAYWRIGHT_DISABLE_VIDEO === "true";
@@ -60,7 +64,7 @@ const localE2EEnv = {
   LOCAL_PLAYWRIGHT_GAUNTLET_AUTH: "true",
   PLAYWRIGHT_DEPLOYED: "0",
   PLAYWRIGHT_BASE_URL: baseURL,
-  NODE_ENV: "development",
+  NODE_ENV: "production",
   NEXT_PUBLIC_APP_URL: baseURL,
   AGENCY_EVENT_OS_RUNTIME_STORE: "file",
   AGENCY_EVENT_OS_RUNTIME_STORE_PATH: localRuntimePath,
@@ -83,6 +87,10 @@ const localE2EEnv = {
   EVENT_DEMO_SPEAKER_CODE: day1Default("EVENT_DEMO_SPEAKER_CODE"),
   EVENT_DEMO_SPONSOR_CODE: day1Default("EVENT_DEMO_SPONSOR_CODE"),
   EVENT_DEMO_VIP_CODE: day1Default("EVENT_DEMO_VIP_CODE"),
+  // The client and crew-lite demo codes too: without them the server refused the client and
+  // crew-lite logins the role journeys make (invalid_role_code), and those specs passed on the gate.
+  EVENT_DEMO_CLIENT_CODE: day1Default("EVENT_DEMO_CLIENT_CODE"),
+  EVENT_DEMO_CREW_LITE_CODE: day1Default("EVENT_DEMO_CREW_LITE_CODE"),
   LIVEKIT_URL: day1Default("LIVEKIT_URL"),
   LIVEKIT_API_KEY: day1Default("LIVEKIT_API_KEY"),
   LIVEKIT_API_SECRET: day1Default("LIVEKIT_API_SECRET"),
@@ -103,10 +111,21 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   webServer: shouldStartLocalServer
     ? {
-        command: `npm run dev -- --hostname 127.0.0.1 --port ${new URL(baseURL).port || "3000"}`,
+        // The suite runs against a production build (`next build` + `next start`), not `next dev`.
+        // Under `next dev` every route compiles on its first request and every render runs React's
+        // development build; with the venue's polls on top, a page took 2-4 s and a first visit
+        // 10-150 s (6 Oct 2026 full run), so multi-page journeys hit the 30 s test timeout on
+        // compiles, not on defects. A production build answers in milliseconds, compiles nothing at
+        // test time, and is the same code shape the Worker serves.
+        // Every server this config starts begins from an empty file runtime store, as CI does:
+        // records left by an earlier local run (an attendee already registered, a code already
+        // rotated) otherwise change what the pages say and fail specs on state, not on code.
+        command: `node -e "require('fs').rmSync(process.argv[1], { force: true })" ${JSON.stringify(localRuntimePath)} && npx next build && npx next start --hostname localhost --port ${new URL(baseURL).port || "3000"}`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
-        timeout: 120_000,
+        // Covers the production build above (about 30 s locally, up to a few minutes on a cold
+        // CI runner) plus the server start; it bounds only the server start, never a test.
+        timeout: 300_000,
         stdout: "pipe",
         stderr: "pipe",
         env: localE2EEnv,

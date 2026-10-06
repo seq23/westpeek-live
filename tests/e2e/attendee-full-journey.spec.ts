@@ -24,5 +24,7 @@ test("main stage exposes live-stream, chat, run-of-show, and fallback/support af
   for (const term of ["live", "chat", "run of show", "help"]) {
     expect(body).toContain(term);
   }
-  expect(["daily", "zoom", "google meet", "fallback", "backup"].some((term) => body.includes(term))).toBeTruthy();
+  // The fallback affordance an attendee sees is the promise that a source switch fixes itself;
+  // the provider names stay behind the scenes (16 Sep 2026).
+  expect(body).toContain("if the picture refreshes or switches source behind the scenes, stay on this page. it comes back on its own.");
 });

@@ -33,7 +33,13 @@ export function BrowserDiagnosticsPanel({ eventId, onResultsChange }: { eventId:
 
   const summary = useMemo(() => summarizeBrowserReadiness(results), [results]);
   // The speaker tech check records this snapshot on the roster row; the testing console ignores it.
-  useEffect(() => { if (onResultsChange && results.length) onResultsChange(summary, results); }, [onResultsChange, summary, results]);
+  // The callback is read through a ref and the effect runs only when the results change: keyed on the
+  // callback too, a parent passing an inline arrow re-rendered → new arrow → effect → parent setState
+  // → re-render, forever, once any check had run. That loop starved every router transition on the
+  // tech-check page, so "Record my tech check" saved but the page never showed it (6 Oct 2026).
+  const onResultsChangeRef = useRef(onResultsChange);
+  useEffect(() => { onResultsChangeRef.current = onResultsChange; }, [onResultsChange]);
+  useEffect(() => { if (results.length) onResultsChangeRef.current?.(summary, results); }, [summary, results]);
   const incidentDrafts = useMemo(
     () => results.filter((result) => ["fail", "blocked", "warn"].includes(result.status)).map((result) => buildTestingIncidentDraft({ eventId, result })),
     [eventId, results],

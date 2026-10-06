@@ -57,6 +57,8 @@ test("assets: honest storage message, a pasted link, a speaker's upload in revie
   await speaker.getByTestId("guest-name").fill("Ada Lovelace");
   await speaker.getByTestId("guest-company").fill("Analytical Engines");
   await speaker.getByTestId("guest-identity-submit").click();
+  // The identity is saved by the form's own round trip; leaving before it lands drops it.
+  await expect(speaker.getByTestId("speaker-portal-shell")).toContainText("Ada Lovelace · Analytical Engines");
   await gotoAndAssert(speaker, `/speaker/events/${eventId}/green-room`);
   await expect(speaker.getByTestId("speaker-asset-upload")).toBeVisible();
   await expect(speaker.getByTestId("speaker-asset-upload")).toContainText(/in review/i);

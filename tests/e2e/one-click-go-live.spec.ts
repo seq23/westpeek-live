@@ -27,7 +27,7 @@ test("one click on the Publish page goes live AND hands over credentials", async
   await gotoAndAssert(page, `/app/events/${eventId}/publish`);
   const card = page.getByTestId("go-live-card");
   await expect(card).toHaveAttribute("data-has-credentials", "false");
-  await expect(page.getByTestId("stream-credentials-empty")).toBeVisible();
+  await expect(page.getByTestId("go-live-card").getByTestId("stream-credentials-empty")).toBeVisible();
   await page.getByTestId("go-live-button").click();
   await expect(page).toHaveURL(new RegExp(`/app/events/${eventId}/publish`));
   // One click did both halves of what used to take two pages: the event is live…
@@ -35,8 +35,8 @@ test("one click on the Publish page goes live AND hands over credentials", async
   // …and the same card is where the credentials live. This local run has placeholder LiveKit keys,
   // so provisioning is refused BY NAME instead of leaving a blank box; production has real keys and
   // the credential path itself is proven in tests/unit/goLiveOneClick.test.ts.
-  await expect(page.getByTestId("stream-credentials-problem")).toContainText(/LiveKit/i);
-  await expect(page.getByTestId("get-stream-credentials")).toBeVisible();
+  await expect(page.getByTestId("go-live-card").getByTestId("stream-credentials-problem")).toContainText(/LiveKit/i);
+  await expect(page.getByTestId("go-live-card").getByTestId("get-stream-credentials")).toBeVisible();
 });
 
 test("the Owner Console starts an event and shows the credentials without opening the crew deck", async ({ page, browser }) => {
@@ -72,15 +72,16 @@ test("after End the show the card explains the released key, and one click gets 
 
   // End the show: the key is released on purpose, and the card says so.
   page.once("dialog", (dialog) => void dialog.accept());
-  await page.getByTestId("end-show-button").first().click();
+  // The command bar carries the same End-the-show chip on every event page; this is the card's.
+  await page.getByTestId("go-live-card").getByTestId("end-show-button").click();
   await gotoAndAssert(page, `/app/events/${eventId}/publish`);
   await expect(page.getByTestId("go-live-card")).toHaveAttribute("data-ended", "true");
-  await expect(page.getByTestId("stream-credentials-empty")).toContainText(/stream key was released/i);
+  await expect(page.getByTestId("go-live-card").getByTestId("stream-credentials-empty")).toContainText(/stream key was released/i);
 
   // One click asks for a new one, from right here — no crew deck, no scrolling.
-  await expect(page.getByTestId("get-stream-credentials")).toBeVisible();
-  await page.getByTestId("get-stream-credentials").click();
-  await expect(page.getByTestId("stream-credentials-problem")).toBeVisible({ timeout: 30_000 });
+  await expect(page.getByTestId("go-live-card").getByTestId("get-stream-credentials")).toBeVisible();
+  await page.getByTestId("go-live-card").getByTestId("get-stream-credentials").click();
+  await expect(page.getByTestId("go-live-card").getByTestId("stream-credentials-problem")).toBeVisible({ timeout: 30_000 });
 
   // A moderator sees the card and is told why they cannot act.
   const crewContext = await browser.newContext();

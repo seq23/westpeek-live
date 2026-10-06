@@ -1,7 +1,7 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { asRegisteredAttendee } from "./helpers/persona";
-import { grantOperatorAccess, isDeployedBrowserRun } from "./helpers/roleJourney";
+import { grantOperatorAccess, isDeployedBrowserRun, openStageChat } from "./helpers/roleJourney";
 
 /**
  * Chat at scale, end to end, through the real pages:
@@ -16,6 +16,12 @@ test.skip(isDeployedBrowserRun(), "local runtime-store journey; deployed proof i
 
 const EVENT = "event-summit";
 const STAGE = `/venue/${EVENT}/stage`;
+
+/** The stage, with its chat reachable: the rail on a wide screen, the opened sheet on a phone. */
+async function gotoStage(page: Page) {
+  await gotoAndAssert(page, STAGE);
+  await openStageChat(page);
+}
 const COMMAND = `/app/events/${EVENT}`;
 
 async function attendeeContext(browser: Browser) {
@@ -56,7 +62,7 @@ test("slow mode paces attendees and exempts the crew; the write path refuses the
   await setSlowMode(crew.page, "5");
 
   // 2. The attendee's room says so, and the composer carries the countdown.
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await expect(attendee.page.getByTestId("main_stage-live-chat")).toHaveAttribute("data-chat-slow-mode", "5");
   await expect(attendee.page.getByTestId("chat-slow-mode-badge")).toBeVisible();
   const first = `slow-e2e first ${stamp}`;
@@ -71,19 +77,22 @@ test("slow mode paces attendees and exempts the crew; the write path refuses the
   await attendee.page.getByTestId("attendee-identity-chat-form").locator('input[name="message"]').fill(early);
   await attendee.page.getByTestId("attendee-identity-chat-form").evaluate((form) => (form as HTMLFormElement).requestSubmit());
   await attendee.page.waitForTimeout(1_500);
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await expect(attendee.page.getByTestId("main_stage-live-chat")).not.toContainText(early);
 
   // 4. Once the window has passed, the same attendee posts again.
   await attendee.page.waitForTimeout(6_000);
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await expect(attendee.page.getByTestId("chat-send-button")).toBeEnabled();
   const later = `slow-e2e later ${stamp}`;
   await send(attendee.page, later);
   await expect(attendee.page.getByTestId("main_stage-live-chat")).toContainText(later);
 
-  // 5. The crew's own composer says it is exempt and never counts down.
-  await gotoAndAssert(crew.page, STAGE);
+  // 5. The crew's own composer says it is exempt and never counts down. A chat post carries a name,
+  //    so the crew member posts as a registered person in the room; the exemption comes from the
+  //    crew cookie beside it, never from the form.
+  await asRegisteredAttendee(crew.page, EVENT);
+  await gotoStage(crew.page);
   await expect(crew.page.getByTestId("attendee-identity-chat-form")).toHaveAttribute("data-slow-mode-exempt", "true");
   await expect(crew.page.getByTestId("chat-slow-mode-countdown")).toHaveCount(0);
 
@@ -103,12 +112,12 @@ test("clear chat empties the room for a second viewer, and the confirm names the
   const crew = await crewContext(browser);
 
   const text = `clear-e2e ${stamp}`;
-  await gotoAndAssert(attendee.page, STAGE);
+  await gotoStage(attendee.page);
   await send(attendee.page, text);
   await expect(attendee.page.getByTestId("main_stage-live-chat")).toContainText(text);
 
   // A second viewer, who presses nothing, is holding the message.
-  await gotoAndAssert(watcher.page, STAGE);
+  await gotoStage(watcher.page);
   await expect(watcher.page.getByTestId("main_stage-live-chat")).toContainText(text);
 
   // Crew clears, through the confirm that names how many and says it cannot be undone.
@@ -123,7 +132,7 @@ test("clear chat empties the room for a second viewer, and the confirm names the
 
   // Empty for the second viewer — who polls, and never reloaded by hand — and for the crew.
   await expect(watcher.page.getByTestId("live-chat-stream")).toHaveAttribute("data-message-count", "0", { timeout: 20_000 });
-  await gotoAndAssert(crew.page, STAGE);
+  await gotoStage(crew.page);
   await expect(crew.page.getByTestId("main_stage-live-chat")).not.toContainText(text);
 
   await attendee.context.close();

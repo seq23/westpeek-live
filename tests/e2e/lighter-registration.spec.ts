@@ -1,6 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
-import { isDeployedBrowserRun, loginAsOperator } from "./helpers/roleJourney";
+import { isDeployedBrowserRun, loginAsOperator, openVenueSection } from "./helpers/roleJourney";
 
 /**
  * Lighter registration (16 Sep 2026): three fields and you are in → the stage → "Tell us more
@@ -27,10 +27,10 @@ test("register with three fields → stage → tell us more saves two fields →
   const ada = await context.newPage();
   await gotoAndAssert(ada, `/events/${eventId}/register`);
   // Only name, email, company are required; title is optional; nothing else is on the page.
-  await expect(ada.locator('form [required]')).toHaveCount(3);
+  await expect(ada.getByTestId("registration-form").locator("[required]")).toHaveCount(3);
   await expect(ada.locator('[name="reasonForAttending"], [name="topicsOfInterest"], [name="socialLinks"]')).toHaveCount(0);
   await ada.locator('[name="name"]').fill("Ada Lovelace");
-  await ada.locator('[name="email"]').fill(`ada-${Date.now()}@example.com`);
+  await ada.getByTestId("registration-form").locator('[name="email"]').fill(`ada-${Date.now()}@example.com`);
   await ada.locator('[name="company"]').fill("Analytical Engines");
   await ada.getByRole("button", { name: /submit registration/i }).click();
   await expect(ada).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?registered=1/);
@@ -39,15 +39,15 @@ test("register with three fields → stage → tell us more saves two fields →
   // The stage carries the collapsed card with a progress cue; two fields saved.
   await gotoAndAssert(ada, `/venue/${eventId}/stage`);
   const card = ada.getByTestId("attendee-profile-panel");
-  await expect(card).toHaveAttribute("data-progress", "0/7");
+  await expect(card.locator("[data-progress]")).toHaveAttribute("data-progress", "0/7");
   await expect(card.getByTestId("tell-us-more-progress")).toHaveText("0 of 7");
-  await card.locator("summary").click();
+  await openVenueSection(card);
   await card.getByTestId("tell-title").fill("Founder");
   await card.getByTestId("tell-fact").fill("Wrote the first program before there was a computer to run it.");
   await card.getByTestId("tell-us-more-save").click();
   await expect(ada).toHaveURL(/saved=profile/);
   await expect(ada.getByTestId("tell-us-more-saved")).toBeVisible();
-  await expect(ada.getByTestId("attendee-profile-panel")).toHaveAttribute("data-progress", "2/7");
+  await expect(ada.getByTestId("attendee-profile-panel").locator("[data-progress]")).toHaveAttribute("data-progress", "2/7");
 
   // People shows what exists and nothing invented.
   await gotoAndAssert(ada, `/venue/${eventId}/people`);
@@ -61,7 +61,7 @@ test("register with three fields → stage → tell us more saves two fields →
   // Hide me: gone from People, still on the crew roster.
   await gotoAndAssert(ada, `/venue/${eventId}/lobby`);
   const lobbyCard = ada.getByTestId("attendee-profile-panel");
-  await lobbyCard.locator("summary").click();
+  await openVenueSection(lobbyCard);
   await lobbyCard.getByTestId("tell-hide-me").check();
   await lobbyCard.getByTestId("tell-us-more-save").click();
   await expect(ada).toHaveURL(/saved=profile/);
@@ -78,6 +78,6 @@ test("register with three fields → stage → tell us more saves two fields →
   await ada.getByTestId("networking-join").click();
   await expect(ada).toHaveURL(/state=waiting/);
   await gotoAndAssert(ada, `/venue/${eventId}/lobby`);
-  await expect(ada.getByTestId("attendee-profile-panel")).toHaveAttribute("data-progress", "4/7");
+  await expect(ada.getByTestId("attendee-profile-panel").locator("[data-progress]")).toHaveAttribute("data-progress", "4/7");
   await context.close();
 });
