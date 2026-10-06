@@ -87,6 +87,20 @@ describe("sign-up, sign-in and sessions", () => {
   });
 });
 
+describe("a signed-up account resolves to a user", () => {
+  it("resolves the permission user from D1 without throwing (every access table read uses real columns)", async () => {
+    setD1ForTests(env.db);
+    try {
+      const { resolvePermissionUserForUserId } = await import("@/lib/auth/authService");
+      const userId = (await auth.findUserByEmail("test.signup@westpeek.ventures"))!.id;
+      const user = await resolvePermissionUserForUserId(userId);
+      expect(user).toMatchObject({ id: userId, email: "test.signup@westpeek.ventures" });
+    } finally {
+      setD1ForTests(undefined);
+    }
+  });
+});
+
 describe("password reset", () => {
   it("issues a reset only for a real account, uses it once, expires it, and ends old sessions", async () => {
     expect(await auth.createPasswordReset("nobody@westpeek.ventures")).toBeUndefined();

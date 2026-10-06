@@ -1,7 +1,46 @@
 # Supabase → Cloudflare (D1 + R2 + app-owned auth), $0 incremental
 
 Written 6 Oct 2026, the day the free Supabase organisation (project `lqxzpwtvolojashknseb`) was deleted.
-Status: **plan only — nothing below is built yet.** Branch `work/supabase-to-cloudflare`.
+Status: **BUILT 6 Oct 2026** on branch `work/supabase-to-cloudflare` (plan commit 984ea43, which is also
+the last commit that holds the Postgres schema: `db/migrations/0001–0046` and the `supabase/` mirror).
+§0 records what was built and where it differs from the plan below.
+
+## 0. As built (6 Oct 2026)
+
+| Piece | Where |
+|---|---|
+| D1 `west-peek-live` (id `48e46056-cecf-4c08-990d-3ca7e8f2d518`), binding `DB` | `wrangler.jsonc`; schema `migrations-d1/0001…0006` (60 tables), applied to production with `wrangler d1 migrations apply --remote` |
+| Query layer: each `from(t).select().eq()…` chain compiles to ONE parameterised SQL statement; JSON/boolean columns typed from the generated manifest | `lib/d1/query.ts`, `lib/d1/schema.generated.ts` (from `scripts/generate_d1_schema_manifest.mjs`) |
+| Runtime store | `services/runtime/d1RuntimeStore.ts`; `runtimeStoreFactory.ts` picks D1 whenever `DB` is bound |
+| R2 `west-peek-live-assets`, binding `ASSETS_BUCKET`, private | `app/api/assets/upload/route.ts` (PUT/POST, HMAC-signed link: key, type, size, 10-min expiry), `app/api/assets/file/route.ts` (signed GET); `services/assets/signedUrlService.ts` |
+| App-owned login | `lib/auth/passwordAuth.ts` (PBKDF2-SHA256 100 000 iterations, per-user salt; sessions and reset tokens stored as SHA-256; reset single-use, 1 h), `app/(auth)/reset-password`, middleware validates the session row |
+| Health | `/api/runtime/health` answers **503** when not ok; coverage checks all 769 tables+columns |
+| Deploy | `.github/workflows/deploy-cloudflare-worker.yml` runs on green `main` (workflow_run), applies D1 migrations, then `cf:deploy` |
+| Guards | `validate:d1-schema`, `validate:retired-backend-gone` (both with `--self-test`); unit tests on a real D1 (Miniflare) |
+
+**Where the build differs from the plan, and why**
+1. **60 tables, not 51 + 3.** The plan counted literal `.from("…")` names; six access tables
+   (`role_assignments`, `client_contacts`, `contractor_assignments`, `vendor_assignments`,
+   `speaker_profiles`, `sponsors`) are read through a variable table name and were missed.
+2. **The store keeps its chain shape** over a small compiler (`lib/d1/query.ts`) instead of
+   hand-written SQL per method: one code path to test, every `RuntimeStore` method exercised on a real
+   D1 (`tests/unit/d1RuntimeStore.test.ts` fails if a declared method is never called).
+3. **`db/migrations/` was deleted too**, not only `supabase/`: a Postgres schema nothing applies would
+   be a second list to drift. History: commit 984ea43.
+4. **Asset routes:** upload is `PUT` (and `POST`) to `/api/assets/upload`; download is
+   `/api/assets/file?key=…` keyed by object, so the house logo (no asset row) uses the same route.
+   The existing access-checked `/api/assets/<id>/download` now redirects to that signed link.
+5. **Deploys were not manual:** Workers Builds deployed every push to `main` (before CI). Its
+   default-branch deploy command is now `npx wrangler versions upload`, so only the green-`main`
+   workflow (migrations first) promotes a version.
+6. **Defects fixed in passing:** `audit_logs` foreign keys dropped (runtime slugs never exist in
+   `agencies`/`events`, so every audit write had been failing silently); `v5_access_attempt_events`
+   accepts `operator`/`owner` like the TypeScript type; the access snapshot asked for `user_id` on
+   `vendor_assignments`/`sponsors` and `status` on `speaker_profiles`, which do not exist, so every
+   self-serve user's resolution threw.
+7. **Not carried:** the 0046 backfill of one superseded code (its event was lost with the project);
+   e-mail confirmation on sign-up (self-serve is gated; sign-up signs in at once).
+
 
 ## 1. What Supabase did for this repo (evidence)
 

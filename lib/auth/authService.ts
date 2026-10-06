@@ -9,8 +9,10 @@ import type {
 } from "./authTypes";
 import { resolvePermissionUser } from "./accessResolver";
 
-async function selectByUserId<T>(table: string, userId: string, select = "*"): Promise<T[]> {
-  const { data, error } = await getDbClient().from(table).select(select).eq("user_id", userId).eq("status", "active");
+async function selectByUserId<T>(table: string, userId: string, options: { activeOnly?: boolean } = {}): Promise<T[]> {
+  let query = getDbClient().from(table).select("*").eq("user_id", userId);
+  if (options.activeOnly !== false) query = query.eq("status", "active");
+  const { data, error } = await query;
 
   if (error) throw new Error(`Failed to resolve ${table}: ${error.message}`);
   return (data ?? []) as T[];
@@ -27,14 +29,17 @@ export async function resolveAccessSnapshot(userId: string): Promise<AuthAccessS
   const profile = await getProfileByUserId(userId);
   if (!profile || profile.status !== "active") return null;
 
-  const [agencyMembers, roleAssignments, clientContacts, contractorAssignments, vendorAssignments, speakerProfiles, sponsors] = await Promise.all([
+  // vendor_assignments and sponsors carry no user_id, and speaker_profiles has no status column:
+  // the Postgres-era version asked for those columns anyway, so EVERY self-serve user's resolution
+  // threw (found 6 Oct 2026 on the D1 move). A vendor or sponsor is not a login; they contribute none.
+  const vendorAssignments: Array<{ id: string; event_id: string }> = [];
+  const sponsors: Array<{ id: string; event_id: string }> = [];
+  const [agencyMembers, roleAssignments, clientContacts, contractorAssignments, speakerProfiles] = await Promise.all([
     selectByUserId<AgencyMemberRecord>("agency_members", userId),
     selectByUserId<RoleAssignmentRecord>("role_assignments", userId),
     selectByUserId<ClientContactRecord>("client_contacts", userId),
     selectByUserId<{ id: string; event_id: string }>("contractor_assignments", userId),
-    selectByUserId<{ id: string; event_id: string }>("vendor_assignments", userId),
-    selectByUserId<{ id: string; event_id: string }>("speaker_profiles", userId),
-    selectByUserId<{ id: string; event_id: string }>("sponsors", userId),
+    selectByUserId<{ id: string; event_id: string }>("speaker_profiles", userId, { activeOnly: false }),
   ]);
 
   return {
