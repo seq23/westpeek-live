@@ -93,6 +93,8 @@ const localE2EEnv = {
 
 export default defineConfig({
   testDir: "./tests/e2e",
+  // Compiles the heavy routes once after the dev server is up (see the file for why).
+  globalSetup: shouldStartLocalServer ? "./tests/e2e-global-setup.ts" : undefined,
   timeout: 30_000,
   expect: {
     timeout: 10_000,
@@ -103,7 +105,10 @@ export default defineConfig({
   reporter: [["list"], ["html", { open: "never" }]],
   webServer: shouldStartLocalServer
     ? {
-        command: `npm run dev -- --hostname 127.0.0.1 --port ${new URL(baseURL).port || "3000"}`,
+        // Every server this config starts begins from an empty file runtime store, as CI does:
+        // records left by an earlier local run (an attendee already registered, a code already
+        // rotated) otherwise change what the pages say and fail specs on state, not on code.
+        command: `node -e "require('fs').rmSync(process.argv[1], { force: true })" ${JSON.stringify(localRuntimePath)} && npm run dev -- --hostname 127.0.0.1 --port ${new URL(baseURL).port || "3000"}`,
         url: baseURL,
         reuseExistingServer: !process.env.CI,
         timeout: 120_000,
