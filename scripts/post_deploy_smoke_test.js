@@ -4,6 +4,34 @@ if (!baseUrl) {
   process.exit(0);
 }
 
+/**
+ * A deploy rolls out over seconds; checking the URL the moment `wrangler deploy` returns can read the
+ * PREVIOUS version (6 Oct 2026: three 500s from the outgoing Supabase build, seconds after the D1
+ * build deployed). When SMOKE_EXPECT_BUILD_ID is set (the deploy workflow passes the commit), every
+ * check below waits until /api/runtime/build-id answers that build five times in a row, and fails by
+ * name if it never does — it never checks whichever version happens to answer.
+ */
+async function waitForExpectedBuild(expected) {
+  if (!expected) return;
+  const want = expected.slice(0, 12);
+  const deadline = Date.now() + 120_000;
+  let streak = 0;
+  let last = "";
+  while (Date.now() < deadline) {
+    try {
+      const response = await fetch(new URL("/api/runtime/build-id", baseUrl), { headers: { "cache-control": "no-cache" }, redirect: "manual" });
+      last = response.ok ? String((await response.json()).buildId || "") : `HTTP ${response.status}`;
+    } catch (error) {
+      last = error instanceof Error ? error.message : String(error);
+    }
+    streak = last === want ? streak + 1 : 0;
+    if (streak >= 5) return;
+    await new Promise((resolve) => setTimeout(resolve, 2_000));
+  }
+  console.error(`post_deploy_smoke_test: NAMED STOP — ${baseUrl} never served build ${want} five times in a row within 120s (last answer: ${last}). The deploy did not take, or an older version is still serving.`);
+  process.exit(1);
+}
+
 const checks = [
   { path: "/", kind: "public", mustContain: "Join an Event" },
   { path: "/join", kind: "public", mustContain: "Event code" },
@@ -30,6 +58,7 @@ const checks = [
 
 async function run() {
   const failures = [];
+  await waitForExpectedBuild(process.env.SMOKE_EXPECT_BUILD_ID);
   for (const check of checks) {
     const response = await fetch(new URL(check.path, baseUrl), { redirect: "manual" });
     const body = await response.text().catch(() => "");

@@ -30,6 +30,10 @@ jobs:
       CLOUDFLARE_API_TOKEN: ${{ secrets.CLOUDFLARE_API_TOKEN }}
       CLOUDFLARE_ACCOUNT_ID: ${{ secrets.CLOUDFLARE_ACCOUNT_ID }}
       POSTDEPLOY_BASE_URL: https://west-peek-live.seq-taylor.workers.dev
+      # The commit being deployed: stamped into the build id and awaited by the smoke test, so the
+      # smoke checks THIS version, not whichever one answers first during the rollout.
+      DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}
+      SMOKE_EXPECT_BUILD_ID: ${{ github.event.workflow_run.head_sha || github.sha }}
       SMOKE_BASE_URL: https://west-peek-live.seq-taylor.workers.dev
 
     steps:

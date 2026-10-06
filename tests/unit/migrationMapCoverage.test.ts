@@ -100,6 +100,10 @@ describe("a database behind its migrations is a failure, never a warning", () =>
     expect(smoke).toContain("migration coverage checked 0 objects");
     expect(smoke).toContain("npx wrangler d1 migrations apply west-peek-live --remote");
     expect(smoke).toContain('health.store !== "d1"');
+    // It checks the version the workflow deployed, never whichever one answers mid-rollout.
+    expect(smoke).toContain("await waitForExpectedBuild(process.env.SMOKE_EXPECT_BUILD_ID);");
+    expect(smoke.indexOf("await waitForExpectedBuild(")).toBeLessThan(smoke.indexOf("for (const check of checks)"));
+    expect(smoke).toContain("never served build");
   });
 
   it("the deploy workflow applies the migrations before the Worker, on green main", () => {
