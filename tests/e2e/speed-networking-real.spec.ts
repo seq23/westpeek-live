@@ -45,11 +45,15 @@ test("two attendees join → matched within 10s with names and timer → Next ma
   await asRegisteredAttendee(ada, eventId); // "E2E Registered Attendee · E2E Company · Founder"
   const grace = await registerAttendee(browser, eventId, { name: "Grace Hopper", company: "US Navy", title: "Admiral" });
 
-  // Not registered → register link; registered → the real Join queue form.
+  // Not registered → the Join the queue ask; registered → the real Join queue form.
   const stranger = await browser.newPage();
   await gotoAndAssert(stranger, `/venue/${eventId}/networking`);
   await expect(stranger.getByTestId("networking-registration-required")).toBeVisible();
-  await expect(stranger.getByTestId("networking-register-link")).toHaveAttribute("href", `/events/${eventId}/register?reason=networking`);
+  // The ask is the one point-of-use control ("One register prompt on a page, ever", 16 Sep 2026):
+  // Join the queue opens into the register link, which carries why and where to come back to.
+  await expect(stranger.getByTestId("register-point-of-use-networking-cta")).toHaveCount(0);
+  await stranger.getByTestId("register-point-of-use-networking").click();
+  await expect(stranger.getByTestId("register-point-of-use-networking-cta")).toHaveAttribute("href", `/events/${eventId}/register?reason=networking&returnTo=${encodeURIComponent(`/venue/${eventId}/networking`)}`);
   await stranger.close();
 
   await gotoAndAssert(ada, `/venue/${eventId}/networking`);

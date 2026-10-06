@@ -1,6 +1,7 @@
 import { expect, test } from "@playwright/test";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { requiredDay1Default } from "./helpers/day1AccessDefaults";
+import { openConsoleSection } from "./helpers/roleJourney";
 
 test("operator can find crew instructions and crew can consume them without operator launchpad access", async ({ page }) => {
   await gotoAndAssert(page, "/production-access/operator");
@@ -8,16 +9,18 @@ test("operator can find crew instructions and crew can consume them without oper
   await page.getByRole("button", { name: /enter operator launchpad/i }).click();
 
   await expect(page).toHaveURL(/\/production-access\/launchpad/);
-  await expect(page.getByRole("link", { name: /Crew Briefing & Instructions/i }).first()).toBeVisible();
-  await page.getByRole("link", { name: /Crew Briefing & Instructions/i }).first().click();
+  // Crew briefing is a card in the launchpad's "Set up an event" section, for the event in hand.
+  const setUp = await openConsoleSection(page, "set-up");
+  await setUp.getByRole("link", { name: /^Crew briefing/ }).click();
 
-  await expect(page).toHaveURL(/\/app\/events\/event-summit\/crew/);
+  await expect(page).toHaveURL(/\/app\/events\/[a-z0-9-]+\/crew$/);
+  const eventId = new URL(page.url()).pathname.split("/")[3];
   await expect(page.locator("body")).toContainText(/Publish crew instructions for show day/i);
   await expect(page.locator("body")).toContainText(/call sheet|run of show|task list|fallback|escalation/i);
   await expect(page.getByRole("link", { name: /Preview Crew Home/i })).toBeVisible();
 
   await page.getByRole("link", { name: /Preview Crew Home/i }).click();
-  await expect(page).toHaveURL(/\/crew\/events\/event-summit/);
+  await expect(page).toHaveURL(new RegExp(`/crew/events/${eventId}$`));
   await expect(page.locator("body")).toContainText(/Crew show-day command|Crew Briefing/i);
   await expect(page.locator("body")).toContainText(/Do not use the Operator Launchpad/i);
 });

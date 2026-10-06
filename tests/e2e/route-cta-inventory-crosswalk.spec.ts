@@ -1,5 +1,5 @@
 import { expect, test } from '@playwright/test';
-import { expectVisibleRoute, expectLinksStayFirstParty, loginAsOperator } from './helpers/roleJourney';
+import { expectVisibleRoute, expectLinksStayFirstParty, loginAsOperator, openConsoleSection } from './helpers/roleJourney';
 
 test.setTimeout(180_000);
 
@@ -16,8 +16,17 @@ test('public, venue, access, and operator CTA crosswalk routes render with first
   }
 
   await loginAsOperator(page, '/production-access/launchpad');
-  await expect(page.locator('body')).toContainText(/Create Event|Preview Demo Venue|Crew Briefing|Testing Console|Run of Show/i);
-  for (const label of ['Create Event in Admin Workspace', 'Preview Demo Venue', 'Crew Briefing', 'Testing Console']) {
-    await expect(page.getByRole('link', { name: new RegExp(label, 'i') }).first(), `${label} CTA should exist`).toBeVisible();
+  // The launchpad folds its cards into sections (16 Sep 2026): each CTA is one section-open away,
+  // and every card stays first-party.
+  await expect(page.getByTestId('operator-launchpad').getByRole('link', { name: 'New event', exact: true }).first()).toHaveAttribute('href', '/app/events/new');
+  for (const [section, label, href] of [
+    ['demo', 'Demo venue', '/venue/demo/lobby'],
+    ['set-up', 'Crew briefing', /^\/app\/events\/[a-z0-9-]+\/crew$/],
+    ['diagnostics', 'Testing console', '/admin/testing'],
+    ['run-a-show', 'Run of show', /^\/app\/events\/[a-z0-9-]+\/run-of-show$/],
+  ] as const) {
+    const body = await openConsoleSection(page, section);
+    await expect(body.getByRole('link', { name: new RegExp(`^${label}`) }).first(), `${label} CTA should exist`).toHaveAttribute('href', href);
   }
+  await expectLinksStayFirstParty(page);
 });

@@ -24,7 +24,9 @@ test("production access offers the Owner Access card and the owner gate lands on
   await page.getByRole("button", { name: /enter owner workspace/i }).click();
   // The owner master password lands on the Owner Console (16 Sep 2026); the actor chip links there.
   await expect(page).toHaveURL(/\/app\/owner$/);
-  await expect(page.getByTestId("workspace-actor")).toContainText(/Sequoia Taylor \/ owner/);
+  // The actor chip says "Owner" (16 Sep 2026), not a person's name, and links to the console.
+  await expect(page.getByTestId("workspace-actor")).toHaveText("Owner");
+  await expect(page.getByTestId("workspace-actor")).toHaveAttribute("href", "/app/owner");
   await expect(page.getByTestId("owner-console")).toBeVisible();
 
   // The launchpad's Create Event link used to bounce a valid owner back through the operator gate.

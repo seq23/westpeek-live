@@ -12,8 +12,10 @@ test("venue identity powers main-stage, breakout, networking, help, people, and 
   await expect(page.locator("body")).not.toContainText("current-attendee");
 
   await page.goto("/venue/demo/networking");
-  // A visitor who has not registered gets the one register link, carrying why they were sent.
-  await expect(page.getByTestId("networking-register-link")).toHaveAttribute("href", /^\/events\/(demo|event-summit)\/register\?reason=networking$/);
+  // A visitor who has not registered gets the one point-of-use ask; pressing it opens the register
+  // link, which carries why they were sent and where to come back to.
+  await page.getByTestId("register-point-of-use-networking").click();
+  await expect(page.getByTestId("register-point-of-use-networking-cta")).toHaveAttribute("href", /^\/events\/(demo|event-summit)\/register\?reason=networking&returnTo=%2Fvenue%2F(demo|event-summit)%2Fnetworking$/);
   await expect(page.locator("body")).not.toContainText("Local E2E Attendee");
 
   await page.goto("/venue/demo/help");

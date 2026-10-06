@@ -12,9 +12,11 @@ test("operator can create a real planned event from the launchpad and land on it
 
   await expect(page).toHaveURL(/\/production-access\/launchpad/);
   await expect(page.locator("body")).toContainText(/Operator Launchpad/i);
-  await expect(page.getByRole("link", { name: /Create Event in Admin Workspace/i }).first()).toBeVisible();
+  // The launchpad's one way to make an event is the "New event" link in its header (16 Sep 2026).
+  const newEvent = page.getByTestId("operator-launchpad").getByRole("link", { name: "New event", exact: true }).first();
+  await expect(newEvent).toHaveAttribute("href", "/app/events/new");
 
-  await page.getByRole("link", { name: /Create Event in Admin Workspace/i }).first().click();
+  await newEvent.click();
 
   await expect(page).toHaveURL(/\/app\/events\/new/);
   await expect(page.getByRole("heading", { name: /Start a Room now, or plan an event for later/i })).toBeVisible();
@@ -35,7 +37,8 @@ test("operator can create a real planned event from the launchpad and land on it
   await expect(page.getByTestId("runtime-event-header")).toBeVisible();
   await expect(body).toContainText(name);
   await expect(body).toContainText("West Peek Productions");
-  await expect(page.getByTestId("event-join-code")).toContainText(/^wpl-/);
+  // Readable codes (16 Sep 2026): WPL- plus the first six letters of the name, a digit when taken.
+  await expect(page.getByTestId("event-join-code")).toHaveText(/^WPL-PLAYWR\d*$/);
 
   await gotoAndAssert(page, `/app/events/${eventId}/setup`);
   await expect(body).toContainText(/Setup.*Basics|Event basics/i);

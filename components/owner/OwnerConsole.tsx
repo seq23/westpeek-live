@@ -2,7 +2,6 @@ import Link from "next/link";
 import { LocalTime } from "@/components/shared/LocalTime";
 import { ConsoleSection, ConsoleToc } from "@/components/owner/ConsoleSection";
 import { SafeSection } from "@/components/system/SafeSection";
-import { EndShowControl } from "@/components/moderation/EndShowControl";
 import { StageRequestsToggle } from "@/components/moderation/StageRequestsToggle";
 import { HostPanel } from "@/components/events/HostPanel";
 import { GuestPreviewList } from "@/components/guests/GuestPreviewLinks";
@@ -99,7 +98,6 @@ async function LiveNowRow({ event }: { event: RuntimeEventRecord }) {
       </div>
       <div className="mt-3 grid gap-3 lg:grid-cols-2">
         <SafeSection label="Stage requests" compact render={() => StageRequestsToggle({ eventId: event.id, compact: true })} />
-        <SafeSection label="End of show" compact render={() => EndShowControl({ eventId: event.id, compact: true })} />
       </div>
       {/* The credentials the producer needs, without opening the crew deck. */}
       <div className="mt-3"><SafeSection label="Go live" compact render={() => GoLiveCard({ eventId: event.id, compact: true, returnTo: "/app/owner" })} /></div>

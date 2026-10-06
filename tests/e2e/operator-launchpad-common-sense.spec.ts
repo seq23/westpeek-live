@@ -1,6 +1,7 @@
 import { expect, test, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { requiredDay1Default } from "./helpers/day1AccessDefaults";
+import { openConsoleSection } from "./helpers/roleJourney";
 
 const forbidden = /Application error|Internal Server Error|not authorized|forbidden|missing setup|unknown event|Supabase Auth required|admin account required/i;
 
@@ -14,21 +15,26 @@ async function loginOperator(page: Page) {
 test("operator launchpad exposes useful Day 1 actions without obvious dead-end language", async ({ page }) => {
   await loginOperator(page);
 
+  // The reorganised launchpad (16 Sep 2026): real events first, then folded sections that each
+  // hold the cards for one job. Every Day 1 action is still one click from here.
   const body = page.locator("body");
   await expect(body).toContainText(/Operator Launchpad/i);
-  await expect(body).toContainText(/Create Event in Admin Workspace/i);
-  await expect(body).toContainText(/Preview Demo Venue/i);
-  await expect(body).toContainText(/Open Operator Packet|Day 1 Operator Packet/i);
-  await expect(body).toContainText(/Run of Show/i);
-  await expect(body).toContainText(/Video Health/i);
-  await expect(body).toContainText(/Crew Gate|Test Crew Login/i);
+  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Everything internal starts here.");
+  await expect(page.getByTestId("operator-launchpad").getByRole("link", { name: "New event", exact: true }).first()).toHaveAttribute("href", "/app/events/new");
+  const run = await openConsoleSection(page, "run-a-show");
+  for (const card of ["Run of show", "Video health", "Crew console", "Testing console"]) await expect(run.getByRole("link", { name: new RegExp(`^${card}`) })).toBeVisible();
+  const demo = await openConsoleSection(page, "demo");
+  await expect(demo.getByRole("link", { name: /^Demo venue/ })).toHaveAttribute("href", "/venue/demo/lobby");
+  await expect(demo.getByRole("link", { name: /^Operator packet/ })).toHaveAttribute("href", "/operator-packet");
+  await expect(demo.getByRole("link", { name: /^Test a crew login/ })).toHaveAttribute("href", "/production-access/crew");
   await expect(body).not.toContainText(forbidden);
 });
 
 test("operator preview venue button opens the seeded phony venue without app errors", async ({ page }) => {
   await loginOperator(page);
 
-  await page.getByRole("link", { name: /Preview Demo Venue/i }).first().click();
+  const demo = await openConsoleSection(page, "demo");
+  await demo.getByRole("link", { name: /^Demo venue/ }).click();
   await expect(page).toHaveURL(/\/venue\/demo\/lobby/);
   await expect(page.locator("body")).toContainText(/Lobby|Attendee venue|West Peek/i);
   await expect(page.locator("body")).not.toContainText(forbidden);

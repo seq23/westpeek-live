@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { expect, type Page } from "@playwright/test";
+import { expect, type Locator, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./assertNoAppError";
 import { day1Default, requiredDay1Default } from "./day1AccessDefaults";
 
@@ -219,4 +219,29 @@ export async function expectLinksStayFirstParty(page: Page, selector = "a[href]"
     if (!allowedHosts.includes(configuredHost)) allowedHosts.push(configuredHost);
     expect(allowedHosts, `first-party or local link expected: ${href}`).toContain(url.hostname);
   }
+}
+
+/**
+ * The launchpad and owner console fold every section (16 Sep 2026); a folded section's cards are
+ * `hidden`. Opens one after hydration (the stored open/closed state is applied on mount) and proves
+ * it is open, so a spec reaches a card the way an operator does.
+ */
+export async function openConsoleSection(page: Page, id: string) {
+  const section = page.getByTestId(`console-section-${id}`);
+  await expect(section).toHaveAttribute("data-hydrated", "true");
+  if ((await section.getAttribute("data-open")) !== "true") await page.getByTestId(`console-section-${id}-toggle`).click();
+  await expect(section).toHaveAttribute("data-open", "true");
+  return section;
+}
+
+/**
+ * Opens a venue section (VenueSection: a button toggle, remembered per browser). The toggle only
+ * works once React has hydrated, and the remembered state lands after mount, so this presses until
+ * the section reports open instead of trusting one early click.
+ */
+export async function openVenueSection(section: Locator) {
+  await expect(async () => {
+    if ((await section.getAttribute("data-open")) !== "true") await section.locator(":scope > button").click();
+    await expect(section).toHaveAttribute("data-open", "true", { timeout: 1_000 });
+  }).toPass({ timeout: 15_000 });
 }

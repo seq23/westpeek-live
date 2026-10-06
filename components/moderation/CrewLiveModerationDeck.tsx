@@ -38,7 +38,9 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, di
         </section>
       ) : null}
       <SafeSection label="Host" render={() => HostPanel({ eventId, viewer })} />
-      <SafeSection label="End of show" render={() => EndShowControl({ eventId, viewer })} />
+      {/* With the stream console the Go-live card above carries End the show; a second copy here
+          was the same button twice on one page. Without it, this is the only one. */}
+      {includeStreamConsole ? null : <SafeSection label="End of show" render={() => EndShowControl({ eventId, viewer })} />}
       <SafeSection label="Speakers" render={() => SpeakerRosterPanel({ eventId, viewer })} />
       <SafeSection label="Attendee roster" render={() => AttendeeLiveRoster({ eventId, search, searchAction, viewer, diagnose })} />
       <SafeSection label="Chat moderation" render={() => ChatModerationQueue({ eventId, viewer })} />

@@ -1,6 +1,7 @@
 import { expect, test, type Browser, type Page } from "@playwright/test";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { requiredDay1Default } from "./helpers/day1AccessDefaults";
+import { isDeployedBrowserRun } from "./helpers/roleJourney";
 
 /**
  * The owner's real-event journeys (locked design, 15 Sep 2026):
@@ -47,7 +48,8 @@ test.describe("owner real events", () => {
     await expect(page).toHaveURL(/\/venue\/[a-z0-9-]+\/lobby\?created=1/);
     await expect(page.getByTestId("event-created-notice")).toContainText(/is live/i);
     const code = (await page.getByTestId("event-join-code").innerText()).trim();
-    expect(code).toMatch(/^wpl-[a-z0-9]{6}$/i);
+    // Readable codes (16 Sep 2026): WPL- plus the first six letters of the name, a digit when taken.
+    expect(code).toMatch(/^WPL-PLAYWR\d*$/);
     await expect(page.getByTestId("event-join-link")).toContainText(`/join?code=${code}`);
     await expect(page.getByTestId("copy-join-code")).toBeVisible();
     await expect(page.locator("body")).toContainText(name);
@@ -86,7 +88,10 @@ test.describe("owner real events", () => {
 
     const closed = await joinFromFreshContext(browser, code);
     try {
-      await expect(closed.page.locator("body")).toContainText(/not publicly open yet/i);
+      // The join page names the state in plain words (16 Sep 2026) and keeps the reason machine-readable.
+      await expect(closed.page.getByTestId("join-trouble")).toHaveAttribute("data-join-reason", "not_public");
+      await expect(closed.page.getByTestId("join-trouble")).toContainText("The doors are not open yet");
+      await expect(closed.page.getByTestId("join-trouble")).toContainText(name);
     } finally {
       await closed.context.close();
     }
@@ -127,7 +132,9 @@ test.describe("owner real events", () => {
 
     const archived = await joinFromFreshContext(browser, code);
     try {
-      await expect(archived.page.locator("body")).toContainText(/archived/i);
+      await expect(archived.page.getByTestId("join-trouble")).toHaveAttribute("data-join-reason", "archived");
+      await expect(archived.page.getByTestId("join-trouble")).toContainText("This event has been put away");
+      await expect(archived.page.getByTestId("join-trouble")).toContainText(name);
     } finally {
       await archived.context.close();
     }
@@ -159,14 +166,27 @@ test.describe("owner real events", () => {
 
   test("(e) the workspace reads real rows: dashboard, clients, settings, and the runtime health endpoint", async ({ page, request }) => {
     const health = await request.get("/api/runtime/health");
-    expect(health.status()).toBe(200);
     const body = await health.json();
     expect(body.seedEvents).toBe(5);
     expect(body.runtimeEvents.ready).toBe(true);
-    expect(JSON.stringify(body)).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY|wpl-[a-z0-9]{6}|CREW-/);
+    expect(body.crewPageReads.ok).toBe(true);
+    // The status code follows `ok` (6 Oct 2026). Production runs D1 and must be all green; a local run
+    // uses the file store, which the migration-coverage probe refuses to call healthy, by name.
+    if (isDeployedBrowserRun()) {
+      expect(body.store).toBe("d1");
+      expect(body.ok).toBe(true);
+      expect(health.status()).toBe(200);
+    } else {
+      expect(body.store).toBe("file");
+      expect(body.migrationCoverage).toMatchObject({ ok: false, checked: 0 });
+      expect(body.migrationCoverage.detail).toContain("the file runtime store is active");
+      expect(body.ok).toBe(false);
+      expect(health.status()).toBe(503);
+    }
+    expect(JSON.stringify(body)).not.toMatch(/SUPABASE_SERVICE_ROLE_KEY|WPL-[A-Z0-9]|wpl-[a-z0-9]{6}|CREW-/);
 
     await loginOwner(page);
-    await expect(page.getByTestId("workspace-actor")).toContainText("Owner");
+    await expect(page.getByTestId("workspace-actor")).toHaveText("Owner");
     // The owner gate lands on the Owner Console; the dashboard is one click away.
     await gotoAndAssert(page, "/app");
     await expect(page.getByTestId("persistence-mode")).toContainText(/tables ready/i);

@@ -99,7 +99,9 @@ test("mint a host link → the link prefills the gate → the host runs the show
   const stale = await hostContext.newPage();
   await stale.goto(new URL(link).pathname + new URL(link).search);
   await stale.getByRole("button", { name: /enter crew workspace/i }).click();
-  await expect(stale).toHaveURL(/\/production-access\/crew\?error=invalid/);
+  // The rotated code is refused and named as replaced, not answered like a guess (16 Sep 2026).
+  await expect(stale).toHaveURL(/\/production-access\/crew\?error=superseded&codeField=crew&on=/);
+  await expect(stale.getByTestId("crew-code-superseded")).toContainText(/^This crew code was replaced on .+\. Ask the producer for the current one\.$/);
   // A fresh link carries the new code.
   await page.getByTestId("mint-host-link").click();
   const fresh = (await page.getByTestId("host-link-url").innerText()).trim();

@@ -56,7 +56,9 @@ export async function GoLiveCard({ eventId, viewer: givenViewer, compact = false
             </button>
           </GatedForm>
         )}
-        {live || hasCredentials ? <SafeSection label="End of show" compact render={() => EndShowControl({ eventId, compact: true, viewer })} /> : null}
+        {/* The one End-the-show control wherever this card sits (publish page, crew deck, owner
+            console); after the show it stays, reporting ENDED, so the page never loses it. */}
+        {live || hasCredentials || ended ? <SafeSection label="End of show" compact render={() => EndShowControl({ eventId, compact: true, viewer })} /> : null}
       </div>
 
       <StreamCredentials eventId={eventId} rtmpUrl={state?.livekitIngressUrl} streamKey={state?.livekitStreamKey} ended={ended} problem={state?.lastProvisionError} canAct={viewerCan(viewer, "go_live")} returnTo={returnTo} />
