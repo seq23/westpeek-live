@@ -9,12 +9,6 @@ import { displayCode } from "@/lib/access/accessCodes";
 import { listEventRecords } from "@/services/events/eventRepository";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
-const DIAGNOSTICS_CARDS = [
-  { title: "Testing console", href: "/admin/testing", line: "Routes, access gates, runtime tables, email, video providers — pick the event inside." },
-  { title: "The manual", href: "/manual", line: "Every door, every role, every step — the owner/operator/crew manual, inside the app." },
-  { title: "Runtime health", href: "/api/runtime/health", line: "The deployed truth: store, schema, and the reads every crew page makes." },
-] as const;
-
 /**
  * The operator launchpad, reorganised (16 Sep 2026). It used to be nine sections of cards, most of
  * them pointing at the same demo event and nine of them at the same diagnostics page. Now: the
@@ -112,10 +106,13 @@ async function LaunchpadBody() {
         </div>
       </ConsoleSection>
 
-      {/* The badge counts the cards it sits over: it said 2 after the manual became the third. */}
-      <ConsoleSection storagePrefix="wpl-launchpad" id="diagnostics" title="Diagnostics" count={DIAGNOSTICS_CARDS.length} blurb="The testing console for everything scoped to an event, the live health of the deployment, and the manual.">
+      {/* The badge is the number of cards below it (validate_v7_operator_launchpad.js checks they
+          agree): it said 2 after the manual became the third card. */}
+      <ConsoleSection storagePrefix="wpl-launchpad" id="diagnostics" title="Diagnostics" count={3} blurb="The testing console for everything scoped to an event, the live health of the deployment, and the manual.">
         <div className="grid gap-4 md:grid-cols-3">
-          {DIAGNOSTICS_CARDS.map((card) => <LaunchpadCard key={card.href} title={card.title} href={card.href}>{card.line}</LaunchpadCard>)}
+          <LaunchpadCard title="Testing console" href="/admin/testing">Routes, access gates, runtime tables, email, video providers — pick the event inside.</LaunchpadCard>
+          <LaunchpadCard title="The manual" href="/manual">Every door, every role, every step — the owner/operator/crew manual, inside the app.</LaunchpadCard>
+          <LaunchpadCard title="Runtime health" href="/api/runtime/health">The deployed truth: store, schema, and the reads every crew page makes.</LaunchpadCard>
         </div>
       </ConsoleSection>
 

@@ -43,8 +43,14 @@ requireTokens("lib/actions/stageStreamActions.ts", ["requireLiveEventControlAcce
 
 // 3. Where the crew is.
 requireTokens("components/moderation/EndShowControl.tsx", ["end-show-control", "end-show-button", "end-show-ended-badge", "endTheShow", "Press before you stop the feed"]);
-requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["=> EndShowControl({ eventId"]);
-requireTokens("components/events/EventPublishPanel.tsx", ["=> EndShowControl({ eventId"]);
+// One End-the-show card per page (6 Oct 2026): the Go-live card carries it wherever it sits (publish
+// page, crew deck, owner console) and keeps it after the show to report ENDED; the hosts no longer
+// render a second copy next to it. The deck renders its own only when it shows no Go-live card.
+requireTokens("components/stage/GoLiveCard.tsx", ["=> EndShowControl({ eventId", "live || hasCredentials || ended ?"]);
+requireTokens("app/app/events/[eventId]/publish/page.tsx", ["GoLiveCard({ eventId"]);
+forbidTokens("components/events/EventPublishPanel.tsx", ["EndShowControl"]);
+forbidTokens("components/owner/OwnerConsole.tsx", ["EndShowControl"]);
+requireTokens("components/moderation/CrewLiveModerationDeck.tsx", ["GoLiveCard({ eventId", "{includeStreamConsole ? null : <SafeSection label=\"End of show\" render={() => EndShowControl({ eventId"]);
 requireTokens("components/testing/StreamYardIngressPanel.tsx", ["=> EndShowControl({ eventId", "livekit-webhook-help", "livekit-webhook-url", "Settings → Webhooks", "None yet — polling is carrying the state (every ~10s)", "LIVEKIT_API_SECRET", "LIVEKIT_WEBHOOK_SECRET"]);
 requireTokens("lib/runtime/appBaseUrl.ts", ['LIVEKIT_WEBHOOK_PATH = "/api/video/livekit-webhook"', "export async function livekitWebhookUrl"]);
 requireTokens("components/events/EventJoinCodePanel.tsx", ['from "@/lib/runtime/appBaseUrl"']);

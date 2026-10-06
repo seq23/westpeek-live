@@ -7,7 +7,7 @@ const fs = require('fs');
  *   · behind the operator gate, owner cookie accepted;
  *   · the operator's REAL events read from the store, not a hard-coded demo id;
  *   · one collapsible section per job, with a table of contents, each remembering its own state;
- *   · Diagnostics is exactly two cards;
+ *   · Diagnostics is at most three cards, and the count on its badge is the number of cards;
  *   · Demo & training exists but is NOT open by default;
  *   · no two cards on the page share an href.
  */
@@ -34,6 +34,9 @@ const diagnostics = s.slice(s.indexOf('id="diagnostics"'), s.indexOf('id="demo"'
 const diagnosticCards = (diagnostics.match(/<LaunchpadCard/g) || []).length;
 if (diagnosticCards > 3) throw new Error(`Diagnostics must stay short — at most the testing console, runtime health and the manual (found ${diagnosticCards})`);
 if (!diagnostics.includes('href="/manual"')) throw new Error("Diagnostics must carry the manual link.");
+// The badge on the section is the number of cards in it: it read 2 over three cards (6 Oct 2026).
+const declaredCount = Number((diagnostics.match(/\bcount=\{(\d+)\}/) || [])[1]);
+if (declaredCount !== diagnosticCards) throw new Error(`Diagnostics badge says ${declaredCount} over ${diagnosticCards} cards; they must agree`);
 const diagnosticHrefs = [...diagnostics.matchAll(/href=\{?["`]([^"`]+)["`]/g)].map((match) => match[1]);
 if (new Set(diagnosticHrefs).size !== diagnosticHrefs.length) throw new Error("Two diagnostics cards point at the same page");
 
