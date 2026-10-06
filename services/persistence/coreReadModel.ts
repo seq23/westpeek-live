@@ -20,5 +20,5 @@ export function buildCoreReadModel(records?: Partial<AgencyDashboardRecordSet>) 
 }
 
 export function getPersistenceModeLabel(records?: Partial<AgencyDashboardRecordSet>) {
-  return records ? "Supabase-ready read model" : "Mock fallback read model";
+  return records ? "D1 read model" : "Mock fallback read model";
 }

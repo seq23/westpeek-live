@@ -29,7 +29,7 @@ export async function saveAgencySettingsAction(formData: FormData): Promise<void
     revalidatePath("/app/settings");
   } catch (error) {
     if (error instanceof WorkspaceActorRequiredError) redirect("/production-access/owner?next=/app/settings");
-    failure = isRuntimeSchemaMissing(error) ? "The runtime tables are missing in Supabase; run db/migrations/0024_runtime_events.sql first." : error instanceof Error ? error.message : "Could not save settings.";
+    failure = isRuntimeSchemaMissing(error) ? "The runtime tables are missing in D1; run npx wrangler d1 migrations apply west-peek-live --remote first." : error instanceof Error ? error.message : "Could not save settings.";
   }
   redirect(failure ? `/app/settings?error=${encodeURIComponent(failure.slice(0, 160))}` : "/app/settings?saved=1");
 }

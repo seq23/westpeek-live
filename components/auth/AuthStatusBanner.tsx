@@ -3,7 +3,8 @@ const messages: Record<string, string> = {
   invalid_login: "Login failed. Check the email/password and try again.",
   missing_email: "Email is required.",
   check_email: "Check your email to confirm the account before logging in.",
-  password_reset_sent: "Password reset email sent.",
+  password_reset_sent: "If that address has an account, a reset link is on its way.",
+  password_reset_done: "Password changed. Log in with the new one.",
   auth_callback_failed: "Auth callback failed. Try logging in again.",
 };
 

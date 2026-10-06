@@ -21,9 +21,6 @@ function requiredInProduction(name: string, value: string | undefined, fallback:
 const envSchema = z.object({
   NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
 
-  NEXT_PUBLIC_SUPABASE_URL: z.string().url().optional().or(z.literal("")),
-  NEXT_PUBLIC_SUPABASE_ANON_KEY: z.string().optional().or(z.literal("")),
-  SUPABASE_SERVICE_ROLE_KEY: z.string().optional().or(z.literal("")),
 
   AUTH_SESSION_COOKIE_NAME: z.string().min(1).default("agency_event_os_session"),
   V5_ACCESS_COOKIE_SECRET: z.string().min(32),
@@ -60,9 +57,6 @@ export function getEnv(): AppEnv {
   const videoProvider = process.env.VIDEO_PROVIDER || (isProduction ? "livekit" : "mock");
   return envSchema.parse({
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
-    NEXT_PUBLIC_SUPABASE_URL: process.env.NEXT_PUBLIC_SUPABASE_URL || "",
-    NEXT_PUBLIC_SUPABASE_ANON_KEY: process.env.NEXT_PUBLIC_SUPABASE_ANON_KEY || "",
-    SUPABASE_SERVICE_ROLE_KEY: process.env.SUPABASE_SERVICE_ROLE_KEY || "",
     AUTH_SESSION_COOKIE_NAME: process.env.AUTH_SESSION_COOKIE_NAME || "agency_event_os_session",
     V5_ACCESS_COOKIE_SECRET: requiredInProduction("V5_ACCESS_COOKIE_SECRET", process.env.V5_ACCESS_COOKIE_SECRET || process.env.V4_ACCESS_COOKIE_SECRET, devOnlyCookieSecret),
     V5_CREW_COOKIE_NAME: process.env.V5_CREW_COOKIE_NAME || process.env.V4_CREW_COOKIE_NAME || "wpl_crew_access",
@@ -87,14 +81,6 @@ export function getEnv(): AppEnv {
     STAGE_STREAM_DEFAULT_SOURCE: process.env.STAGE_STREAM_DEFAULT_SOURCE === "DAILY" ? "DAILY" : "LIVEKIT_INGRESS",
     DAILY_STAGE_FALLBACK_REQUIRES_TOKEN: process.env.DAILY_STAGE_FALLBACK_REQUIRES_TOKEN === "false" ? "false" : "true",
   });
-}
-
-export function isSupabaseConfigured(env: Partial<AppEnv> = getEnv()) {
-  return Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.NEXT_PUBLIC_SUPABASE_ANON_KEY);
-}
-
-export function isSupabaseAdminConfigured(env: Partial<AppEnv> = getEnv()) {
-  return Boolean(env.NEXT_PUBLIC_SUPABASE_URL && env.SUPABASE_SERVICE_ROLE_KEY);
 }
 
 export function isResendConfigured(env: Partial<AppEnv> = getEnv()) {

@@ -2,7 +2,7 @@ import type { PermissionUser, ScopeType, UserRole } from "@/types/permissions";
 
 export interface AuthSession {
   user: PermissionUser;
-  source: "mock" | "supabase";
+  source: "mock" | "password";
 }
 
 export interface AuthCookiePayload {

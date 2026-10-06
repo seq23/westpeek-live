@@ -1,10 +1,10 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DbClient } from "@/lib/d1/query";
 import { eventInputSchema, normalizeOptional, type EventInput } from "@/lib/validation/clientEventSchemas";
 import { createAuditLog } from "@/services/audit";
 import type { DbEventRecord } from "@/types/persistence";
 import { mapEventRecord } from "@/services/persistence/mapRecords";
 
-export async function listEventsForAgency(client: SupabaseClient, agencyId: string) {
+export async function listEventsForAgency(client: DbClient, agencyId: string) {
   const { data, error } = await client
     .from("events")
     .select("*")
@@ -16,7 +16,7 @@ export async function listEventsForAgency(client: SupabaseClient, agencyId: stri
   return { data: ((data ?? []) as DbEventRecord[]).map(mapEventRecord) };
 }
 
-export async function listEventsForClient(client: SupabaseClient, clientId: string) {
+export async function listEventsForClient(client: DbClient, clientId: string) {
   const { data, error } = await client
     .from("events")
     .select("*")
@@ -28,13 +28,13 @@ export async function listEventsForClient(client: SupabaseClient, clientId: stri
   return { data: ((data ?? []) as DbEventRecord[]).map(mapEventRecord) };
 }
 
-export async function getEventByIdFromSupabase(client: SupabaseClient, eventId: string) {
+export async function getEventById(client: DbClient, eventId: string) {
   const { data, error } = await client.from("events").select("*").eq("id", eventId).maybeSingle();
   if (error) return { error: error.message };
   return { data: data ? mapEventRecord(data as DbEventRecord) : undefined };
 }
 
-export async function createEventRecord(client: SupabaseClient, input: EventInput, actorUserId: string) {
+export async function createEventRecord(client: DbClient, input: EventInput, actorUserId: string) {
   const parsed = eventInputSchema.parse(input);
   const payload = toEventPayload(parsed, actorUserId);
   const { data, error } = await client.from("events").insert(payload).select("*").single();
@@ -55,7 +55,7 @@ export async function createEventRecord(client: SupabaseClient, input: EventInpu
   return { data: mapEventRecord(data as DbEventRecord) };
 }
 
-export async function updateEventRecord(client: SupabaseClient, eventId: string, input: EventInput, actorUserId: string) {
+export async function updateEventRecord(client: DbClient, eventId: string, input: EventInput, actorUserId: string) {
   const parsed = eventInputSchema.parse(input);
   const payload = {
     ...toEventPayload(parsed, actorUserId),

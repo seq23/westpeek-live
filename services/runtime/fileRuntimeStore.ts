@@ -71,7 +71,7 @@ function readSnapshotFile(filePath: string): V6RuntimeSnapshot {
   if (!fs.existsSync(filePath)) return emptyRuntimeSnapshot();
   // Local file store only. A read that lands between another dev-server process's write and rename
   // can see a torn file; re-read a few times before giving up (three attendee pages polling
-  // networking every 5s surfaced this once, 16 Sep 2026). Production uses Supabase.
+  // networking every 5s surfaced this once, 16 Sep 2026). Production uses D1.
   let parsed: Partial<V6RuntimeSnapshot> | undefined;
   let lastError: unknown;
   for (let attempt = 0; attempt < 5 && !parsed; attempt += 1) {

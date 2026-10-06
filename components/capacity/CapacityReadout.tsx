@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/shared/LocalTime";
-import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, SUPABASE_PLAN, fractionUsed } from "@/lib/capacity/capacityPlans";
+import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, D1_PLAN, R2_PLAN, fractionUsed } from "@/lib/capacity/capacityPlans";
 import { readCapacityPosition, type CapacityReading } from "@/services/capacity/capacityReadingService";
 
 /**
@@ -18,7 +18,7 @@ const NUMBER = new Intl.NumberFormat("en-US");
 
 function formatValue(reading: CapacityReading) {
   if (reading.value === null) return "unknown";
-  if (reading.key === "supabaseAwake") return reading.value === 1 ? "yes" : "no";
+  if (reading.key === "databaseAnswering") return reading.value === 1 ? "yes" : "no";
   return `${NUMBER.format(Math.round(reading.value * 100) / 100)} ${reading.unit}`;
 }
 
@@ -96,15 +96,16 @@ async function CapacityBody() {
       </section>
 
       <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm">
-        <h2 className="text-xl font-black tracking-tight">Supabase</h2>
+        <h2 className="text-xl font-black tracking-tight">Database and files</h2>
         <p className="mt-1 text-sm text-brand-muted">
-          {SUPABASE_PLAN.label} · {SUPABASE_PLAN.databaseMb} MB database, {SUPABASE_PLAN.egressGb} GB egress, no backups, and it pauses after {SUPABASE_PLAN.autoPauseIdleDays} idle days. A scheduled keep-alive reads one row a day so it never gets there.
+          {D1_PLAN.label} · {D1_PLAN.databaseGb} GB, {NUMBER.format(D1_PLAN.rowsWrittenPerMonth)} rows written a month, never pauses.
+          {" "}{R2_PLAN.label} · {R2_PLAN.storageGbMonth} GB-month of files, no egress fees.
         </p>
-        <ul className="mt-3 grid gap-3 md:grid-cols-3">{position.supabase.map((reading) => <ReadingRow key={reading.key} reading={reading} />)}</ul>
+        <ul className="mt-3 grid gap-3 md:grid-cols-3">{position.database.map((reading) => <ReadingRow key={reading.key} reading={reading} />)}</ul>
       </section>
 
       <p className="text-xs text-brand-muted">
-        Read <LocalTime iso={position.readAt} mode="datetime" />. The figures marked unknown live in the provider dashboards; nothing on this page is estimated. Full detail: <Link className="font-black underline" href="/api/runtime/keep-alive">the keep-alive probe</Link>.
+        Read <LocalTime iso={position.readAt} mode="datetime" />. The figures marked unknown live in the provider dashboards; nothing on this page is estimated. Full detail: <Link className="font-black underline" href="/api/runtime/health">the runtime health probe</Link>.
       </p>
     </div>
   );

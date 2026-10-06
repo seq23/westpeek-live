@@ -3,10 +3,10 @@ import { useRef, useState, useTransition } from "react";
 import { confirmHouseLogoUploadAction, requestHouseLogoUploadAction } from "@/lib/actions/houseDefaultsActions";
 
 /**
- * The same two-step signed upload the asset library uses: the server mints a short-lived URL, the
- * browser PUTs the bytes straight to Supabase Storage, and only then is the path recorded. The
- * Worker never carries the file and the browser never sees a service key. Every refusal is said in
- * words — including "storage is not configured here", which is a real answer, not a failure.
+ * The same two-step signed upload the asset library uses: the server mints a short-lived signed link,
+ * the browser PUTs the bytes to /api/assets/upload (into the private R2 bucket), and only once the
+ * object is there is the path recorded. Every refusal is said in words — including "storage is not
+ * bound here", which is a real answer, not a failure.
  */
 export function HouseLogoUploader() {
   const input = useRef<HTMLInputElement>(null);
@@ -25,7 +25,8 @@ export function HouseLogoUploader() {
       return;
     }
     startTransition(async () => {
-      await confirmHouseLogoUploadAction({ storagePath: ticket.storagePath, fileName: file.name });
+      const confirmed = await confirmHouseLogoUploadAction({ storagePath: ticket.storagePath, fileName: file.name });
+      if (!confirmed.ok) { setState({ kind: "error", message: confirmed.reason }); return; }
       setState({ kind: "done", message: `${file.name} is the logo now. Reload to see it in the header.` });
     });
   }

@@ -6,7 +6,7 @@ export function RealDataStatusPanel() {
       <div className="grid gap-3 md:grid-cols-3">
         <div className="rounded-2xl bg-slate-50 p-4">
           <p className="font-semibold text-slate-950">Auth</p>
-          <p className="text-sm text-slate-600">Supabase session-aware.</p>
+          <p className="text-sm text-slate-600">Session-aware (app-owned login on D1).</p>
         </div>
         <div className="rounded-2xl bg-slate-50 p-4">
           <p className="font-semibold text-slate-950">Clients / Events</p>

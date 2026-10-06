@@ -95,7 +95,7 @@ test("owner gate → console → TOC, folds that remember, Live now opens the cr
   await expect(owner.getByTestId(`console-guests-${eventId}`)).toBeVisible();
   await expect(owner.getByTestId("console-crew-password-status")).toContainText(/set/);
   await expect(owner.getByTestId("console-build")).toBeVisible();
-  await expect(owner.getByTestId("console-supabase-status")).toHaveAttribute("data-ok", "true");
+  await expect(owner.getByTestId("console-database-status")).toHaveAttribute("data-ok", "true");
   await context.close();
 
   // An operator is sent to the launchpad, not the console.

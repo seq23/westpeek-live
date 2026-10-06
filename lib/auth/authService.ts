@@ -1,4 +1,4 @@
-import { createServerSupabaseClient } from "@/lib/supabase/server";
+import { getDbClient } from "@/lib/d1/binding";
 import type { PermissionUser } from "@/types/permissions";
 import type {
   AgencyMemberRecord,
@@ -10,16 +10,14 @@ import type {
 import { resolvePermissionUser } from "./accessResolver";
 
 async function selectByUserId<T>(table: string, userId: string, select = "*"): Promise<T[]> {
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.from(table).select(select).eq("user_id", userId).eq("status", "active");
+  const { data, error } = await getDbClient().from(table).select(select).eq("user_id", userId).eq("status", "active");
 
   if (error) throw new Error(`Failed to resolve ${table}: ${error.message}`);
   return (data ?? []) as T[];
 }
 
 export async function getProfileByUserId(userId: string): Promise<ProfileRecord | null> {
-  const supabase = createServerSupabaseClient();
-  const { data, error } = await supabase.from("profiles").select("*").eq("id", userId).maybeSingle();
+  const { data, error } = await getDbClient().from("profiles").select("*").eq("id", userId).maybeSingle();
 
   if (error) throw new Error(`Failed to resolve profile: ${error.message}`);
   return (data ?? null) as ProfileRecord | null;
@@ -57,7 +55,7 @@ export async function resolveAccessSnapshot(userId: string): Promise<AuthAccessS
   };
 }
 
-export async function resolvePermissionUserForSupabaseUser(userId: string): Promise<PermissionUser | null> {
+export async function resolvePermissionUserForUserId(userId: string): Promise<PermissionUser | null> {
   const snapshot = await resolveAccessSnapshot(userId);
   if (!snapshot) return null;
   return resolvePermissionUser(snapshot);

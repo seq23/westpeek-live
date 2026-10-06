@@ -16,7 +16,7 @@ export function RuntimeEventHeader({ event, justCreated, error, returnTo }: { ev
   return (
     <section className="space-y-4" data-testid="runtime-event-header">
       {justCreated ? <p className="rounded-2xl border border-emerald-200 bg-emerald-50 p-4 text-sm font-bold text-emerald-800" data-testid="event-created-notice">{event.name} was created as a draft. Work through the setup spine below, then publish it from the Publish tab.</p> : null}
-      {error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">{error === "schema_missing" ? "The runtime tables are missing in Supabase; see /app/events/new for the named stop." : error}</p> : null}
+      {error ? <p className="rounded-2xl border border-amber-200 bg-amber-50 p-4 text-sm font-bold text-amber-800">{error === "schema_missing" ? "The runtime tables are missing in D1; see /app/events/new for the named stop." : error}</p> : null}
       <div className="flex flex-col gap-3 rounded-3xl border border-brand-line bg-white p-5 shadow-sm md:flex-row md:items-center md:justify-between">
         <div>
           <div className="flex flex-wrap items-center gap-3">

@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
-import { archiveAsset, recordUploadedAsset, requestAssetUpload, setAssetReview, setAssetVisibility } from "@/services/assets/eventAssetService";
+import { archiveAsset, recordUploadedAsset, requestAssetUpload, setAssetReview, setAssetVisibility, storedObjectExists } from "@/services/assets/eventAssetService";
 import type { EventAssetStatus, EventAssetVisibility } from "@/types/eventAssets";
 
 function clean(value: FormDataEntryValue | null) {
@@ -33,8 +33,7 @@ async function guestUploader(eventId: string) {
 
 /**
  * Step one of a real upload: the server checks who is asking and what they are sending, then mints
- * a short-lived signed URL straight to Supabase Storage. The browser PUTs the bytes itself, so a
- * 40 MB deck never passes through the Worker.
+ * a short-lived signed link to /api/assets/upload, which streams the bytes into the private R2 bucket.
  */
 export async function requestAssetUploadAction(input: { eventId: string; fileName: string; mimeType: string; sizeBytes: number }) {
   const actor = await getWorkspaceActor();
@@ -62,6 +61,9 @@ export async function confirmAssetUploadAction(input: { eventId: string; assetId
     uploadedByKind = "crew";
     uploadedByLabel = who;
   }
+  // The row is written only for an object that is really in the bucket, under this event's prefix.
+  if (!input.storagePath.startsWith(`${input.eventId}/${input.assetId}/`)) return { ok: false as const, reason: "That upload does not belong to this event." };
+  if (!(await storedObjectExists(input.storagePath))) return { ok: false as const, reason: "The file never reached storage. Upload it again." };
   const asset = await recordUploadedAsset({ ...input, uploadedByKind, uploadedByLabel });
   revalidateAssetSurfaces(input.eventId);
   return { ok: true as const, assetId: asset.id };

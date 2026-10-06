@@ -7,10 +7,10 @@ import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 export const dynamic = "force-dynamic";
 
 /**
- * A file leaves the private bucket only through a signed URL that expires in ten minutes, and only
+ * A file leaves the private R2 bucket only through a signed link to /api/assets/file that expires in ten minutes, and only
  * for someone who may see this event: the owner, an operator, or crew with a cookie for it.
  */
-export async function GET(_request: Request, { params }: { params: Promise<{ assetId: string }> }) {
+export async function GET(request: Request, { params }: { params: Promise<{ assetId: string }> }) {
   const { assetId } = await params;
   const asset = await getRuntimeStore().getEventAsset(assetId).catch(() => undefined);
   if (!asset) return NextResponse.json({ ok: false, error: "No such file." }, { status: 404 });
@@ -21,5 +21,5 @@ export async function GET(_request: Request, { params }: { params: Promise<{ ass
   }
   const link = await assetDownloadUrl(assetId);
   if (!link.ok) return NextResponse.json({ ok: false, error: link.reason }, { status: 503 });
-  return NextResponse.redirect(link.url, { status: 307, headers: { "cache-control": "no-store" } });
+  return NextResponse.redirect(new URL(link.url, request.url), { status: 307, headers: { "cache-control": "no-store" } });
 }

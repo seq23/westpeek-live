@@ -1,25 +1,21 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import { decodeRow, type DbClient } from "@/lib/d1/query";
 import type { DbAgencyRecord } from "@/types/persistence";
 import { mapAgencyRecord } from "@/services/persistence/mapRecords";
 
-export async function listAgenciesForUser(client: SupabaseClient, userId: string) {
-  const { data, error } = await client
-    .from("agency_members")
-    .select("agencies(*)")
-    .eq("user_id", userId)
-    .eq("status", "active");
-
-  if (error) return { error: error.message, data: [] };
-
-  const agencies = ((data ?? []) as Array<{ agencies: DbAgencyRecord | DbAgencyRecord[] | null }>).flatMap((row) => {
-    if (!row.agencies) return [];
-    return Array.isArray(row.agencies) ? row.agencies : [row.agencies];
-  });
-
-  return { data: agencies.map(mapAgencyRecord) };
+/** The agencies a user is an active member of: one join, so a membership row never reads alone. */
+export async function listAgenciesForUser(client: DbClient, userId: string) {
+  try {
+    const { results } = await client.db
+      .prepare('SELECT a.* FROM "agency_members" m JOIN "agencies" a ON a."id" = m."agency_id" WHERE m."user_id" = ? AND m."status" = ?')
+      .bind(userId, "active")
+      .all<Record<string, unknown>>();
+    return { data: results.map((row) => mapAgencyRecord(decodeRow("agencies", row) as unknown as DbAgencyRecord)) };
+  } catch (error) {
+    return { error: error instanceof Error ? error.message : String(error), data: [] };
+  }
 }
 
-export async function getAgencyById(client: SupabaseClient, agencyId: string) {
+export async function getAgencyById(client: DbClient, agencyId: string) {
   const { data, error } = await client.from("agencies").select("*").eq("id", agencyId).maybeSingle();
   if (error) return { error: error.message };
   return { data: data ? mapAgencyRecord(data as DbAgencyRecord) : undefined };

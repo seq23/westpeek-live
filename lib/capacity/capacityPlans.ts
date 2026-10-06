@@ -107,15 +107,23 @@ export const CLOUDFLARE_STREAM_PLAN = {
 } as const;
 
 /**
- * Supabase Free. The cliff here is not a quota: it is the seven-day idle auto-pause, which takes
- * the runtime store down between shows and returns a dead app to whoever opens it next.
+ * Cloudflare D1 and R2, inside the Workers Paid plan already paid for (since 16 Sep 2026). There is
+ * no idle pause and no new subscription: the cliffs are the included monthly allowances.
  */
-export const SUPABASE_PLAN = {
-  label: "Supabase Free",
-  databaseMb: 500,
-  egressGb: 5,
-  autoPauseIdleDays: 7,
-  backups: false,
+export const D1_PLAN = {
+  label: "Cloudflare D1 (Workers Paid)",
+  databaseGb: 5,
+  rowsReadPerMonth: 25_000_000_000,
+  rowsWrittenPerMonth: 50_000_000,
+  idlePause: false,
+} as const;
+
+export const R2_PLAN = {
+  label: "Cloudflare R2 (Workers Paid)",
+  storageGbMonth: 10,
+  classAOpsPerMonth: 1_000_000,
+  classBOpsPerMonth: 10_000_000,
+  egressFees: false,
 } as const;
 
 /** 0–1, or null when either side of the fraction is unknown. Never invents a comfortable bar. */

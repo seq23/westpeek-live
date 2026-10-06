@@ -1,16 +1,16 @@
-import type { SupabaseClient } from "@supabase/supabase-js";
+import type { DbClient } from "@/lib/d1/query";
 import type { ApprovalDecisionInput } from "@/lib/validation/productionOpsSchemas";
 import type { DbApprovalRequestRecord } from "@/types/persistence";
 import { createAuditLog } from "@/services/audit";
 import { mapApprovalRequestRecord } from "@/services/persistence/mapOperationalRecords";
 
-export async function listPersistedApprovalsForEvent(client: SupabaseClient, eventId: string) {
+export async function listPersistedApprovalsForEvent(client: DbClient, eventId: string) {
   const { data, error } = await client.from("approval_requests").select("*").eq("event_id", eventId).is("deleted_at", null).order("created_at", { ascending: false });
   if (error) return { data: [], error: error.message };
   return { data: ((data ?? []) as DbApprovalRequestRecord[]).map(mapApprovalRequestRecord) };
 }
 
-export async function decideApprovalRequest(client: SupabaseClient, input: ApprovalDecisionInput, actorUserId: string) {
+export async function decideApprovalRequest(client: DbClient, input: ApprovalDecisionInput, actorUserId: string) {
   const statusMap = { approve: "approved", request_changes: "changes_requested", lock: "locked", archive: "archived" } as const;
   const payload = {
     status: statusMap[input.decision],

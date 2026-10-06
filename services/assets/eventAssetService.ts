@@ -1,13 +1,15 @@
 import { randomId } from "@/lib/security/portableCrypto";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getAssetsBucket } from "@/lib/d1/binding";
+import { signDownloadUrl, signUploadUrl } from "./signedUrlService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { EVENT_ASSET_BUCKET, assetUploadRefusal, type EventAssetRecord, type EventAssetStatus, type EventAssetUploaderKind, type EventAssetVisibility } from "@/types/eventAssets";
 
 /**
- * Real files for an event. The browser never sees a service key: the server mints a short-lived
- * signed upload URL for a private bucket, the browser PUTs the bytes straight to Supabase Storage,
- * and the row is written when the upload confirms. Downloads are signed on demand and expire.
- * Storage that is not configured says so in words rather than failing silently.
+ * Real files for an event, in the private R2 bucket (binding ASSETS_BUCKET). The server mints a
+ * short-lived signed upload link to this Worker's own /api/assets/upload route, the browser PUTs the
+ * bytes there and the route streams them into R2; the row is written only once the object is
+ * confirmed in the bucket. Downloads are signed on demand and expire. Storage that is not bound says
+ * so in words rather than failing silently.
  */
 export interface UploadTicket {
   ok: true;
@@ -28,19 +30,22 @@ function storagePathFor(eventId: string, assetId: string, fileName: string) {
   return `${eventId}/${assetId}/${safe}`;
 }
 
-async function storageClient() {
+const NOT_BOUND = "File storage is not bound on this deployment (R2 binding ASSETS_BUCKET).";
+
+async function uploadTicket(storagePath: string, assetId: string, mimeType: string, sizeBytes: number): Promise<UploadTicket | UploadRefusal> {
   try {
-    return createSupabaseAdminClient();
-  } catch {
-    return undefined;
+    const signedUrl = await signUploadUrl({ key: storagePath, mimeType, sizeBytes });
+    return { ok: true, assetId, signedUrl, token: "", storagePath, bucket: EVENT_ASSET_BUCKET };
+  } catch (error) {
+    return { ok: false, reason: `Storage could not sign the upload: ${error instanceof Error ? error.message : String(error)}.` };
   }
 }
 
-/** Creates the private bucket the first time anyone uploads, so nobody has to click around Supabase. */
-async function ensureBucket(client: NonNullable<Awaited<ReturnType<typeof storageClient>>>) {
-  const { data } = await client.storage.getBucket(EVENT_ASSET_BUCKET);
-  if (data) return;
-  await client.storage.createBucket(EVENT_ASSET_BUCKET, { public: false });
+/** True only when the bytes are really in the bucket: a confirm for an object that never arrived is refused. */
+export async function storedObjectExists(storagePath: string) {
+  const bucket = getAssetsBucket();
+  if (!bucket) return false;
+  return Boolean(await bucket.head(storagePath));
 }
 
 export async function requestAssetUpload(input: {
@@ -51,18 +56,10 @@ export async function requestAssetUpload(input: {
 }): Promise<UploadTicket | UploadRefusal> {
   const refusal = assetUploadRefusal({ mimeType: input.mimeType, sizeBytes: input.sizeBytes });
   if (refusal) return { ok: false, reason: refusal };
-  const client = await storageClient();
-  if (!client) return { ok: false, reason: "File storage is not configured on this deployment (no Supabase service key). Paste a link to the file instead." };
+  if (!getAssetsBucket()) return { ok: false, reason: `${NOT_BOUND} Paste a link to the file instead.` };
   const assetId = randomId("asset");
   const storagePath = storagePathFor(input.eventId, assetId, input.fileName);
-  try {
-    await ensureBucket(client);
-    const { data, error } = await client.storage.from(EVENT_ASSET_BUCKET).createSignedUploadUrl(storagePath);
-    if (error || !data) return { ok: false, reason: `Storage refused the upload: ${error?.message || "no signed URL returned"}. Paste a link instead.` };
-    return { ok: true, assetId, signedUrl: data.signedUrl, token: data.token, storagePath, bucket: EVENT_ASSET_BUCKET };
-  } catch (error) {
-    return { ok: false, reason: `Storage is unreachable: ${error instanceof Error ? error.message : String(error)}. Paste a link instead.` };
-  }
+  return uploadTicket(storagePath, assetId, input.mimeType, input.sizeBytes);
 }
 
 /**
@@ -79,28 +76,17 @@ export async function requestHouseLogoUpload(input: { fileName: string; mimeType
   const refusal = assetUploadRefusal({ mimeType: input.mimeType, sizeBytes: input.sizeBytes });
   if (refusal) return { ok: false, reason: refusal };
   if (!input.mimeType.startsWith("image/")) return { ok: false, reason: "A logo has to be an image — PNG, JPG or SVG." };
-  const client = await storageClient();
-  if (!client) return { ok: false, reason: "File storage is not configured on this deployment (no Supabase service key), so a logo cannot be uploaded. The wordmark stays." };
+  if (!getAssetsBucket()) return { ok: false, reason: `${NOT_BOUND} A logo cannot be uploaded; the wordmark stays.` };
   const assetId = randomId("logo");
   const storagePath = storagePathFor(HOUSE_LOGO_PREFIX, assetId, input.fileName);
-  try {
-    await ensureBucket(client);
-    const { data, error } = await client.storage.from(EVENT_ASSET_BUCKET).createSignedUploadUrl(storagePath);
-    if (error || !data) return { ok: false, reason: `Storage refused the upload: ${error?.message || "no signed URL returned"}.` };
-    return { ok: true, assetId, signedUrl: data.signedUrl, token: data.token, storagePath, bucket: EVENT_ASSET_BUCKET };
-  } catch (error) {
-    return { ok: false, reason: `Storage is unreachable: ${error instanceof Error ? error.message : String(error)}.` };
-  }
+  return uploadTicket(storagePath, assetId, input.mimeType, input.sizeBytes);
 }
 
 /** A one-hour signed URL for the stored logo, or nothing — in which case the wordmark renders. */
 export async function houseLogoUrl(storagePath: string): Promise<string | undefined> {
   if (!storagePath) return undefined;
-  const client = await storageClient();
-  if (!client) return undefined;
-  const { data, error } = await client.storage.from(EVENT_ASSET_BUCKET).createSignedUrl(storagePath, 60 * 60);
-  if (error || !data) return undefined;
-  return data.signedUrl;
+  if (!getAssetsBucket()) return undefined;
+  return signDownloadUrl({ key: storagePath, expiresInSeconds: 60 * 60 }).catch(() => undefined);
 }
 
 export async function recordUploadedAsset(input: {
@@ -175,9 +161,10 @@ export async function assetDownloadUrl(assetId: string): Promise<{ ok: true; url
   if (!asset) return { ok: false, reason: "That file is not in the library." };
   if (asset.externalUrl) return { ok: true, url: asset.externalUrl };
   if (!asset.storagePath) return { ok: false, reason: "That row has no file behind it." };
-  const client = await storageClient();
-  if (!client) return { ok: false, reason: "File storage is not configured on this deployment." };
-  const { data, error } = await client.storage.from(EVENT_ASSET_BUCKET).createSignedUrl(asset.storagePath, 60 * 10);
-  if (error || !data) return { ok: false, reason: `Storage refused the download: ${error?.message || "no signed URL"}` };
-  return { ok: true, url: data.signedUrl };
+  if (!getAssetsBucket()) return { ok: false, reason: NOT_BOUND };
+  try {
+    return { ok: true, url: await signDownloadUrl({ key: asset.storagePath, expiresInSeconds: 60 * 10 }) };
+  } catch (error) {
+    return { ok: false, reason: `Storage could not sign the download: ${error instanceof Error ? error.message : String(error)}` };
+  }
 }

@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getDbClient } from "@/lib/d1/binding";
 import { clientInputSchema, eventInputSchema } from "@/lib/validation/clientEventSchemas";
 import { createClientRecord, updateClientRecord } from "@/services/clients";
 import { createEventRecord, updateEventRecord } from "@/services/events";
@@ -18,8 +18,8 @@ export interface ActionState {
 export async function createClientAction(input: unknown): Promise<ActionState> {
   return runValidated(clientInputSchema, input, async (parsed) => {
     const session = await requireUser();
-    const supabase = createSupabaseAdminClient();
-    const result = await createClientRecord(supabase, parsed, session.id);
+    const db = getDbClient();
+    const result = await createClientRecord(db, parsed, session.id);
     if (result.error || !result.data) return { ok: false, message: result.error ?? "Could not create client." };
     revalidatePath("/app/clients");
     return { ok: true, message: "Client created.", id: result.data.id };
@@ -29,8 +29,8 @@ export async function createClientAction(input: unknown): Promise<ActionState> {
 export async function updateClientAction(clientId: string, input: unknown): Promise<ActionState> {
   return runValidated(clientInputSchema, input, async (parsed) => {
     const session = await requireUser();
-    const supabase = createSupabaseAdminClient();
-    const result = await updateClientRecord(supabase, clientId, parsed, session.id);
+    const db = getDbClient();
+    const result = await updateClientRecord(db, clientId, parsed, session.id);
     if (result.error || !result.data) return { ok: false, message: result.error ?? "Could not update client." };
     revalidatePath(`/app/clients/${clientId}`);
     return { ok: true, message: "Client updated.", id: result.data.id };
@@ -40,8 +40,8 @@ export async function updateClientAction(clientId: string, input: unknown): Prom
 export async function createEventAction(input: unknown): Promise<ActionState> {
   return runValidated(eventInputSchema, input, async (parsed) => {
     const session = await requireUser();
-    const supabase = createSupabaseAdminClient();
-    const result = await createEventRecord(supabase, parsed, session.id);
+    const db = getDbClient();
+    const result = await createEventRecord(db, parsed, session.id);
     if (result.error || !result.data) return { ok: false, message: result.error ?? "Could not create event." };
     revalidatePath("/app/events");
     return { ok: true, message: "Event created.", id: result.data.id };
@@ -51,8 +51,8 @@ export async function createEventAction(input: unknown): Promise<ActionState> {
 export async function updateEventAction(eventId: string, input: unknown): Promise<ActionState> {
   return runValidated(eventInputSchema, input, async (parsed) => {
     const session = await requireUser();
-    const supabase = createSupabaseAdminClient();
-    const result = await updateEventRecord(supabase, eventId, parsed, session.id);
+    const db = getDbClient();
+    const result = await updateEventRecord(db, eventId, parsed, session.id);
     if (result.error || !result.data) return { ok: false, message: result.error ?? "Could not update event." };
     revalidatePath(`/app/events/${eventId}/overview`);
     return { ok: true, message: "Event updated.", id: result.data.id };

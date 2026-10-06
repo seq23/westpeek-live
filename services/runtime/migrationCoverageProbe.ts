@@ -1,18 +1,17 @@
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getD1 } from "@/lib/d1/binding";
+import type { D1DatabaseLike } from "@/lib/d1/query";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { RUNTIME_TABLE_MIGRATIONS } from "@/types/runtimeEvent";
 
 /**
- * Does the live database actually have everything RUNTIME_TABLE_MIGRATIONS says a migration put
- * there? The older probe in getRuntimeSchemaStatus() ran a hand-written list of fourteen reads, so
- * the other forty entries in the map were never checked against production at all. Migrations 0030,
- * 0037 and 0023 each sat unapplied for days behind exactly that gap.
+ * Does the live D1 database actually have every table and every column migrations-d1/ declares?
+ * RUNTIME_TABLE_MIGRATIONS is derived from the migration SQL itself (lib/d1/schema.generated.ts), so
+ * this checks the whole schema, not a hand-picked list — the Postgres-era probe checked fourteen of
+ * fifty-three objects and three migrations sat unapplied behind that gap.
  *
- * This checks EVERY entry in the map, and it does it per table rather than per object: one PostgREST
- * read per table naming all of that table's mapped columns, thirteen requests for fifty-three objects
- * rather than fifty-three. PostgREST validates the whole select list before it executes, so a single
- * `limit=0` read tells us both that the table is there and that the columns are, and names the first
- * one that is not. Nothing is fetched: `head: true` with `limit(0)` returns no rows.
+ * One round trip: `sqlite_master` for the tables, then `PRAGMA table_info` for each expected table in
+ * one batch. A database that cannot be reached throws, and the health route turns that into ok:false
+ * and a 503 — never a pass.
  */
 export interface MigrationCoverageProbe {
   ok: boolean;
@@ -22,53 +21,35 @@ export interface MigrationCoverageProbe {
   detail?: string;
 }
 
-/** `runtime_events` and `runtime_events.attendee_session_days` both belong to the runtime_events read. */
-function groupByTable(): Map<string, { columns: string[]; objects: Map<string, string> }> {
-  const groups = new Map<string, { columns: string[]; objects: Map<string, string> }>();
-  for (const [key, migrationFile] of Object.entries(RUNTIME_TABLE_MIGRATIONS)) {
-    const dot = key.indexOf(".");
-    const table = dot < 0 ? key : key.slice(0, dot);
-    const column = dot < 0 ? undefined : key.slice(dot + 1);
-    const group = groups.get(table) || { columns: [], objects: new Map<string, string>() };
-    if (column) group.columns.push(column);
-    group.objects.set(key, migrationFile);
-    groups.set(table, group);
+export async function probeMigrationCoverageOn(db: D1DatabaseLike): Promise<MigrationCoverageProbe> {
+  const entries = Object.entries(RUNTIME_TABLE_MIGRATIONS);
+  if (!entries.length) return { ok: false, checked: 0, missing: [], detail: "RUNTIME_TABLE_MIGRATIONS is empty; there is nothing to prove and this is a failure, not a pass" };
+  const tables = Array.from(new Set(entries.map(([key]) => key.split(".")[0])));
+  for (const table of tables) if (!/^[a-z_][a-z0-9_]*$/.test(table)) throw new Error(`refused table name ${table}`);
+  const results = await db.batch(tables.map((table) => db.prepare(`PRAGMA table_info("${table}")`)));
+  const present = new Map<string, Set<string>>();
+  tables.forEach((table, index) => {
+    const rows = (results[index]?.results || []) as Array<{ name?: string }>;
+    if (rows.length) present.set(table, new Set(rows.map((row) => String(row.name))));
+  });
+  const missing: MigrationCoverageProbe["missing"] = [];
+  let checked = 0;
+  for (const [object, migrationFile] of entries) {
+    checked += 1;
+    const [table, column] = object.split(".");
+    const columns = present.get(table);
+    if (!columns) missing.push({ object, migrationFile, detail: `no such table: ${table}` });
+    else if (column && !columns.has(column)) missing.push({ object, migrationFile, detail: `no such column: ${object}` });
   }
-  return groups;
+  if (!checked) return { ok: false, checked: 0, missing, detail: "the coverage probe checked zero objects; it must never pass on an empty loop" };
+  return { ok: missing.length === 0, checked, missing };
 }
 
 export async function probeMigrationCoverage(): Promise<MigrationCoverageProbe> {
-  const entries = Object.keys(RUNTIME_TABLE_MIGRATIONS).length;
-  // An empty map would otherwise report a clean bill of health for a database nobody looked at.
-  if (!entries) return { ok: false, checked: 0, missing: [], detail: "RUNTIME_TABLE_MIGRATIONS is empty; there is nothing to prove and this is a failure, not a pass" };
-  if (getRuntimeStore().kind !== "supabase") {
-    return { ok: false, checked: 0, missing: [], detail: "the file runtime store is active, so no migration state can be read; production must run the supabase store" };
+  if (getRuntimeStore().kind !== "d1") {
+    return { ok: false, checked: 0, missing: [], detail: "the file runtime store is active, so no migration state can be read; production must run the d1 store (binding DB)" };
   }
-
-  let client;
-  try {
-    client = createSupabaseAdminClient();
-  } catch (error) {
-    return { ok: false, checked: 0, missing: [], detail: error instanceof Error ? error.message : String(error) };
-  }
-
-  const missing: MigrationCoverageProbe["missing"] = [];
-  let checked = 0;
-  for (const [table, group] of Array.from(groupByTable().entries())) {
-    // Naming the columns proves the table too: PostgREST cannot resolve a column on a table it cannot see.
-    const select = group.columns.length ? group.columns.join(",") : "*";
-    const { error } = await client.from(table).select(select, { head: true }).limit(0);
-    checked += group.objects.size;
-    if (!error) continue;
-    // PostgREST: PGRST205/42P01 for a table it cannot see, 42703 for a column that is not there.
-    // Either way the whole group is unproven, so name the table's objects with the file that supplies them.
-    const detail = `${error.code || "error"}: ${error.message}`.slice(0, 200);
-    const columnMatch = /column\s+"?([a-z0-9_]+)"?\s+.*does not exist/i.exec(error.message || "");
-    const named = columnMatch ? `${table}.${columnMatch[1]}` : table;
-    if (group.objects.has(named)) missing.push({ object: named, migrationFile: RUNTIME_TABLE_MIGRATIONS[named], detail });
-    else for (const [object, migrationFile] of Array.from(group.objects.entries())) missing.push({ object, migrationFile, detail });
-  }
-
-  if (!checked) return { ok: false, checked: 0, missing, detail: "the coverage probe checked zero objects; it must never pass on an empty loop" };
-  return { ok: missing.length === 0, checked, missing };
+  const db = getD1();
+  if (!db) return { ok: false, checked: 0, missing: [], detail: "D1 binding DB is not available" };
+  return probeMigrationCoverageOn(db);
 }

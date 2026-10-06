@@ -3,7 +3,7 @@
 import { revalidatePath } from "next/cache";
 import { z } from "zod";
 import { requireUser } from "@/lib/auth";
-import { createSupabaseAdminClient } from "@/lib/supabase/admin";
+import { getDbClient } from "@/lib/d1/binding";
 import { approvalDecisionSchema, lastMinuteChangeDecisionSchema, productionInboxDecisionSchema } from "@/lib/validation/productionOpsSchemas";
 import { decideApprovalRequest } from "@/services/approval-ops";
 import { decideLastMinuteChange } from "@/services/change-control";
@@ -13,7 +13,7 @@ import type { ActionState } from "./clientEventActions";
 export async function decideApprovalAction(input: unknown): Promise<ActionState> {
   return runValidated(approvalDecisionSchema, input, async (parsed) => {
     const session = await requireUser();
-    const result = await decideApprovalRequest(createSupabaseAdminClient(), parsed, session.id);
+    const result = await decideApprovalRequest(getDbClient(), parsed, session.id);
     if (result.error || !result.data) return { ok: false, message: result.error ?? "Could not update approval." };
     revalidatePath(`/app/events/${parsed.eventId}/approval-queue`);
     return { ok: true, message: "Approval updated.", id: result.data.id };
@@ -23,7 +23,7 @@ export async function decideApprovalAction(input: unknown): Promise<ActionState>
 export async function updateInboxItemAction(input: unknown): Promise<ActionState> {
   return runValidated(productionInboxDecisionSchema, input, async (parsed) => {
     const session = await requireUser();
-    const result = await updateProductionInboxItem(createSupabaseAdminClient(), parsed, session.id);
+    const result = await updateProductionInboxItem(getDbClient(), parsed, session.id);
     if (result.error || !result.data) return { ok: false, message: result.error ?? "Could not update inbox item." };
     revalidatePath(`/app/events/${parsed.eventId}/inbox`);
     return { ok: true, message: "Inbox item updated.", id: result.data.id };
@@ -33,7 +33,7 @@ export async function updateInboxItemAction(input: unknown): Promise<ActionState
 export async function decideLastMinuteChangeAction(input: unknown): Promise<ActionState> {
   return runValidated(lastMinuteChangeDecisionSchema, input, async (parsed) => {
     const session = await requireUser();
-    const result = await decideLastMinuteChange(createSupabaseAdminClient(), parsed, session.id);
+    const result = await decideLastMinuteChange(getDbClient(), parsed, session.id);
     if (result.error || !result.data) return { ok: false, message: result.error ?? "Could not update change request." };
     revalidatePath(`/app/events/${parsed.eventId}/change-control`);
     return { ok: true, message: "Change request updated.", id: result.data.id };

@@ -6,7 +6,7 @@ import { EventConfigPanel } from "./EventConfigPanel";
 import { PublishingPipelinePanel } from "./PublishingPipelinePanel";
 import { VideoProvidersPanel } from "./VideoProvidersPanel";
 import { EmailResendPanel } from "./EmailResendPanel";
-import { SupabaseRuntimePanel } from "./SupabaseRuntimePanel";
+import { RuntimeStorePanel } from "./RuntimeStorePanel";
 import { RunOfShowPanel } from "./RunOfShowPanel";
 import { AttendeeExperiencePanel } from "./AttendeeExperiencePanel";
 import { SecuritySmokePanel } from "./SecuritySmokePanel";
@@ -31,7 +31,7 @@ export async function TestingConsole({ eventId = "event-summit", rosterSearch = 
     PublishingPipelinePanel,
     VideoProvidersPanel,
     EmailResendPanel,
-    SupabaseRuntimePanel,
+    RuntimeStorePanel,
     RunOfShowPanel,
     AttendeeExperiencePanel,
     SecuritySmokePanel,
