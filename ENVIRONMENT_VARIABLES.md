@@ -223,14 +223,16 @@ copied it would have had every send rejected.
 therefore did not change the address — it silently swapped `ResendEmailProvider` for `MockEmailProvider`,
 and every message was discarded with no error anywhere. It keys on `RESEND_API_KEY` alone now.
 
-### NAMED STOP — DMARC, owner action, Cloudflare DNS
+### DMARC — DONE (was a named stop)
 
-There is **no DMARC record** on `westpeek.live` or `events.westpeek.live`. Confirmed 17 Sep 2026 against
-both `8.8.8.8` and `1.1.1.1`. SPF and DKIM alone no longer clear the bulk-sender bar Gmail and Yahoo have
+Resolved: on 31 Oct 2026 `dig TXT _dmarc.westpeek.live` and `dig TXT _dmarc.events.westpeek.live` both
+answer `v=DMARC1; p=none; rua=mailto:hello@westpeek.live; fo=1`. Next step below: read the reports, then
+tighten to `p=quarantine`. History: on 17 Sep 2026 there was no DMARC record on either name (checked
+against both `8.8.8.8` and `1.1.1.1`). SPF and DKIM alone no longer clear the bulk-sender bar Gmail and Yahoo have
 enforced since February 2024, so this is a deliverability risk, not a formality.
 
-It cannot be fixed from this repo — it is a DNS record in the Cloudflare dashboard for `westpeek.live`.
-Add, at `_dmarc.westpeek.live`, TXT:
+It is a DNS record in the Cloudflare dashboard for `westpeek.live`, not in this repo. The record at
+`_dmarc.westpeek.live` (and `_dmarc.events.westpeek.live`) is TXT:
 
     v=DMARC1; p=none; rua=mailto:hello@westpeek.live; fo=1
 

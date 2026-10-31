@@ -91,3 +91,33 @@ Purpose: records every archived/superseded doc and its active replacement to pre
 | `docs/VIDEO_ARCHITECTURE.md` | `docs/archive/superseded/docs__VIDEO_ARCHITECTURE.md` | docs/ACTIVE_DOCS.md / active runbooks / root ledgers | Historical only. Not operating authority. |
 | `docs/VIDEO_FALLBACK_OPERATIONS.md` | `docs/archive/superseded/docs__VIDEO_FALLBACK_OPERATIONS.md` | docs/ACTIVE_DOCS.md / active runbooks / root ledgers | Historical only. Not operating authority. |
 | `docs/West_Peek_Live_Day1_Complete_Product_Operator_Manual_v2.md` | `docs/archive/superseded/docs__West_Peek_Live_Day1_Complete_Product_Operator_Manual_v2.md` | docs/ACTIVE_DOCS.md / active runbooks / root ledgers | Historical only. Not operating authority. |
+| `AGENCY_EVENT_OS_LIFECYCLE_REMEDIATION_2026-06-15.md` | `docs/archive/history-2026/AGENCY_EVENT_OS_LIFECYCLE_REMEDIATION_2026-06-15.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `AUTONOMOUS_ENGINEERING_IMPLEMENTATION_REPORT_2026-06-14.md` | `docs/archive/history-2026/AUTONOMOUS_ENGINEERING_IMPLEMENTATION_REPORT_2026-06-14.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `AUTONOMOUS_TERMINAL_RUNBOOK.md` | `docs/archive/history-2026/AUTONOMOUS_TERMINAL_RUNBOOK.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `DIAGNOSTICS_ROUTING_MATRIX.md` | `docs/archive/history-2026/DIAGNOSTICS_ROUTING_MATRIX.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `DOCUMENTATION_AND_VALIDATOR_SIMPLIFICATION_2026-06-14.md` | `docs/archive/history-2026/DOCUMENTATION_AND_VALIDATOR_SIMPLIFICATION_2026-06-14.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `FINAL_TIER_PATCH_SUMMARY_2026-06-11.md` | `docs/archive/history-2026/FINAL_TIER_PATCH_SUMMARY_2026-06-11.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `HOSTILE_CODE_REVIEW_TIER4_ATTENDEE_LIVE_CONSUMPTION_2026-06-12.md` | `docs/archive/history-2026/HOSTILE_CODE_REVIEW_TIER4_ATTENDEE_LIVE_CONSUMPTION_2026-06-12.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `HOSTILE_FIXLOOP_FINAL_2026-06-14.md` | `docs/archive/history-2026/HOSTILE_FIXLOOP_FINAL_2026-06-14.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `HOSTILE_REVIEW_TIER4_ATTENDEE_SURFACE_FINAL_2026-06-12.md` | `docs/archive/history-2026/HOSTILE_REVIEW_TIER4_ATTENDEE_SURFACE_FINAL_2026-06-12.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `IMPLEMENTATION_REPORT_2026-06-14.md` | `docs/archive/history-2026/IMPLEMENTATION_REPORT_2026-06-14.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `POSTDEPLOY_DEPLOYMENT_PATCH_SUMMARY_2026-06-11.md` | `docs/archive/history-2026/POSTDEPLOY_DEPLOYMENT_PATCH_SUMMARY_2026-06-11.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `QUICK_APPLY_ZIP_CHEAT_SHEET.md` | `docs/archive/history-2026/QUICK_APPLY_ZIP_CHEAT_SHEET.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `Repo_and_Project_Instructions_Master_Operating_Contract_v5.0.md` | `docs/archive/history-2026/Repo_and_Project_Instructions_Master_Operating_Contract_v5.0.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `SECURITY_DEPENDENCY_REMEDIATION_2026-06-13.md` | `docs/archive/history-2026/SECURITY_DEPENDENCY_REMEDIATION_2026-06-13.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `TIER4_DATA_TRACE_REVIEW_2026-06-12.md` | `docs/archive/history-2026/TIER4_DATA_TRACE_REVIEW_2026-06-12.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `TIER4_FALLBACK_LADDER_EXPANSION_2026-06-12.md` | `docs/archive/history-2026/TIER4_FALLBACK_LADDER_EXPANSION_2026-06-12.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `VALIDATOR_RISK_RECLASSIFICATION_2026-06-14.md` | `docs/archive/history-2026/VALIDATOR_RISK_RECLASSIFICATION_2026-06-14.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `WEST_PEEK_SUITE_MASTER_CONTRACT_REMEDIATION_PLAN_2026-06-14_REV3.md` | `docs/archive/history-2026/WEST_PEEK_SUITE_MASTER_CONTRACT_REMEDIATION_PLAN_2026-06-14_REV3.md` | RUNBOOK.md / CLAUDE.md | Historical only. Not operating authority. |
+| `docs/runbooks/QUICK_APPLY_ZIP_CHEAT_SHEET.md` | `docs/archive/history-2026/runbooks__QUICK_APPLY_ZIP_CHEAT_SHEET.md` | RUNBOOK.md | Historical only. Not operating authority. |
+| `docs/manual-notes/chat-at-scale.md` | `docs/archive/manual-notes/chat-at-scale.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/command-bar-and-health.md` | `docs/archive/manual-notes/command-bar-and-health.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/contractors-vendors.md` | `docs/archive/manual-notes/contractors-vendors.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/email-composer.md` | `docs/archive/manual-notes/email-composer.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/plan-an-event.md` | `docs/archive/manual-notes/plan-an-event.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/real-event-workspace.md` | `docs/archive/manual-notes/real-event-workspace.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/registration-continuity.md` | `docs/archive/manual-notes/registration-continuity.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/templates-email-assets.md` | `docs/archive/manual-notes/templates-email-assets.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/venue-attendee-ux.md` | `docs/archive/manual-notes/venue-attendee-ux.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/venue-chrome.md` | `docs/archive/manual-notes/venue-chrome.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |
+| `docs/manual-notes/work-templates-real.md` | `docs/archive/manual-notes/work-templates-real.md` | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md | Historical only. Not operating authority. |

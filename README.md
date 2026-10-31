@@ -1,187 +1,43 @@
-> **Repo update lifecycle:** Start with [`REPO_UPDATE_LIFECYCLE.md`](REPO_UPDATE_LIFECYCLE.md). The single postdeploy closure command is `npm run release:close-lifecycle`.
-
 # West Peek Live!
 
-West Peek Live! is a multi-client virtual event production platform for agencies.
+The virtual-event platform behind **westpeek.live**: public event pages, the attendee venue (lobby,
+stage, sessions, breakouts, expo, speed networking, replay), and the production workspace where the
+owner, operators and crew build and run a show. It runs West Peek Ventures live events and agency
+events for clients. Video comes in from StreamYard (or any RTMP tool) through LiveKit, with
+Cloudflare Stream, Daily, Zoom and Google Meet as the fallback ladder.
 
-It combines:
+One Next.js app, built with OpenNext into one Cloudflare Worker, on Cloudflare D1 and R2.
 
-1. A Hopin-style virtual event venue.
-2. An agency production operating system for client events.
+## Where to start
 
-## Current Baseline
+| You want to | Read |
+|---|---|
+| Run an event (owner, operator, crew, guest) | [`docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md`](docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md), also in the app at `/manual` |
+| Know which accounts, domains, services and secret names the app uses | [`docs/SETUP_AND_ACCOUNTS.md`](docs/SETUP_AND_ACCOUNTS.md) |
+| Change the code, test it, ship it | [`RUNBOOK.md`](RUNBOOK.md) |
+| Every environment variable, by name | [`ENVIRONMENT_VARIABLES.md`](ENVIRONMENT_VARIABLES.md) |
+| Plans, limits and what to buy next | [`docs/CAPACITY.md`](docs/CAPACITY.md) |
+| The full list of docs and which are history | [`docs/README.md`](docs/README.md) |
 
-This starter baseline includes:
-
-- Product documentation
-- Next.js App Router-style route structure
-- TypeScript domain types
-- Centralized permission helper
-- Readiness scoring helper
-- WPP-style seeded data
-- Agency dashboard
-- Client and event management
-- Run-of-show and task planning
-- Contractor/vendor/speaker/sponsor shells
-- Client portal
-- Production command center
-- Public event pages
-- Attendee venue shell
-- Analytics and reporting shell
-- Test scaffolding
-- Vitest alias configuration
-- Auth shell pages
-- Technical debt register
-
-## Planned Post-MVP Scope
-
-- Production auth
-- Supabase persistence
-- RLS
-- Real video provider integration
-- Payments
-- Email notifications
-- File uploads
-- Real chat persistence
-- Real analytics ingestion
-- Report export
-
-
-## Release proof command map
-
-Use the grouped commands first; split into smaller scripts only after a failure.
+## Quick commands
 
 ```bash
-# Pre-deploy source/repo proof
-npm run validate
-
-# Post-deploy Tier 3 live-runtime proof
-POSTDEPLOY_BASE_URL="https://<fresh-deployment-url>" \
-PLAYWRIGHT_BASE_URL="https://<fresh-deployment-url>" \
-SMOKE_BASE_URL="https://<fresh-deployment-url>" \
-npm run postdeploy:full
-
-# Tier 4 automated live-provider proof
-npm run env:run -- -- bash -lc 'set -a; . ./.env.local; set +a; POSTDEPLOY_BASE_URL="https://<fresh-deployment-url>" PLAYWRIGHT_BASE_URL="https://<fresh-deployment-url>" SMOKE_BASE_URL="https://<fresh-deployment-url>" TIER4_CONTROLLED_RTMP_BROADCASTER=1 TIER4_LIVE_PROVIDER_OPERATIONAL_PROOF=1 TIER4_RESEND_SEND_APPROVED=1 NODE_OPTIONS="--max-old-space-size=3072" npm run tier4:auto-controlled-livekit-proof'
+npm ci
+npm run dev                          # local app
+npm run typecheck && npm run test    # fast loop
+npm run release:prepush:container    # exactly what CI runs
 ```
 
-`npm run validate` plus `npm run postdeploy:full` is the normal Tier 1-3 proof set for this repo workflow. Tier 4 remains separate and must produce live-provider evidence before COMPLETE can be claimed.
+Production deploys itself from green `main` (see `RUNBOOK.md`, "How it deploys"). Never run a bare
+`wrangler deploy`. The release lifecycle and its closure command are in
+[`REPO_UPDATE_LIFECYCLE.md`](REPO_UPDATE_LIFECYCLE.md).
 
-## Validation Status
+## Brand
 
-STRUCTURALLY CHECKED — LOCAL VALIDATION REQUIRED
+[`WEST_PEEK_BRAND_SYSTEM.md`](WEST_PEEK_BRAND_SYSTEM.md) is the locked visual system.
 
-Full npm validation has not been run in this environment.
+## Secrets
 
-
-## Backend Foundation Added
-
-This baseline now includes Supabase/Auth/Resend foundation scaffolding:
-
-- Environment validation
-- Supabase browser/server/admin clients
-- Seeded-backed auth helpers
-- Permission-required helper
-- Resend-compatible email provider abstraction
-- Seeded email provider
-- Audit log service abstraction
-- Initial SQL migration draft
-- Seed SQL draft
-- Backend setup docs
-- Unit tests for env/email/audit helpers
-
-## Remaining Post-MVP Scope
-
-- Live Supabase CRUD wiring
-- Supabase Auth session resolution
-- RLS policy implementation
-- Real email sending in app flows
-- Production deployment
-
-## Master Plan v4
-
-V4 product model: Public Experience Plane, Access Plane, Event Operations Plane, Governance + Deployment Plane.
-
-## V6 End-to-End Operationalization
-
-This baseline includes the V6 operational layer for Master Plan v4/v5 completion:
-
-- named setup subroutes under `/app/events/[eventId]` for branding, attendee flow, venue, agenda, access, communications, and preview
-- repo-config-driven event code resolution
-- HMAC signed production access cookies
-- role/event-scoped special guest access
-- crew action capability helpers
-- config package builder/importer and PR-only publishing workflow
-- runtime persistence for access, audit, analytics, fallback, support, email, registrations, incidents, and run-of-show events
-- room-level video fallback controls with rollback
-- operational communications dashboard with honest Resend availability
-- runtime-backed analytics dashboard
-- v6 completion/audit validators
-
-Run fast structural checks with:
-
-```bash
-npm run validate:v5-hard
-npm run validate:v6-audit
-```
-
-Full validation remains local-updater owned unless dependencies are installed and `npm run validate` passes in the execution environment.
-
-## West Peek Live local env restore policy
-
-Real secret values are intentionally not stored inside baseline ZIP artifacts. Use `npm run env:restore` or any `*:with-env` command to restore `.env.local` from an approved local-only private source. See `ENV_RESTORE_POLICY.md`.
-
-Supported private source locations:
-
-- `AGENCY_EVENT_OS_ENV_GPG_PATH=/absolute/path/to/agency-event-os.env.local.gpg`
-- `AGENCY_EVENT_OS_ENV_LOCAL_PATH=/absolute/path/to/.env.local.backup`
-- `AGENCY_EVENT_OS_ENV_BACKUP=/absolute/path/to/.env.local.backup`
-- `~/.config/agency-event-os/agency-event-os.env.local.gpg`
-- `~/agency-event-os.env.local.gpg`
-- `~/agency-event-os.env.local.backup`
-
-Do not commit `.env.local`.
-
-### Tier 4 LiveKit cleanup guardrail
-
-The controlled Tier 4 LiveKit proof now auto-deletes generated LiveKit ingress resources after proof capture. This prevents LiveKit Cloud ingress quota exhaustion from blocking future Tier 4 runs.
-
-Stale Tier 4 ingress cleanup:
-
-```bash
-npm run env:run -- -- bash -lc 'set -a; . ./.env.local; set +a; TIER4_LIVEKIT_CLEANUP_APPROVED=1 npm run tier4:cleanup-livekit-ingress'
-```
-
-Cleanup proof is enforced by `validate:tier4-cleanup-contract` and is part of the validation matrix.
-
-
-## Tier 4 fallback ladder expansion — 2026-06-12
-
-Show-day ladder order is now explicit and must be exercised in Tier 4:
-
-1. StreamYard-compatible Custom RTMP path into LiveKit, proven by controlled ffmpeg RTMP broadcaster. StreamYard itself remains a manual/operator provider because automated StreamYard API access is enterprise-only.
-2. LiveKit + Cloudflare Stream Live fallback, proven through the Cloudflare Stream Live Inputs API, controlled RTMP media push, and live input cleanup.
-3. Daily real fallback provider, proven by room create, meeting token create, and room delete cleanup. Daily API keys are normalized so pasted `Bearer ...` values do not create `Bearer Bearer ...` authentication failures; a 401 after normalization is a real Daily key/domain/provider auth failure.
-4. Zoom fallback, proven by denied unauthenticated access and authorized SDK signature generation; no provider cleanup is required because the proof is stateless.
-5. Google Meet fallback, proven by valid HTTPS Meet continuity URL or explicit not-applicable disposition; no provider cleanup is required because it is a manual/static continuity link.
-
-Tier 4 must attempt every configured rung and fail only after the full ladder trace is written.
-
-
-## Authenticated Product Usability Governance
-
-This repo adopts `REPO_MASTER_CONTRACT_ADDENDUM_AUTHENTICATED_PRODUCT_USABILITY_2026-06-13.md`. Route, lifecycle, control, hostile fixture, normalization, maintenance, Hallmark, and final-proof artifacts govern release closure.
-
-
-## Autonomous Engineering Lifecycle v5
-
-This repo implements the suite Revision 3 lifecycle: machine-readable route manifest, container validation, bounded strategy-rotating self-heal, mandatory predeploy Hallmark, applicable public/authenticated/role postdeploy audits, exact cleanup, rollback/containment, and final proof reporting.
-
-
-## Canonical West Peek brand authority
-
-- [`WEST_PEEK_BRAND_SYSTEM.md`](WEST_PEEK_BRAND_SYSTEM.md) — locked cross-suite visual system and Hallmark acceptance criteria.
-
-## Baseline ZIP preflight
-
-Before applying a baseline ZIP, use `docs/runbooks/PRE_UPDATER_BASELINE_CHECKLIST.md`. It is the canonical checklist for required root files, safe environment examples, forbidden generated artifacts, ZIP integrity, updater preflight, and localhost-before-push execution.
+No secret values live in this repository. Names only: `deployment/cloudflare-required-secrets.json`
+and `docs/SETUP_AND_ACCOUNTS.md`. Local values are restored with `npm run env:restore`
+(`ENV_RESTORE_POLICY.md`); never commit `.env.local`.

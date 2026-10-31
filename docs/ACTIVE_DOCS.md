@@ -16,6 +16,8 @@ Purpose: single operator entrypoint that prevents doc sprawl. If a document is n
 - `REPO_PRODUCT_PROMISE_LEDGER.md`
 - `REPO_VALIDATION_MATRIX.md`
 - `docs/ACTIVE_DOCS.md`
+- `docs/SETUP_AND_ACCOUNTS.md`
+- `CLAUDE.md`
 - `docs/AGENCY_EVENT_OS_DAY1_OPERATOR_PACKET.md`
 - `docs/BRANDING_ROLLOUT_CHECKLIST.md`
 - `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md`

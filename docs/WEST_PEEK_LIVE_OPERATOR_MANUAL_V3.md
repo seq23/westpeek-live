@@ -14,7 +14,7 @@ Status: ACTIVE. Supersedes `docs/archive/superseded/docs__West_Peek_Live_Day1_Co
 | Read this inside the app | `westpeek.live/manual` (owner + operator) |
 | Download it | **Assets → West Peek documents → Operator manual → Download .md**, or from the repo at `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md` |
 | Email | Resend — house addresses set in Settings |
-| Last revised | 17 September 2026 |
+| Last revised | 31 October 2026 (screenshots retaken from the current app, demo event; run of show, incident log and report added) |
 
 > **No access codes appear in this document.** Every code lives behind the owner gate in the app. See §5.
 
@@ -296,6 +296,21 @@ Those values render **only** under an owner session — an operator never receiv
 | **End the show** | Deliberate. Releases the feed, marks the event ENDED, every viewer's stage says so, and the networking queue closes with it |
 
 Everyone is **permitted to watch by default**. You only approve people to come *on* the stage.
+
+### Call the show: run of show, incidents, report
+
+![Run of show with the readiness panel](images/manual/17-run-of-show.jpg)
+
+- **Run of show** (event page → **Run of show**, and the crew deck → **Run of Show**): the timeline of segments with speaker, sponsor, approval, producer cue and technical cue. Under **Call the show**, press **Mark live** when a segment really starts and **Mark complete** when it really ends. Your mark overrides the clock and every screen follows within a page load; without marks, the clock decides.
+- **Who is on**: each segment lists its **Speakers** (people who entered with the speaker code) plus anyone you name under *Also on*, a moderator, and a note. Press **Save who is on**.
+
+![Incident log](images/manual/18-incidents.jpg)
+
+- **Incidents** (event page → **Incidents**): **Log incident** with one line ("Speaker audio dropped for 30 seconds") and whether it is *Open: still being dealt with* or *Resolved: already fixed*. Open ones get **Mark resolved** later. Problems the app detects itself are added and marked *Logged by the app*.
+
+![Post-event report](images/manual/19-report.jpg)
+
+- **Report** (event page → **Reports**): counted only from what this event recorded: registered, came in, lobby visits, main stage joins, engagement, and how the show ran (segments, ran on time, ran late, not timed). Nothing is estimated. The client portal shows the client these same numbers.
 
 ---
 
