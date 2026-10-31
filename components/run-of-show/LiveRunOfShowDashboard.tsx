@@ -38,7 +38,7 @@ export async function LiveRunOfShowDashboard({ eventId, viewer = "agency", showC
           ? `Next: ${show.next.segment.title} at ${formatEventTime(show.next.segment.startAt, timezone)}`
           : "Nothing is on right now";
   return (
-    <div className="space-y-6" data-testid="ros-tracker" data-current-segment={show.current?.segment.id || ""} data-next-segment={show.next?.segment.id || ""} data-delayed={show.delay ? "true" : "false"}>
+    <div className="min-w-0 space-y-6 break-words" data-testid="ros-tracker" data-current-segment={show.current?.segment.id || ""} data-next-segment={show.next?.segment.id || ""} data-delayed={show.delay ? "true" : "false"}>
       <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm">
         <p className="text-sm font-medium text-slate-500">Run of show progress</p>
         <h2 className="mt-1 text-xl font-semibold text-slate-950" data-testid="ros-tracker-headline">{headline}</h2>

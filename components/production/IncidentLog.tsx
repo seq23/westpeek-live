@@ -28,24 +28,24 @@ export async function IncidentLog({ eventId, heading = "h2" }: { eventId: string
 
       <form action={logIncidentAction} className="mt-5 grid gap-3 rounded-2xl border border-slate-200 bg-slate-50 p-4" data-testid="incident-form">
         <input type="hidden" name="eventId" value={eventId} />
-        <label className="grid gap-1 text-sm font-bold text-slate-800">
+        <label className="grid min-w-0 gap-1 text-sm font-bold text-slate-800">
           What happened
           <input name="title" required maxLength={160} placeholder="Speaker audio dropped for 30 seconds" className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal" data-testid="incident-title" />
         </label>
-        <label className="grid gap-1 text-sm font-bold text-slate-800">
+        <label className="grid min-w-0 gap-1 text-sm font-bold text-slate-800">
           More detail (optional)
           <textarea name="details" maxLength={2000} rows={2} className="rounded-xl border border-slate-300 bg-white px-3 py-2 text-sm font-normal" data-testid="incident-details" />
         </label>
         <div className="grid gap-3 sm:grid-cols-2">
-          <label className="grid gap-1 text-sm font-bold text-slate-800">
+          <label className="grid min-w-0 gap-1 text-sm font-bold text-slate-800">
             How serious
-            <select name="severity" defaultValue="medium" className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal" data-testid="incident-severity">
+            <select name="severity" defaultValue="medium" className="min-h-11 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal" data-testid="incident-severity">
               {INCIDENT_SEVERITIES.map((option) => <option key={option.value} value={option.value}>{option.label}</option>)}
             </select>
           </label>
-          <label className="grid gap-1 text-sm font-bold text-slate-800">
+          <label className="grid min-w-0 gap-1 text-sm font-bold text-slate-800">
             Status
-            <select name="status" defaultValue="open" className="min-h-11 rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal" data-testid="incident-status">
+            <select name="status" defaultValue="open" className="min-h-11 w-full min-w-0 rounded-xl border border-slate-300 bg-white px-3 text-sm font-normal" data-testid="incident-status">
               <option value="open">Open: still being dealt with</option>
               <option value="resolved">Resolved: already fixed</option>
             </select>
