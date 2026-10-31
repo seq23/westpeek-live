@@ -4,6 +4,10 @@ Read this before changing anything. It is the file an AI employee (Porter in Wes
 Danielle in Boss OS) reads at plan time; `scripts/validate_runbook.mjs` fails the build if the
 paths and scripts named here stop existing.
 
+## Where the other docs are
+Accounts, domains/DNS, integrations, secret names and rollback: `docs/SETUP_AND_ACCOUNTS.md`.
+How to run an event: `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md` (in the app at `/manual`). Doc map: `docs/README.md`.
+
 ## What this repo is
 **West Peek Live!** — the virtual-event platform (public event pages, attendee venue, agency
 production workspace). Partners call it "westpeek live", "west peek live", "the live site",
@@ -79,7 +83,7 @@ Workers Builds (Git integration) still builds every branch and uploads a preview
 no longer promotes `main` (its default-branch deploy command is `npx wrangler versions upload` since
 6 Oct 2026), so a red or unmigrated commit never reaches production. Deeper procedure, rollback and postdeploy proof:
 `TERMINAL_RELEASE_RUNBOOK.md`, `PREDEPLOY_POSTDEPLOY_RUNBOOK.md`,
-`ROLLBACK_AND_CONTAINMENT_RUNBOOK.md`, `AUTONOMOUS_TERMINAL_RUNBOOK.md`, `docs/runbooks/postdeploy.md`,
+`ROLLBACK_AND_CONTAINMENT_RUNBOOK.md`, `docs/runbooks/postdeploy.md`,
 `docs/runbooks/environment-setup.md`, `docs/runbooks/validation-operations.md`.
 
 ## Guards, and what each pins

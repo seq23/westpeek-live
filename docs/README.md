@@ -1,77 +1,38 @@
 # West Peek Live! Docs
 
-This folder contains the documentation baseline and implementation references for West Peek Live!.
+The doc map. Current as of 31 Oct 2026. Anything under `docs/archive/` is history only.
 
-## Primary Source Docs
+## For people running events
 
-- `PRODUCT_SPEC.md`
-- `MVP_SCOPE.md`
-- `USER_ROLES_AND_PERMISSIONS.md`
-- `DATABASE_SCHEMA.md`
-- `ROUTE_MAP.md`
-- `IMPLEMENTATION_ROADMAP.md`
+- `WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md` — **the operator guide**: the five doors, owner, operator,
+  crew, special guests, attendees, codes, email, templates, fallback ladder, show-day runbook (§15),
+  troubleshooting. Screenshots in `images/manual/` (retaken 31 Oct 2026 from the current app, demo event).
+  Also served in the app at `/manual`.
+- `AGENCY_EVENT_OS_DAY1_OPERATOR_PACKET.md` — the private day-1 packet served at `/operator-packet`.
+- `CAPACITY.md` — what each plan includes, what runs out first, what to buy next.
 
-## Implementation Docs
+## For setting up and keeping it running
 
-- `COMPONENT_MAP.md`
-- `SECURITY_MODEL.md`
-- `VIDEO_ARCHITECTURE.md`
-- `SPEED_NETWORKING.md`
-- `ANALYTICS_AND_REPORTING.md`
-- `TEST_PLAN.md`
-- `TECH_DEBT_REGISTER.md`
+- `SETUP_AND_ACCOUNTS.md` — accounts, domains and DNS, integrations, secret names, rollback.
+- `DEPLOYMENT_ENV_CHECKLIST.md`, `POST_DEPLOYMENT_SMOKE_TEST.md`, `runbooks/deployment-cloudflare.md`,
+  `runbooks/postdeploy.md` — deploy and post-deploy checks.
+- `LIVEKIT_WEBHOOKS.md` — how LiveKit tells the app a show started or ended.
+- `DAILY_AUTOMATIC_FALLBACK.md`, `WHITE_LABEL_BACKUP_ROOMS.md`, `WHITE_LABEL_FALLBACK_VIDEO_19A.md`,
+  `VIDEO_PROVIDER_ABSTRACTION_7.md` — the video fallback design.
+- `manual-notes/` — five notes still read by validators (capacity, migration assurance, networking
+  fairness, speed-networking privacy, preview personas). Their content is in the manual.
+- `SUPABASE_TO_CLOUDFLARE.md` — history of the October 2026 move to D1 + R2 (validator-pinned).
 
-## Backend Foundation Docs
+## For changing the code
 
-- `SUPABASE_SETUP.md`
-- `RESEND_SETUP.md`
-- `AUTH_IMPLEMENTATION.md`
-- `DATABASE_MIGRATION_PLAN.md`
-- `AUDIT_LOGS.md`
+Start at `../RUNBOOK.md`. Validation and proof matrices (`VALIDATION_*`, `*_E2E_MATRIX.md`,
+`PERSONA_ROUTE_OUTCOME_MAP.md`, `E2E_OUTCOME_TESTING_STANDARD.md`, `testing/`, `product/`) are read by
+validators in `../scripts/`; keep them in place.
 
-- `TESTING_CONSOLE.md`
+## Indexes
 
-- `WHITE_LABEL_BACKUP_ROOMS.md`
+- `ACTIVE_DOCS.md` — active documents, by lane.
+- `DOCS_CONSOLIDATION_MAP.md` — every Markdown file and its status (enforced by `npm run validate:docs-consolidation`).
+- `archive/ARCHIVE_INDEX.md` — every archived file and what replaced it.
 
-- `AUTH_BATCH_3A.md`
-
-- `AUTH_ROUTE_ACCESS_MATRIX.md`
-
-- `SPEAKER_GREEN_ROOM.md`
-- `SPONSOR_PACKAGES.md`
-- `PRODUCTION_INBOX.md`
-- `LAST_MINUTE_CHANGE_CONTROL.md`
-- `BREAKOUT_AND_NETWORKING_MODEL.md`
-- `RUN_OF_SHOW_LIVE_PROGRESS.md`
-
-- `PERSISTENCE_BATCH_3B.md`
-- `PRODUCTION_OPS_PERSISTENCE_BATCH_3C.md`
-
-- `STORAGE_AND_ASSET_UPLOADS_3D.md`
-- `SPEAKER_SPONSOR_PERSISTENCE_3E.md`
-- `EMAIL_WORKFLOWS_3F.md`
-- `PRODUCTION_WORKFLOW_PERSISTENCE_5.md`
-- `REAL_TESTING_CONSOLE_DIAGNOSTICS_6.md`
-
-- `LIVEKIT_ROOM_UI_8C.md`
-- `VENUE_PERSISTENCE_9.md`
-- `SPEED_NETWORKING_ENGINE_10.md`
-- `REPORTS_AND_EXPORTS_11.md`
-- `EMAIL_PRODUCTION_SENDING_17.md`
-- `BRAND_SYSTEM_WEST_PEEK_LIVE.md`
-- `BRANDING_ROLLOUT_CHECKLIST.md`
-- `MOBILE_TABLET_QA_WEST_PEEK_LIVE.md`
-
-- `DEPLOYMENT_READINESS_WEST_PEEK_LIVE.md`
-- `DEPLOYMENT_ENV_CHECKLIST.md`
-- `POST_DEPLOYMENT_SMOKE_TEST.md`
-- `SUPABASE_RLS_DEPLOYMENT_REVIEW.md`
-
-- `WHITE_LABEL_FALLBACK_VIDEO_19A.md`
-
-- Canonical deployment authority: app domain `westpeek.live`; email sending domain `events.westpeek.live`.
-- Daily automatic fallback is documented across deployment, video architecture, testing console, and post-deployment smoke docs.
-
-## Master Plan v4
-
-Master Plan v4 adds public join, production access, event setup, publishing, room-level fallback, analytics, and QA/security validators.
+Canonical deployment authority: app domain `westpeek.live`; email sending domain `events.westpeek.live`.

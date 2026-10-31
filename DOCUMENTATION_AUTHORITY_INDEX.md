@@ -90,7 +90,8 @@ This index classifies documentation without deleting historical evidence. Only r
 ## Operational runbooks and proof contracts
 - `RUNBOOK.md` — plan-time entry for AI employees and operators: what the repo is, standing rules, how to make and land a change (guard: `scripts/validate_runbook.mjs`)
 - `AUTHENTICATED_ROUTE_MANIFEST.md`
-- `AUTONOMOUS_TERMINAL_RUNBOOK.md`
+- `docs/SETUP_AND_ACCOUNTS.md`
+- `CLAUDE.md`
 - `DIAGNOSTICS_STANDARD.md`
 - `E2E_REQUIRED_TEST_MATRIX.md`
 - `ENTITY_LIFECYCLE_MATRIX.md`
