@@ -5,8 +5,7 @@ const { spawn } = require("child_process");
 
 const COMMANDS = {
   build: ["npx", ["next", "build"]],
-  // The flag: see scripts/build_cloudflare_or_next.js (OPENNEXT_BUILD_FLAGS) for why.
-  "cf:build": ["npx", ["opennextjs-cloudflare", "build", "--dangerouslyUseUnsupportedNextVersion"]],
+  "cf:build": ["npx", ["opennextjs-cloudflare", "build"]],
 };
 
 function fail(message) {
