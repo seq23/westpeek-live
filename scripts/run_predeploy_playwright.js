@@ -7,7 +7,7 @@ const { day1Default } = require('./lib/day1AccessDefaults');
 const root = process.cwd();
 const cli = path.join(root, 'node_modules', '@playwright', 'test', 'cli.js');
 if (!fs.existsSync(cli)) {
-  console.error('PREDEPLOY PLAYWRIGHT BLOCKED: node_modules/@playwright/test/cli.js is missing. Run npm ci in this temporary ZIP workspace or copy a complete node_modules first.');
+  console.error('PREDEPLOY PLAYWRIGHT BLOCKED: node_modules/@playwright/test/cli.js is missing. Run npm ci first.');
   process.exit(1);
 }
 

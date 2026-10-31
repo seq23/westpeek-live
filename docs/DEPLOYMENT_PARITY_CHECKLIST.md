@@ -1,10 +1,11 @@
 # Deployment Parity Checklist
 
-Use this before delivering a ZIP, pushing to GitHub, or deploying to Cloudflare.
+Use this before pushing a branch, merging a PR, or deploying to Cloudflare. (Baseline ZIPs are
+retired as of 31 Oct 2026: a change is a PR, merged and deployed by `land`.)
 
-## Pre-delivery from a fresh ZIP
+## Before pushing a branch
 
-Run from a clean extraction of the exact ZIP to be delivered:
+Run from the branch's working tree, dependencies installed from the lockfile:
 
 ```bash
 npm ci
@@ -85,7 +86,7 @@ AGENCY_EVENT_OS_RUNTIME_STORE=file
 ALLOW_FILE_RUNTIME_STORE_IN_PRODUCTION=true
 ```
 
-These are intentional for the current demo Worker so front-door venue/admin smoke routes do not hard-depend on Supabase runtime writes while the production database path is still being stabilized.
+Since 6 Oct 2026 production runs on Cloudflare D1 through the `DB` binding (`services/runtime/runtimeStoreFactory.ts`; `/api/runtime/health` reports `"store":"d1"`). The two keys stay in the secret manifest because the deploy-parity validator pins them; forcing `AGENCY_EVENT_OS_RUNTIME_STORE=file` is for local runs only.
 
 
 ## Live click audit requirement

@@ -6,7 +6,7 @@ Purpose: every Markdown document is classified so active documentation stays int
 | Document | Status | Reason | Active replacement |
 |---|---|---|---|
 | `ARCHITECTURAL_DECISIONS.md` | ACTIVE | Current active operator/proof/runbook surface or validator-referenced source. | None |
-| `ARTIFACT_MANIFEST.md` | ACTIVE | Current active operator/proof/runbook surface or validator-referenced source. | None |
+| `ARTIFACT_MANIFEST.md` | ARCHIVED | Moved to docs/archive/history-2026/ARTIFACT_MANIFEST.md (31 Oct 2026). Manifest of a June 2026 baseline ZIP; ZIP apply is retired (PR + land). | RUNBOOK.md |
 | `COMPLEXITY_LEDGER.md` | ACTIVE | Current active operator/proof/runbook surface or validator-referenced source. | None |
 | `E2E_REQUIRED_TEST_MATRIX.md` | ACTIVE | Current active operator/proof/runbook surface or validator-referenced source. | None |
 | `ENVIRONMENT_VARIABLES.md` | ACTIVE | Current active operator/proof/runbook surface or validator-referenced source. | None |
@@ -150,7 +150,7 @@ Purpose: every Markdown document is classified so active documentation stays int
 
 | Document | Status | Purpose |
 |---|---|---|
-| `TERMINAL_RELEASE_RUNBOOK.md` | ACTIVE | Terminal release/update/deploy/postdeploy/provider-proof runbook. |
+| `TERMINAL_RELEASE_RUNBOOK.md` | ARCHIVED | Moved to docs/archive/history-2026/TERMINAL_RELEASE_RUNBOOK.md (31 Oct 2026). ZIP-apply terminal sequence; retired (PR + land). | RUNBOOK.md |
 | `ENV_RESTORE_POLICY.md` | ACTIVE | Local private env restore policy for test-everything with temporary `.env.local`; required to prevent missing repo-local vault assumptions. | None |
 
 
@@ -158,12 +158,12 @@ Purpose: every Markdown document is classified so active documentation stays int
 
 - Canonical validation authority lives in `REPO_VALIDATION_MATRIX.md` and `_repo_validation_matrix.json`.
 - Canonical validator admission authority lives in `VALIDATOR_ADMISSION_REGISTER.md` and `_validator_admission_register.json`.
-- Canonical execution sequencing lives in `TESTING_SEQUENCE.md` and `TERMINAL_RELEASE_RUNBOOK.md`.
+- Canonical execution sequencing lives in `TESTING_SEQUENCE.md` and `RUNBOOK.md`.
 - Historical docs remain archived and non-authoritative unless explicitly restored in this map.
 - New docs that duplicate any of the above authorities must be merged or archived instead of expanding the active doc surface.
 
 - `WEST_PEEK_BRAND_SYSTEM.md` — canonical cross-suite visual authority; active and locked.
-- `docs/manual-notes/migration-assurance.md` — how a migration actually reaches production: what the Supabase GitHub integration does and does not do, the guards that catch a forgotten one, and the named manual step when it goes red.
+- `docs/manual-notes/migration-assurance.md` — how a migration reaches production on D1 (`migrations-d1/`, applied by the deploy workflow before the Worker ships) and the guards that catch a forgotten one. Its Postgres-era half is archived (31 Oct 2026).
 
 
 ## Admitted 2026-09-23 — root RUNBOOK.md and previously unmapped docs
@@ -235,8 +235,8 @@ classified; status follows its section in `DOCUMENTATION_AUTHORITY_INDEX.md` whe
 | `docs/manual-notes/work-templates-real.md` | ARCHIVED | Moved to docs/archive/manual-notes/work-templates-real.md (31 Oct 2026). Branch note already folded into the operator manual (v4, 16 Sep 2026). | docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md |
 | `docs/plans/OWNER_ONE_PLACE_AND_VIEW_AS.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
 | `docs/runbooks/DUAL_PREPUSH_AND_ARTIFACT_PARITY_CONTRACT.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
-| `docs/runbooks/FIRST_COMMAND_GREEN_DELIVERY_CONTRACT.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
-| `docs/runbooks/PRE_UPDATER_BASELINE_CHECKLIST.md` | ACTIVE | Listed under "Canonical West Peek brand authority" in DOCUMENTATION_AUTHORITY_INDEX.md. | None |
+| `docs/runbooks/FIRST_COMMAND_GREEN_DELIVERY_CONTRACT.md` | ARCHIVED | Moved to docs/archive/history-2026/runbooks__FIRST_COMMAND_GREEN_DELIVERY_CONTRACT.md (31 Oct 2026). ZIP delivery contract; retired (PR + land). | RUNBOOK.md |
+| `docs/runbooks/PRE_UPDATER_BASELINE_CHECKLIST.md` | ARCHIVED | Moved to docs/archive/history-2026/runbooks__PRE_UPDATER_BASELINE_CHECKLIST.md (31 Oct 2026). Baseline-ZIP checklist; retired (PR + land). | RUNBOOK.md |
 | `docs/runbooks/QUICK_APPLY_ZIP_CHEAT_SHEET.md` | ARCHIVED | Moved to docs/archive/history-2026/runbooks__QUICK_APPLY_ZIP_CHEAT_SHEET.md (31 Oct 2026). Exact duplicate of the root ZIP cheat sheet; ZIP apply is retired (PR + land). | RUNBOOK.md |
 | `docs/runbooks/SUITE_RELEASE_LIFECYCLE_CONTRACT.md` | ACTIVE | Current operator, agent or release reference not previously mapped. | None |
 

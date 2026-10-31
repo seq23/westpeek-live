@@ -23,10 +23,8 @@ Nothing on the page is estimated, and no unread number is ever drawn as a zero o
   *before* the show; there is no graceful way to turn attendees away.
 - The full table, the worked example and the upgrade order are in `docs/CAPACITY.md`.
 
-## Keep-alive (background, nothing to operate)
+## Keep-alive (retired, nothing to operate)
 
-Supabase Free pauses after seven idle days and takes the runtime store with it. A scheduled job
-(`.github/workflows/supabase-keep-alive.yml`, daily 07:17 UTC) reads a single row through
-`/api/runtime/keep-alive` so the clock never gets there. It writes nothing and logs nothing. If it
-ever fails, the GitHub Actions run goes red — that is the signal the project is paused or the
-service role key is wrong.
+The runtime store moved from Supabase Free to Cloudflare D1 on 6 Oct 2026. D1 never pauses, so the
+old daily keep-alive job and its route were deleted and a validator keeps them deleted. If the page's
+database reading says **no**, the database itself could not be read: check `/api/runtime/health`.

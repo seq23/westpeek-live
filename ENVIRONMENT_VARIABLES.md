@@ -121,7 +121,7 @@ Purpose: safe env contract for local, CI, Cloudflare Worker, postdeploy, and pro
 
 ## Agency Event OS local env restore policy
 
-Real secret values are intentionally not stored inside baseline ZIP artifacts. Use `npm run env:restore` or any `*:with-env` command to restore `.env.local` from an approved local-only private source. See `ENV_RESTORE_POLICY.md`.
+Real secret values are intentionally never committed to the repository. Use `npm run env:restore` or any `*:with-env` command to restore `.env.local` from an approved local-only private source. See `ENV_RESTORE_POLICY.md`.
 
 Supported private source locations:
 

@@ -82,7 +82,7 @@ migrations (`npx wrangler d1 migrations apply west-peek-live --remote`), builds 
 Workers Builds (Git integration) still builds every branch and uploads a preview version, but it
 no longer promotes `main` (its default-branch deploy command is `npx wrangler versions upload` since
 6 Oct 2026), so a red or unmigrated commit never reaches production. Deeper procedure, rollback and postdeploy proof:
-`TERMINAL_RELEASE_RUNBOOK.md`, `PREDEPLOY_POSTDEPLOY_RUNBOOK.md`,
+`PREDEPLOY_POSTDEPLOY_RUNBOOK.md`,
 `ROLLBACK_AND_CONTAINMENT_RUNBOOK.md`, `docs/runbooks/postdeploy.md`,
 `docs/runbooks/environment-setup.md`, `docs/runbooks/validation-operations.md`.
 

@@ -32,7 +32,6 @@
     "scripts/validate_v7_operator_launchpad.js",
     "scripts/validate_v7_route_safety.js",
     "tests/unit/v5RouteAuthorization.test.ts",
-    "ARTIFACT_MANIFEST.md",
     "_artifact_manifest.json"
   ],
   "validationPassed": [
