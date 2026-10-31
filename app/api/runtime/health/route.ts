@@ -9,8 +9,8 @@ export const dynamic = "force-dynamic";
  * Public, read-only runtime readiness. No secrets, no row contents: which store
  * is active, whether the runtime tables from migration 0024 exist, and how many
  * compiled seed events still resolve — and `crewPageReads`: the reads the crew
- * deck and the networking page make, against the newest real runtime event with
- * the real store, so a schema drift the local file store cannot see fails here by
+ * deck and the networking page make, against a synthetic probe event id (never a
+ * real client event: this route is public) with the real store, so a schema drift the local file store cannot see fails here by
  * name. The post-deploy proof reads this so a missing or mis-shaped table is a
  * named, visible stop rather than a 500 on the crew page during a show.
  *
