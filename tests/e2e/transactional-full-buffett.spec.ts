@@ -34,6 +34,10 @@ transactionalDescribe("Transactional Full Buffett E2E", () => {
     await expectEventuallyRuntimeEvent((events) => events.some((event) => event.name === eventName && event.status === "draft" && /^wpl-/.test(event.joinCode)), "runtime event row should persist to the local runtime store");
 
     await gotoAndAssert(page, "/app/events/demo/run-of-show");
+    // The tracker and its controls fit the screen: a page wider than a phone shifts every control
+    // off its own hit point (the segment picker did this on 30 Oct 2026).
+    const overflow = await page.evaluate(() => document.documentElement.scrollWidth - document.documentElement.clientWidth);
+    expect(overflow, "the run-of-show page is wider than the screen").toBeLessThanOrEqual(1);
     await page.getByRole("button", { name: /^Mark live$/i }).click();
     await expectEventuallyRuntime(
       (snapshot) => (snapshot.runOfShowEvents || []).some((event: any) => event.eventId === "demo" && event.action === "mark_live"),

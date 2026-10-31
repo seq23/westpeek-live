@@ -12,13 +12,15 @@ export function LiveRunOfShowControls({ eventId, show, timezone }: { eventId: st
   if (!show.total) return null;
   const preselected = (show.next || show.current)?.segment.id;
   return (
-    <form action={recordRunOfShowControlAction} className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="ros-controls">
+    <form action={recordRunOfShowControlAction} className="min-w-0 rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="ros-controls">
       <p className="text-sm font-medium text-slate-500">Call the show</p>
       <p className="mt-2 text-sm text-slate-600">Your mark overrides the clock. Mark a segment live when it really starts and complete when it really ends; every screen follows within a page load. Without marks, the clock decides.</p>
       <input type="hidden" name="eventId" value={eventId} />
-      <label className="mt-4 grid gap-1 text-xs font-bold text-slate-700">
+      <label className="mt-4 grid min-w-0 gap-1 text-xs font-bold text-slate-700">
         Segment
-        <select name="segmentId" defaultValue={preselected} className="min-h-11 rounded-xl border border-slate-300 px-3 text-sm" data-testid="ros-control-segment">
+        {/* w-full + min-w-0: a select sizes itself to its longest option, and on a phone the long
+            segment titles pushed the whole page wider than the screen (browser suite, 30 Oct 2026). */}
+        <select name="segmentId" defaultValue={preselected} className="min-h-11 w-full min-w-0 max-w-full truncate rounded-xl border border-slate-300 px-3 text-sm" data-testid="ros-control-segment">
           {show.segments.map((run) => (
             <option key={run.segment.id} value={run.segment.id}>{formatEventTime(run.segment.startAt, timezone)} · {run.segment.title}{run.state === "current" ? " (on now)" : run.state === "done" ? " (done)" : run.state === "skipped" ? " (skipped)" : ""}</option>
           ))}
