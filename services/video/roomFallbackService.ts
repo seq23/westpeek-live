@@ -1,4 +1,5 @@
 import { randomId } from "@/lib/security/portableCrypto";
+import { recordAutomaticIncident } from "@/services/incidents/incidentLog";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import type { V4RoomFallbackState, V4RoomType, V4VideoProvider } from "@/types/v4";
 
@@ -72,8 +73,14 @@ export async function switchRoomFallback(input: { state: V4RoomFallbackState; pr
     lastCheckedAt: new Date().toISOString(),
     auditEventIds: [...input.state.auditEventIds, auditId],
   } satisfies V4RoomFallbackState;
-  return getRuntimeStore().setFallbackState(fallbackKey(next.eventId, next.roomType), next);
+  const saved = await getRuntimeStore().setFallbackState(fallbackKey(next.eventId, next.roomType), next);
+  if (input.provider !== "livekit" && input.provider !== input.state.activeProvider) {
+    await recordAutomaticIncident({ eventId: next.eventId, title: `${next.roomType.replaceAll("_", " ")} moved to a backup path: ${PROVIDER_NAMES[input.provider]}`, details: `Switched from ${PROVIDER_NAMES[input.state.activeProvider]} by ${input.actorRole || "technical director"}.${input.reason ? ` ${input.reason}` : ""}`, severity: "high" });
+  }
+  return saved;
 }
+
+const PROVIDER_NAMES: Record<V4VideoProvider, string> = { livekit: "the main stream", cloudflare_stream: "Cloudflare Stream", daily: "Daily", zoom: "Zoom", google_meet: "Google Meet" };
 
 export async function clearRoomFallbackOverride(state: V4RoomFallbackState, actorRole = "technical_director") {
   const auditId = await appendFallbackAudit(state, "livekit", "rollback", actorRole, "clear_manual_override");

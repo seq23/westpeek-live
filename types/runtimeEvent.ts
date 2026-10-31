@@ -19,6 +19,17 @@ export interface RuntimeEventSession {
   room: string;
   startAt: string;
   endAt: string;
+  /**
+   * Who is on in this segment (30 Oct 2026). All optional and kept inside the sessions JSON, so a
+   * session saved before then reads as "nobody named yet" and needs no migration.
+   * speakerIds are guest ids of speakers who entered with the speaker code; host is free text
+   * (the host, moderator or owner of the segment); alsoOn names people not in the app yet;
+   * cueNotes are the producer's notes for the crew.
+   */
+  speakerIds?: string[];
+  host?: string;
+  alsoOn?: string;
+  cueNotes?: string;
 }
 
 export interface RuntimeEventBranding {
@@ -134,6 +145,6 @@ export const SUPERSEDED_CODES_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
  * hand-kept Postgres-era version silently skipped seven migrations, three of them never applied.
  */
 export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = Object.fromEntries(
-  Object.entries(D1_SCHEMA).flatMap(([table, schema]) => [[table, schema.file], ...Object.keys(schema.columns).map((column) => [`${table}.${column}`, schema.file])]),
+  Object.entries(D1_SCHEMA).flatMap(([table, schema]) => [[table, schema.file], ...Object.keys(schema.columns).map((column) => [`${table}.${column}`, schema.addedColumns?.[column] || schema.file])]),
 );
 

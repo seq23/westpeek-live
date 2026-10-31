@@ -4,6 +4,8 @@ import { StatusBadge } from "@/components/shared/StatusBadge";
 import { MetricCard } from "@/components/shared/MetricCard";
 import { formatEventDate } from "@/lib/utils/format";
 import { CrewLiveModerationDeck } from "@/components/moderation/CrewLiveModerationDeck";
+import { getEventShow } from "@/services/run-of-show/eventShow";
+import { listEventIncidents } from "@/services/incidents/incidentLog";
 
 /**
  * @seed-view — the demo/seed branch of the event command centre. Its live segment, cues, speaker
@@ -13,8 +15,12 @@ import { CrewLiveModerationDeck } from "@/components/moderation/CrewLiveModerati
 export async function ProductionCommandCenterSeedView({ eventId, rosterSearch = "", diagnose }: { eventId: string; rosterSearch?: string; diagnose?: string }) {
   const event = getEvent(eventId);
   const segments = getRunOfShowForEvent(event.id);
-  const current = segments[0];
-  const next = segments.slice(1, 4);
+  // What is on comes from the one shared reading (clock + producer marks), not from row order.
+  const [show, incidents] = await Promise.all([getEventShow(eventId), listEventIncidents(eventId)]);
+  const current = segments.find((segment) => segment.id === show.current?.segment.id);
+  const upcomingIds = show.segments.filter((run) => run.state === "upcoming").map((run) => run.segment.id).slice(0, 3);
+  const next = segments.filter((segment) => upcomingIds.includes(segment.id));
+  const openIncidents = incidents.filter((incident) => incident.status !== "resolved");
   const speakers = getSpeakersForEvent(event.id);
   const crew = getContractorAssignmentsForEvent(event.id);
   const vendors = getVendorAssignmentsForEvent(event.id);
@@ -62,7 +68,7 @@ export async function ProductionCommandCenterSeedView({ eventId, rosterSearch = 
               </div>
             </div>
           ) : (
-            <p>No live segment.</p>
+            <p data-testid="command-no-current-segment">Nothing is on right now. The clock and the producer&rsquo;s marks on the run of show decide what is.</p>
           )}
         </SectionCard>
 
@@ -107,13 +113,15 @@ export async function ProductionCommandCenterSeedView({ eventId, rosterSearch = 
           </div>
         </SectionCard>
 
-        <SectionCard title="Incident log">
+        <SectionCard title="Incident log" eyebrow={openIncidents.length ? `${openIncidents.length} open` : "clear"}>
           <div className="space-y-3">
-            <div className="rounded-xl bg-slate-50 p-3">
-              <p className="font-medium">No open critical incidents</p>
-              <p className="text-sm text-slate-500">Incident logging connects operational issues to production records.</p>
-            </div>
-            <button className="w-full rounded-xl bg-slate-950 px-4 py-3 text-sm font-medium text-white">Log incident</button>
+            {openIncidents.length ? openIncidents.slice(0, 3).map((incident) => (
+              <div key={incident.id} className="rounded-xl bg-slate-50 p-3">
+                <p className="font-medium">{incident.title}</p>
+                <p className="text-sm text-slate-500">{incident.severity}</p>
+              </div>
+            )) : <p className="text-sm text-slate-600">No open incident on this event.</p>}
+            <a href={`/app/events/${eventId}/incidents`} className="block w-full rounded-xl bg-slate-950 px-4 py-3 text-center text-sm font-medium text-white">Open the incident log</a>
           </div>
         </SectionCard>
       </div>

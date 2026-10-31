@@ -33,8 +33,8 @@ describe("the Nova Summit demo is a full show, and it is always on", () => {
     }
   });
 
-  it("is never a finished event: something is on now and something is next", () => {
-    const view = attendeeRunOfShowView(EVENT);
+  it("is never a finished event: something is on now and something is next", async () => {
+    const view = await attendeeRunOfShowView(EVENT);
     expect(view.finished).toBe(false);
     expect(view.now).toBeDefined();
     expect(view.next).toBeDefined();
@@ -43,26 +43,26 @@ describe("the Nova Summit demo is a full show, and it is always on", () => {
     expect(view.position).toBeLessThan(view.total);
   });
 
-  it("has something on at every minute of the show, so the strip never goes blank", () => {
+  it("has something on at every minute of the show, so the strip never goes blank", async () => {
     const start = demoShowStartMs();
     const blank: number[] = [];
     let examined = 0;
     for (let minute = 0; minute < DEMO_SHOW_LENGTH_MINUTES; minute += 1) {
       examined += 1;
-      const view = attendeeRunOfShowView(EVENT, start + minute * 60_000 + 30_000);
+      const view = await attendeeRunOfShowView(EVENT, start + minute * 60_000 + 30_000);
       if (!view.now) blank.push(minute);
     }
     expect(examined).toBe(DEMO_SHOW_LENGTH_MINUTES);
     expect(blank).toEqual([]);
   });
 
-  it("exercises the features the product has, rather than describing them", () => {
+  it("exercises the features the product has, rather than describing them", async () => {
     const titles = getRunOfShowForEvent(EVENT).map((segment) => `${segment.publicTitle} ${segment.room}`).join(" | ").toLowerCase();
     for (const feature of ["keynote", "panel", "q&a", "sponsor spotlight", "expo", "networking", "breakout", "fireside", "closing"]) {
       expect(titles).toContain(feature);
     }
     // The networking block must light up the queue link on the attendee row.
-    expect(attendeeRunOfShowView(EVENT).segments.some((segment) => segment.networking)).toBe(true);
+    expect((await attendeeRunOfShowView(EVENT)).segments.some((segment) => segment.networking)).toBe(true);
   });
 
   it("fills the venue: sessions, breakouts, booths, replays and a People page", () => {

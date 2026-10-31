@@ -103,7 +103,10 @@ if (!fs.existsSync("app/venue/[eventId]/run-of-show/page.tsx")) fail("The standa
 if (!read("AUTHENTICATED_ROUTE_MANIFEST.md").includes("`/venue/[eventId]/run-of-show`")) fail("The run of show route must stay in the route ledger.");
 examined += 1;
 const projection = read("services/run-of-show/attendeeRunOfShow.ts");
-for (const token of ["export function attendeeRunOfShowView", "networking:"]) if (!projection.includes(token)) fail(`attendeeRunOfShow projection missing ${token}`);
+// The projection reads the ONE shared show reading (clock + producer marks), so the lobby strip can
+// never disagree with the producer's tracker or the command centre again (30 Oct 2026).
+for (const token of ["export async function attendeeRunOfShowView", "getEventShow(eventId, at)", "networking:"]) if (!projection.includes(token)) fail(`attendeeRunOfShow projection missing ${token}`);
+if (/Date\.now\(\)\s*[<>]|getTime\(\)\s*<=\s*at/.test(projection)) fail("attendeeRunOfShow must not decide now/next from the clock on its own; it reads services/run-of-show/eventShow.ts");
 for (const leak of ["technicalCues", "producerNotes", "backupPlan", "emergencyNotes", "liveNotes", "internalNotes"]) {
   if (projection.includes(leak)) fail(`The attendee run of show projection must not carry ${leak}.`);
   for (const guestFile of ["components/venue/RunOfShowStrip.tsx", "components/venue/AttendeeRunOfShow.tsx"]) {

@@ -67,6 +67,27 @@ describe("D1RuntimeStore against migrations-d1 on a real D1", () => {
     expect(snapshot.runOfShowEvents[0]).toMatchObject({ id: "ros-1", action: "mark_live" });
   });
 
+  it("keeps a per-event incident log with source, reporter and resolution (migration 0007)", async () => {
+    await store.appendIncident({ id: "inc-2", eventId: EVENT, title: "Stage moved to Daily", severity: "critical", status: "open", ownerRole: "system", details: "auto", createdAt: T1, source: "automatic", reportedBy: "Logged by the app" });
+    await store.appendIncident({ id: "inc-other", eventId: "evt-other", title: "Elsewhere", severity: "low", status: "open", ownerRole: "crew", details: "", createdAt: T2 });
+    const log = await store.listIncidents(EVENT);
+    expect(log.map((item) => item.id)).toEqual(["inc-2", "inc-1"]);
+    expect(log[0]).toMatchObject({ source: "automatic", reportedBy: "Logged by the app", updatedAt: T1 });
+    // A row appended without the new fields (the shape written before 0007) reads as a person's.
+    expect(log[1]).toMatchObject({ id: "inc-1", source: "manual" });
+    expect(await store.updateIncidentStatus({ id: "inc-2", eventId: EVENT, status: "resolved", updatedAt: T2 })).toMatchObject({ status: "resolved", resolvedAt: T2, updatedAt: T2 });
+    expect(await store.updateIncidentStatus({ id: "inc-2", eventId: EVENT, status: "open", updatedAt: T2 })).toMatchObject({ status: "open", resolvedAt: undefined });
+    // Another event's id cannot reach this event's incident.
+    expect(await store.updateIncidentStatus({ id: "inc-2", eventId: "evt-other", status: "resolved", updatedAt: T2 })).toBeUndefined();
+    expect((await store.listIncidents(EVENT))[0].status).toBe("open");
+  });
+
+  it("reads one event's run-of-show marks back, oldest first", async () => {
+    await store.appendRunOfShowEvent({ id: "ros-2", eventId: EVENT, segmentId: "seg-1", action: "mark_complete", actorRole: "producer", createdAt: T2 });
+    await store.appendRunOfShowEvent({ id: "ros-other", eventId: "evt-other", segmentId: "seg-9", action: "skip", actorRole: "producer", createdAt: T1 });
+    expect((await store.listRunOfShowEvents(EVENT)).map((row) => [row.id, row.action])).toEqual([["ros-1", "mark_live"], ["ros-2", "mark_complete"]]);
+  });
+
   it("keeps fallback, stage-stream and live-control state as JSON keyed by event and room", async () => {
     const fallback = { eventId: EVENT, roomType: "stage", activeProvider: "daily", nested: { list: [1, 2] } } as never;
     await store.setFallbackState(`${EVENT}:stage`, fallback);

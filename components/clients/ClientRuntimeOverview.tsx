@@ -1,7 +1,10 @@
 import { StatusBadge } from "@/components/shared/StatusBadge";
 import { formatEventDate } from "@/lib/utils/format";
 import { getPublishReadiness } from "@/services/events/eventPublishService";
-import { getRunOfShowForEvent } from "@/lib/runtime/getRuntimeData";
+import { getEventShow, showTimezone, whoIsOn } from "@/services/run-of-show/eventShow";
+import { getEventReport } from "@/services/reports/eventReport";
+import { EventReportView } from "@/components/analytics/EventReportView";
+import { formatEventTime } from "@/lib/utils/format";
 import { listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
@@ -13,12 +16,15 @@ import type { RuntimeEventRecord } from "@/types/runtimeEvent";
  */
 export async function ClientRuntimeOverview({ event, clientSlug }: { event: RuntimeEventRecord; clientSlug: string }) {
   const readiness = getPublishReadiness(event.id);
-  const segments = getRunOfShowForEvent(event.id);
-  const [attendees, speakers] = await Promise.all([
+  const ended = event.status === "ended" || event.status === "replay_available" || event.status === "archived";
+  const [attendees, speakers, show, report] = await Promise.all([
     getRuntimeStore().listAttendeeProfiles(event.id, 200).catch(() => []),
     listGuestProfiles(event.id, "speaker").catch(() => []),
+    getEventShow(event.id),
+    ended ? getEventReport(event.id).catch(() => undefined) : Promise.resolve(undefined),
   ]);
-  const ended = event.status === "ended" || event.status === "replay_available" || event.status === "archived";
+  const segments = show.segments;
+  const timezone = showTimezone(event.id);
   return (
     <main className="min-h-screen bg-slate-50 p-6">
       <div className="mx-auto max-w-6xl space-y-6" data-testid="client-runtime-overview">
@@ -48,12 +54,14 @@ export async function ClientRuntimeOverview({ event, clientSlug }: { event: Runt
         </section>
         <section className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm" data-testid="client-run-of-show">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Run of show</p>
-          {segments.length ? <ol className="mt-3 space-y-2">{segments.map((segment) => <li key={segment.id} className="rounded-2xl bg-slate-50 p-3 text-sm"><span className="font-black">{formatEventDate(segment.startAt, event.timezone)}</span> · {segment.publicTitle} · {segment.room}</li>)}</ol> : <p className="mt-3 text-sm text-slate-600">The production team has not published a run of show yet.</p>}
+          {show.current ? <p className="mt-2 text-sm font-bold text-emerald-800" data-testid="client-ros-now">On now: {show.current.segment.title}</p> : show.finished ? <p className="mt-2 text-sm text-slate-600">The show is over.</p> : null}
+          {segments.length ? <ol className="mt-3 space-y-2">{segments.map(({ segment, state }) => <li key={segment.id} className={`rounded-2xl p-3 text-sm ${state === "current" ? "border border-emerald-300 bg-emerald-50" : "bg-slate-50"}`} data-testid="client-ros-row" data-state={state}><span className="font-black">{formatEventTime(segment.startAt, timezone)}</span> · {segment.title} · {segment.room}{state === "current" ? " · on now" : state === "done" ? " · done" : state === "skipped" ? " · skipped" : ""}{whoIsOn(segment) ? <span className="block text-slate-600">{whoIsOn(segment)}</span> : null}</li>)}</ol> : <p className="mt-3 text-sm text-slate-600">The production team has not published a run of show yet.</p>}
         </section>
         <section className="grid gap-4 md:grid-cols-2">
           <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Approvals and assets</p><p className="mt-2 text-sm text-slate-600">Nothing is waiting for your approval. Items appear here when the production team sends them.</p></div>
-          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Reports</p><p className="mt-2 text-sm text-slate-600">{ended ? "The event has ended; the report is being prepared." : "The event has not ended yet, so there is no report to show."}</p></div>
+          <div className="rounded-3xl border border-slate-200 bg-white p-6 shadow-sm"><p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Reports</p><p className="mt-2 text-sm text-slate-600">{ended ? (report?.hasData ? "The event has ended. Below is what it recorded." : "The event has ended. Nothing was recorded for it, so there are no figures to show.") : "The event has not ended yet, so there is no report to show."}</p></div>
         </section>
+        {ended && report?.hasData ? <section data-testid="client-report"><EventReportView report={report} /></section> : null}
         <p className="text-xs text-slate-400">Client view for {clientSlug}. Timeline, approvals, assets, and reports pages show the same event state.</p>
       </div>
     </main>

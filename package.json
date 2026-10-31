@@ -15,7 +15,7 @@
     "build:event-config-package": "node scripts/build_event_config_package.js",
     "build:next": "next build",
     "build:recoverable": "node scripts/run_recoverable_build.js build --clean",
-    "cf:build": "opennextjs-cloudflare build",
+    "cf:build": "opennextjs-cloudflare build --dangerouslyUseUnsupportedNextVersion",
     "cf:build:recoverable": "node scripts/run_recoverable_build.js cf:build --clean",
     "cf:deploy": "opennextjs-cloudflare deploy",
     "cf:preview": "opennextjs-cloudflare preview",

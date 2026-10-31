@@ -33,6 +33,11 @@ function objectsDeclaredBySql(): Map<string, string> {
         if (col) out.set(`${m[1]}.${col[1]}`, `migrations-d1/${name}`);
       }
     }
+    // Additive widening in a later file (0007 onwards): the column belongs to the file that adds it.
+    for (const m of Array.from(sql.matchAll(/ALTER TABLE (\w+) ADD COLUMN ([a-z_][a-z0-9_]*) (TEXT|INTEGER|REAL)\b/g))) {
+      expect(out.has(m[1]), `${name} widens ${m[1]}, which no earlier migration creates`).toBe(true);
+      out.set(`${m[1]}.${m[2]}`, `migrations-d1/${name}`);
+    }
   }
   return out;
 }
@@ -54,19 +59,24 @@ describe("the runtime migration map cannot be forgotten", () => {
     expect(RUNTIME_TABLE_MIGRATIONS["contacts.archived_at"]).toBe("migrations-d1/0001_core.sql");
     expect(RUNTIME_TABLE_MIGRATIONS["attendee_sessions.client_build_id"]).toBe("migrations-d1/0004_attendees_live.sql");
     for (const table of ["auth_users", "auth_sessions", "auth_password_resets"]) expect(RUNTIME_TABLE_MIGRATIONS[table]).toBe("migrations-d1/0006_events_audit_auth.sql");
+    // The incident log's columns (30 Oct 2026) point at the file that adds them, so an unapplied 0007 is named.
+    for (const column of ["source", "reported_by", "updated_at", "resolved_at"]) expect(RUNTIME_TABLE_MIGRATIONS[`v6_incident_events.${column}`]).toBe("migrations-d1/0007_incident_log_and_show_marks.sql");
+    expect(RUNTIME_TABLE_MIGRATIONS["v6_incident_events.severity"]).toBe("migrations-d1/0006_events_audit_auth.sql");
     expect(Object.keys(D1_SCHEMA)).toHaveLength(60);
   });
 
   it("the generated manifest is current and the schema validator passes with its count", () => {
     expect(run("scripts/generate_d1_schema_manifest.mjs", ["--check"])).toMatchObject({ code: 0 });
     const { code, output } = run("scripts/validate_d1_schema_parity.js");
-    expect(output).toMatch(/validate_d1_schema_parity: PASS — \d+ checks: 6 migration files, 60 tables, \d+ columns/);
+    expect(output).toMatch(/validate_d1_schema_parity: PASS — \d+ checks: 7 migration files, 60 tables, \d+ columns/);
     expect(code).toBe(0);
   });
 
-  it("the schema validator proves itself: four breakages caught, a clean copy passes", () => {
+  it("the schema validator proves itself: six breakages caught, a clean copy passes", () => {
     const { code, output } = run("scripts/validate_d1_schema_parity.js", ["--self-test"]);
-    expect(output).toContain("4 breakages caught, clean copy passes");
+    expect(output).toContain("6 breakages caught, clean copy passes");
+    expect(output).toContain("self-test PASS: a column added by ALTER TABLE is dropped is caught");
+    expect(output).toContain("self-test PASS: ALTER TABLE on a table nobody creates is caught");
     expect(code).toBe(0);
     const script = fs.readFileSync("scripts/validate_d1_schema_parity.js", "utf8");
     expect(script).toContain("zero migration files");

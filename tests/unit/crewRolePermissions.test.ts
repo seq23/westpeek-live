@@ -33,7 +33,7 @@ const EXPECTED: Record<CrewAction, V4CrewRole[]> = {
   manage_host: ["executive_producer"],
   manage_access_codes: ["executive_producer", "producer"],
   delay_segment: ["executive_producer", "show_caller"],
-  log_incident: ["executive_producer", "producer", "show_caller", "moderator", "support"],
+  log_incident: ["executive_producer", "producer", "technical_director", "show_caller", "moderator", "support"],
   view_support: ["executive_producer", "support"],
   edit_draft_setup: ["executive_producer", "va"],
   mark_ready_for_review: ["executive_producer", "va"],

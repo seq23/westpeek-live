@@ -20,7 +20,7 @@
  * never pass on an empty loop.
  *
  *   node scripts/validate_d1_schema_parity.js              validate the repo
- *   node scripts/validate_d1_schema_parity.js --self-test  break a copy four ways and prove each fails
+ *   node scripts/validate_d1_schema_parity.js --self-test  break a copy six ways and prove each fails
  */
 const fs = require("fs");
 const os = require("os");
@@ -56,6 +56,13 @@ function parseMigrations(dir) {
         if (col) columns.add(col[1]);
       }
       tables.set(m[1], { file, columns });
+    }
+    // Additive widening in a later file: ALTER TABLE t ADD COLUMN c TYPE.
+    const alter = /ALTER TABLE (\w+) ADD COLUMN ([a-z_][a-z0-9_]*) (TEXT|INTEGER|REAL)\b/g;
+    while ((m = alter.exec(sql))) {
+      const table = tables.get(m[1]);
+      if (table) table.columns.add(m[2]);
+      else tables.set(m[1], { file, columns: new Set([m[2]]), alterOnly: true });
     }
   }
   return { files, tables };
@@ -133,6 +140,7 @@ function validate(root) {
   const { files, tables } = parseMigrations(migrationsDir);
   if (!files.length) failures.push("migrations-d1 has zero migration files; there is no schema to prove");
   if (!tables.size) failures.push("migrations-d1 declares zero tables");
+  for (const [name, table] of tables) if (table.alterOnly) failures.push(`migrations-d1/${table.file} adds a column to ${name}, but no migration creates ${name}`);
 
   // 1. manifest current
   const generator = path.join(root, "scripts/generate_d1_schema_manifest.mjs");
@@ -201,6 +209,8 @@ function selfTest() {
     ["a Postgres type in a migration", (dir) => fs.appendFileSync(path.join(dir, "migrations-d1/0001_core.sql"), "\nCREATE TABLE IF NOT EXISTS broken (\n  id TEXT NOT NULL,\n  data jsonb\n);\n"), /contains jsonb/],
     ["a column the code reads is dropped", (dir) => { const f = path.join(dir, "migrations-d1/0003_runtime.sql"); fs.writeFileSync(f, fs.readFileSync(f, "utf8").replace("  confirm_token TEXT,\n", "")); }, /request_event_intake\.confirm_token/],
     ["zero migration files", (dir) => fs.rmSync(path.join(dir, "migrations-d1"), { recursive: true, force: true }), /zero migration files/],
+    ["a column added by ALTER TABLE is dropped", (dir) => { const f = path.join(dir, "migrations-d1/0007_incident_log_and_show_marks.sql"); fs.writeFileSync(f, fs.readFileSync(f, "utf8").replace("ALTER TABLE v6_incident_events ADD COLUMN resolved_at TEXT;\n", "")); }, /v6_incident_events\.resolved_at/],
+    ["ALTER TABLE on a table nobody creates", (dir) => fs.appendFileSync(path.join(dir, "migrations-d1/0007_incident_log_and_show_marks.sql"), "\nALTER TABLE no_such_table ADD COLUMN extra TEXT;\n"), /adds a column to no_such_table/],
     ["deploy before migrate", (dir) => { const f = path.join(dir, ".github/workflows/deploy-cloudflare-worker.yml"); fs.writeFileSync(f, fs.readFileSync(f, "utf8").replace(/d1 migrations apply west-peek-live --remote/g, "d1 migrations list west-peek-live --remote")); }, /never applies the D1 migrations/],
   ];
   let failed = 0;

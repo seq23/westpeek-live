@@ -53,6 +53,14 @@ export interface V6IncidentRuntimeEvent {
   ownerRole: string;
   details: string;
   createdAt: string;
+  /** "automatic" when the app logged it itself (a stream moved to a backup path); "manual" when a person did. Rows before migration 0007 read as manual. */
+  source?: "manual" | "automatic";
+  /** Who logged it, in words: "Owner", "Producer", a signed-in name. */
+  reportedBy?: string;
+  /** Last change of status (migration 0007). */
+  updatedAt?: string;
+  /** When it was marked resolved (migration 0007). */
+  resolvedAt?: string;
 }
 
 export interface V6SupportRequestRuntimeEvent {
@@ -156,6 +164,10 @@ export interface RuntimeStore {
   getFallbackState(key: string): Promise<V4RoomFallbackState | undefined>;
   setFallbackState(key: string, state: V4RoomFallbackState): Promise<V4RoomFallbackState>;
   appendIncident(event: V6IncidentRuntimeEvent): Promise<V6IncidentRuntimeEvent>;
+  /** One event's incident log, newest first (migration 0007 adds source, reporter and resolution). */
+  listIncidents(eventId: string): Promise<V6IncidentRuntimeEvent[]>;
+  /** Open or resolve one incident of one event; undefined when no such incident exists on that event. */
+  updateIncidentStatus(input: { id: string; eventId: string; status: V6IncidentRuntimeEvent["status"]; updatedAt: string }): Promise<V6IncidentRuntimeEvent | undefined>;
   appendSupportRequest(event: V6SupportRequestRuntimeEvent): Promise<V6SupportRequestRuntimeEvent>;
   appendEmailEvent(event: V6EmailRuntimeEvent): Promise<V6EmailRuntimeEvent>;
   appendRegistration(event: V6RegistrationRuntimeEvent): Promise<V6RegistrationRuntimeEvent>;
@@ -212,6 +224,8 @@ export interface RuntimeStore {
   upsertAttendeePermission(permission: AttendeePermission): Promise<AttendeePermission>;
   listAttendeePermissions(eventId: string, attendeeId: string): Promise<AttendeePermission[]>;
   appendRunOfShowEvent(event: V6RunOfShowRuntimeEvent): Promise<V6RunOfShowRuntimeEvent>;
+  /** Every producer mark on one event's run of show, oldest first: the input to services/run-of-show/showProgress.ts. */
+  listRunOfShowEvents(eventId: string): Promise<V6RunOfShowRuntimeEvent[]>;
   /**
    * The Zoom meeting and Meet room a person typed in for this event (migration 0045). Kept apart
    * from the stage state on purpose: "Reset primary" rebuilds that row from defaults, and a meeting

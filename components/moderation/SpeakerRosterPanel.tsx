@@ -10,6 +10,8 @@ import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getProducerNotes, getVipRoom, listSpeakerCueDecks, listSpeakerStageStates, listSpeakerTechChecks } from "@/services/guests/guestStateService";
 import type { CueDeckVersion } from "@/types/specialGuest";
+import { getEventShow, segmentsForSpeaker, showTimezone } from "@/services/run-of-show/eventShow";
+import { formatEventTime } from "@/lib/utils/format";
 
 function deckToLines(version?: CueDeckVersion) {
   return { cards: (version?.cards || []).map((card) => (card.body ? `${card.title} | ${card.body}` : card.title)).join("\n"), talkingPoints: (version?.talkingPoints || []).join("\n"), script: version?.script || "" };
@@ -37,6 +39,10 @@ export async function SpeakerRosterPanel({ eventId, viewer: givenViewer }: { eve
     givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId),
   ]);
   const event = await findEventRecord(eventId).catch(() => undefined);
+  const show = await getEventShow(eventId).catch(() => undefined);
+  const timezone = showTimezone(eventId);
+  // Where each speaker is on, by name and time, instead of their raw guest id.
+  const onAt = (guestId: string) => (show ? segmentsForSpeaker(show, guestId) : []).map((run) => `${formatEventTime(run.segment.startAt, timezone)} ${run.segment.title}`).join(" · ");
   const speakerLink = event && event.source !== "seed" ? `${await appBaseUrl()}${guestGatePath(event, "speaker")}` : undefined;
   const stageOf = new Map(stages.map((item) => [item.guestId, item.state]));
   const techOf = new Map(techChecks.map((item) => [item.guestId, item.state]));
@@ -65,7 +71,8 @@ export async function SpeakerRosterPanel({ eventId, viewer: givenViewer }: { eve
               <div className="flex flex-wrap items-start justify-between gap-3">
                 <div>
                   <p className="text-sm font-black text-slate-950">{speaker.name} <span className="font-medium text-slate-500">· {speaker.company || "no company"}{speaker.title ? ` · ${speaker.title}` : ""}</span></p>
-                  <p className="mt-1 text-xs text-slate-600">Tech check: <strong data-testid={`speaker-tech-${speaker.guestId}`}>{tech ? `${tech.status.replaceAll("_", " ")} · ${tech.score}/100` : "not recorded"}</strong> · Cue cards: <strong>{deck?.approved ? `v${deck.approved.versionNumber} live` : "none"}{deck?.pending ? ` · v${deck.pending.versionNumber} pending` : ""}</strong> · <code className="text-[11px] text-slate-400">{speaker.guestId}</code></p>
+                  <p className="mt-1 text-xs text-slate-600">Tech check: <strong data-testid={`speaker-tech-${speaker.guestId}`}>{tech ? `${tech.status.replaceAll("_", " ")} · ${tech.score}/100` : "not recorded"}</strong> · Cue cards: <strong>{deck?.approved ? `v${deck.approved.versionNumber} live` : "none"}{deck?.pending ? ` · v${deck.pending.versionNumber} pending` : ""}</strong></p>
+                  <p className="mt-1 text-xs text-slate-600" data-testid={`speaker-segments-${speaker.guestId}`}>{onAt(speaker.guestId) ? <>On at: <strong>{onAt(speaker.guestId)}</strong></> : "Not on any segment yet. Name them on a segment on the run of show."}</p>
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
                   {canPreview ? <GuestPreviewLinkRow eventId={eventId} guest={speaker} compact /> : null}

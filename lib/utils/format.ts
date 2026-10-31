@@ -26,6 +26,18 @@ export function formatEventDate(value: string, timeZone?: string): string {
   }
 }
 
+/** Just the time, "6:31 PM", in the event's zone when known (the zone is named when it is not). */
+export function formatEventTime(value: string, timeZone?: string): string {
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  const zone = timeZone?.trim() || undefined;
+  try {
+    return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", ...(zone ? { timeZone: zone } : { timeZoneName: "short" }) }).format(date);
+  } catch {
+    return new Intl.DateTimeFormat("en", { hour: "numeric", minute: "2-digit", timeZoneName: "short" }).format(date);
+  }
+}
+
 export function titleize(value: string): string {
   return value.replace(/_/g, " ").replace(/\b\w/g, (letter) => letter.toUpperCase());
 }
