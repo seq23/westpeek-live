@@ -43,13 +43,10 @@ function ancestorContainsOpenNext() {
 }
 
 /**
- * OpenNext refuses to build a Next.js major more than two years after its release date, measured
- * against TODAY's clock: Next 15 (released 21 Oct 2024) stopped building on 21 Oct 2026 with no
- * commit behind it, so every Workers Builds preview and every deploy went red at once (found 30 Oct
- * 2026 on PR #91). The flag lets the pinned 15.5.x keep building until the app moves to Next 16;
- * tests/unit/openNextBuildFlag.test.ts fails if any build path drops the flag while next is < 16.
+ * No override flag: OpenNext refuses a Next.js major two years after its release (Next 15 stopped
+ * building on 21 Oct 2026), and the lasting answer was to move to Next 16, not to force the build.
+ * scripts/validate_next_version_floor.mjs fails if the flag comes back or next drops below 16.
  */
-const OPENNEXT_BUILD_FLAGS = '--dangerouslyUseUnsupportedNextVersion';
 
 const nextOnly = process.env.AGENCY_EVENT_OS_NEXT_BUILD_ONLY === '1' || ancestorContainsOpenNext();
 
@@ -59,4 +56,4 @@ if (nextOnly) {
 }
 
 console.log('build_cloudflare_or_next: running OpenNext Cloudflare build so npm run build emits deployable .open-next output.');
-run(`opennextjs-cloudflare build ${OPENNEXT_BUILD_FLAGS}`, { ...process.env, AGENCY_EVENT_OS_NEXT_BUILD_ONLY: '1' });
+run('opennextjs-cloudflare build', { ...process.env, AGENCY_EVENT_OS_NEXT_BUILD_ONLY: '1' });

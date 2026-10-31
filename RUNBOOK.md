@@ -94,5 +94,6 @@ no longer promotes `main` (its default-branch deploy command is `npx wrangler ve
 | `scripts/validate_worker_variable_budget.js` | Worker secrets stay under the per-Worker cap with headroom |
 | `scripts/post_deploy_smoke_test.js` | public pages 200 with markers, protected pages redirect, video APIs fail safe |
 | `scripts/validate_runbook.mjs` | this file names real paths and scripts |
+| `scripts/validate_next_version_floor.mjs` | `next` stays at major 16+ (package.json and lockfile) and `--dangerouslyUseUnsupportedNextVersion` never returns to a build path (`--self-test`) |
 
 Prove a new guard negatively before merging: plant the defect, watch it fail, remove it.

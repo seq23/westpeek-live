@@ -5349,6 +5349,27 @@
       "simplificationDisposition": "KEEP"
     },
     {
+      "script": "validate:next-version-floor",
+      "command": "node scripts/validate_next_version_floor.mjs",
+      "status": "ACTIVE",
+      "admission": "registered_support_lane",
+      "parentOrMatrixAuthority": "validate:v5-hard",
+      "category": "static_validation",
+      "severity": "HARD FAIL",
+      "productionRisk": "OpenNext refuses a Next.js major two years after its release by the build-day clock; Next 15 stopped building on 21 Oct 2026 and every preview and deploy went red with no commit behind it. Forcing it with --dangerouslyUseUnsupportedNextVersion ships an unsupported runtime.",
+      "whatItProves": "package.json and package-lock.json both put next at major 16 or above; the override flag appears in no package script, repo script, workflow, wrangler.jsonc, open-next.config.ts or next.config.js. Hard-fails when it scans no files. --self-test proves four planted defects fail.",
+      "whatItDoesNotProve": "Does not prove the build succeeds or that the next Next major will be supported in time; the build itself proves that.",
+      "failureHandling": "Block the release. Upgrade Next to a major OpenNext supports; never add the override back.",
+      "ownerDecisionNeeded": "NO.",
+      "expectedFailureFrequency": "Rare; fires on a downgrade or a re-added override.",
+      "runtimeCost": "Negligible; reads package.json, the lockfile and the build scripts.",
+      "maintenanceCost": "Raise FLOOR when the app moves to the next Next major.",
+      "removalConditions": "Retire only if the app stops building with OpenNext.",
+      "owner": "Repo owner / release operator",
+      "blockerPolicy": "Blocks validate:v5-hard and therefore the release.",
+      "simplificationDisposition": "KEEP"
+    },
+    {
       "script": "validate:browser-suite-workflow",
       "command": "node scripts/validate_browser_suite_workflow.js && node scripts/validate_browser_suite_workflow.js --self-test",
       "status": "ACTIVE",
