@@ -78,7 +78,7 @@ async function run() {
       else if (!health.runtimeEvents?.ready) failures.push(`${check.path} NAMED STOP — runtime tables missing (${(health.runtimeEvents?.missingTables || []).join(", ") || health.runtimeEvents?.detail || "unknown"}); apply ${health.runtimeEvents?.migrationFile} (npx wrangler d1 migrations apply west-peek-live --remote)`);
       else if (health.seedEvents !== 5) failures.push(`${check.path} expected 5 compiled seed events got ${health.seedEvents}`);
       // The crew deck's and networking page's reads against a REAL runtime event: a mis-shaped table (16 Sep 2026) fails here by name.
-      else if (health.crewPageReads && !health.crewPageReads.ok) failures.push(`${check.path} NAMED STOP — crew page reads failed on ${health.crewPageReads.eventId || "runtime event"}: ${(health.crewPageReads.reads || []).filter((r) => !r.ok).map((r) => `${r.name}: ${r.detail || "failed"}`).join("; ")}`);
+      else if (health.crewPageReads && !health.crewPageReads.ok) failures.push(`${check.path} NAMED STOP — crew page reads failed: ${(health.crewPageReads.reads || []).filter((r) => !r.ok).map((r) => `${r.name}: ${r.detail || "failed"}`).join("; ")}`);
       // Every entry in RUNTIME_TABLE_MIGRATIONS against the live database. Its own branch, not another
       // `else if`: a deploy whose database is behind its migrations must fail even when everything above
       // it passed, because that is exactly what 0030, 0037 and 0023 looked like from the outside — green.
