@@ -145,6 +145,6 @@ export const SUPERSEDED_CODES_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
  * hand-kept Postgres-era version silently skipped seven migrations, three of them never applied.
  */
 export const RUNTIME_TABLE_MIGRATIONS: Record<string, string> = Object.fromEntries(
-  Object.entries(D1_SCHEMA).flatMap(([table, schema]) => [[table, schema.file], ...Object.keys(schema.columns).map((column) => [`${table}.${column}`, schema.file])]),
+  Object.entries(D1_SCHEMA).flatMap(([table, schema]) => [[table, schema.file], ...Object.keys(schema.columns).map((column) => [`${table}.${column}`, schema.addedColumns?.[column] || schema.file])]),
 );
 
