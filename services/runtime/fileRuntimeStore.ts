@@ -182,9 +182,28 @@ export class FileRuntimeStore implements RuntimeStore {
 
   async appendIncident(event: V6IncidentRuntimeEvent) {
     const snapshot = this.read();
-    snapshot.incidentEvents.push(event);
+    const stored: V6IncidentRuntimeEvent = { ...event, source: event.source || "manual", updatedAt: event.updatedAt || event.createdAt, resolvedAt: event.resolvedAt ?? (event.status === "resolved" ? event.createdAt : undefined) };
+    snapshot.incidentEvents.push(stored);
     this.write(snapshot);
     return event;
+  }
+
+  async listIncidents(eventId: string) {
+    return this.read().incidentEvents
+      .filter((item) => item.eventId === eventId)
+      .map((item) => ({ ...item, source: item.source || "manual" }))
+      .sort((a, b) => b.createdAt.localeCompare(a.createdAt));
+  }
+
+  async updateIncidentStatus(input: { id: string; eventId: string; status: V6IncidentRuntimeEvent["status"]; updatedAt: string }) {
+    const snapshot = this.read();
+    const found = snapshot.incidentEvents.find((item) => item.id === input.id && item.eventId === input.eventId);
+    if (!found) return undefined;
+    found.status = input.status;
+    found.updatedAt = input.updatedAt;
+    found.resolvedAt = input.status === "resolved" ? input.updatedAt : undefined;
+    this.write(snapshot);
+    return { ...found, source: found.source || "manual" };
   }
 
   async appendSupportRequest(event: V6SupportRequestRuntimeEvent) {
@@ -301,6 +320,10 @@ export class FileRuntimeStore implements RuntimeStore {
     snapshot.runOfShowEvents.push(event);
     this.write(snapshot);
     return event;
+  }
+
+  async listRunOfShowEvents(eventId: string) {
+    return this.read().runOfShowEvents.filter((item) => item.eventId === eventId).sort((a, b) => a.createdAt.localeCompare(b.createdAt));
   }
 
 

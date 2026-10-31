@@ -79,6 +79,7 @@ function dynamicDraftRunOfShow(eventId: string): SeedRunOfShow[] | undefined {
   // created a minute earlier told its producer to "bring Drake live after the 30-second bumper" —
   // the demo summit's notes, copied along with the field list.
   const shape = runtimeSeedData.runOfShowSegments[0];
+  const own = new Map(event.sessions.map((session) => [session.id, session]));
   return sessions.map((session, index) => ({
     ...shape,
     id: `${session.id}-segment`,
@@ -89,10 +90,11 @@ function dynamicDraftRunOfShow(eventId: string): SeedRunOfShow[] | undefined {
     endAt: session.endAt,
     durationMinutes: Math.max(1, Math.round((new Date(session.endAt).getTime() - new Date(session.startAt).getTime()) / 60_000)),
     room: (session as { room?: string }).room || "Main Stage",
-    speakerId: "",
+    // Who is on and the cue notes are the producer's own, per session (30 Oct 2026); empty until named.
+    speakerId: own.get(session.id)?.speakerIds?.[0] || "",
     responsibleUserId: "",
-    producerNotes: "No producer notes yet. Add them on Run of Show.",
-    technicalCues: "No technical cues yet.",
+    producerNotes: own.get(session.id)?.cueNotes || "No producer notes yet. Add them on Run of Show.",
+    technicalCues: own.get(session.id)?.cueNotes || "No technical cues yet.",
     clientFacingDescription: session.name,
     backupPlan: "If the feed drops, the stage moves down the fallback ladder; the producer decides when.",
     pollCue: "",

@@ -5,6 +5,8 @@ import { WorkspaceEmptyState } from "@/components/workspace/WorkspaceEmptyState"
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import type { V6RuntimeSnapshot } from "@/services/runtime/runtimeStore";
+import { getEventReport } from "@/services/reports/eventReport";
+import { EventReportView } from "@/components/analytics/EventReportView";
 
 function countByKind(runtime: V6RuntimeSnapshot, eventId: string, kind: string) {
   return runtime.analyticsEvents.filter((event) => event.eventId === eventId && event.kind === kind).length;
@@ -83,32 +85,24 @@ export async function EventAnalyticsDashboard({ eventId }: { eventId: string }) 
 
 export async function ClientReportBuilder({ eventId }: { eventId: string }) {
   const event = await findEventRecord(eventId);
-  const runtime = await getRuntimeStore().readSnapshot();
-  const registrations = runtime.registrations.filter((item) => item.eventId === eventId).length;
-  const support = runtime.supportRequests.filter((item) => item.eventId === eventId).length;
-  const analytics = runtime.analyticsEvents.filter((item) => item.eventId === eventId).length;
+  const report = await getEventReport(eventId);
 
   return (
     <div className="space-y-6">
       <div className="rounded-3xl bg-slate-950 p-6 text-white">
         <p className="text-sm text-slate-300">Client report builder</p>
         <h1 className="mt-2 text-3xl font-semibold">{event?.name || eventId}</h1>
-        <p className="mt-2 text-slate-300">Every figure is counted from what this event actually recorded. Nothing is estimated and nothing is carried over from another event.</p>
+        <p className="mt-2 text-slate-300">Every figure is counted from what this event actually recorded. Nothing is estimated and nothing is carried over from another event. The client portal shows the client these same numbers.</p>
       </div>
-      <div className="grid gap-4 md:grid-cols-3">
-        <MetricCard label="Registrations" value={registrations} />
-        <MetricCard label="Recorded moments" value={analytics} />
-        <MetricCard label="Support requests" value={support} />
-      </div>
-      {analytics === 0 && registrations === 0 ? (
+      {report.hasData ? <EventReportView report={report} /> : (
         <WorkspaceEmptyState
           testId="report-empty"
           title="There is nothing to report yet"
-          line="A client report is built from what the event recorded: who registered, who came, what they did. None of that exists for this event yet, and inventing numbers to fill the page would be worse than an empty one. Come back after the show, or after the first registrations land."
+          line="A client report is built from what the event recorded: who registered, who came, what they did, how the show ran. None of that exists for this event yet, and inventing numbers to fill the page would be worse than an empty one. Come back after the show, or after the first registrations land."
           actionHref={`/app/events/${eventId}/analytics`}
           actionLabel="See the live analytics"
         />
-      ) : null}
+      )}
     </div>
   );
 }

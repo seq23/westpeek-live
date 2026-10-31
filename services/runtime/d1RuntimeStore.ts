@@ -192,6 +192,34 @@ function supersededCodeFromRow(row: Record<string, unknown>): SupersededCodeReco
   return { id: String(row.id || ""), eventId: String(row.event_id || ""), field: String(row.field || "join") as SupersededCodeRecord["field"], code: String(row.code || ""), codeKey: String(row.code_key || ""), replacedAt: String(row.replaced_at || ""), replacedBy: row.replaced_by ? String(row.replaced_by) : undefined, reason: String(row.reason || "rotate") as SupersededCodeRecord["reason"] };
 }
 
+function mapIncident(row: Record<string, unknown>): V6IncidentRuntimeEvent {
+  return {
+    id: String(row.id),
+    eventId: String(row.event_id || ""),
+    title: String(row.title || ""),
+    severity: row.severity as V6IncidentRuntimeEvent["severity"],
+    status: row.status as V6IncidentRuntimeEvent["status"],
+    ownerRole: String(row.owner_role || ""),
+    details: String(row.details || ""),
+    createdAt: String(row.created_at || ""),
+    source: row.source === "automatic" ? "automatic" : "manual",
+    reportedBy: row.reported_by ? String(row.reported_by) : undefined,
+    updatedAt: row.updated_at ? String(row.updated_at) : undefined,
+    resolvedAt: row.resolved_at ? String(row.resolved_at) : undefined,
+  };
+}
+
+function mapRunOfShowEvent(row: Record<string, unknown>): V6RunOfShowRuntimeEvent {
+  return {
+    id: String(row.id),
+    eventId: String(row.event_id || ""),
+    segmentId: String(row.segment_id || ""),
+    action: row.action as V6RunOfShowRuntimeEvent["action"],
+    actorRole: String(row.actor_role || ""),
+    createdAt: String(row.created_at || ""),
+  };
+}
+
 function fail(message: string): never {
   throw new Error(`D1 runtime store failed: ${message}`);
 }
@@ -559,7 +587,25 @@ export class D1RuntimeStore implements RuntimeStore {
       owner_role: event.ownerRole,
       details: event.details,
       created_at: event.createdAt,
+      source: event.source || "manual",
+      reported_by: event.reportedBy ?? null,
+      updated_at: event.updatedAt || event.createdAt,
+      resolved_at: event.resolvedAt ?? (event.status === "resolved" ? event.createdAt : null),
     }, event);
+  }
+
+  async listIncidents(eventId: string) {
+    const { data, error } = await this.client.from("v6_incident_events").select("*").eq("event_id", eventId).order("created_at", { ascending: false });
+    if (error) failOrSchemaMissing("v6_incident_events.source", error);
+    return ((data || []) as Array<Record<string, unknown>>).map(mapIncident);
+  }
+
+  async updateIncidentStatus(input: { id: string; eventId: string; status: V6IncidentRuntimeEvent["status"]; updatedAt: string }) {
+    const { error } = await this.client.from("v6_incident_events").update({ status: input.status, updated_at: input.updatedAt, resolved_at: input.status === "resolved" ? input.updatedAt : null }).eq("id", input.id).eq("event_id", input.eventId);
+    if (error) failOrSchemaMissing("v6_incident_events.resolved_at", error);
+    const { data, error: readError } = await this.client.from("v6_incident_events").select("*").eq("id", input.id).eq("event_id", input.eventId).maybeSingle();
+    if (readError) fail(`v6_incident_events read: ${readError.message}`);
+    return data ? mapIncident(data as Record<string, unknown>) : undefined;
   }
 
   appendSupportRequest(event: V6SupportRequestRuntimeEvent) {
@@ -703,6 +749,12 @@ export class D1RuntimeStore implements RuntimeStore {
       actor_role: event.actorRole,
       created_at: event.createdAt,
     }, event);
+  }
+
+  async listRunOfShowEvents(eventId: string) {
+    const { data, error } = await this.client.from("v6_run_of_show_runtime_events").select("*").eq("event_id", eventId).order("created_at", { ascending: true });
+    if (error) fail(`v6_run_of_show_runtime_events read: ${error.message}`);
+    return ((data || []) as Array<Record<string, unknown>>).map(mapRunOfShowEvent);
   }
 
 
@@ -1390,16 +1442,7 @@ export class D1RuntimeStore implements RuntimeStore {
       createdAt: String(row.created_at || ""),
     }));
     snapshot.fallbackStates = fallbackStates.map((row) => row.state as V4RoomFallbackState).filter(Boolean);
-    snapshot.incidentEvents = incidentEvents.map((row) => ({
-      id: String(row.id),
-      eventId: String(row.event_id || ""),
-      title: String(row.title || ""),
-      severity: row.severity as V6IncidentRuntimeEvent["severity"],
-      status: row.status as V6IncidentRuntimeEvent["status"],
-      ownerRole: String(row.owner_role || ""),
-      details: String(row.details || ""),
-      createdAt: String(row.created_at || ""),
-    }));
+    snapshot.incidentEvents = incidentEvents.map(mapIncident);
     snapshot.supportRequests = supportRequests.map((row) => ({
       id: String(row.id),
       eventId: String(row.event_id || ""),
@@ -1437,14 +1480,7 @@ export class D1RuntimeStore implements RuntimeStore {
     snapshot.attendeeAgendaIntents = attendeeAgendaIntents.map((row) => mapAttendeeAgendaIntent(row));
     snapshot.sponsorLeadOptIns = sponsorLeadOptIns.map((row) => ({ id: String(row.id), attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), sponsorBoothId: String(row.sponsor_booth_id || ""), allowedFields: Array.isArray(row.allowed_fields) ? row.allowed_fields.map(String) : [], createdAt: String(row.created_at || "") }));
     snapshot.attendeePermissions = attendeePermissions.map((row) => ({ id: String(row.id || ""), attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), permissionKind: row.permission_kind as AttendeePermission["permissionKind"], granted: Boolean(row.granted), grantedBy: row.granted_by ? String(row.granted_by) : undefined, reason: row.reason ? String(row.reason) : undefined, updatedAt: String(row.updated_at || "") }));
-    snapshot.runOfShowEvents = runOfShowEvents.map((row) => ({
-      id: String(row.id),
-      eventId: String(row.event_id || ""),
-      segmentId: String(row.segment_id || ""),
-      action: row.action as V6RunOfShowRuntimeEvent["action"],
-      actorRole: String(row.actor_role || ""),
-      createdAt: String(row.created_at || ""),
-    }));
+    snapshot.runOfShowEvents = runOfShowEvents.map(mapRunOfShowEvent);
     snapshot.stageStreamStates = stageStreamStates.map((row) => row.state as StageStreamState).filter(Boolean);
     snapshot.stageStreamEvents = stageStreamEvents.map((row) => row.state_event as StageStreamEvent).filter(Boolean);
     snapshot.liveChatMessages = liveChatMessages.map(mapLiveChatMessage);

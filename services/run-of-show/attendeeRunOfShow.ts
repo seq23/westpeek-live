@@ -1,4 +1,4 @@
-import { getLiveRunOfShowSegments } from "@/services/run-of-show/liveRunOfShowService";
+import { getEventShow, type EventShow } from "@/services/run-of-show/eventShow";
 
 /**
  * The attendee-safe projection of the run of show: the ONLY shape a guest surface may read. It
@@ -6,9 +6,10 @@ import { getLiveRunOfShowSegments } from "@/services/run-of-show/liveRunOfShowSe
  * producer notes, technical cues, backup plans, emergency notes or crew vocabulary — filtering
  * those out by hand at each call site is how one of them eventually leaks.
  *
- * "Now" comes from the real segment clock, not from an assumed index: a segment is on when the
- * viewer's instant sits inside its window. Before the first one starts, nothing is on and the next
- * one is what matters; after the last one ends, the show is over and we say so.
+ * "Now" and "next" are not decided here. They come from the one reading every surface shares
+ * (services/run-of-show/eventShow.ts: the clock plus the producer's marks), so the lobby strip says
+ * the same thing is on as the producer's tracker and the command centre. Before the first segment
+ * nothing is on and the next one is what matters; after the last one, the show is over and we say so.
  */
 export interface AttendeeRunOfShowSegment {
   id: string;
@@ -19,6 +20,8 @@ export interface AttendeeRunOfShowSegment {
   description: string;
   /** A networking block, so the strip can point at the queue from the row the viewer is reading. */
   networking: boolean;
+  /** Where this segment stands: finished, on now, or later (the next one is `view.next`). */
+  state: "finished" | "now" | "later";
 }
 
 export interface AttendeeRunOfShowView {
@@ -27,42 +30,39 @@ export interface AttendeeRunOfShowView {
   position: number;
   now?: AttendeeRunOfShowSegment;
   next?: AttendeeRunOfShowSegment;
-  /** True once the last segment's end time has passed. */
+  /** True once every segment has finished (or been passed by the producer). */
   finished: boolean;
   segments: AttendeeRunOfShowSegment[];
 }
 
 const NETWORKING = /network|mingle|meet\s*&?\s*greet/i;
 
-function project(segment: { id: string; publicTitle: string; startAt: string; endAt: string; room: string; clientFacingDescription: string }): AttendeeRunOfShowSegment {
+export function attendeeRunOfShowFromShow(show: EventShow): AttendeeRunOfShowView {
+  const runs = show.segments.filter((run) => run.segment.title && run.state !== "skipped");
+  const segments = runs.map((run): AttendeeRunOfShowSegment => ({
+    id: run.segment.id,
+    title: run.segment.title,
+    startAt: run.segment.startAt,
+    endAt: run.segment.endAt,
+    room: run.segment.room,
+    description: run.segment.description,
+    networking: NETWORKING.test(run.segment.title) || NETWORKING.test(run.segment.room),
+    state: run.state === "current" ? "now" : run.state === "done" ? "finished" : "later",
+  }));
+  if (!segments.length) return { total: 0, position: 0, finished: false, segments };
+  const now = segments.find((segment) => segment.id === show.current?.segment.id);
+  const next = segments.find((segment) => segment.id === show.next?.segment.id);
+  const anchor = now || next;
   return {
-    id: segment.id,
-    title: segment.publicTitle,
-    startAt: segment.startAt,
-    endAt: segment.endAt,
-    room: segment.room,
-    description: segment.clientFacingDescription,
-    networking: NETWORKING.test(segment.publicTitle) || NETWORKING.test(segment.room),
+    total: segments.length,
+    position: anchor ? segments.indexOf(anchor) + 1 : segments.length,
+    now,
+    next,
+    finished: !now && !next,
+    segments,
   };
 }
 
-export function attendeeRunOfShowView(eventId: string, at: number = Date.now()): AttendeeRunOfShowView {
-  const segments = getLiveRunOfShowSegments(eventId)
-    .map(project)
-    .filter((segment) => segment.title)
-    .sort((a, b) => a.startAt.localeCompare(b.startAt));
-  if (!segments.length) return { total: 0, position: 0, finished: false, segments };
-  const started = (s: AttendeeRunOfShowSegment) => new Date(s.startAt).getTime() <= at;
-  const ended = (s: AttendeeRunOfShowSegment) => new Date(s.endAt).getTime() <= at;
-  const nowIndex = segments.findIndex((segment) => started(segment) && !ended(segment));
-  const nextIndex = segments.findIndex((segment) => !started(segment));
-  const finished = nowIndex < 0 && nextIndex < 0;
-  return {
-    total: segments.length,
-    position: (nowIndex >= 0 ? nowIndex : nextIndex >= 0 ? nextIndex : segments.length - 1) + 1,
-    now: nowIndex >= 0 ? segments[nowIndex] : undefined,
-    next: nowIndex >= 0 ? segments[nowIndex + 1] : nextIndex >= 0 ? segments[nextIndex] : undefined,
-    finished,
-    segments,
-  };
+export async function attendeeRunOfShowView(eventId: string, at: number = Date.now()): Promise<AttendeeRunOfShowView> {
+  return attendeeRunOfShowFromShow(await getEventShow(eventId, at));
 }

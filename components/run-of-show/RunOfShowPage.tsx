@@ -2,7 +2,9 @@ import { SectionCard } from "@/components/shared/SectionCard";
 import { WorkspaceEmptyState } from "@/components/workspace/WorkspaceEmptyState";
 import { RunOfShowSeedView } from "@/components/run-of-show/RunOfShowSeedView";
 import { realRuntimeEvent } from "@/lib/workspace/realEvent";
-import { listWorkspaceSpeakers, workspaceSegments } from "@/services/events/eventWorkspaceReadModel";
+import { listWorkspaceSpeakers } from "@/services/events/eventWorkspaceReadModel";
+import { getEventShow, whoIsOn, type EventShow } from "@/services/run-of-show/eventShow";
+import { SegmentPeopleEditor } from "@/components/run-of-show/SegmentPeopleEditor";
 import { formatEventDate } from "@/lib/utils/format";
 
 /**
@@ -11,30 +13,33 @@ import { formatEventDate } from "@/lib/utils/format";
  *
  * It used to render the seed run-of-show segments, cues and approval states. A Room created a
  * minute earlier told its producer to "bring Drake live after the 30-second bumper" — the demo
- * summit's notes. There are no per-segment producer cues in the store yet, so none are shown: the
- * cue cards a producer really writes live per SPEAKER on the crew deck, and the page says so.
+ * summit's notes. Each segment now carries its own people and cue notes (30 Oct 2026), edited
+ * right here, and the segment on now is highlighted from the shared show reading.
  */
-export async function RunOfShowPage({ eventId }: { eventId: string }) {
+export async function RunOfShowPage({ eventId, show: given }: { eventId: string; show?: EventShow }) {
   const event = realRuntimeEvent(eventId);
   if (!event) return <RunOfShowSeedView eventId={eventId} />;
-  const segments = workspaceSegments(event);
-  const speakers = await listWorkspaceSpeakers(event.id);
+  const [speakers, show] = await Promise.all([listWorkspaceSpeakers(event.id), given ? Promise.resolve(given) : getEventShow(event.id)]);
+  const segments = show.segments.map((run) => ({ ...run.segment, state: run.state }));
 
   return (
     <div className="space-y-6" data-testid="run-of-show" data-segments={segments.length}>
       <div className="rounded-3xl border border-brand-line bg-white p-4 shadow-sm sm:p-6">
         <p className="text-sm font-medium text-slate-500">Run of show</p>
         <h1 className="mt-2 text-3xl font-semibold">{event.name}</h1>
-        <p className="mt-2 text-slate-600">This event&rsquo;s own sessions, in order. Edit them on Setup. Producer cues are written per speaker on the crew deck and land on their teleprompter within about five seconds — there are no per-segment cue notes in the store, so none are shown here.</p>
+        <p className="mt-2 text-slate-600">This event&rsquo;s own sessions, in order, with who is on in each and the cue notes the crew sees. Open &ldquo;Who is on&rdquo; on a segment to name its speakers and host. Speaker cue cards are written per speaker on the crew deck.</p>
       </div>
 
       <div className="grid gap-6 xl:grid-cols-[1fr_320px]">
         <SectionCard title="Production timeline" eyebrow={`${segments.length} segment${segments.length === 1 ? "" : "s"}`}>
           <div className="space-y-4">
             {segments.map((segment) => (
-              <div key={segment.id} className="rounded-2xl border border-slate-200 p-4" data-testid={`ros-segment-${segment.id}`}>
-                <p className="text-sm text-slate-500">{formatEventDate(segment.startAt, event.timezone)} · {segment.durationMinutes} min · {segment.room}</p>
+              <div key={segment.id} className={`rounded-2xl border p-4 ${segment.state === "current" ? "border-emerald-300 bg-emerald-50" : "border-slate-200"}`} data-testid={`ros-segment-${segment.sessionId || segment.id}`} data-state={segment.state}>
+                <p className="text-sm text-slate-500">{segment.state === "current" ? <strong className="text-emerald-800">On now · </strong> : null}{formatEventDate(segment.startAt, event.timezone)} · {segment.durationMinutes} min · {segment.room}</p>
                 <h3 className="mt-1 text-lg font-semibold">{segment.title}</h3>
+                <p className="mt-1 text-sm text-slate-700" data-testid="ros-segment-people">{whoIsOn(segment) || "Nobody named yet"}</p>
+                {segment.cueNotes ? <p className="mt-1 text-sm text-slate-600">Cue: {segment.cueNotes}</p> : null}
+                <SegmentPeopleEditor eventId={event.id} segment={segment} speakers={speakers} />
               </div>
             ))}
           </div>

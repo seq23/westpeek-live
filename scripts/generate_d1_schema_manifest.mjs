@@ -43,6 +43,18 @@ export function parseD1Migrations(migrationsDir = dir) {
       if (tables[table]) throw new Error(`${table} is created twice (${tables[table].file} and migrations-d1/${file})`);
       tables[table] = { file: `migrations-d1/${file}`, primaryKey, columns };
     }
+    // A later migration widens a table with ALTER TABLE ... ADD COLUMN (additive only; D1 records
+    // each file once, so an applied CREATE is never edited). The column joins its table's list; a
+    // column added to a table no migration creates is an error, not a silent new table.
+    const alter = /ALTER TABLE (\w+) ADD COLUMN ([a-z_][a-z0-9_]*) (TEXT|INTEGER|REAL)\b([^;]*);/g;
+    while ((m = alter.exec(sql))) {
+      const [, table, name, type, rest] = m;
+      if (!tables[table]) throw new Error(`migrations-d1/${file} adds ${table}.${name}, but no earlier migration creates ${table}`);
+      let kind = type === "TEXT" ? "text" : type === "INTEGER" ? "int" : "real";
+      if (new RegExp(`CHECK \\(json_valid\\(${name}\\)\\)`).test(rest)) kind = "json";
+      else if (new RegExp(`CHECK \\(${name} IN \\(0, 1\\)\\)`).test(rest)) kind = "bool";
+      tables[table].columns[name] = kind;
+    }
   }
   return { files, tables };
 }

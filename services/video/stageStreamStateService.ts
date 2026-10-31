@@ -1,4 +1,5 @@
 import { randomId, base64UrlEncode } from "@/lib/security/portableCrypto";
+import { recordAutomaticIncident } from "@/services/incidents/incidentLog";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getEventBackupRoom, houseGoogleMeetUrl, houseZoomMeetingNumber } from "@/services/video/backupRoomService";
@@ -298,7 +299,28 @@ export async function applyStageStreamSignal(input: { eventId: string; stageId?:
     // The state write above is the source of truth; a lost log line is reported, not fatal.
     console.warn(`[stage-stream] event log append failed for ${key}: ${error instanceof Error ? error.message : String(error)}`);
   });
+  const incident = stageStreamIncident(current, next, reason || input.signal);
+  if (incident) await recordAutomaticIncident({ eventId: next.eventId, ...incident });
   return next;
+}
+
+const SOURCE_NAMES: Record<StageStreamState["activeStreamSource"], string> = { LIVEKIT_INGRESS: "the main stream", CLOUDFLARE_STREAM: "Cloudflare Stream", DAILY: "Daily", ZOOM: "Zoom", GOOGLE_MEET: "Google Meet" };
+
+/**
+ * The incident the incident log should get for one stage transition, if any: the stage moved off
+ * the main stream onto a backup path, or the stream reported a failure where there was none. A
+ * move back to the main stream, an intentional end of show, and a state that did not change log
+ * nothing.
+ */
+export function stageStreamIncident(before: StageStreamState, after: StageStreamState, reason: string): { title: string; details: string; severity: "high" | "critical" } | undefined {
+  if (after.operatorMarkedShowEnded || after.streamStatus === "ENDED") return undefined;
+  if (after.activeStreamSource !== before.activeStreamSource && after.activeStreamSource !== "LIVEKIT_INGRESS") {
+    return { title: `${after.stageId === "main-stage" ? "Main stage" : after.stageId} moved to a backup path: ${SOURCE_NAMES[after.activeStreamSource]}`, details: `Switched from ${SOURCE_NAMES[before.activeStreamSource]}. ${reason}`.trim(), severity: "high" };
+  }
+  if (before.failurePlane === "NONE" && after.failurePlane !== "NONE") {
+    return { title: `Video health check failed: ${after.failurePlane.replaceAll("_", " ").toLowerCase()}`, details: reason, severity: after.failurePlane === "PRIMARY_PIPELINE_TOTAL_FAILURE" ? "critical" : "high" };
+  }
+  return undefined;
 }
 
 /**

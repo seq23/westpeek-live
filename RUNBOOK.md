@@ -89,7 +89,7 @@ no longer promotes `main` (its default-branch deploy command is `npx wrangler ve
 | `scripts/validate-validator-admission.mjs` | every validation package script has an admission row |
 | `scripts/validate-deployed-route-manifest.mjs` | every route in `config/deployed-route-manifest.json` is fully described, unique, and covers desktop + mobile |
 | `scripts/validate_logo_home_links.js` | every rendered mark links home through the one home link |
-| `scripts/validate_d1_schema_parity.js` | `migrations-d1/` is SQLite, the generated manifest is current, every table and column the code names exists, migrations apply before deploy (`--self-test` proves four breakages) |
+| `scripts/validate_d1_schema_parity.js` | `migrations-d1/` is SQLite, the generated manifest is current, every table and column the code names exists, migrations apply before deploy (`--self-test` proves six breakages) |
 | `scripts/validate_retired_backend_gone.js` | nothing that runs, builds, deploys or configures the app names the retired hosted backend (`--self-test`) |
 | `scripts/validate_worker_variable_budget.js` | Worker secrets stay under the per-Worker cap with headroom |
 | `scripts/post_deploy_smoke_test.js` | public pages 200 with markers, protected pages redirect, video APIs fail safe |

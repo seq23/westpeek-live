@@ -1091,7 +1091,11 @@ export const D1_SCHEMA: Record<string, D1TableSchema> = {
       "status": "text",
       "owner_role": "text",
       "details": "text",
-      "created_at": "text"
+      "created_at": "text",
+      "source": "text",
+      "reported_by": "text",
+      "updated_at": "text",
+      "resolved_at": "text"
     }
   },
   "v6_registration_events": {

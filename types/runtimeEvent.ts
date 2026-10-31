@@ -19,6 +19,17 @@ export interface RuntimeEventSession {
   room: string;
   startAt: string;
   endAt: string;
+  /**
+   * Who is on in this segment (30 Oct 2026). All optional and kept inside the sessions JSON, so a
+   * session saved before then reads as "nobody named yet" and needs no migration.
+   * speakerIds are guest ids of speakers who entered with the speaker code; host is free text
+   * (the host, moderator or owner of the segment); alsoOn names people not in the app yet;
+   * cueNotes are the producer's notes for the crew.
+   */
+  speakerIds?: string[];
+  host?: string;
+  alsoOn?: string;
+  cueNotes?: string;
 }
 
 export interface RuntimeEventBranding {

@@ -47,7 +47,7 @@ export async function VenuePageShell({
   let activity: VenueActivity = EMPTY_VENUE_ACTIVITY;
   // Fails soft by rendering nothing: an unreadable schedule must never become an error bar across
   // every venue page.
-  const runOfShow = (() => { try { return attendeeRunOfShowView(model.eventId); } catch { return undefined; } })();
+  const runOfShow = await attendeeRunOfShowView(model.eventId).catch(() => undefined);
   try {
     const [event, stage, actor, viewer, chrome] = await Promise.all([
       findEventRecord(model.eventId).catch(() => undefined),

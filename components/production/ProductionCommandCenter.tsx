@@ -5,14 +5,11 @@ import { WorkspaceEmptyState } from "@/components/workspace/WorkspaceEmptyState"
 import { CrewLiveModerationDeck } from "@/components/moderation/CrewLiveModerationDeck";
 import { ProductionCommandCenterSeedView } from "@/components/production/ProductionCommandCenterSeedView";
 import { realRuntimeEvent } from "@/lib/workspace/realEvent";
-import { listWorkspaceSpeakers, workspaceSegments, type WorkspaceSegment } from "@/services/events/eventWorkspaceReadModel";
+import { listWorkspaceSpeakers } from "@/services/events/eventWorkspaceReadModel";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
+import { getEventShow, whoIsOn } from "@/services/run-of-show/eventShow";
+import { listEventIncidents } from "@/services/incidents/incidentLog";
 import { formatEventDate } from "@/lib/utils/format";
-
-/** Which of the event's own sessions the clock is inside right now — nothing is "current" before the show. */
-function segmentNow(segments: WorkspaceSegment[], at: number) {
-  return segments.find((segment) => new Date(segment.startAt).getTime() <= at && at < new Date(segment.endAt).getTime());
-}
 
 /**
  * The producer's cockpit for a REAL event. Every tile is this event's own rows: its sessions, the
@@ -25,13 +22,13 @@ function segmentNow(segments: WorkspaceSegment[], at: number) {
 export async function ProductionCommandCenter({ eventId, rosterSearch = "", diagnose }: { eventId: string; rosterSearch?: string; diagnose?: string }) {
   const event = realRuntimeEvent(eventId);
   if (!event) return <ProductionCommandCenterSeedView eventId={eventId} rosterSearch={rosterSearch} diagnose={diagnose} />;
-  const [speakers, snapshot] = await Promise.all([listWorkspaceSpeakers(event.id), getRuntimeStore().readSnapshot().catch(() => undefined)]);
-  const segments = workspaceSegments(event);
-  const now = Date.now();
-  const current = segmentNow(segments, now);
-  const upcoming = segments.filter((segment) => new Date(segment.startAt).getTime() > now).slice(0, 3);
-  const rooms = Array.from(new Set(segments.map((segment) => segment.room)));
-  const incidents = (snapshot?.incidentEvents || []).filter((item) => item.eventId === event.id && item.status !== "resolved");
+  const [speakers, snapshot, show, allIncidents] = await Promise.all([listWorkspaceSpeakers(event.id), getRuntimeStore().readSnapshot().catch(() => undefined), getEventShow(event.id), listEventIncidents(event.id)]);
+  // What is on now and next: the one reading every surface shares (clock + the producer's marks).
+  const currentRun = show.current;
+  const current = currentRun?.segment;
+  const upcoming = show.segments.filter((run) => run.state === "upcoming").slice(0, 3).map((run) => run.segment);
+  const rooms = Array.from(new Set(show.segments.map((run) => run.segment.room)));
+  const incidents = allIncidents.filter((item) => item.status !== "resolved");
   const support = (snapshot?.supportRequests || []).filter((item) => item.eventId === event.id && item.status !== "resolved");
   const onStage = speakers.filter((speaker) => speaker.stage === "on_stage").length;
 
@@ -44,7 +41,7 @@ export async function ProductionCommandCenter({ eventId, rosterSearch = "", diag
       </div>
 
       <div className="grid gap-4 md:grid-cols-4">
-        <MetricCard label="Right now" value={current ? current.title : event.status === "live" ? "Between segments" : "Not started"} note={current ? formatEventDate(current.startAt, event.timezone) : `Status: ${event.status.replaceAll("_", " ")}`} />
+        <MetricCard label="Right now" value={current ? current.title : show.finished ? "Show over" : event.status === "live" ? "Between segments" : "Not started"} note={current ? formatEventDate(current.startAt, event.timezone) : `Status: ${event.status.replaceAll("_", " ")}`} />
         <MetricCard label="Speakers on stage" value={`${onStage}/${speakers.length}`} note="entered with the speaker code" />
         <MetricCard label="Open incidents" value={incidents.length} />
         <MetricCard label="Open support requests" value={support.length} />
@@ -54,14 +51,16 @@ export async function ProductionCommandCenter({ eventId, rosterSearch = "", diag
         <SectionCard title="Live segment">
           {current ? (
             <div className="rounded-2xl border border-slate-200 p-5" data-testid="command-current-segment">
-              <p className="text-sm text-slate-500">{formatEventDate(current.startAt, event.timezone)} · {current.room} · {current.durationMinutes} min</p>
+              <p className="text-sm text-slate-500">{formatEventDate(current.startAt, event.timezone)} · {current.room} · {current.durationMinutes} min · {currentRun?.decidedBy === "mark" ? "marked live by the producer" : "by the clock"}</p>
               <h2 className="mt-1 text-2xl font-semibold">{current.title}</h2>
+              {whoIsOn(current) ? <p className="mt-2 text-sm text-slate-700" data-testid="command-current-people">On: {whoIsOn(current)}</p> : null}
+              {show.delay ? <p className="mt-3 rounded-xl bg-amber-50 p-3 text-sm text-amber-900" data-testid="command-delay">Running about {show.delay.minutes} min behind.</p> : null}
             </div>
           ) : (
             <WorkspaceEmptyState
               testId="command-no-current-segment"
-              title="Nothing is running right now"
-              line="The clock is not inside any of this event's sessions. When it is, the session appears here. Cue cards for each speaker are on their row in the deck below and reach their teleprompter within about five seconds."
+              title={show.finished ? "The show is over" : "Nothing is running right now"}
+              line="Nothing is marked live on the run of show and the clock is not inside any of this event's sessions. Mark a segment live on the run of show, or wait for its start time. Cue cards for each speaker are on their row in the deck below and reach their teleprompter within about five seconds."
               actionHref={`/app/events/${event.id}/run-of-show`}
               actionLabel="Open the run of show"
             />
@@ -75,6 +74,7 @@ export async function ProductionCommandCenter({ eventId, rosterSearch = "", diag
                 <div key={segment.id} className="rounded-2xl bg-slate-50 p-4">
                   <p className="text-sm text-slate-500">{formatEventDate(segment.startAt, event.timezone)} · {segment.room}</p>
                   <p className="font-semibold">{segment.title}</p>
+                  {whoIsOn(segment) ? <p className="text-sm text-slate-600">{whoIsOn(segment)}</p> : null}
                 </div>
               ))}
             </div>
