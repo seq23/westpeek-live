@@ -103,3 +103,13 @@ describe("which stage transitions become incidents", () => {
     expect(stageStreamIncident(base, base, "heartbeat")).toBeUndefined();
   });
 });
+
+describe("the incident page has no sample rows left in it", () => {
+  it("reads the event's own log and says so plainly when it is empty", () => {
+    const source = fs.readFileSync("components/production/IncidentLog.tsx", "utf8") + fs.readFileSync("components/production/IncidentPanel.tsx", "utf8");
+    expect(source).toContain("listEventIncidents(eventId)");
+    expect(source).toContain("No incidents logged for this event.");
+    expect(source).not.toMatch(/const incidents = \[/);
+    expect(source).not.toContain("Daily fallback verified");
+  });
+});
