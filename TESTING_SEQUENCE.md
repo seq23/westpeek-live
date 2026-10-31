@@ -134,7 +134,7 @@ Required Tier 4 inputs:
 6. Rerun Tier 3 for deployed-safe proof.
 7. Rerun Tier 4 for final live-provider proof when COMPLETE is claimed.
 8. Clean generated artifacts.
-9. Package full baseline ZIP and reopen it.
+9. Push the branch, open a PR, and merge it with `land <pr>` (baseline ZIPs are retired, 31 Oct 2026).
 
 ## Completion boundary
 
@@ -153,7 +153,7 @@ NODE_OPTIONS="--max-old-space-size=3072" npm run test:everything
 
 The command writes one report and per-command logs under `logs/test-everything/<timestamp>/`. Do not call a repo COMPLETE from this command alone unless the final Tier 4 provider/deploy evidence also passes.
 
-See `TERMINAL_RELEASE_RUNBOOK.md` for the full one-command-at-a-time release sequence.
+The release sequence is a PR, then `land <pr>` (see `RUNBOOK.md`); the June 2026 terminal runbook is history in `docs/archive/history-2026/TERMINAL_RELEASE_RUNBOOK.md`.
 
 ## Temporary `.env.local` wrapper sequence
 
@@ -197,7 +197,7 @@ The final Tier 4 command must fail or block if required deployed/provider proof 
 
 ## Agency Event OS local env restore policy
 
-Real secret values are intentionally not stored inside baseline ZIP artifacts. Use `npm run env:restore` or any `*:with-env` command to restore `.env.local` from an approved local-only private source. See `ENV_RESTORE_POLICY.md`.
+Real secret values are intentionally never committed to the repository. Use `npm run env:restore` or any `*:with-env` command to restore `.env.local` from an approved local-only private source. See `ENV_RESTORE_POLICY.md`.
 
 Supported private source locations:
 

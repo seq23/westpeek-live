@@ -6,7 +6,6 @@ This index classifies documentation without deleting historical evidence. Only r
 
 ## Active authority
 - `ARCHITECTURAL_DECISIONS.md`
-- `ARTIFACT_MANIFEST.md`
 - `AUTHENTICATED_PRODUCT_AUDIT.md`
 - `AUTH_STATE_VAULT.md`
 - `COMPLEXITY_LEDGER.md`
@@ -106,7 +105,6 @@ This index classifies documentation without deleting historical evidence. Only r
 - `ROLLBACK_AND_CONTAINMENT_RUNBOOK.md`
 - `RUNTIME_CONTEXT_TRACE_MATRIX.md`
 - `SECRETS_AND_VAULT_ARCHITECTURE.md`
-- `TERMINAL_RELEASE_RUNBOOK.md`
 - `TESTING_ARCHITECTURE.md`
 - `TESTING_SEQUENCE.md`
 - `TEST_FIXTURE_LIFECYCLE.md`
@@ -152,4 +150,3 @@ This index classifies documentation without deleting historical evidence. Only r
 
 - [`WEST_PEEK_BRAND_SYSTEM.md`](WEST_PEEK_BRAND_SYSTEM.md) — locked cross-suite visual system and Hallmark acceptance criteria.
 
-- `docs/runbooks/PRE_UPDATER_BASELINE_CHECKLIST.md` — canonical pre-updater ZIP completeness, exclusion, integrity, and localhost-before-push checklist.

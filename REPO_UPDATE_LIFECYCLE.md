@@ -1,28 +1,30 @@
 # REPOSITORY UPDATE AND RELEASE LIFECYCLE
 
-**Repo:** `agency-event-os`  
-**Status:** ACTIVE / OPERATOR ENTRY POINT  
-**Purpose:** Give a new chat or operator one authoritative map for applying a baseline ZIP and closing the release lifecycle.
+**Repo:** `westpeek-live` (package name `agency-event-os`)
+**Status:** ACTIVE / OPERATOR ENTRY POINT
+**Purpose:** One map for making a change, shipping it and closing the release lifecycle.
+**Updated:** 31 Oct 2026. Baseline ZIPs and the ZIP updater are retired: every change is a pull
+request, merged and deployed by `land`. The June 2026 ZIP-era version of this page, the terminal
+runbook and the baseline checklist are history in `docs/archive/history-2026/`.
 
 ## 1. Product lane
 
 - Audit model: **public + authenticated + role-specific**.
-- Source of truth: the approved baseline ZIP and repo-local `_repo_update_contract.json`.
-- Terminal mode: one command at a time; Juniper interprets output and chooses the next command.
+- Source of truth: `main` on GitHub and the repo-local `_repo_update_contract.json`.
+- `RUNBOOK.md` is the plan-time page; this file is the release map.
 
-## 2. Update-time lifecycle
+## 2. Change-time lifecycle
 
-1. Confirm repo identity: `pwd`, Git root, repo name, remote, branch, and working tree.
-2. Confirm ZIP identity, root structure, checksum, and snapshot mode.
-3. Run updater preflight and create a rollback checkpoint.
-4. Apply the ZIP with the contract-driven updater.
-5. Restore local environment/auth state where applicable.
-6. Run `npm run release:validate:container`.
-7. Run `npm run release:self-heal`.
-8. Run `npm run release:hallmark`. Hallmark is mandatory before deploy.
-9. Run `npm run release:prepush`.
-10. Commit, push, and verify GitHub Actions/deployment.
-11. Run `npm run release:close-lifecycle`.
+1. Work on a branch (or a worktree) cut from `origin/main`.
+2. Run `npm run release:validate:container` — the same fast gate CI runs (structural validators,
+   typecheck, lint, unit tests on a real D1).
+3. Run `npm run release:self-heal` when a generated file or manifest is behind.
+4. Run `npm run release:hallmark` for UI work. Hallmark is mandatory before a UI change deploys.
+5. Run `npm run release:prepush` (it routes to the container or local lane).
+6. Push and open a PR. `Repository validation` must be green.
+7. `land <pr>` — verifies green, merges, watches `main`; the deploy workflow then applies D1
+   migrations and deploys the Worker from that exact commit.
+8. Run `npm run release:close-lifecycle` when a release needs live proof and cleanup.
 
 ## 3. One-command lifecycle closure
 
@@ -53,35 +55,17 @@ Validate wiring without touching production:
 
 ## 5. Operator lookup
 
+- Plan-time page and merge/deploy steps: `RUNBOOK.md`
 - Machine-readable lifecycle: `_repo_update_contract.json`
 - Validator severity/admission: `_repo_validation_matrix.json`
 - Documentation authority: `DOCUMENTATION_AUTHORITY_INDEX.md`
-- Terminal commands: `TERMINAL_RELEASE_RUNBOOK.md`
+- Suite lifecycle contract: `docs/runbooks/SUITE_RELEASE_LIFECYCLE_CONTRACT.md`
 - This lifecycle entry point: `REPO_UPDATE_LIFECYCLE.md`
-
 
 ## Canonical West Peek brand authority
 
 - [`WEST_PEEK_BRAND_SYSTEM.md`](WEST_PEEK_BRAND_SYSTEM.md) — locked cross-suite visual system and Hallmark acceptance criteria.
 
-## Pre-updater artifact gate
-
-Before any baseline ZIP is applied, follow:
-
-`docs/runbooks/PRE_UPDATER_BASELINE_CHECKLIST.md`
-
-A failed required-file, secret, generated-artifact, ZIP-integrity, or root-layout check blocks updater execution.
-
-
-## LOCKED SUITE LIFECYCLE ADDENDUM — 2026-06-14
-
-See `docs/runbooks/SUITE_RELEASE_LIFECYCLE_CONTRACT.md`. The final artifact must pass `release:prepush` before delivery; the updater is a confirmation gate, not the first defect-discovery environment.
-
-
-## v3.1 baseline naming
-
-Use `npm run package:baseline:v3.1`. The canonical filename is `agency-event-os-main_BASELINE_MM-DD-YY_<sha8>.zip`, accompanied by `<filename>.sha256`. The SHA is the current Git commit when available; artifact-mode packaging falls back to a deterministic source-tree SHA.
-
 ## Cloudflare Worker workflow
 
-`.github/workflows/deploy-cloudflare-worker.yml` is the bounded production deployment lane. It uses concurrency cancellation, a 45-minute job ceiling, bounded dependency/build/deploy/smoke commands, explicit credential gates, and deployable-output checks so a stuck OpenNext or Wrangler process cannot run indefinitely.
+`.github/workflows/deploy-cloudflare-worker.yml` is the bounded production deployment lane. It runs on green `main`, applies D1 migrations before deploying, and uses concurrency cancellation, a 45-minute job ceiling, bounded dependency/build/deploy/smoke commands, explicit credential gates, and deployable-output checks so a stuck OpenNext or Wrangler process cannot run indefinitely.

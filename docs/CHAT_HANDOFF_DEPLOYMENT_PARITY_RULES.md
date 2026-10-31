@@ -8,11 +8,11 @@ Repo validation is not enough.
 
 The deployed product includes Cloudflare Worker runtime behavior, OpenNext output, secrets, runtime persistence, role gates, and front-door demo routes. Any chat working on this repo must validate deployment parity before delivery.
 
-## ZIP delivery rules
+## Pull request rules
 
-Do not deliver a repo ZIP unless the exact snapshot passes:
+Baseline ZIPs are retired (31 Oct 2026). Do not merge a PR unless its exact head passes:
 
-1. clean extraction from ZIP
+1. a branch cut from `origin/main`
 2. npm ci
 3. npm run validate
 4. npm run build
@@ -95,7 +95,7 @@ AGENCY_EVENT_OS_RUNTIME_STORE=file
 ALLOW_FILE_RUNTIME_STORE_IN_PRODUCTION=true
 ```
 
-These are intentional for the current demo Worker so front-door venue/admin smoke routes do not hard-depend on Supabase runtime writes while the production database path is still being stabilized.
+Since 6 Oct 2026 production runs on Cloudflare D1 through the `DB` binding (`services/runtime/runtimeStoreFactory.ts`; `/api/runtime/health` reports `"store":"d1"`). The two keys stay in the secret manifest because the deploy-parity validator pins them; forcing `AGENCY_EVENT_OS_RUNTIME_STORE=file` is for local runs only.
 
 
 ## Live click audit requirement

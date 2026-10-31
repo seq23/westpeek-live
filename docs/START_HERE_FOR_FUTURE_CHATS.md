@@ -11,7 +11,7 @@ West Peek Live is not a simple static site. It has:
 - crew/special guest access cookies
 - demo access codes
 - runtime persistence
-- Supabase runtime tables
+- Cloudflare D1 runtime tables (`migrations-d1/`) and R2 assets
 - LiveKit/Daily/Zoom/Google Meet fallback behavior
 - public/demo/front-door venue routes
 
@@ -64,9 +64,9 @@ Tier 4 uses `env:run` so `.env.local` is restored only for the command and remov
 
 ## Non-negotiable delivery rule
 
-A ZIP is not deploy-ready until:
+A change is a pull request (baseline ZIPs are retired, 31 Oct 2026). It is not ready to merge until:
 
-- fresh-ZIP validation passes
+- `Repository validation` is green on the PR
 - npm run validate passes
 - npm run build passes
 - npm run cf:build passes
@@ -102,7 +102,7 @@ AGENCY_EVENT_OS_RUNTIME_STORE=file
 ALLOW_FILE_RUNTIME_STORE_IN_PRODUCTION=true
 ```
 
-These are intentional for the current demo Worker so front-door venue/admin smoke routes do not hard-depend on Supabase runtime writes while the production database path is still being stabilized.
+Since 6 Oct 2026 production runs on Cloudflare D1 through the `DB` binding (`services/runtime/runtimeStoreFactory.ts`; `/api/runtime/health` reports `"store":"d1"`). The two keys stay in the secret manifest because the deploy-parity validator pins them; forcing `AGENCY_EVENT_OS_RUNTIME_STORE=file` is for local runs only.
 
 
 ## Live click audit requirement

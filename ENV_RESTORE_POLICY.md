@@ -4,9 +4,9 @@ Status: ACTIVE
 
 ## Why this exists
 
-`Agency Event OS` needs real provider credentials for Tier 3 proof, but real secret values and plaintext `.env.local` files must not live in source ZIP artifacts.
+`Agency Event OS` needs real provider credentials for Tier 3 proof, but real secret values and plaintext `.env.local` files must never be committed to the repository.
 
-The repo therefore does **not** require `secrets/agency-event-os.env.local.gpg` to be present inside the baseline ZIP. That old repo-local assumption has been removed.
+The repo therefore does **not** require `secrets/agency-event-os.env.local.gpg` to be present in the repository. That old repo-local assumption has been removed.
 
 ## Approved restore model
 
@@ -52,4 +52,4 @@ If `.env.local` already exists, the wrapper refuses to overwrite or remove it un
 
 ## Completion impact
 
-If no private env source exists locally, Tier 3 is BLOCKED by missing operator secret material. That is a real blocker, not a repo-local ZIP defect.
+If no private env source exists locally, Tier 3 is BLOCKED by missing operator secret material. That is a real blocker, not a repository defect.

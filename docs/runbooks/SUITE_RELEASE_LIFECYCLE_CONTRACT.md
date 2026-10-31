@@ -3,28 +3,28 @@
 **Status:** LOCKED / CANONICAL
 **Applies to:** Network OS, Agency Event OS, Pitch Lab
 
+*Updated 31 Oct 2026: baseline ZIPs are retired. A change is a pull request; `land <pr>` merges and
+deploys it. The ZIP-era steps (package, reopen, apply ZIP) are history in `docs/archive/history-2026/`.*
+
 ## Universal lifecycle
 
-1. Container structural proof.
-2. Package from the true repository root.
-3. Reopen the final ZIP and rerun artifact-safe validation.
-4. Run the exact repository `release:prepush` contract against the final artifact before delivery.
-5. Apply ZIP locally.
-6. Run local real-browser visual proof and preserve evidence externally.
-7. Commit and push only after local gates pass.
-8. Verify GitHub Actions and deployment.
-9. Run `release:postpush`.
-10. Run repo-specific `release:live-proof`.
-11. Run the populated deployed click-audit lanes applicable to the repo.
-12. Run exact fixture cleanup.
-13. Run the repo-specific post-cleanup integrity check.
-14. Generate `release:report`.
+1. Container structural proof (`npm run release:validate:container`, also CI's `Repository validation`).
+2. Run the exact repository `release:prepush` contract on the branch before opening the PR.
+3. Run local real-browser visual proof when the change touches what it covers, and preserve evidence externally.
+4. Push, open the PR, and merge only on green, with `land <pr>`.
+5. Verify `main` and the deploy workflow reach green for the merge commit.
+6. Run `release:postpush`.
+7. Run repo-specific `release:live-proof`.
+8. Run the populated deployed click-audit lanes applicable to the repo.
+9. Run exact fixture cleanup.
+10. Run the repo-specific post-cleanup integrity check.
+11. Generate `release:report`.
 
 ## First-command-green delivery law
 
-The local updater's first validation command must be treated as a confirmation gate, not a discovery environment. Before delivery, the final ZIP must be extracted into a clean workspace, dependencies installed from the lockfile, and the exact repo-owned `release:prepush` command executed. Any failure is repaired in source and the full baseline is rebuilt. Delivery is prohibited until the final reopened artifact has passed every proof layer available in the build environment.
+The PR's CI run is a confirmation gate, not a discovery environment. Before pushing, the exact repo-owned `release:prepush` command runs on the branch with dependencies installed from the lockfile. Any failure is repaired in source before the push.
 
-When the build container cannot execute a real browser, it must run the registered structural/snapshot fallback and label real-browser proof as local-required. It may not claim screenshots or browser geometry. The local updater must then execute the real-browser lane before push.
+When the environment cannot execute a real browser, it must run the registered structural/snapshot fallback and label real-browser proof as local-required. It may not claim screenshots or browser geometry. The post-merge browser suite on `main` then executes the real-browser lane.
 
 ## Evidence preservation
 
@@ -32,7 +32,7 @@ Browser screenshots, traces, geometry maps, and reports must be copied outside t
 
 `~/repo-validation-evidence/<repo>/<run-id>/`
 
-Generated run evidence is not required inside baseline ZIPs.
+Generated run evidence is never committed.
 
 ## Non-substitution law
 
