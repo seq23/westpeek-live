@@ -66,11 +66,16 @@ describe("speed networking room privacy", () => {
     const env = { apiKey: "k", apiSecret: "s" };
 
     it("gives two attendees with the same display name different identities", () => {
-      const first = createLiveKitAccessToken({ env, roomName: "room-1", request: { ...base, displayName: "Ada" } });
-      const second = createLiveKitAccessToken({ env, roomName: "room-1", request: { ...base, displayName: "Ada" } });
+      // "Grace", not "Ada": a, d and a are hex digits, so a random id contained "ada" about one run
+      // in sixty and main went red on it (30 Oct 2026). g, r and c cannot all appear in hex by chance.
+      const first = createLiveKitAccessToken({ env, roomName: "room-1", request: { ...base, displayName: "Grace" } });
+      const second = createLiveKitAccessToken({ env, roomName: "room-1", request: { ...base, displayName: "Grace" } });
       expect(first.participantIdentity).not.toBe(second.participantIdentity);
-      expect(first.participantIdentity).not.toContain("ada");
-      expect(second.participantIdentity).not.toContain("ada");
+      for (const identity of [first.participantIdentity, second.participantIdentity]) {
+        expect(identity.toLowerCase()).not.toContain("grace");
+        // Nothing but an opaque random id: no room for a name to hide in.
+        expect(identity).toMatch(/^anon-[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/);
+      }
     });
 
     it("uses the stable attendee id when one is given, so a rejoin is the same person and not a third body", () => {
