@@ -13,8 +13,9 @@ on:
   push:
     branches: [main]
   schedule:
-    # 07:17 UTC = 02:17 Central, after the day's merges.
-    - cron: "17 7 * * *"
+    # 02:17 Central all year (timezone-pinned), after the day's merges.
+    - cron: "17 2 * * *"  # America/Chicago, all year
+      timezone: America/Chicago
   workflow_dispatch:
 
 permissions:
