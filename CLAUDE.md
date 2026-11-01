@@ -16,3 +16,7 @@ Rules that bite:
   `docs/DOCS_CONSOLIDATION_MAP.md` (active) or `docs/archive/ARCHIVE_INDEX.md` (archived).
 - Screenshots in the manual come from a local production build on demo data, never from production.
 - The repo is public: no client names, no secret values, no access codes in any doc.
+
+## Company brain
+
+Read `~/Brains/west-peek.md` before any work (business facts, priorities, voice, settled decisions). New business facts go to the brain via Boss OS, not into this repo or memory. Repo how-tos stay in `docs/`.
