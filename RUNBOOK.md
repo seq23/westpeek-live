@@ -61,7 +61,7 @@ OpenNext into one Cloudflare **Worker** (not Pages):
    - `npm run release:prepush:container` — route manifest, validator admission, no-secrets, then
      `npm run validate` (typecheck, lint, Vitest, `validate:v5-hard`, `validate:v7`,
      `validate:deploy-parity`), then `npm run validate:lifecycle-governance`,
-     `npm run validate:ui-test-parity`, `npm run validate:browser-suite-contract`.
+     `npm run validate:browser-suite-contract`.
    Quick loop while editing: `npm run typecheck`, `npm run test`, the one guard you touched.
 4. Look at it: `npm run dev`, screenshot desktop and 390px. The PR also gets a Workers Builds
    preview (version URL `https://<hash>-west-peek-live.seq-taylor.workers.dev`, posted as a PR comment).

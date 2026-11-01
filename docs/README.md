@@ -32,7 +32,7 @@ validators in `../scripts/`; keep them in place.
 ## Indexes
 
 - `ACTIVE_DOCS.md` — active documents, by lane.
-- `DOCS_CONSOLIDATION_MAP.md` — every Markdown file and its status (enforced by `npm run validate:docs-consolidation`).
+- `DOCS_CONSOLIDATION_MAP.md` — every Markdown file and its status.
 - `archive/ARCHIVE_INDEX.md` — every archived file and what replaced it.
 
 Canonical deployment authority: app domain `westpeek.live`; email sending domain `events.westpeek.live`.

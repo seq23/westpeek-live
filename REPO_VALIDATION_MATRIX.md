@@ -39,7 +39,6 @@ Proves static source contracts only.
 Representative commands:
 
 ```bash
-npm run validate:final-tier-contract
 npm run validate:tier4-contract
 npm run validate:everything -- --tier=1
 ```

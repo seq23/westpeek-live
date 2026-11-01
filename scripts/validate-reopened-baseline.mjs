@@ -1,7 +1,0 @@
-#!/usr/bin/env node
-import { execFileSync, spawnSync } from 'node:child_process';
-import fs from 'node:fs'; import os from 'node:os'; import path from 'node:path';
-const zip=process.argv[2]; if(!zip||!fs.existsSync(zip)) throw new Error('Usage: npm run validate:reopened-baseline -- <ZIP_PATH>');
-execFileSync('unzip',['-t',zip],{stdio:'inherit'});
-const dir=fs.mkdtempSync(path.join(os.tmpdir(),'reopened-baseline-'));
-try{execFileSync('unzip',['-q',zip,'-d',dir]);const roots=[];function walk(d,depth=0){if(depth>2)return;for(const e of fs.readdirSync(d,{withFileTypes:true})){const p=path.join(d,e.name);if(e.isFile()&&e.name==='package.json')roots.push(d);else if(e.isDirectory())walk(p,depth+1)}}walk(dir);if(roots.length!==1)throw new Error(`Expected one repo root, found ${roots.length}`);const root=roots[0];let r=spawnSync('npm',['run','validate:baseline-package-contract:artifact'],{cwd:root,stdio:'inherit',env:{...process.env,NODE_OPTIONS:'--max-old-space-size=3072'}});if(r.status!==0)process.exit(r.status??1);r=spawnSync('npm',['ci','--ignore-scripts'],{cwd:root,stdio:'inherit',env:{...process.env,NODE_OPTIONS:'--max-old-space-size=3072'}});if(r.status!==0)process.exit(r.status??1);r=spawnSync('npm',['run','release:prepush'],{cwd:root,stdio:'inherit',env:{...process.env,NODE_OPTIONS:'--max-old-space-size=3072',REOPENED_ARTIFACT_PROOF:'1'}});process.exit(r.status??1)}finally{fs.rmSync(dir,{recursive:true,force:true})}

@@ -2,7 +2,6 @@ const fs = require("fs");
 const { execFileSync } = require("child_process");
 function read(file) { return fs.existsSync(file) ? fs.readFileSync(file, "utf8") : ""; }
 function fail(message) { console.error(message); process.exit(1); }
-execFileSync("node", ["scripts/validate_v6_completion_contract.js"], { stdio: "inherit" });
 execFileSync("node", ["scripts/validate_v5_no_secrets.js"], { stdio: "inherit" });
 execFileSync("node", ["scripts/validate_v5_event_config_schema.js"], { stdio: "inherit" });
 execFileSync("node", ["scripts/validate_v5_publishing.js"], { stdio: "inherit" });

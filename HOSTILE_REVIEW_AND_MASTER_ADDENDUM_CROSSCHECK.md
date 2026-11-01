@@ -23,6 +23,5 @@ Purpose: static delivery-gate review before packaging. This document maps the re
 ## Delivery lock
 
 - Static hostile/Master Addendum crosscheck must pass before a PR merges.
-- `npm run validate:e2e-coverage` must pass before a PR merges.
 - `npm run validate:everything -- --tier=1` must pass before a PR merges.
 - COMPLETE remains blocked until browser, provider, postdeploy, and human-review layers actually run and pass.

@@ -33,4 +33,3 @@ Route- and state-complete Hallmark review, brand review, and operational signoff
 - Every mutation requires state change, persistence readback, reload/re-entry, and negative authorization.
 - Completion is forbidden while a required row is UNPROVEN or BLOCKED.
 
-Machine-readable authority: `_canonical_tier_profile.json`.

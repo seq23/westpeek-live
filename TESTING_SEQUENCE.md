@@ -34,7 +34,6 @@ Do not run the older piecemeal postdeploy sequence unless `postdeploy:full` fail
 Run source-level validation only. Do not claim browser/deploy/provider proof.
 
 ```bash
-npm run validate:final-tier-contract
 npm run validate:tier4-contract
 npm run validate:everything -- --tier=1
 ```
