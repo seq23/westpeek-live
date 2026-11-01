@@ -43,6 +43,9 @@ function validate(root) {
       const on = workflow.on || workflow[true] || {};
       check(Array.isArray(on.push?.branches) && on.push.branches.includes("main"), `${WORKFLOW} must run on push to main`);
       check(Array.isArray(on.schedule) && on.schedule.some((entry) => typeof entry.cron === "string" && entry.cron.trim()), `${WORKFLOW} must run on a nightly schedule`);
+      // 1 Nov 2026: the nightly run is Central wall-clock time all year, never a bare UTC hour that
+      // moves with the clock change.
+      check(Array.isArray(on.schedule) && on.schedule.length > 0 && on.schedule.every((entry) => entry.timezone === "America/Chicago"), `${WORKFLOW}: every schedule entry must carry timezone: America/Chicago`);
       check(Object.prototype.hasOwnProperty.call(on, "workflow_dispatch"), `${WORKFLOW} must be dispatchable by hand`);
       check(!Object.prototype.hasOwnProperty.call(on, "pull_request") && !Object.prototype.hasOwnProperty.call(on, "pull_request_target"), `${WORKFLOW} must not run on pull requests: the browser suite is post-merge, never the merge gate`);
       const jobs = Object.values(workflow.jobs || {});
@@ -85,7 +88,9 @@ function selfTest() {
   const edit = (file, from, to) => { const full = path.join(tmp, file); const text = fs.readFileSync(full, "utf8"); if (!from.test(text)) throw new Error(`self-test cannot plant into ${file}: ${from}`); fs.writeFileSync(full, text.replace(from, to)); };
   const cases = [
     ["a pull_request trigger", () => edit(WORKFLOW, /\non:\n/, "\non:\n  pull_request:\n"), /must not run on pull requests/],
-    ["no schedule", () => edit(WORKFLOW, /  schedule:\n.*\n.*\n/, ""), /nightly schedule/],
+    // The whole block: the key and every line indented under it (comment, cron, timezone).
+    ["no schedule", () => edit(WORKFLOW, /  schedule:\n(?:    .*\n)+/, ""), /nightly schedule/],
+    ["a UTC schedule", () => edit(WORKFLOW, /\n\s*timezone: America\/Chicago\n/, "\n"), /timezone: America\/Chicago/],
     ["no timeout", () => edit(WORKFLOW, /    timeout-minutes: \d+\n/, ""), /timeout-minutes between 10 and 120/],
     ["no failure issue", () => edit(WORKFLOW, /gh issue create/, "echo"), /browser-suite-red issue on failure/],
     ["the gate runs playwright", () => edit(MERGE_GATE, /- run: npm ci\n/, "- run: npm ci\n      - run: npx playwright test\n"), /fast merge gate/],
