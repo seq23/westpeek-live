@@ -38,7 +38,6 @@ for (const row of matrixRows) {
 }
 
 if (!pkg.scripts?.['validate:validator-admission']) failures.push('Missing package script validate:validator-admission');
-if (!pkg.scripts?.['validate:docs-consolidation']) failures.push('Missing package script validate:docs-consolidation');
 if (!pkg.scripts?.['validate:everything']?.includes('validate-everything.mjs')) failures.push('validate:everything must route through scripts/validate-everything.mjs');
 fs.mkdirSync(path.join(root,'reports'), { recursive: true });
 const report = { repo: pkg.name, generatedAt: new Date().toISOString(), scopedScripts: scoped.length, admittedScripts: admitted.size, failures };

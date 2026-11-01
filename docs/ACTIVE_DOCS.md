@@ -52,7 +52,7 @@ Purpose: single operator entrypoint that prevents doc sprawl. If a document is n
 ## Operator rule
 - Start here, then use the root ledgers and `docs/runbooks/*` for execution.
 - Archived docs are historical only unless an active validator still references them and the consolidation map says so.
-- New docs require an entry in `docs/DOCS_CONSOLIDATION_MAP.md`; otherwise `npm run validate:docs-consolidation` fails.
+- New docs require an entry in `docs/DOCS_CONSOLIDATION_MAP.md`.
 
 - `REPO_IDENTITY.md` — repo identity anchor for packaging, updater routing, and wrong-repo prevention.
 

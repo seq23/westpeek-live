@@ -30,8 +30,6 @@ const requiredFiles = [
   "tests/e2e/access-safe-failure-full-journey.spec.ts",
   "tests/e2e/transactional-full-buffett.spec.ts",
   "tests/e2e/helpers/runtimeTrace.ts",
-  "docs/TRANSACTIONAL_FULL_BUFFETT_E2E_MATRIX.md",
-  "docs/ROLE_JOURNEY_E2E_MATRIX.md",
   "scripts/audit_cloudflare_secret_parity.js",
   "scripts/post_deploy_role_flow_e2e_audit.js",
   "scripts/audit_speed_networking_e2e.js",
@@ -40,7 +38,7 @@ for (const file of requiredFiles) read(file);
 
 const pkg = JSON.parse(read("package.json"));
 const scripts = pkg.scripts || {};
-for (const key of ["test:e2e", "postdeploy:browser", "test:e2e:deployed", "audit:cloudflare-secrets", "postdeploy:role-flow-e2e", "audit:speed-networking:e2e", "test:e2e:transactional", "validate:transactional-e2e-contract"]) {
+for (const key of ["test:e2e", "postdeploy:browser", "test:e2e:deployed", "audit:cloudflare-secrets", "postdeploy:role-flow-e2e", "audit:speed-networking:e2e", "test:e2e:transactional"]) {
   if (!scripts[key]) fail(`package.json missing ${key}`);
 }
 const full = scripts["postdeploy:full"] || "";

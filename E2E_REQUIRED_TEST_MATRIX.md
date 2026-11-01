@@ -21,7 +21,6 @@ Agency Event OS cannot be called COMPLETE until every HARD FAIL lane below has p
 | Mobile critical journeys | `tests/e2e/mobile-critical-journeys.spec.ts` | PRESENT / NOT RUN | Blocks COMPLETE until run/pass. |
 | Real StreamYard Custom RTMP → LiveKit media proof | `tests/e2e/real-streamyard-livekit-media.spec.ts`; `npm run test:e2e:real-streamyard-livekit` | PRESENT AS LIVE PROOF LANE / UNPROVEN | Blocks production media claim until run with real provider. |
 | Postdeploy role/provider critical lanes | `tests/e2e/postdeploy-role-provider-critical.spec.ts` | PRESENT AS POSTDEPLOY PROOF LANE / UNPROVEN | Blocks deployed-readiness claim until run. |
-| E2E coverage static guard | `npm run validate:e2e-coverage` | PRESENT | Does not prove browser behavior. |
 
 ## Explicit UNPROVEN lanes until evidence exists
 
