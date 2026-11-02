@@ -33,8 +33,10 @@ for **Ship**, the plan to be on for any real show.
 DNS/Email Routing, Stream Live, LiveKit, StreamYard, Daily, Zoom, Google Meet, Resend), one row each,
 worst first against a 90-minute, 200-person show: plan and cost, what is included, the first limit
 that show reaches, and the price past it or "hard wall". The figures and their source URLs and read
-dates live in `serviceCapacityRows()` in `capacityPlans.ts`; a plan nobody recorded (StreamYard, Zoom,
-Google Meet, Resend on 2 Nov 2026) shows **plan not recorded**, never a borrowed number. A unit test
+dates live in `serviceCapacityRows()` in `capacityPlans.ts`; a plan nobody recorded (Google Meet on 2 Nov 2026) shows **plan not recorded**, never a borrowed
+number. StreamYard, Zoom (Basic) and Resend are on their free plans (owner, 2 Nov 2026): before a real
+show, Resend's 100 emails a day, Zoom Basic's 40-minute meetings and StreamYard Free's limits all need
+an upgrade, like LiveKit. A unit test
 fails if the page and the accounts table ever list different services.
 
 ## What each cliff means in practice
