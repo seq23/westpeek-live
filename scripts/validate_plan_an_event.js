@@ -97,11 +97,11 @@ for (const audience of AUDIENCES) {
   examined += 1;
   if (!new RegExp(`slug: "${audience}"`).test(defaults)) failures.push(`No first draft shipped for /how-it-works/${audience}; the page would be blank before its first edit.`);
 }
-// House style, and the crew page's promise that it stands alone.
+// The crew page's promise that it stands alone. (Em dashes are swapped at render time by
+// renderMarkdownLite via lib/presentation/houseStyle.ts, never checked here.)
 const bodies = defaults.split("body: `").slice(1).map((chunk) => chunk.split("`,")[0]);
 if (bodies.length !== AUDIENCES.length) failures.push(`Expected ${AUDIENCES.length} instruction drafts, found ${bodies.length}.`);
 for (const body of bodies) {
-  if (body.includes("—")) failures.push("Instruction body copy must not use em-dashes.");
   if (body.length < 800) failures.push("An instruction draft under 800 characters is a placeholder, not an instruction.");
 }
 const crewDraft = bodies[AUDIENCES.indexOf("crew")] || "";

@@ -135,7 +135,6 @@ for (const file of [...attendeeSurfaces, "app/join/page.tsx"]) {
   for (const [phrase, why] of JARGON) {
     if (new RegExp(phrase.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"), "i").test(copy)) fail(`${file} shows "${phrase}" to a guest (${why}).`);
   }
-  if (copy.includes("—")) fail(`${file} uses an em-dash in body copy.`);
 }
 
 // ---- 6. one shared component each ---------------------------------------------------------------

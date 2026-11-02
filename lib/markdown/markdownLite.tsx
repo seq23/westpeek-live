@@ -1,6 +1,7 @@
 import Link from "next/link";
 import type { ReactNode } from "react";
 import { markdownSlug } from "@/lib/markdown/markdownOutline";
+import { swapEmDashes } from "@/lib/presentation/houseStyle";
 
 /**
  * Markdown-lite: headings, paragraphs, lists, tables, block quotes, fenced code, images, links,
@@ -14,7 +15,7 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
   let match: RegExpExecArray | null;
   let index = 0;
   while ((match = pattern.exec(text))) {
-    if (match.index > lastIndex) nodes.push(text.slice(lastIndex, match.index));
+    if (match.index > lastIndex) nodes.push(swapEmDashes(text.slice(lastIndex, match.index)));
     const token = match[0];
     const key = `${keyPrefix}-${index}`;
     index += 1;
@@ -22,19 +23,19 @@ function inline(text: string, keyPrefix: string): ReactNode[] {
       const alt = token.slice(2, token.indexOf("]"));
       const src = token.slice(token.indexOf("](") + 2, -1);
       // eslint-disable-next-line @next/next/no-img-element
-      nodes.push(<img key={key} src={src} alt={alt} className="my-3 w-full rounded-2xl border border-brand-line" loading="lazy" />);
+      nodes.push(<img key={key} src={src} alt={swapEmDashes(alt)} className="my-3 w-full rounded-2xl border border-brand-line" loading="lazy" />);
     } else if (token.startsWith("[")) {
       const label = token.slice(1, token.indexOf("]"));
       const href = token.slice(token.indexOf("](") + 2, -1);
-      nodes.push(href.startsWith("/") ? <Link key={key} href={href} className="font-bold underline">{label}</Link> : <a key={key} href={href} className="font-bold underline" rel="noreferrer">{label}</a>);
+      nodes.push(href.startsWith("/") ? <Link key={key} href={href} className="font-bold underline">{swapEmDashes(label)}</Link> : <a key={key} href={href} className="font-bold underline" rel="noreferrer">{swapEmDashes(label)}</a>);
     } else if (token.startsWith("`")) {
       nodes.push(<code key={key} className="rounded bg-brand-ash px-1 py-0.5 text-[0.9em]">{token.slice(1, -1)}</code>);
     } else {
-      nodes.push(<strong key={key}>{token.slice(2, -2)}</strong>);
+      nodes.push(<strong key={key}>{swapEmDashes(token.slice(2, -2))}</strong>);
     }
     lastIndex = match.index + token.length;
   }
-  if (lastIndex < text.length) nodes.push(text.slice(lastIndex));
+  if (lastIndex < text.length) nodes.push(swapEmDashes(text.slice(lastIndex)));
   return nodes;
 }
 

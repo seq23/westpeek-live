@@ -2,6 +2,9 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { markdownHeadings, markdownSlug } from "@/lib/markdown/markdownOutline";
 import { buildChanged, typingInProgress } from "@/lib/runtime/buildVersion";
+import { createElement, Fragment } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+import { renderMarkdownLite } from "@/lib/markdown/markdownLite";
 
 /**
  * The manual renderer and the deploy watchdog. The owner kept an Owner Console open across a
@@ -25,6 +28,19 @@ describe("markdown-lite", () => {
     expect(MANUAL_IMAGES.length).toBeGreaterThan(0);
     for (const image of MANUAL_IMAGES) expect(fs.existsSync(`public/manual/images/${image}`)).toBe(true);
     expect(MANUAL_SOURCE).not.toMatch(/\]\(docs\/images/);
+  });
+});
+
+describe("house style at render time", () => {
+  it("a page never shows an em dash, whoever wrote one into the source; code is left as written", () => {
+    const source = "# Go live — now\n\nOpen the room — then wait for **crew — ready** and [the guide — here](/x).\n\n- — a bullet\n\n| a — b |\n|---|\n| c—d |\n\nRun `a—b` exactly.\n\n```\nkeep — this\n```\n";
+    const html = renderToStaticMarkup(createElement(Fragment, null, ...renderMarkdownLite(source)));
+    const outsideCode = html.replace(/<code[^>]*>[\s\S]*?<\/code>/g, "");
+    expect(outsideCode).not.toContain("—");
+    expect(html).toContain("Open the room, then wait for");
+    expect(html).toContain("crew, ready");
+    expect(html).toContain("a—b");
+    expect(html).toContain("keep — this");
   });
 });
 
