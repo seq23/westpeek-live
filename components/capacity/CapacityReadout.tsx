@@ -1,13 +1,16 @@
 import Link from "next/link";
 import { LocalTime } from "@/components/shared/LocalTime";
-import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, D1_PLAN, R2_PLAN, fractionUsed } from "@/lib/capacity/capacityPlans";
+import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, D1_PLAN, R2_PLAN, fractionUsed, serviceCapacityRows, serviceCapacityWorstFirst } from "@/lib/capacity/capacityPlans";
+import { ServiceCapacityList } from "@/components/capacity/ServiceCapacityList";
 import { readCapacityPosition, type CapacityReading } from "@/services/capacity/capacityReadingService";
+import { scheduledEventsTooBigForPlan } from "@/services/capacity/livekitPlanFitService";
+import { LivekitPlanWarnings } from "@/components/capacity/LivekitPlanWarnings";
 
 /**
  * WHERE THE MONTH STANDS AGAINST THE PLANS.
  *
- * Transcode minutes come first and get the bar, because they are the first cliff: 600 a month on
- * Ship, and every minute of StreamYard feed pushed into an ingress burns one.
+ * Transcode minutes come first and get the bar, because they are the first cliff (60 a month on
+ * Build, 600 on Ship), and every minute of StreamYard feed pushed into an ingress burns one.
  *
  * A reading we could not take prints "unknown" and the reason — never a zero. A zero on this page
  * would read as "nothing spent yet", which on the 28th of a busy month is the most expensive lie
@@ -59,17 +62,22 @@ function ReadingRow({ reading, prominent = false }: { reading: CapacityReading; 
 }
 
 async function CapacityBody() {
-  const position = await readCapacityPosition();
+  const [position, fit] = await Promise.all([readCapacityPosition(), scheduledEventsTooBigForPlan()]);
   const [transcode, ...restOfMonth] = position.livekit;
   return (
     <div className="space-y-6" data-testid="capacity-readout">
+      <LivekitPlanWarnings warnings={fit.warnings} />
+      <ServiceCapacityList rows={serviceCapacityWorstFirst(serviceCapacityRows(position.plan.tier))} />
       <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-orange">First cliff</p>
         <h2 className="mt-2 text-2xl font-black tracking-tight">Transcode minutes</h2>
         <p className="mt-1 text-sm text-brand-muted">
           {position.plan.label}
           {position.plan.monthlyUsd !== null ? ` · $${position.plan.monthlyUsd}/mo` : ""}
-          {position.plan.confirmed ? "" : " · these allowances were never read from the dashboard"}
+          {position.plan.confirmed ? "" : " · an allowance marked unknown was never published for this plan"}
+          {position.plan.overageBilled ? "" : " · no overage billing: every allowance is a hard cap"}
+          {position.plan.otherLimits.length ? ` · also ${position.plan.otherLimits.join(", ")}` : ""}
+          {` · source: ${position.plan.source}`}
           . Every minute of StreamYard feed pushed into an ingress burns one, whether five people watch or five hundred.
         </p>
         <ul className="mt-4 space-y-3"><ReadingRow reading={transcode} prominent /></ul>

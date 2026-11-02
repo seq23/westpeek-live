@@ -104,7 +104,7 @@ describe("a real event's workspace shows the owner her own event", () => {
   it("overview: no invented readiness percentage, and no other event's numbers", async () => {
     const html = await markup(EventOverview({ eventId: event.id }));
     expect(html).toContain(event.name);
-    expect(html).toContain("of 7 ready");
+    expect(html).toContain("of 8 ready"); // seven event checks plus the LiveKit plan fit (2 Nov 2026)
     expect(html).not.toMatch(/\d+%/);
     expect(html).toContain("Nobody has entered with a role code yet");
     for (const giveaway of SEED_GIVEAWAYS) expect(html).not.toContain(giveaway);

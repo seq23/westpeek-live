@@ -9,18 +9,33 @@ operator), linked from the operator launchpad under *Plans & capacity*.
 
 ## The plans
 
+**Current LiveKit plan: Build ($0), since 2 Nov 2026** — downgraded from Ship because no event is
+booked before January (events are sponsor-driven). **Switch back to Ship ≥7 days before the first real show** — Build's 60 transcode minutes cannot carry one 90-minute show. `/app/capacity`, the launchpad and the event's readiness list show `LIVEKIT_PLAN_TOO_SMALL` until you do.
+
 | Plan | Cost | Included each month | Past the allowance |
 | --- | --- | --- | --- |
-| **LiveKit Ship** | $50/mo | **600 transcode minutes** · 150,000 WebRTC participant-minutes · 250 GB downstream · 1,000 concurrent connections | $0.02 / transcode minute (video) · $0.0005 / participant-minute · $0.12 / GB · concurrency is a ceiling, not a meter — the 1,001st connection is refused |
+| **LiveKit Build** (current) | $0 | **60 transcode minutes** (shared by stream import and recording) · 5,000 WebRTC participant-minutes · 100 concurrent connections · 2 concurrent imports · 2 concurrent exports · 60 track-egress minutes · downstream bandwidth **not listed (unknown)** | No overage billing listed: every allowance is a hard cap. Read from https://livekit.com/pricing.md on 2 Nov 2026 |
+| **LiveKit Ship** (to switch back to) | $50/mo | **600 transcode minutes** · 150,000 WebRTC participant-minutes · 250 GB downstream · 1,000 concurrent connections | $0.02 / transcode minute (video) · $0.0005 / participant-minute · $0.12 / GB · concurrency is a ceiling, not a meter — the 1,001st connection is refused |
 | **Cloudflare Workers Paid** | $5/mo | 10,000,000 requests · 30 s CPU per invocation · 128 variables per Worker | Requests bill per million; the variable cap is hard. We declare 49 variables and a validator holds the manifests at 60 |
 | **Cloudflare Stream** | pay-as-you-go | nothing included | $5 per 1,000 minutes stored · $1 per 1,000 minutes delivered. Live input `westpeek-fallback` |
 | **Cloudflare D1** (inside Workers Paid) | $0 extra | 5 GB storage · 25 billion rows read · 50 million rows written | Billed per extra million rows / GB; it never sleeps (no auto-pause) and Time Travel restores any minute of the last 30 days |
 | **Cloudflare R2** (inside Workers Paid) | $0 extra | 10 GB-month · 1 M writes · 10 M reads · no egress fees | Billed per extra GB-month / million operations. Bucket `west-peek-live-assets` |
 
-LiveKit **Build** and **Scale** are named in the module but their allowances were never read from
-the dashboard, so they report `unknown` rather than a made-up number. If we ever move off Ship, put
-that plan's figures into `capacityPlans.ts` first — the readout will draw honest bars the moment
-they are real, and refuse to draw a comfortable one until then.
+LiveKit **Scale** is named in the module but its allowances were never read, so it reports
+`unknown` rather than a made-up number; so does Build's downstream bandwidth. `livekitPlanFit()` in
+`capacityPlans.ts` raises `LIVEKIT_PLAN_TOO_SMALL` for any scheduled event whose run time (start to
+end) or registered audience passes a Build hard cap. The worked example and upgrade order below are
+for **Ship**, the plan to be on for any real show.
+
+## Every other service
+
+`/app/capacity` also lists **every service in `docs/SETUP_AND_ACCOUNTS.md`** (GitHub, Workers, D1, R2,
+DNS/Email Routing, Stream Live, LiveKit, StreamYard, Daily, Zoom, Google Meet, Resend), one row each,
+worst first against a 90-minute, 200-person show: plan and cost, what is included, the first limit
+that show reaches, and the price past it or "hard wall". The figures and their source URLs and read
+dates live in `serviceCapacityRows()` in `capacityPlans.ts`; a plan nobody recorded (StreamYard, Zoom,
+Google Meet, Resend on 2 Nov 2026) shows **plan not recorded**, never a borrowed number. A unit test
+fails if the page and the accounts table ever list different services.
 
 ## What each cliff means in practice
 

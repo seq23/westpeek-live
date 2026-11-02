@@ -14,7 +14,7 @@ Checked against the code and live DNS on 31 Oct 2026.
 | Cloudflare R2 | Uploaded files, private | bucket `west-peek-live-assets`, binding `ASSETS_BUCKET` | signed links only |
 | Cloudflare DNS | `westpeek.live` zone (Cloudflare nameservers) | see DNS below | dashboard |
 | Cloudflare Stream Live | Fallback rung 2 | live input `westpeek-fallback` | `CLOUDFLARE_STREAM_*` |
-| LiveKit Cloud (Ship plan) | Main stage, rooms, RTMP ingress from StreamYard | project `westpeek-live`; webhooks: `docs/LIVEKIT_WEBHOOKS.md` | `LIVEKIT_*` |
+| LiveKit Cloud (Build plan, $0, since 2 Nov 2026; back to Ship $50/mo ≥7 days before the first real show — 60 transcode minutes can't carry one 90-minute show) | Main stage, rooms, RTMP ingress from StreamYard | project `westpeek-live`; webhooks: `docs/LIVEKIT_WEBHOOKS.md` | `LIVEKIT_*` |
 | StreamYard | Production switcher, sends RTMP into LiveKit | operator account; **no API**, set up by hand per show (manual §14–15) | `STREAMYARD_PRIMARY_ENABLED`, `STAGE_STREAM_DEFAULT_SOURCE` |
 | Daily | Fallback rung 3 (rooms + tokens) | | `DAILY_*` |
 | Zoom Meeting SDK | Fallback rung 4 | | `ZOOM_MEETING_SDK_KEY`, `ZOOM_MEETING_SDK_SECRET` |
