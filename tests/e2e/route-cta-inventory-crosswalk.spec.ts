@@ -1,4 +1,5 @@
 import { expect, test } from '@playwright/test';
+import { LIVEKIT_DASHBOARD_URL } from '../../lib/capacity/capacityPlans';
 import { expectVisibleRoute, expectLinksStayFirstParty, loginAsOperator, openConsoleSection } from './helpers/roleJourney';
 
 test.setTimeout(180_000);
@@ -30,5 +31,6 @@ test('public, venue, access, and operator CTA crosswalk routes render with first
     const body = await openConsoleSection(page, section);
     await expect(body.getByRole('link', { name: new RegExp(`^${label}`) }).first(), `${label} CTA should exist`).toHaveAttribute('href', href);
   }
-  await expectLinksStayFirstParty(page);
+  // Owner-only console: the plan warning may link to LiveKit's own dashboard, nothing else off-site.
+  await expectLinksStayFirstParty(page, 'a[href]', [new URL(LIVEKIT_DASHBOARD_URL).hostname]);
 });
