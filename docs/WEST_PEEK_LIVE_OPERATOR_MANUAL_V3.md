@@ -8,7 +8,7 @@ Status: ACTIVE. Supersedes `docs/archive/superseded/docs__West_Peek_Live_Day1_Co
 | Worker fallback URL | https://west-peek-live.seq-taylor.workers.dev |
 | Hosting | Cloudflare Workers (**Paid**, $5/mo — 30 s CPU, 10M req/mo, 128 variables) |
 | Database | Cloudflare D1 `west-peek-live` (Workers Paid — see §16) |
-| Video | LiveKit Cloud, project `westpeek-live` (**Ship**, $50/mo) |
+| Video | LiveKit Cloud, project `westpeek-live` (**Build**, $0 since 2 Nov 2026 — switch to **Ship**, $50/mo, ≥7 days before the first real show) |
 | Backup video | Cloudflare Stream Live, input `westpeek-fallback` (pay-as-you-go) |
 | Storage | Cloudflare R2, private bucket `west-peek-live-assets` (signed links only) |
 | Read this inside the app | `westpeek.live/manual` (owner + operator) |
@@ -550,12 +550,15 @@ Both are saved per event and both are optional. If what you type is not a meetin
 
 | Service | Plan | Included | First cliff |
 | --- | --- | --- | --- |
-| LiveKit | **Ship** $50/mo | 600 transcode min, 150,000 participant-min, 1,000 concurrent | **Transcode minutes** — every minute of StreamYard feed burns one |
+| LiveKit (now) | **Build** $0 | 60 transcode min, 5,000 participant-min, 100 concurrent — all hard caps | **Transcode minutes** — one 90-minute show does not fit |
+| LiveKit (for a show) | **Ship** $50/mo | 600 transcode min, 150,000 participant-min, 1,000 concurrent | **Transcode minutes** — every minute of StreamYard feed burns one |
 | Cloudflare Workers | **Paid** $5/mo | 10M requests, 30 s CPU, 128 variables | Variable count (128) |
 | Cloudflare Stream | Pay as you go | — | $5 / 1,000 min stored, $1 / 1,000 min delivered |
 | Cloudflare D1 + R2 | Included in Workers Paid | D1: 5 GB, 25B rows read / 50M written a month. R2: 10 GB-month, no egress fees | None in sight; never pauses |
 
 ![Plans and capacity](images/manual/11-capacity.jpg)
+
+**Switch back to Ship ≥7 days before the first real show** — Build's 60 transcode minutes cannot carry one 90-minute show. `/app/capacity`, the launchpad and the event's readiness list show `LIVEKIT_PLAN_TOO_SMALL` until you do.
 
 **`/app/capacity`** shows the month against these allowances, transcode minutes first because that is the cliff we reach first. Anything the provider will not tell the app reads **unknown** and points at the dashboard that knows — no bar is ever drawn against a number nobody checked.
 

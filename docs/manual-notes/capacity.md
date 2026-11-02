@@ -14,6 +14,8 @@ Nothing on the page is estimated, and no unread number is ever drawn as a zero o
 
 ## What an operator needs to know from it
 
+- **We are on LiveKit Build ($0) since 2 Nov 2026**: 60 transcode minutes, 100 concurrent, no
+  overage. **Switch back to Ship ≥7 days before the first real show** — Build's 60 transcode minutes cannot carry one 90-minute show. `/app/capacity`, the launchpad and the event's readiness list show `LIVEKIT_PLAN_TOO_SMALL` until you do.
 - **600 transcode minutes a month on LiveKit Ship**, and every minute of StreamYard feed pushed
   into an ingress burns one. That is about six and a half 90-minute shows. Going over costs $0.02 a
   minute — a bill, not a wall.

@@ -3,6 +3,9 @@ import { listSpeakerCueDecks, listSpeakerStageStates, listSpeakerTechChecks, lis
 import { listEventAssets } from "@/services/assets/eventAssetService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
+import { livekitPlan, type LiveKitTier } from "@/lib/capacity/capacityPlans";
+import { eventLivekitPlanFit } from "@/services/capacity/livekitPlanFitService";
+import { houseLivekitTier } from "@/services/agencies/houseDefaultsService";
 import type { SpeakerStageStatus, SponsorBoothState } from "@/types/specialGuest";
 
 /**
@@ -113,8 +116,16 @@ export async function listWorkspaceSponsors(eventId: string): Promise<WorkspaceS
  * percentage was computed from the seed arrays: an event created a minute earlier scored 87% ready
  * because every fixture list it filtered came back empty and an empty list scored full marks.
  */
-export function workspaceReadiness(input: { event: RuntimeEventRecord; speakers: WorkspaceSpeaker[]; sponsors: WorkspaceSponsor[]; segments: WorkspaceSegment[]; assetsInReview: number }): WorkspaceReadinessItem[] {
+export function workspaceReadiness(input: { event: RuntimeEventRecord; speakers: WorkspaceSpeaker[]; sponsors: WorkspaceSponsor[]; segments: WorkspaceSegment[]; assetsInReview: number; livekitTier?: LiveKitTier; registrations?: number }): WorkspaceReadinessItem[] {
   const { event, speakers, sponsors, segments, assetsInReview } = input;
+  const planItems: WorkspaceReadinessItem[] = [];
+  if (input.livekitTier) {
+    const audience = input.registrations ?? 0;
+    const fit = eventLivekitPlanFit(event, input.livekitTier, audience);
+    planItems.push(fit
+      ? { id: "livekit-plan", label: "LiveKit plan", ready: false, detail: `${fit.code}: ${fit.message}. ${fit.reasons.join(" ")} Dashboard: ${fit.dashboardUrl}` }
+      : { id: "livekit-plan", label: "LiveKit plan", ready: true, detail: `${livekitPlan(input.livekitTier).label} carries this show with ${audience} registered.` });
+  }
   const techChecked = speakers.filter((speaker) => speaker.techCheck === "ready").length;
   const publishedBooths = sponsors.filter((sponsor) => sponsor.booth?.published).length;
   return [
@@ -125,16 +136,19 @@ export function workspaceReadiness(input: { event: RuntimeEventRecord; speakers:
     { id: "sponsors", label: "Sponsors", ready: sponsors.length === 0 || publishedBooths === sponsors.length, detail: sponsors.length ? `${publishedBooths} of ${sponsors.length} sponsor booths published.` : "No sponsors on this event." },
     { id: "assets", label: "Assets", ready: assetsInReview === 0, detail: assetsInReview ? `${assetsInReview} file${assetsInReview === 1 ? "" : "s"} waiting for review.` : "Nothing waiting for review." },
     { id: "published", label: "Published", ready: event.status !== "draft", detail: `Status is ${event.status.replaceAll("_", " ")}.` },
+    ...planItems,
   ];
 }
 
 export async function getEventWorkspaceReadModel(event: RuntimeEventRecord): Promise<EventWorkspaceReadModel> {
-  const [speakers, sponsors, assets, snapshot] = await Promise.all([
+  const [speakers, sponsors, assets, snapshot, livekitTier] = await Promise.all([
     listWorkspaceSpeakers(event.id),
     listWorkspaceSponsors(event.id),
     listEventAssets(event.id).catch(() => []),
     getRuntimeStore().readSnapshot().catch(() => undefined),
+    houseLivekitTier().catch(() => undefined),
   ]);
+  const registrations = snapshot ? snapshot.registrations.filter((item) => item.eventId === event.id).length : 0;
   const segments = workspaceSegments(event);
   const assetsInReview = assets.filter((asset) => asset.status === "in_review").length;
   return {
@@ -144,8 +158,8 @@ export async function getEventWorkspaceReadModel(event: RuntimeEventRecord): Pro
     segments,
     assetsTotal: assets.length,
     assetsInReview,
-    registrations: snapshot ? snapshot.registrations.filter((item) => item.eventId === event.id).length : 0,
+    registrations,
     analyticsEvents: snapshot ? snapshot.analyticsEvents.filter((item) => item.eventId === event.id).length : 0,
-    readiness: workspaceReadiness({ event, speakers, sponsors, segments, assetsInReview }),
+    readiness: workspaceReadiness({ event, speakers, sponsors, segments, assetsInReview, livekitTier, registrations }),
   };
 }

@@ -7,6 +7,8 @@ import { SafeSection } from "@/components/system/SafeSection";
 import { LocalTime } from "@/components/shared/LocalTime";
 import { displayCode } from "@/lib/access/accessCodes";
 import { listEventRecords } from "@/services/events/eventRepository";
+import { scheduledEventsTooBigForPlan } from "@/services/capacity/livekitPlanFitService";
+import { LivekitPlanWarnings } from "@/components/capacity/LivekitPlanWarnings";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
 /**
@@ -45,7 +47,10 @@ function EventLine({ event }: { event: RuntimeEventRecord }) {
 }
 
 async function LaunchpadBody() {
-  const events = await listEventRecords({ includeSeed: false }).catch(() => [] as RuntimeEventRecord[]);
+  const [events, fit] = await Promise.all([
+    listEventRecords({ includeSeed: false }).catch(() => [] as RuntimeEventRecord[]),
+    scheduledEventsTooBigForPlan().catch(() => ({ warnings: [] })),
+  ]);
   const live = events.filter((event) => LIVE.includes(event.status));
   const upcoming = events.filter((event) => UPCOMING.includes(event.status));
   const drafts = events.filter((event) => event.status === "draft");
@@ -55,6 +60,7 @@ async function LaunchpadBody() {
   return (
     <div className="space-y-4">
       <ConsoleToc items={toc} />
+      <LivekitPlanWarnings warnings={fit.warnings} />
 
       <ConsoleSection storagePrefix="wpl-launchpad" id="your-events" title="Your events" count={events.length} blurb="Everything on the books, newest first. Open one, drop into its crew console, or look at the venue a guest sees." defaultOpen>
         {events.length ? (

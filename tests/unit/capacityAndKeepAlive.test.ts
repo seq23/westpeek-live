@@ -1,7 +1,9 @@
 import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { execSync } from "node:child_process";
-import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, D1_PLAN, LIVEKIT_TIERS, R2_PLAN, fractionUsed, livekitAllowance, livekitPlan, livekitTier } from "@/lib/capacity/capacityPlans";
+import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, D1_PLAN, LIVEKIT_DASHBOARD_URL, LIVEKIT_PLAN_TOO_SMALL, R2_PLAN, fractionUsed, livekitAllowance, livekitPlan, livekitPlanFit, livekitTier } from "@/lib/capacity/capacityPlans";
+import { workspaceReadiness } from "@/services/events/eventWorkspaceReadModel";
+import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 import { pingDatabase, readLiveKitLiveSnapshot } from "@/services/capacity/capacityReadingService";
 import { setD1ForTests } from "@/lib/d1/binding";
 import { createTestD1 } from "./helpers/d1";
@@ -26,8 +28,18 @@ describe("LiveKit plan allowances", () => {
     expect(livekitAllowance("concurrentConnections", "ship").overage.usdPerUnit).toBeNull();
   });
 
+  it("Build carries the allowances livekit.com/pricing listed on 2 Nov 2026, as hard caps; unlisted bandwidth is unknown, not zero", () => {
+    const plan = livekitPlan("build");
+    expect(plan.monthlyUsd).toBe(0);
+    expect(plan.overageBilled).toBe(false);
+    expect(plan.allowances[0].key).toBe("transcodeMinutes");
+    expect(plan.allowances.map((allowance) => allowance.included)).toEqual([60, 5_000, null, 100]);
+    expect(livekitAllowance("downstreamGb", "build").unknownReason.length).toBeGreaterThan(20);
+    for (const allowance of plan.allowances) expect(allowance.overage.usdPerUnit).toBeNull();
+  });
+
   it("a tier nobody read off the dashboard reports unknown, never zero", () => {
-    for (const tier of LIVEKIT_TIERS.filter((name) => name !== "ship")) {
+    for (const tier of ["scale"] as const) {
       const plan = livekitPlan(tier);
       expect(plan.confirmed).toBe(false);
       for (const allowance of plan.allowances) {
@@ -38,11 +50,35 @@ describe("LiveKit plan allowances", () => {
     }
   });
 
-  it("LIVEKIT_TIER selects the plan and an unknown value falls back to Ship rather than to nothing", () => {
+  it("LIVEKIT_TIER selects the plan and an unknown value falls back to Build (the plan since 2 Nov 2026) rather than to nothing", () => {
     expect(livekitTier({ LIVEKIT_TIER: "scale" })).toBe("scale");
     expect(livekitTier({ LIVEKIT_TIER: "  SHIP " })).toBe("ship");
-    expect(livekitTier({ LIVEKIT_TIER: "platinum" })).toBe("ship");
-    expect(livekitTier({})).toBe("ship");
+    expect(livekitTier({ LIVEKIT_TIER: "platinum" })).toBe("build");
+    expect(livekitTier({})).toBe("build");
+  });
+
+  it("LIVEKIT_PLAN_TOO_SMALL fires for a 90-minute, 200-person event on Build and not on Ship", () => {
+    const onBuild = livekitPlanFit({ tier: "build", runMinutes: 90, expectedAudience: 200 });
+    expect(onBuild?.code).toBe(LIVEKIT_PLAN_TOO_SMALL);
+    expect(onBuild?.message).toBe("Switch LiveKit to Ship ($50/mo) before this event");
+    expect(onBuild?.dashboardUrl).toBe(LIVEKIT_DASHBOARD_URL);
+    // Each cliff it passes is named: transcode (90 > 60), concurrency (200 > 100), participant-minutes.
+    expect(onBuild?.reasons).toHaveLength(3);
+    // Negative: the same show on Ship is a bill, not a wall; a small short show fits Build.
+    expect(livekitPlanFit({ tier: "ship", runMinutes: 90, expectedAudience: 200 })).toBeNull();
+    expect(livekitPlanFit({ tier: "build", runMinutes: 30, expectedAudience: 50 })).toBeNull();
+    // Each limit alone is enough.
+    expect(livekitPlanFit({ tier: "build", runMinutes: 61, expectedAudience: 0 })?.reasons).toHaveLength(1);
+    expect(livekitPlanFit({ tier: "build", runMinutes: 10, expectedAudience: 101 })?.reasons).toHaveLength(1);
+
+    // Where the operator reads it: the event's readiness check.
+    const event = { id: "e1", name: "Show", status: "published", startAt: "2027-01-20T18:00:00.000Z", endAt: "2027-01-20T19:30:00.000Z", timezone: "America/Chicago", sessions: [] } as unknown as RuntimeEventRecord;
+    const plan = (tier: "build" | "ship") => workspaceReadiness({ event, speakers: [], sponsors: [], segments: [], assetsInReview: 0, livekitTier: tier, registrations: 200 }).find((item) => item.id === "livekit-plan");
+    expect(plan("build")?.ready).toBe(false);
+    expect(plan("build")?.detail).toContain(LIVEKIT_PLAN_TOO_SMALL);
+    expect(plan("build")?.detail).toContain(LIVEKIT_DASHBOARD_URL);
+    expect(plan("ship")?.ready).toBe(true);
+    expect(plan("ship")?.detail).not.toContain(LIVEKIT_PLAN_TOO_SMALL);
   });
 
   it("the other three plans live here too, so no number is retyped into prose", () => {
@@ -133,5 +169,38 @@ describe("the database reading (D1, no keep-alive)", () => {
     expect(readout).toContain("position.database.map");
     expect(readout).toContain('href="/api/runtime/health"');
     expect(readout).toContain('reading.key === "databaseAnswering"');
+  });
+});
+
+describe("every service on the capacity page", () => {
+  /** The first column of the service table in docs/SETUP_AND_ACCOUNTS.md, up to any " (". */
+  function servicesInSetupDoc(): string[] {
+    const doc = fs.readFileSync("docs/SETUP_AND_ACCOUNTS.md", "utf8");
+    const table = doc.split("## Accounts and services")[1].split("\n## ")[0];
+    return table.split("\n")
+      .filter((line) => line.startsWith("|") && !/^\|\s*-/.test(line) && !/^\|\s*Service\s*\|/.test(line))
+      .map((line) => line.split("|")[1].replace(/\*\*/g, "").split(" (")[0].trim())
+      .filter(Boolean);
+  }
+
+  it("has one row per service in SETUP_AND_ACCOUNTS.md and none that is not there, as rendered", async () => {
+    const { renderToStaticMarkup } = await import("react-dom/server");
+    const { ServiceCapacityList } = await import("@/components/capacity/ServiceCapacityList");
+    const { serviceCapacityRows, serviceCapacityWorstFirst } = await import("@/lib/capacity/capacityPlans");
+    const expected = servicesInSetupDoc();
+    expect(expected.length).toBeGreaterThanOrEqual(12); // hard-fail on an empty or truncated parse
+    const html = renderToStaticMarkup(ServiceCapacityList({ rows: serviceCapacityWorstFirst(serviceCapacityRows("build")) }));
+    const rendered = Array.from(html.matchAll(/data-service="([^"]+)"/g)).map((match) => match[1].replace(/&amp;/g, "&"));
+    expect([...rendered].sort()).toEqual([...expected].sort());
+  });
+
+  it("worst first, and an unread plan says so rather than borrowing a number", async () => {
+    const { serviceCapacityRows, serviceCapacityWorstFirst } = await import("@/lib/capacity/capacityPlans");
+    const rows = serviceCapacityWorstFirst(serviceCapacityRows("build"));
+    expect(rows[0].showLoad).toBeGreaterThanOrEqual(1);
+    for (const row of rows.filter((item) => !item.planRecorded)) expect(row.plan).toContain("plan not recorded");
+    const livekit = rows.find((row) => row.service === "LiveKit Cloud")!;
+    expect(livekit.showLoad!).toBeGreaterThan(1);
+    expect(serviceCapacityRows("ship").find((row) => row.service === "LiveKit Cloud")!.showLoad!).toBeLessThan(1);
   });
 });
