@@ -1,4 +1,5 @@
 const fs = require("fs");
+const { isBelowFloor, minimumLength } = require("./lib/lengthFloor");
 /**
  * Plan an event, end to end (16 Sep 2026).
  *
@@ -99,10 +100,11 @@ for (const audience of AUDIENCES) {
 }
 // The crew page's promise that it stands alone. (Em dashes are swapped at render time by
 // renderMarkdownLite via lib/presentation/houseStyle.ts, never checked here.)
+const INSTRUCTION_TARGET_CHARS = 800;
 const bodies = defaults.split("body: `").slice(1).map((chunk) => chunk.split("`,")[0]);
 if (bodies.length !== AUDIENCES.length) failures.push(`Expected ${AUDIENCES.length} instruction drafts, found ${bodies.length}.`);
 for (const body of bodies) {
-  if (body.length < 800) failures.push("An instruction draft under 800 characters is a placeholder, not an instruction.");
+  if (isBelowFloor(body.length, INSTRUCTION_TARGET_CHARS)) failures.push(`An instruction draft under ${minimumLength(INSTRUCTION_TARGET_CHARS)} characters is a placeholder, not an instruction.`);
 }
 const crewDraft = bodies[AUDIENCES.indexOf("crew")] || "";
 for (const topic of ["production-access/crew", "crew code", "Go live", "stream credentials", "Moderat", "fallback", "Cloudflare Stream", "Move back up", "End the show"]) {
