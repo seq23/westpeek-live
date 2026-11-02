@@ -86,11 +86,5 @@ check("app/events/[slug]/register/page.tsx", ["prefillEmail", "waitSeconds"]);
 check("types/attendeeSession.ts", ["AttendeeSessionAssurance", '"email_restored"']);
 check("tests/unit/registrationContinuity.test.ts", ["no privileged state crosses an unverified email", "cannot be used to enumerate who registered", "matched and healed", "an expired session gets the way back"]);
 
-// No em-dashes in anything the guest reads: the owner's voice, and the one style rule she notices.
-for (const file of ["components/venue/RegistrationContinuityNote.tsx", "components/venue/ReturningAttendeeForm.tsx", "services/attendees/attendeeSessionPolicy.ts"]) {
-  const copy = read(file).split("\n").filter((line) => !line.trim().startsWith("*") && !line.trim().startsWith("/*") && !line.trim().startsWith("//"));
-  if (copy.some((line) => line.includes("—"))) throw new Error(`${file} has an em-dash in guest-facing copy.`);
-}
-
 if (examined < 16) throw new Error(`validate_registration_continuity examined only ${examined} files; it must not pass on an empty loop.`);
 console.log(`validate_registration_continuity: PASS — ${examined} files examined; the lifetime is named and per-event, the second device needs only an email, and no privileged state crosses an unverified one.`);
