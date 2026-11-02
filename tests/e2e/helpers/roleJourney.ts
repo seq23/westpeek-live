@@ -218,7 +218,10 @@ export async function expectRouteMatrix(page: Page, routes: RouteExpectation[]) 
   }
 }
 
-export async function expectLinksStayFirstParty(page: Page, selector = "a[href]") {
+// alsoAllow: the owner-only operator pages may link out to a vendor's own dashboard (e.g. the
+// LIVEKIT_PLAN_TOO_SMALL warning's "Open LiveKit" link, lib/capacity/capacityPlans.ts). Public,
+// venue and access pages never get it.
+export async function expectLinksStayFirstParty(page: Page, selector = "a[href]", alsoAllow: string[] = []) {
   const hrefs = await page.locator(selector).evaluateAll((links) => links.map((link) => (link as HTMLAnchorElement).href));
   for (const href of hrefs) {
     if (href.startsWith("mailto:") || href.startsWith("tel:") || href.startsWith("javascript:")) continue;
@@ -226,6 +229,7 @@ export async function expectLinksStayFirstParty(page: Page, selector = "a[href]"
     const allowedHosts = ["127.0.0.1", "localhost", "westpeek.live", "www.westpeek.live", "productions.joinwestpeek.com"];
     const configuredHost = new URL(baseUrl()).hostname;
     if (!allowedHosts.includes(configuredHost)) allowedHosts.push(configuredHost);
+    allowedHosts.push(...alsoAllow);
     expect(allowedHosts, `first-party or local link expected: ${href}`).toContain(url.hostname);
   }
 }
