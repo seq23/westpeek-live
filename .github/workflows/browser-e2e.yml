@@ -29,7 +29,8 @@ concurrency:
 jobs:
   browser-suite:
     name: Playwright (desktop + mobile, production build)
-    runs-on: ubuntu-latest
+    # Pinned: ubuntu-latest became 26.04 on 5 Nov 2026, which Playwright's browser install refuses.
+    runs-on: ubuntu-24.04
     # About 4x a normal run (the full suite takes ~20 minutes on a runner): a fault detector for a
     # hung run, never a budget to grow into.
     timeout-minutes: 80
