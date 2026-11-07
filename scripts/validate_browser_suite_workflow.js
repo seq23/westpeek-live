@@ -9,6 +9,9 @@
  *    and never on pull_request (the merge gate is "Repository validation", which must stay fast and
  *    must not run Playwright itself);
  *  - its job has a timeout-minutes between 10 and 120 (a fault detector at ~4x a normal run);
+ *  - its job runs on a PINNED Ubuntu image Playwright supports (ubuntu-24.04 / ubuntu-22.04), never
+ *    ubuntu-latest: on 5 Nov 2026 ubuntu-latest became 26.04 and `playwright install` refused it
+ *    ("Playwright does not support chromium on ubuntu26.04-x64"), red two nights on no commit;
  *  - a red run opens or updates the browser-suite-red issue, and a green run closes it;
  *  - playwright.config.ts serves the suite from a production build (`next build` + `next start`),
  *    never `next dev`, on localhost (the host `next start` redirects to), from an emptied runtime
@@ -27,6 +30,8 @@ const YAML = require("yaml");
 const WORKFLOW = ".github/workflows/browser-e2e.yml";
 const MERGE_GATE = ".github/workflows/validation.yml";
 const CONFIG = "playwright.config.ts";
+// Images `npx playwright install --with-deps chromium` supports. Move the pin only after Playwright does.
+const PLAYWRIGHT_RUNNERS = ["ubuntu-24.04", "ubuntu-22.04"];
 
 function validate(root) {
   const failures = [];
@@ -53,6 +58,7 @@ function validate(root) {
       for (const job of jobs) {
         const minutes = job["timeout-minutes"];
         check(Number.isInteger(minutes) && minutes >= 10 && minutes <= 120, `${WORKFLOW}: every job needs timeout-minutes between 10 and 120 (got ${minutes})`);
+        check(PLAYWRIGHT_RUNNERS.includes(job["runs-on"]), `${WORKFLOW}: every job must run on a pinned image Playwright supports (${PLAYWRIGHT_RUNNERS.join(" or ")}), never ubuntu-latest (got ${job["runs-on"]})`);
       }
       const runs = jobs.flatMap((job) => (job.steps || []).map((step) => ({ run: String(step.run || ""), if: String(step.if || "") })));
       check(runs.some((step) => /\bnpx playwright test\b/.test(step.run) && !step.if), `${WORKFLOW} must run \`npx playwright test\` unconditionally`);
@@ -92,6 +98,7 @@ function selfTest() {
     ["no schedule", () => edit(WORKFLOW, /  schedule:\n(?:    .*\n)+/, ""), /nightly schedule/],
     ["a UTC schedule", () => edit(WORKFLOW, /\n\s*timezone: America\/Chicago\n/, "\n"), /timezone: America\/Chicago/],
     ["no timeout", () => edit(WORKFLOW, /    timeout-minutes: \d+\n/, ""), /timeout-minutes between 10 and 120/],
+    ["ubuntu-latest", () => edit(WORKFLOW, /runs-on: ubuntu-24\.04/, "runs-on: ubuntu-latest"), /pinned image Playwright supports/],
     ["no failure issue", () => edit(WORKFLOW, /gh issue create/, "echo"), /browser-suite-red issue on failure/],
     ["the gate runs playwright", () => edit(MERGE_GATE, /- run: npm ci\n/, "- run: npm ci\n      - run: npx playwright test\n"), /fast merge gate/],
     ["next dev in the config", () => edit(CONFIG, /npx next build && npx next start/, "npm run dev --"), /production build/],
