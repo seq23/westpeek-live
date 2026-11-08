@@ -69,6 +69,8 @@ export interface VirtualVenueReplay {
   status: "not_available" | "processing" | "available" | "restricted";
   durationSeconds?: number;
   href: string;
+  /** Where the recording plays. A replay is "available" only when this exists. */
+  playbackUrl?: string;
 }
 
 export interface VirtualVenueModel {

@@ -2,6 +2,7 @@ import { getNetworkingSettings, networkingClosedByEventStatus } from "@/services
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { getPublicStageStreamState } from "@/services/video/stageStreamStateService";
+import { stageIsLive } from "@/lib/video/stageLiveState";
 import type { VenueSurface, VirtualVenueModel } from "@/types/virtualVenue";
 
 /**
@@ -49,9 +50,11 @@ export async function getVenueActivity(model: VirtualVenueModel): Promise<VenueA
    */
   const eventIsOver = networkingClosedByEventStatus(event?.status);
   return {
-    // "Live" is the provider actually carrying a picture, or a session the model says is on now.
-    stageLive: !eventIsOver && (Boolean(stage && /_LIVE$/.test(stage.streamStatus)) || model.liveNow.length > 0),
-    liveSessionTitle: eventIsOver ? undefined : model.liveNow[0]?.title,
+    // "Live" is a provider actually carrying a picture, read through the same rule the player uses.
+    // A session the agenda says is on now is a plan, not a stream: it once lit "Stage LIVE" over a
+    // player reading "Pre-stream" on the demo venue (7 Nov 2026).
+    stageLive: !eventIsOver && stageIsLive(stage),
+    liveSessionTitle: eventIsOver || !stageIsLive(stage) ? undefined : model.liveNow[0]?.title,
     networkingOpen: Boolean(settings?.open) && !eventIsOver,
     networkingQueueSize: eventIsOver ? 0 : entries.filter((entry) => entry.status === "waiting").length,
     networkingMatchMinutes: settings?.matchMinutes || 0,
