@@ -73,10 +73,11 @@ describe("the Nova Summit demo is a full show, and it is always on", () => {
     expect(model.breakouts.length).toBeGreaterThanOrEqual(3);
     expect(model.booths.length).toBeGreaterThanOrEqual(3);
     expect(model.people.length).toBeGreaterThanOrEqual(12);
-    // Only what has finished or is on can be replayed, and something has finished by now.
+    // Only what has finished or is on is listed, and something has finished by now. Nothing is
+    // "available" without a recording to play: the demo has none, so none is offered as watchable.
     expect(model.replays.length).toBeGreaterThanOrEqual(1);
-    expect(model.replays.some((replay) => replay.status === "available")).toBe(true);
-    expect(model.replays.every((replay) => replay.status !== "not_available")).toBe(true);
+    expect(model.replays.every((replay) => replay.status !== "available" || Boolean(replay.playbackUrl))).toBe(true);
+    expect(model.replays.some((replay) => replay.status === "not_available")).toBe(true);
   });
 
   it("keeps the venue clock and the public landing page telling the same story", () => {

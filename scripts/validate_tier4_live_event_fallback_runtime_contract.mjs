@@ -62,7 +62,6 @@ requireText('components/video/StagePlayer.tsx', [
   'ZoomEmbeddedRoom',
   'GoogleMeetFallbackStagePlayer',
   'attendeeOverlayMessage',
-  'Attendee-facing player hides provider changes until final external-room continuity is required',
   'state.activeStreamSource === "GOOGLE_MEET" ? "Final backup room active" : "Live stage connected"',
 ]);
 requireText('components/testing/StreamYardIngressPanel.tsx', [

@@ -14,6 +14,7 @@ import { useStagePlayerPreferences } from "@/components/video/useStagePlayerPref
 import { StageSoundToggle } from "@/components/video/StageSoundToggle";
 import { useAttendeeStageStatus, type AttendeeStageStatusSnapshot } from "@/components/video/useAttendeeStageStatus";
 import { notifyServerBuildId } from "@/components/system/BuildVersionWatchdog";
+import { stageShowsPreStream } from "@/lib/video/stageLiveState";
 
 interface StagePlayerProps {
   initialState: PublicStageStreamState;
@@ -110,7 +111,8 @@ export function StagePlayer({ initialState, eventId, eventName, stageId = "main-
     })();
   }
 
-  const shouldShowPreStream = state.activeStreamSource === "LIVEKIT_INGRESS" && !state.hasEverStarted && (state.streamStatus === "GENERATING_CREDENTIALS" || state.streamStatus === "READY_FOR_STREAMYARD" || state.streamStatus === "STREAMYARD_CONNECTED");
+  // The same rule the venue menu reads (lib/video/stageLiveState), so the two never disagree.
+  const shouldShowPreStream = stageShowsPreStream(state);
   const switching = isPending || /^SWITCHING_TO_/.test(state.streamStatus);
   const player = shouldShowPreStream ? <StagePreStreamCard />
     : state.activeStreamSource === "CLOUDFLARE_STREAM" ? <CloudflareStreamFallbackStagePlayer playbackUrl={state.cloudflareStreamPlaybackUrl} />
@@ -128,12 +130,11 @@ export function StagePlayer({ initialState, eventId, eventName, stageId = "main-
       </div>
       {publishGrant ? <div className="px-3 pt-3"><AttendeeStageControls room={attendeeRoom} grant={publishGrant} /></div> : null}
       <div className="flex items-center justify-between gap-3 rounded-b-3xl border-t border-white/10 bg-slate-950 px-4 py-3 text-xs text-slate-300">
-        <span>{backendViewer ? `Source: ${state.activeStreamSource} · Status: ${state.streamStatus}` : state.activeStreamSource === "GOOGLE_MEET" ? "Final backup room active" : "Live stage connected"}</span>
+        <span>{backendViewer ? `Source: ${state.activeStreamSource} · Status: ${state.streamStatus}` : shouldShowPreStream ? "Starts soon" : state.activeStreamSource === "GOOGLE_MEET" ? "Final backup room active" : "Live stage connected"}</span>
         {/* Secondary. On a phone the OS volume is what people actually use, so this is desktop only
             and the mute icon on the picture is the control that matters. */}
         <input aria-label="Stage player volume" type="range" min="0" max="1" step="0.05" value={preferences.volume} onChange={(e) => setVolume(Number(e.target.value))} className="hidden w-24 sm:block" />
       </div>
-      <p className="sr-only">Attendee-facing player hides provider changes until final external-room continuity is required.</p>
     </div>
   );
 }

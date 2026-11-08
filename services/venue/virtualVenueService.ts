@@ -137,12 +137,15 @@ export function buildVirtualVenueModel(eventId: string): VirtualVenueModel {
 
   // Only what has actually happened can be replayed. What is on now is processing; what has not
   // started yet is not offered at all, rather than listed as available and then disappointing.
+  // A finished session is "available" only with a recording to play: the demo venue once listed
+  // three "Available" cards that opened nothing (7 Nov 2026). No recording source is wired yet,
+  // so a finished session reads "not_available" until one is.
   const replays: VirtualVenueReplay[] = sessions
     .filter((session) => session.status !== "upcoming")
     .map((session) => ({
       id: `replay-${session.id}`,
       title: session.title,
-      status: session.status === "live" ? ("processing" as const) : ("available" as const),
+      status: session.status === "live" ? ("processing" as const) : ("not_available" as const),
       durationSeconds: session.startsAt && session.endsAt ? Math.max(0, Math.round((new Date(session.endsAt).getTime() - new Date(session.startsAt).getTime()) / 1000)) || undefined : undefined,
       href: `/venue/${event.id}/replay#replay-${session.id}`,
     }));
