@@ -359,3 +359,16 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: `?viewAs=` only ever resolved to a STORED guest profile, which exists only after a real human entered a role code and typed their name — so on a fresh event there was nobody to view as — and `/venue/` was not previewable at all. Now a `viewAs` value beginning `preview-` resolves to a synthetic **persona** (`preview-attendee`, `-vip`, `-speaker`, `-sponsor`, `-client`) that renders the event's real configuration and content, and `mirror-<attendeeId>` renders a REAL attendee's own state read-only for a producer. Both write nothing: nine services that write something another human could see call `refusePreviewWrite` at the top and it THROWS, so a stale page, a replayed form or a hand-made request is refused too; four lists a person reads run through `excludePreviewIdentities`, tested against rows planted straight into the store. `/venue/` joined the view-as prefixes without widening `canViewAsGuest` — more surfaces, the same people. **Enter the room ▾** on the Owner Console rows and the event workspace header opens **Myself (host)** with no code and no registration, then the five personas, then a divider and the event's real guests unchanged. Every attendee roster row gained **Diagnose** — which tells never-connected from receiving-nothing (ours) from poor-connection (theirs), naming a source and a read time per field and reading Unknown rather than green when a probe did not run — and **See their view**. LiveKit's RoomService supplies presence and what is on air; it does not expose subscriptions or quality, so the attendee's own stage page reports those on a heartbeat (migration 0037). No IP and no location is shown or stored, and the browser line is a derived label, never the raw user agent.
 - Proof behind it: `tests/unit/previewPersonas.test.ts`. Manual paragraphs for §3, §6 and §7 are in `docs/manual-notes/preview-personas.md` (the manual itself is owned by another branch this week).
+
+## Safety checks restored — 2026-11-10
+
+- Included in: `npm run validate` (through `validate:v5-hard`, `validate:deploy-parity` and `npm run test`)
+- `validate:stage-stream` — LiveKit webhook verifies its signature and fails closed
+- `validate:event-command-bar` — `/api/venue/tick` is 403 to all but owner and operator, never carries a stream key
+- `validate:event-email-real` — the attendee email send is access-guarded; nothing sends on a timer
+- `validate:demo-summit-showcase` — the speed-networking privacy promise is rendered beside Join
+- `validate:env` — no `NEXT_PUBLIC_*` secret, token, password or key
+- `validate:shelf-email-assets-house-defaults` — Settings never renders access codes or master passwords
+- `validate:v5-publishing` — no raw workflow input inside a `run:` block, in any workflow
+- `validate:attendee-roster-contract` — every mutating roster action awaits `requireControl(eventId)`
+- `tests/unit/anonymousViewerToken.test.ts` — an anonymous viewer gets a watch-only Guest token

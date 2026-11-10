@@ -145,6 +145,15 @@ Every validation/test/smoke/audit/deploy package script is assigned below. Advis
 | `tier4:real-provider-journey-probe` | registered_proof_lane | HARD FAIL | Repo owner / release operator | provider_runtime | `validate:everything` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
 | `test:e2e:tier4-real-provider-journeys` | registered_proof_lane | HARD FAIL | Repo owner / release operator | browser_e2e | `validate:everything` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
 | `validate:tier4-hostile-coverage` | registered_proof_lane | HARD FAIL | Repo owner / release operator | governance | `validate:everything` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
+| `validate:stage-stream` | registered_support_lane | HARD FAIL | Repo owner / release operator | static_validation | `validate:everything` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
+| `validate:event-command-bar` | direct_matrix_row | HARD FAIL | Repo owner / release operator | security | `validate` | Safety restore 10 Nov 2026. |
+| `validate:event-email-real` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
+| `validate:demo-summit-showcase` | direct_matrix_row | HARD FAIL | Repo owner / release operator | security | `validate` | Safety restore 10 Nov 2026. |
+| `validate:env` | direct_matrix_row | HARD FAIL | Repo owner / release operator | environment_secrets | `validate:env` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
+| `validate:shelf-email-assets-house-defaults` | direct_matrix_row | HARD FAIL | Repo owner / release operator | security | `validate` | Safety restore 10 Nov 2026. |
+| `validate:v5-publishing` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:everything` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
+| `validate:attendee-roster-contract` | umbrella_or_legacy_chain | HARD FAIL | Repo owner / release operator | static_validation | `validate:deploy-parity` | HARD FAIL blocks only when the script is selected by the active tier/profile; INFO rows are diagnostic. |
+| `test: anonymousViewerToken.test.ts` | unit_test | HARD FAIL | Repo owner / release operator | auth_permissions | `validate` | Safety restore 10 Nov 2026. |
 
 ## Simplification Pass — 2026-06-12
 
