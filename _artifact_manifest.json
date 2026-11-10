@@ -29,7 +29,6 @@
     "lib/auth/requireEventRole.ts",
     "lib/env/safeEnv.ts",
     "scripts/validate_access_boundary_contract.js",
-    "scripts/validate_v7_operator_launchpad.js",
     "scripts/validate_v7_route_safety.js",
     "tests/unit/v5RouteAuthorization.test.ts",
     "_artifact_manifest.json"
@@ -40,9 +39,7 @@
     "npm run test -- --run tests/unit/v5RouteAuthorization.test.ts",
     "npm run validate:v7",
     "npm run validate:deploy-parity",
-    "npm run validate",
-    "npm run validate:tier4-contract",
-    "npm run validate:no-generated-artifacts"
+    "npm run validate"
   ],
   "localHttpProof": [
     "POST /api/production-access/operator with operator password returned 303, set wpl_operator_access, and allowed GET /admin/testing/tier4-manual-event to return 200.",

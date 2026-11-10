@@ -1,14 +1,22 @@
+// No raw workflow input is interpolated inside a `run:` block in any workflow
+// (script injection). Trimmed 10 Nov 2026 to this rule (hostile review of the
+// validator cut) and widened from one workflow to all of them.
 const fs = require("fs");
-const canonical = ".github/workflows/publish-event-config.yml";
-if (!fs.existsSync(canonical)) throw new Error("Missing canonical publish-event-config workflow.");
-if (fs.existsSync(".github/workflows/event-config-publish.yml")) throw new Error("Legacy event-config-publish workflow name must not exist.");
-const workflow = fs.readFileSync(canonical, "utf8");
-const importer = fs.readFileSync("scripts/import_event_config_package.js", "utf8");
-for (const token of ["required: true", "EVENT_CONFIG_PACKAGE", "node scripts/import_event_config_package.js", "git diff --quiet -- data/events data/access public/events", "peter-evans/create-pull-request"]) {
-  if (!workflow.includes(token)) throw new Error(`Workflow missing publish invariant: ${token}`);
+const dir = ".github/workflows";
+const files = fs.readdirSync(dir).filter((f) => /\.ya?ml$/.test(f));
+if (!files.length) { console.error("validate_v5_publishing: examined zero workflows"); process.exit(1); }
+const failures = [];
+for (const f of files) {
+  const lines = fs.readFileSync(`${dir}/${f}`, "utf8").split(/\r?\n/);
+  let inRun = false, indent = 0;
+  lines.forEach((line, i) => {
+    const ind = line.length - line.trimStart().length;
+    const single = line.match(/^\s*(?:-\s*)?run:\s*(?![|>])(.+)$/);
+    if (single && /\$\{\{\s*(inputs|github\.event\.inputs)\./.test(single[1])) failures.push(`${f}:${i + 1} interpolates a workflow input inside run:`);
+    if (/^\s*(?:-\s*)?run:\s*[|>]/.test(line)) { inRun = true; indent = ind; return; }
+    if (inRun && line.trim() && ind <= indent) inRun = false;
+    if (inRun && /\$\{\{\s*(inputs|github\.event\.inputs)\./.test(line)) failures.push(`${f}:${i + 1} interpolates a workflow input inside a run: block; pass it through env:`);
+  });
 }
-if (workflow.includes("${{ inputs.event_config_package }}") && workflow.includes("run: |")) throw new Error("Workflow must not interpolate raw workflow input directly inside multiline shell run blocks.");
-for (const token of ["event-config-packages/", "forbidden", "Secret-like value", "manifest.slug", "copyTree"]) {
-  if (!importer.includes(token)) throw new Error(`Importer missing safety invariant: ${token}`);
-}
-console.log("validate_v5_publishing: PASS");
+if (failures.length) { console.error("validate_v5_publishing: FAIL\n- " + failures.join("\n- ")); process.exit(1); }
+console.log(`validate_v5_publishing: PASS — ${files.length} workflows, no raw input inside run:.`);

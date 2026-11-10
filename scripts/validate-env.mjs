@@ -1,31 +1,20 @@
 #!/usr/bin/env node
+// No NEXT_PUBLIC_* secret, token or key: a NEXT_PUBLIC_ value is compiled into
+// the browser bundle. Trimmed 10 Nov 2026 to this rule (hostile review of the
+// validator cut). Reads every env name the contract and the example files declare.
 import fs from 'node:fs';
 import path from 'node:path';
-
 const root = process.cwd();
-const args = new Set(process.argv.slice(2));
-const strict = args.has('--strict') || process.env.VALIDATE_ENV_STRICT === '1' || process.env.NODE_ENV === 'production';
 const contractPath = path.join(root, '_env_contract.json');
 if (!fs.existsSync(contractPath)) throw new Error('_env_contract.json is required.');
 const contract = JSON.parse(fs.readFileSync(contractPath, 'utf8'));
-const required = contract.requiredRuntimeEnv || [];
-const optional = contract.optionalRuntimeEnv || [];
-const localOnly = contract.localOnlyEnv || [];
-const examples = ['.env.example', '.env.local.example', '.env.preview.example', '.env.production.example'].filter((name) => fs.existsSync(path.join(root, name)));
-const exampleText = examples.map((name) => fs.readFileSync(path.join(root, name), 'utf8')).join('\n');
-const missingFromExamples = required.filter((key) => !new RegExp(`^${key}=`, 'm').test(exampleText));
-const missingRuntime = strict ? required.filter((key) => !process.env[key]) : [];
-const publicSecretLeaks = required.filter((key) => /^NEXT_PUBLIC_/i.test(key) && /SECRET|TOKEN|PRIVATE|SERVICE_ROLE|API_KEY/i.test(key));
-const reportsDir = path.join(root, 'reports');
-fs.mkdirSync(reportsDir, { recursive: true });
-const report = { repo: contract.repo, generatedAt: new Date().toISOString(), strict, examples, requiredCount: required.length, optionalCount: optional.length, localOnlyCount: localOnly.length, missingFromExamples, missingRuntime, publicSecretLeaks, result: 'PASS' };
-if (missingFromExamples.length || missingRuntime.length || publicSecretLeaks.length) report.result = 'FAIL';
-fs.writeFileSync(path.join(reportsDir, 'env-contract-validation.json'), JSON.stringify(report, null, 2) + '\n');
-let md = `# Env Contract Validation — ${contract.repo}\n\nGenerated: ${report.generatedAt}\nStrict: ${strict ? 'YES' : 'NO'}\nResult: ${report.result}\n\n`;
-md += `Examples inspected: ${examples.join(', ') || 'none'}\n\n`;
-md += `Missing from examples: ${missingFromExamples.length ? missingFromExamples.join(', ') : 'none'}\n\n`;
-md += `Missing runtime values in strict mode: ${missingRuntime.length ? missingRuntime.join(', ') : 'none'}\n\n`;
-md += `Public secret boundary violations: ${publicSecretLeaks.length ? publicSecretLeaks.join(', ') : 'none'}\n`;
-fs.writeFileSync(path.join(reportsDir, 'env-contract-validation.md'), md);
-console.log(md);
-process.exit(report.result === 'PASS' ? 0 : 1);
+const names = new Set([...(contract.requiredRuntimeEnv || []), ...(contract.optionalRuntimeEnv || []), ...(contract.localOnlyEnv || [])]);
+for (const name of ['.env.example', '.env.local.example', '.env.preview.example', '.env.production.example']) {
+  const p = path.join(root, name);
+  if (!fs.existsSync(p)) continue;
+  for (const m of fs.readFileSync(p, 'utf8').matchAll(/^([A-Z][A-Z0-9_]*)=/gm)) names.add(m[1]);
+}
+if (!names.size) { console.error('validate-env: examined zero env names'); process.exit(1); }
+const leaks = [...names].filter((key) => /^NEXT_PUBLIC_/i.test(key) && /SECRET|TOKEN|PRIVATE|SERVICE_ROLE|API_KEY|PASSWORD/i.test(key));
+if (leaks.length) { console.error(`validate-env: FAIL — browser-exposed secret name(s): ${leaks.join(', ')}`); process.exit(1); }
+console.log(`validate-env: PASS — ${names.size} env names, none a NEXT_PUBLIC_ secret.`);

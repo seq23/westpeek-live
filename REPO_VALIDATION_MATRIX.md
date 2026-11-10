@@ -39,7 +39,7 @@ Proves static source contracts only.
 Representative commands:
 
 ```bash
-npm run validate:tier4-contract
+npm run validate
 npm run validate:everything -- --tier=1
 ```
 
@@ -145,7 +145,6 @@ Required proof:
 - controlled RTMP proof captures provider/media observation before cleanup
 - controlled Tier 4 calls LiveKit `Ingress/DeleteIngress` for the generated ingress unless explicitly retained
 - evidence records `cleanupStatus`, `cleanupAttempted`, and `cleanupDeleted`
-- `validate:tier4-cleanup-contract` blocks if cleanup is not represented in the harness, evidence template, matrix, and runbook
 
 Provider quota failures such as `resource_exhausted`, `total ingress object limit exceeded`, or `concurrent ingress` are classified as real provider cleanup/quota failures. They are not app smoke failures and they are not allowed to be hidden inside generic Tier 4 failure language.
 
@@ -280,7 +279,6 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 
 ## Production workspace spine — 2026-09-16
 
-- Validators: `npm run validate:event-workspace-spine`, `npm run validate:v7-operator-launchpad`
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: the operator launchpad leads with the operator's real events and one collapsible section per job (Your events / Run a show / Set up an event / People & data / Diagnostics — exactly two cards / Demo & training, collapsed by default), with no two cards sharing an href and no hard-coded demo event id. Every event page is reachable from the left spine exactly once (`lib/navigation/eventWorkspaceSpine.ts` versus a filesystem walk), the pages that existed twice (`/producer`, `/timeline`, `/approvals`) are redirect stubs, readiness dots exist only where the store can really answer (speakers named, sessions planned, published), and the spine is mounted fail-soft in the event layout with a mobile drawer.
 - Note: `validate_v7_operator_launchpad` previously asserted the page's exact card titles and demo links — client-facing prose that froze the launchpad in the shape the owner asked us to fix. It now asserts structure and behaviour.
@@ -288,7 +286,6 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 
 ## Event assets are real files — 2026-09-16
 
-- Validators: `npm run validate:event-assets-contract`, `npm run validate:no-seed-data-on-app-pages`
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: the Assets page rendered seed fixtures and had no upload control at all. Now a file goes from the browser straight to Supabase Storage (private bucket `event-assets`, created on first use) through a short-lived signed URL — the Worker never carries the bytes and the browser never sees a service key — and lands as an `event_assets` row (migration 0031) with who sent it, a review state and a visibility. A speaker's or sponsor's upload from their own portal arrives `in_review`; approval plus "show the client" is what puts a file on the client's side; downloads are signed, expire in ten minutes and are access-checked; removal is archiving. Storage that is not configured says so in words and offers the paste-a-link path.
 - The companion rule: no page under `/app` may render compiled seed fixtures as the owner's real data. The pages still doing so are listed in `KNOWN_SEED_PAGES`, which may only shrink — a new offender fails, and an entry that stops offending must be deleted.
@@ -317,7 +314,6 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 
 ## The manual lives in the app — 2026-09-16
 
-- Validator: `npm run validate:manual-in-app`
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: `docs/WEST_PEEK_LIVE_OPERATOR_MANUAL_V3.md` stays the one source of truth; `scripts/build_manual_assets.js` (run by `npm run build`) copies it into a generated module and its screenshots into `public/manual/images/`, and `/manual` renders it behind the owner+operator gate with a section spine. The validator rebuilds and fails if the generated copy had drifted, fails if the file or the rendered copy carries anything code-shaped or a password value, fails if the manual names a route that is not in `config/deployed-route-manifest.json`, and fails if the Owner Console's codes fold, the operator launchpad or the crew deck stops linking to it.
 - Proof behind it: `tests/e2e/manual-and-gate-exits.spec.ts`.
@@ -336,21 +332,18 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 
 ## Email is real, per event — 2026-09-16
 
-- Validator: `npm run validate:event-email-real`
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: `components/email/EmailWorkflowMatrix.tsx` printed "Live-send capable through Resend." under eleven workflow names and knew nothing. It is gone. Every send now writes an `email_send_logs` row (migration 0032) with the recipient, the provider actually used, the status, the failure reason and the role that pressed Send. `/app/events/{id}/communications` reads that log — per workflow, when it last went out and to whom, or "Never sent for this event" — and offers **Send now** for the workflows a person sends by hand, refusing an empty recipient list in words. `/app/email` is the cross-event record. The banner reads the real environment: with Resend unconfigured the rows say `mock` rather than implying delivery, and nothing in the app mails anyone on a timer.
 - Proof behind it: `tests/unit/eventEmail.test.ts`, `tests/e2e/event-email.spec.ts`.
 
 ## Going live is one action — 2026-09-16
 
-- Validator: `npm run validate:one-click-go-live`
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: it used to take two pages — set the status on `/app/events/{id}/publish`, then hunt for the RTMP credentials on `/crew/events/{id}` under a heading called "Backend showrunner fallback console". One `GoLiveCard` now renders on the Publish page, the Owner Console (event row and Live now) and the crew deck: status → **Go live** (flips the event AND provisions credentials, reusing an existing key) → RTMP URL and masked stream key with **Copy**, **Copy both for StreamYard** and the paste steps → the fallback rung → **End the show**. "Generate / Refresh Primary RTMP" is gone: it is **Get stream credentials** when there is none and **New stream key** (with a confirm) when replacing one. Ending a show still releases the key on purpose, and the empty state says so instead of looking broken. A failed or unconfigured provision is named on the card — `livekitIngressService` now records the missing-credentials case instead of returning silently.
 - Proof behind it: `tests/unit/goLiveOneClick.test.ts`, `tests/e2e/one-click-go-live.spec.ts`. Manual §3.3, §6 and §12 updated in the same PR.
 
 ## One bar, and a health dot that cannot lie — 2026-09-16
 
-- Validator: `npm run validate:event-command-bar`
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: the app was organised around which role a page belongs to, so an owner holding the master key paid a page load for every role boundary they crossed — set the event live on `/app/events/{id}/publish`, fetch the RTMP credentials on `/crew/events/{id}`, open stage requests there too, then type the venue URL to see the room. One `EventCommandBar` now renders at the top of `/app/events/**`, `/crew/events/**`, `/venue/**`, `/speaker/events/**` and `/sponsor/events/**`, mounted in each area's layout so a new page under any of them cannot forget it: event name with a switcher that lands on the **same kind of page** for another event, status pill, the health dot, **Go live / End show**, **Stage requests Open|Closed**, **Enter the room**, **Codes** (masked, with Copy), **Crew deck**, **Manual**. Everything but Crew deck and Manual acts in place and revalidates. It renders for **owner and operator cookies only** — never an attendee who reached `/venue/**`, never plain crew — through one predicate, `commandBarVisibleTo`, that the bar and the combined poll both ask. Every section goes through `SafeSection`, so one dead probe is one named chip and never a blank bar.
 - The health dot is the **worst** of nine signals (feed, stage, webhook, fallback, database, chat, attendees, build, capacity), ranked red > yellow > **unknown** > green so it can only read green when every signal was actually measured. `settle()` forces any signal with no `checkedAt` to grey: a probe that did not run reads unknown, never green. Every signal names its source and its last-checked time; a yellow or red one renders the button to press, not a description of the problem. Capacity and per-attendee connection read grey with the reason, because LiveKit exposes neither to this Worker and an invented percentage is the exact failure the panel exists to prevent. The panel carries the per-show event log, with times in the viewer's zone through `LocalTime`. Everything arrives on ONE combined request to `/api/venue/tick` — nine polls would be nine round trips from every open owner page during a show — and that endpoint 403s anyone the bar is not for and never carries a stream key.
@@ -358,13 +351,24 @@ Tier 4 must attempt every configured rung and fail only after the full ladder tr
 - Proof behind it: `tests/unit/eventCommandBar.test.ts`. Proved negatively on 16 Sep 2026: removing the owner/operator guard, unmounting the bar from the venue layout, letting an unrun probe keep a green level, and reducing stage requests to the bar alone each fail the validator by name; restoring each passes again.
 ## Templates are wired — 2026-09-16
 
-- Validator: `npm run validate:event-templates-real`
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: templates were three compiled fixtures rendered as read-only cards, and `/app/events/new` never offered one. A template is now a row in the runtime store (migration 0033, `runtime_event_templates`) carrying only what the create form reads — format, type, duration, sessions, registration questions. **Use this template** opens New event prefilled and the event it creates gets that duration and that agenda (`sessionsFromTemplate`, laid end to end from the start time); **Save an event as a template** captures a real event's shape; a nameless template is refused in words; and `/app/templates` is off the `KNOWN_SEED_PAGES` shrink-only list.
 - Proof behind it: `tests/unit/eventTemplates.test.ts`, `tests/e2e/event-templates.spec.ts`.
 ## See the room as anybody, and answer "I can't see it" — 2026-09-16
 
-- Validator: `npm run validate:preview-personas`
 - Included in: `npm run validate` through `validate:deploy-parity`
 - Purpose: `?viewAs=` only ever resolved to a STORED guest profile, which exists only after a real human entered a role code and typed their name — so on a fresh event there was nobody to view as — and `/venue/` was not previewable at all. Now a `viewAs` value beginning `preview-` resolves to a synthetic **persona** (`preview-attendee`, `-vip`, `-speaker`, `-sponsor`, `-client`) that renders the event's real configuration and content, and `mirror-<attendeeId>` renders a REAL attendee's own state read-only for a producer. Both write nothing: nine services that write something another human could see call `refusePreviewWrite` at the top and it THROWS, so a stale page, a replayed form or a hand-made request is refused too; four lists a person reads run through `excludePreviewIdentities`, tested against rows planted straight into the store. `/venue/` joined the view-as prefixes without widening `canViewAsGuest` — more surfaces, the same people. **Enter the room ▾** on the Owner Console rows and the event workspace header opens **Myself (host)** with no code and no registration, then the five personas, then a divider and the event's real guests unchanged. Every attendee roster row gained **Diagnose** — which tells never-connected from receiving-nothing (ours) from poor-connection (theirs), naming a source and a read time per field and reading Unknown rather than green when a probe did not run — and **See their view**. LiveKit's RoomService supplies presence and what is on air; it does not expose subscriptions or quality, so the attendee's own stage page reports those on a heartbeat (migration 0037). No IP and no location is shown or stored, and the browser line is a derived label, never the raw user agent.
 - Proof behind it: `tests/unit/previewPersonas.test.ts`. Manual paragraphs for §3, §6 and §7 are in `docs/manual-notes/preview-personas.md` (the manual itself is owned by another branch this week).
+
+## Safety checks restored — 2026-11-10
+
+- Included in: `npm run validate` (through `validate:v5-hard`, `validate:deploy-parity` and `npm run test`)
+- `validate:stage-stream` — LiveKit webhook verifies its signature and fails closed
+- `validate:event-command-bar` — `/api/venue/tick` is 403 to all but owner and operator, never carries a stream key
+- `validate:event-email-real` — the attendee email send is access-guarded; nothing sends on a timer
+- `validate:demo-summit-showcase` — the speed-networking privacy promise is rendered beside Join
+- `validate:env` — no `NEXT_PUBLIC_*` secret, token, password or key
+- `validate:shelf-email-assets-house-defaults` — Settings never renders access codes or master passwords
+- `validate:v5-publishing` — no raw workflow input inside a `run:` block, in any workflow
+- `validate:attendee-roster-contract` — every mutating roster action awaits `requireControl(eventId)`
+- `tests/unit/anonymousViewerToken.test.ts` — an anonymous viewer gets a watch-only Guest token

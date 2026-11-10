@@ -1,8 +1,7 @@
 # RUNBOOK — westpeek-live
 
 Read this before changing anything. It is the file an AI employee (Porter in West Peek OS,
-Danielle in Boss OS) reads at plan time; `scripts/validate_runbook.mjs` fails the build if the
-paths and scripts named here stop existing.
+Danielle in Boss OS) reads at plan time.
 
 ## Where the other docs are
 Accounts, domains/DNS, integrations, secret names and rollback: `docs/SETUP_AND_ACCOUNTS.md`.
@@ -32,8 +31,7 @@ OpenNext into one Cloudflare **Worker** (not Pages):
   clients; they are excluded from the West Peek master network sheet (`excluded_not_ours`,
   Sequoia, 22 Sep 2026). Never wire a form here to the Network OS intake door.
 - **Brand is locked**: `WEST_PEEK_BRAND_SYSTEM.md` is CANONICAL / LOCKED (palette, logo). Every
-  rendered West Peek mark links home through `components/brand/WestPeekHomeLink.tsx`
-  (guard `npm run validate:logo-home-links`; brand `npm run validate:brand`).
+  rendered West Peek mark links home through `components/brand/WestPeekHomeLink.tsx`.
 - **A schema change is a NEW file in `migrations-d1/`** (next number; never edit an applied one —
   D1 records each file once). Then `node scripts/generate_d1_schema_manifest.mjs` and commit the
   regenerated `lib/d1/schema.generated.ts`. The deploy workflow applies it before the Worker ships
@@ -43,9 +41,9 @@ OpenNext into one Cloudflare **Worker** (not Pages):
   (`npm run validate:worker-variable-budget`).
 - **Never a bare `wrangler deploy` or plain `next build` + wrangler** — see
   `docs/runbooks/deployment-cloudflare.md`. Production deploys come from `main` only (below).
-- **Validators are HARD FAIL or nothing** (`docs/ACTIVE_DOCS.md`); every new `validate:*` /
-  `test*` / `audit*` package script needs a row in `_validator_admission_register.json`
-  (`npm run validate:validator-admission`). A new root doc is listed in
+- **Validators are HARD FAIL or nothing** (`docs/ACTIVE_DOCS.md`), and only safety, a break a
+  person would hit, or data integrity (owner bar, 10 Nov 2026); list each in
+  `_validator_admission_register.json`. A new root doc is listed in
   `DOCUMENTATION_AUTHORITY_INDEX.md` and `docs/DOCS_CONSOLIDATION_MAP.md`.
 - **Merge law** (`AGENTS.md`): only on every required check green; never `--admin`, never force-push;
   a blocker that cannot go green on its own is a NAMED STOP.
@@ -58,10 +56,9 @@ OpenNext into one Cloudflare **Worker** (not Pages):
    admission row, and wire it into `npm run validate` (via `validate:v5-hard`).
 3. Run exactly what CI runs:
    - `npm run validate:cloudflare-workflow-contract`
-   - `npm run release:prepush:container` — route manifest, validator admission, no-secrets, then
+   - `npm run release:prepush:container` — route manifest, no-secrets, then
      `npm run validate` (typecheck, lint, Vitest, `validate:v5-hard`, `validate:v7`,
-     `validate:deploy-parity`), then `npm run validate:lifecycle-governance`,
-     `npm run validate:browser-suite-contract`.
+     `validate:deploy-parity`), then `npm run validate:lifecycle-governance`.
    Quick loop while editing: `npm run typecheck`, `npm run test`, the one guard you touched.
 4. Look at it: `npm run dev`, screenshot desktop and 390px. The PR also gets a Workers Builds
    preview (version URL `https://<hash>-west-peek-live.seq-taylor.workers.dev`, posted as a PR comment).
@@ -90,14 +87,11 @@ no longer promotes `main` (its default-branch deploy command is `npx wrangler ve
 | Script | Pins |
 |---|---|
 | `scripts/validate-cloudflare-workflow-contract.mjs` | the deploy workflow runs on green `main`, applies D1 migrations before deploying, and keeps its timeout, gate, OpenNext build and smoke steps; `wrangler.jsonc` still targets the `west-peek-live` Worker |
-| `scripts/validate-validator-admission.mjs` | every validation package script has an admission row |
 | `scripts/validate-deployed-route-manifest.mjs` | every route in `config/deployed-route-manifest.json` is fully described, unique, and covers desktop + mobile |
-| `scripts/validate_logo_home_links.js` | every rendered mark links home through the one home link |
 | `scripts/validate_d1_schema_parity.js` | `migrations-d1/` is SQLite, the generated manifest is current, every table and column the code names exists, migrations apply before deploy (`--self-test` proves six breakages) |
 | `scripts/validate_retired_backend_gone.js` | nothing that runs, builds, deploys or configures the app names the retired hosted backend (`--self-test`) |
 | `scripts/validate_worker_variable_budget.js` | Worker secrets stay under the per-Worker cap with headroom |
 | `scripts/post_deploy_smoke_test.js` | public pages 200 with markers, protected pages redirect, video APIs fail safe |
-| `scripts/validate_runbook.mjs` | this file names real paths and scripts |
 | `scripts/validate_next_version_floor.mjs` | `next` stays at major 16+ (package.json and lockfile) and `--dangerouslyUseUnsupportedNextVersion` never returns to a build path (`--self-test`) |
 
 Prove a new guard negatively before merging: plant the defect, watch it fail, remove it.
