@@ -5,6 +5,7 @@ import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { recordAnalyticsEvent } from "@/services/analytics/analyticsEventService";
 import { getEventConfig } from "@/services/events/eventConfigRepository";
 import { ensureRuntimeEvent } from "@/services/events/runtimeEventOverlay";
+import { findEventRecord } from "@/services/events/eventRepository";
 import { registerOrUpdateAttendee } from "@/services/attendees/attendeeRegistrationService";
 import { createAttendeeSession } from "@/services/attendees/attendeeSessionService";
 import { upsertAttendeeAgendaIntent } from "@/services/attendees/attendeeAgendaIntentService";
@@ -73,6 +74,19 @@ export async function submitEventRegistration(formData: FormData) {
     interestingFact,
     createdAt,
   });
+
+  // A new sign-up can push the audience past a plan (Resend Free's 100 a day, LiveKit Build's 100
+  // connections): log the NOTICE once, on the sign-up that crossed it.
+  if (result.duplicateBehavior === "created") {
+    await import("@/services/capacity/livekitPlanFitService")
+      .then(async (mod) => {
+        const record = await findEventRecord(eventId);
+        if (!record) return;
+        const audience = await mod.registeredAudience(eventId);
+        await mod.noticeEventPlanFit(record, { previousAudience: Math.max(0, audience - 1) });
+      })
+      .catch(() => undefined);
+  }
 
   await recordAnalyticsEvent({
     eventId,

@@ -151,6 +151,92 @@ export function livekitPlanFit(input: { tier: LiveKitTier; runMinutes: number; e
   return { code: LIVEKIT_PLAN_TOO_SMALL, message: `Switch LiveKit to Ship ($${ship.monthlyUsd}/mo) before this event`, dashboardUrl: LIVEKIT_DASHBOARD_URL, reasons };
 }
 
+// ---------------------------------------------------------------------------
+// THE PLANS EACH SHOW-DAY SERVICE IS ON, and whether a given event fits them.
+// LiveKit's tier is a setting (Settings → house defaults, or LIVEKIT_TIER). The other three have no
+// API that reports a plan, so the owner's answer is recorded here (2 Nov 2026: all free). After an
+// upgrade, change the one value below; `null` means nobody recorded it and the check says so.
+// ---------------------------------------------------------------------------
+
+export type ZoomPlan = "basic" | "pro";
+export type ResendPlan = "free" | "pro";
+export type StreamyardPlan = "free" | "essential" | "core" | "advanced";
+
+export interface RecordedPlans {
+  livekit: LiveKitTier;
+  zoom: ZoomPlan | null;
+  resend: ResendPlan | null;
+  streamyard: StreamyardPlan | null;
+}
+
+/** The owner's answer on 2 Nov 2026. Read by the plan check and by the /app/capacity rows. */
+export const RECORDED_SERVICE_PLANS: Omit<RecordedPlans, "livekit"> = { zoom: "basic", resend: "free", streamyard: "free" };
+
+const ZOOM_MEETING_MINUTES: Record<ZoomPlan, number> = { basic: 40, pro: 30 * 60 };
+const RESEND_EMAILS_PER_DAY: Record<ResendPlan, number | null> = { free: 100, pro: null };
+const PLAN_LABEL = {
+  zoom: { basic: "Zoom Basic (free)", pro: "Zoom Pro" },
+  resend: { free: "Resend Free", pro: "Resend Pro" },
+  streamyard: { free: "StreamYard Free", essential: "StreamYard Essential", core: "StreamYard Core", advanced: "StreamYard Advanced" },
+} as const;
+
+export type PlanService = "LiveKit" | "Zoom" | "Resend" | "StreamYard";
+
+export interface PlanShortfall {
+  service: PlanService;
+  /** The plan we are on, or "plan not recorded". */
+  current: string;
+  /** "Ship", "Pro", "a paid plan". */
+  upgradeTo: string;
+  planRecorded: boolean;
+  /** Why it falls short, in words. Never empty. */
+  reasons: string[];
+}
+
+export interface PlanFitShow {
+  runMinutes: number;
+  /** People registered for it. */
+  audience: number;
+  /** A Room is LiveKit WebRTC only; StreamYard feeds the stage, so only a stage show needs it. */
+  format?: "stage" | "room";
+}
+
+function notRecorded(service: PlanService, upgradeTo: string): PlanShortfall {
+  return { service, current: "plan not recorded", upgradeTo, planRecorded: false, reasons: [`The ${service} plan is not recorded, so nobody can say it carries this show.`] };
+}
+
+/**
+ * THE ONE PLAN CHECK. Every service whose recorded plan cannot carry this show, in the order the
+ * banner names them. Empty when everything fits. Figures are the ones serviceCapacityRows() shows.
+ *
+ * Zoom and Google Meet are fallback rungs capped at 100 participants on every plan we would buy, so
+ * the participant cap is shown on /app/capacity but is not an upgrade trigger; Zoom Basic's
+ * 40-minute meeting is, because Pro removes it. Google Meet is a static link: not checked.
+ */
+export function eventPlanShortfalls(show: PlanFitShow, plans: RecordedPlans): PlanShortfall[] {
+  const runMinutes = Math.max(0, Math.round(show.runMinutes));
+  const audience = Math.max(0, Math.round(show.audience));
+  const out: PlanShortfall[] = [];
+
+  const livekit = livekitPlanFit({ tier: plans.livekit, runMinutes, expectedAudience: audience });
+  if (livekit) out.push({ service: "LiveKit", current: livekitPlan(plans.livekit).label, upgradeTo: "Ship", planRecorded: true, reasons: livekit.reasons });
+
+  if (plans.zoom === null) out.push(notRecorded("Zoom", "Pro"));
+  else if (runMinutes > ZOOM_MEETING_MINUTES[plans.zoom]) out.push({ service: "Zoom", current: PLAN_LABEL.zoom[plans.zoom], upgradeTo: "Pro", planRecorded: true, reasons: [`A ${runMinutes}-minute show; a ${PLAN_LABEL.zoom[plans.zoom]} meeting ends at ${ZOOM_MEETING_MINUTES[plans.zoom]} minutes.`] });
+
+  if (plans.resend === null) out.push(notRecorded("Resend", "Pro"));
+  else {
+    const perDay = RESEND_EMAILS_PER_DAY[plans.resend];
+    if (perDay !== null && audience > perDay) out.push({ service: "Resend", current: PLAN_LABEL.resend[plans.resend], upgradeTo: "Pro", planRecorded: true, reasons: [`A show-day reminder to ${audience} registered people; ${PLAN_LABEL.resend[plans.resend]} sends ${perDay} emails a day.`] });
+  }
+
+  if (show.format !== "room") {
+    if (plans.streamyard === null) out.push(notRecorded("StreamYard", "a paid plan"));
+    else if (plans.streamyard === "free") out.push({ service: "StreamYard", current: PLAN_LABEL.streamyard.free, upgradeTo: "a paid plan", planRecorded: true, reasons: ["StreamYard Free puts its branding on the stage and has streaming limits its pricing page does not state; a real show needs Essential or Core."] });
+  }
+  return out;
+}
+
 /**
  * Cloudflare Workers Paid, $5/mo. The 128-variable cap is the plan's; the repo holds itself to 60
  * (scripts/validate_worker_variable_budget.js), which is the number that actually bites first.
@@ -309,7 +395,7 @@ export function serviceCapacityRows(tier: LiveKitTier = livekitTier(), show: { r
     },
     livekitRow(tier, show),
     {
-      service: "StreamYard", role: "Production switcher, sends RTMP into LiveKit", plan: "Free (owner, 2 Nov 2026)", planRecorded: true, cost: "$0",
+      service: "StreamYard", role: "Production switcher, sends RTMP into LiveKit", plan: RECORDED_SERVICE_PLANS.streamyard ? `${PLAN_LABEL.streamyard[RECORDED_SERVICE_PLANS.streamyard]} (owner, 2 Nov 2026)` : "plan not recorded", planRecorded: RECORDED_SERVICE_PLANS.streamyard !== null, cost: "$0",
       included: "By plan: Free 6 on-screen · Essential $18.99/mo 2 destinations, 1080p · Core $44.99/mo 3 destinations, 10 on-screen · Advanced $88.99/mo 8 destinations, 10 on-screen + 15 backstage",
       firstLimit: "Free: 6 on-screen, StreamYard branding, and \"streaming limits\" the pricing page does not quantify; upgrade to Essential or Core before a real show", showLoad: null,
       pastIt: "hard wall (a plan feature, not a meter)",
@@ -323,7 +409,7 @@ export function serviceCapacityRows(tier: LiveKitTier = livekitTier(), show: { r
       source: `https://www.daily.co/pricing/video-sdk/ (${READ}); domain config via Daily API (${READ})`,
     },
     {
-      service: "Zoom Meeting SDK", role: "Fallback rung 4", plan: "Basic, free (owner, 2 Nov 2026; the SDK follows the host's Zoom licence)", planRecorded: true, cost: "$0",
+      service: "Zoom Meeting SDK", role: "Fallback rung 4", plan: RECORDED_SERVICE_PLANS.zoom ? `${PLAN_LABEL.zoom[RECORDED_SERVICE_PLANS.zoom]} (owner, 2 Nov 2026; the SDK follows the host's Zoom licence)` : "plan not recorded", planRecorded: RECORDED_SERVICE_PLANS.zoom !== null, cost: "$0",
       included: "Basic: 100 participants, 40 minutes · Pro $16.99/mo: 100 participants, 30 hours",
       firstLimit: `Participants: ${show.audience} of 100, and a Basic meeting ends at 40 minutes`, showLoad: Math.max(show.audience / 100, show.runMinutes / 40),
       pastIt: "hard wall",
@@ -337,7 +423,7 @@ export function serviceCapacityRows(tier: LiveKitTier = livekitTier(), show: { r
       source: `https://support.google.com/meet/answer/7317473 (${READ})`,
     },
     {
-      service: "Resend", role: "All outgoing email", plan: "Free (owner, 2 Nov 2026)", planRecorded: true, cost: "$0",
+      service: "Resend", role: "All outgoing email", plan: RECORDED_SERVICE_PLANS.resend ? `${PLAN_LABEL.resend[RECORDED_SERVICE_PLANS.resend]} (owner, 2 Nov 2026)` : "plan not recorded", planRecorded: RECORDED_SERVICE_PLANS.resend !== null, cost: "$0",
       included: "Free: 3,000 a month, 100 a day · Pro $20/mo: 50,000 a month, no daily limit",
       firstLimit: `Emails a day: a show-day reminder to ${show.audience} people against 100 a day`, showLoad: show.audience / 100,
       pastIt: "Free: hard wall · Pro: $0.90 per extra 1,000",

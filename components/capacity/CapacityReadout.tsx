@@ -4,7 +4,7 @@ import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, D1_PLAN, R2_PLAN, frac
 import { ServiceCapacityList } from "@/components/capacity/ServiceCapacityList";
 import { readCapacityPosition, type CapacityReading } from "@/services/capacity/capacityReadingService";
 import { scheduledEventsTooBigForPlan } from "@/services/capacity/livekitPlanFitService";
-import { LivekitPlanWarnings } from "@/components/capacity/LivekitPlanWarnings";
+import { PlanShortfallList } from "@/components/capacity/PlanShortfallList";
 
 /**
  * WHERE THE MONTH STANDS AGAINST THE PLANS.
@@ -66,7 +66,7 @@ async function CapacityBody() {
   const [transcode, ...restOfMonth] = position.livekit;
   return (
     <div className="space-y-6" data-testid="capacity-readout">
-      <LivekitPlanWarnings warnings={fit.warnings} />
+      <PlanShortfallList warnings={fit.warnings} />
       <ServiceCapacityList rows={serviceCapacityWorstFirst(serviceCapacityRows(position.plan.tier))} />
       <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-orange">First cliff</p>

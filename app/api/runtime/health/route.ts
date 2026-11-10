@@ -2,6 +2,7 @@ import { NextResponse } from "next/server";
 import { getRuntimeSchemaStatus, listSeedEventRecords } from "@/services/events/eventRepository";
 import { probeCrewPageReads } from "@/services/events/crewPageReadsProbe";
 import { probeMigrationCoverage } from "@/services/runtime/migrationCoverageProbe";
+import { planFitHealth } from "@/services/capacity/livekitPlanFitService";
 
 export const dynamic = "force-dynamic";
 
@@ -18,6 +19,10 @@ export const dynamic = "force-dynamic";
  * every table and every column migrations-d1/ declares — checked against the live
  * D1 database, each missing object reported with the migration file that supplies
  * it. The status code is 503 whenever `ok` is false.
+ *
+ * `planFit` is a NOTICE, not a failure: how many events still to run will not fit the plans we are
+ * on and which services fall short (the same check as the red banner). It never changes `ok` or the
+ * status code, and it names no event (this route is public).
  */
 export async function GET() {
   let schema;
@@ -31,11 +36,13 @@ export async function GET() {
   // A thrown probe is a failed probe, never an absent one: `ok: false` so the smoke test still stops.
   const migrationCoverage = await probeMigrationCoverage().catch((error) => ({ ok: false, checked: 0, missing: [], detail: error instanceof Error ? error.message : String(error) }));
   const ok = schema.ok && crewPageReads.ok && migrationCoverage.ok;
+  const planFit = await planFitHealth().catch((error) => ({ ok: false, eventsNeedingUpgrade: null, services: [], notice: `plan check did not run: ${error instanceof Error ? error.message : String(error)}` }));
   return NextResponse.json(
     {
       ok,
       crewPageReads,
       migrationCoverage,
+      planFit,
       store: schema.store,
       runtimeEvents: { ready: schema.ok, missingTables: schema.missingTables, migrationFile: schema.migrationFile, detail: schema.detail },
       seedEvents,

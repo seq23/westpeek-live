@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import { execSync } from "node:child_process";
 import { CLOUDFLARE_STREAM_PLAN, CLOUDFLARE_WORKERS_PLAN, D1_PLAN, LIVEKIT_DASHBOARD_URL, LIVEKIT_PLAN_TOO_SMALL, R2_PLAN, fractionUsed, livekitAllowance, livekitPlan, livekitPlanFit, livekitTier } from "@/lib/capacity/capacityPlans";
 import { workspaceReadiness } from "@/services/events/eventWorkspaceReadModel";
+import type { RecordedPlans } from "@/lib/capacity/capacityPlans";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 import { pingDatabase, readLiveKitLiveSnapshot } from "@/services/capacity/capacityReadingService";
 import { setD1ForTests } from "@/lib/d1/binding";
@@ -71,14 +72,18 @@ describe("LiveKit plan allowances", () => {
     expect(livekitPlanFit({ tier: "build", runMinutes: 61, expectedAudience: 0 })?.reasons).toHaveLength(1);
     expect(livekitPlanFit({ tier: "build", runMinutes: 10, expectedAudience: 101 })?.reasons).toHaveLength(1);
 
-    // Where the operator reads it: the event's readiness check.
-    const event = { id: "e1", name: "Show", status: "published", startAt: "2027-01-20T18:00:00.000Z", endAt: "2027-01-20T19:30:00.000Z", timezone: "America/Chicago", sessions: [] } as unknown as RuntimeEventRecord;
-    const plan = (tier: "build" | "ship") => workspaceReadiness({ event, speakers: [], sponsors: [], segments: [], assetsInReview: 0, livekitTier: tier, registrations: 200 }).find((item) => item.id === "livekit-plan");
-    expect(plan("build")?.ready).toBe(false);
-    expect(plan("build")?.detail).toContain(LIVEKIT_PLAN_TOO_SMALL);
-    expect(plan("build")?.detail).toContain(LIVEKIT_DASHBOARD_URL);
-    expect(plan("ship")?.ready).toBe(true);
-    expect(plan("ship")?.detail).not.toContain(LIVEKIT_PLAN_TOO_SMALL);
+    // Where the operator reads it: the event's readiness check, which runs the same all-service check.
+    const event = { id: "e1", name: "Show", status: "published", format: "stage", startAt: "2027-01-20T18:00:00.000Z", endAt: "2027-01-20T19:30:00.000Z", timezone: "America/Chicago", sessions: [] } as unknown as RuntimeEventRecord;
+    const free: RecordedPlans = { livekit: "build", zoom: "basic", resend: "free", streamyard: "free" };
+    const paid: RecordedPlans = { livekit: "ship", zoom: "pro", resend: "pro", streamyard: "core" };
+    const plan = (plans: RecordedPlans) => workspaceReadiness({ event, speakers: [], sponsors: [], segments: [], assetsInReview: 0, plans, registrations: 200 }).find((item) => item.id === "service-plans");
+    expect(plan(free)?.ready).toBe(false);
+    for (const service of ["LiveKit", "Zoom", "Resend", "StreamYard"]) expect(plan(free)?.detail).toContain(service);
+    expect(plan(free)?.detail).toContain(LIVEKIT_DASHBOARD_URL);
+    // No code on screen: the readiness line is read by people.
+    expect(plan(free)?.detail).not.toContain(LIVEKIT_PLAN_TOO_SMALL);
+    expect(plan(paid)?.ready).toBe(true);
+    expect(plan({ ...paid, livekit: "build" })?.detail).not.toContain("Zoom");
   });
 
   it("the other three plans live here too, so no number is retyped into prose", () => {

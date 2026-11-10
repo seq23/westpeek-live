@@ -10,7 +10,7 @@ operator), linked from the operator launchpad under *Plans & capacity*.
 ## The plans
 
 **Current LiveKit plan: Build ($0), since 2 Nov 2026** — downgraded from Ship because no event is
-booked before January (events are sponsor-driven). **Switch back to Ship ≥7 days before the first real show** — Build's 60 transcode minutes cannot carry one 90-minute show. `/app/capacity`, the launchpad and the event's readiness list show `LIVEKIT_PLAN_TOO_SMALL` until you do.
+booked before January (events are sponsor-driven). **Switch back to Ship ≥7 days before the first real show** — Build's 60 transcode minutes cannot carry one 90-minute show. The product says so itself (owner, 10 Nov 2026: a trigger in the product, not a to-do list): see *The red banner* below.
 
 | Plan | Cost | Included each month | Past the allowance |
 | --- | --- | --- | --- |
@@ -38,6 +38,44 @@ number. StreamYard, Zoom (Basic) and Resend are on their free plans (owner, 2 No
 show, Resend's 100 emails a day, Zoom Basic's 40-minute meetings and StreamYard Free's limits all need
 an upgrade, like LiveKit. A unit test
 fails if the page and the accounts table ever list different services.
+
+## The red banner: an event the plans cannot carry
+
+`eventPlanShortfalls()` in `capacityPlans.ts` is the one check. For each event still to run (not
+ended, replayed or archived, end time not passed) it takes the run time (start to end) and the
+registered audience (active attendee profiles, one per person) and names every service whose
+recorded plan cannot carry it:
+
+| Service | Falls short when | Upgrade to |
+| --- | --- | --- |
+| LiveKit | Build: run time > 60 transcode minutes, audience > 100 connections, or audience × minutes > 5,000 (`livekitPlanFit()`) | Ship |
+| Zoom (fallback rung 4) | Basic: run time > 40 minutes (Pro: 30 hours). The 100-participant cap is on every plan, so it is shown on `/app/capacity` but is not an upgrade trigger | Pro |
+| Resend | Free: registered audience > 100 (one show-day reminder each, 100 a day) | Pro |
+| StreamYard | Free, on any stage show (branding and unstated streaming limits). A Room has no StreamYard feed | a paid plan (Essential or Core) |
+
+LiveKit's tier is the Settings value (or `LIVEKIT_TIER`). Zoom, Resend and StreamYard have no API
+that reports a plan, so the owner's answer is recorded in `RECORDED_SERVICE_PLANS` (2 Nov 2026: all
+free); after an upgrade, change that one value. `null` there means **plan not recorded**, which the
+banner names rather than assuming the plan fits. Google Meet is a static link and is not checked.
+
+Where it shows:
+- **A thin red line at the top of every operator screen** — the `/app` shell (every `/app` page,
+  event pages included), the crew console (where the show goes live) and the operator launchpad —
+  one line naming the soonest event, its date in Central time, the days left and only the services
+  that fall short, e.g. "⚠ Upgrade before Founders Night (Sat 9 Jan, in 60 days): LiveKit to Ship,
+  Zoom to Pro, Resend to Pro, StreamYard to a paid plan. Open ›" (several events: "⚠ 2 events need
+  upgrades first, the next is …"). "Open ›" goes to `/app/capacity`. The code `PLAN_TOO_SMALL` is a
+  `data-code` attribute only. Nothing renders when every event fits.
+- **`/app/capacity`** lists, under the banner, each event, each service and why, and how to clear it.
+- **The event's readiness list** has a *Service plans* line from the same check.
+- **The server** logs one line when an event is created, has its status set, is re-timed or restored,
+  or gains the registration that pushes a new service over:
+  `NOTICE [PLAN_TOO_SMALL] event=<id> services=<list> starts=<iso>` (`noticeEventPlanFit()`). The
+  page that action lands on is server-rendered with the banner.
+- **`/api/runtime/health`** carries `planFit: { ok, eventsNeedingUpgrade, services, notice }`. It is a
+  notice: it never changes `ok` or the status code, and it names no event (the route is public).
+
+Tests: `tests/unit/planUpgradeBanner.test.ts`.
 
 ## What each cliff means in practice
 

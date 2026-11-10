@@ -3,6 +3,7 @@ import { Sidebar } from "@/components/navigation/Sidebar";
 import { Topbar } from "@/components/navigation/Topbar";
 import { BuildVersionPoller } from "@/components/system/BuildVersionPoller";
 import { BuildVersionWatchdog } from "@/components/system/BuildVersionWatchdog";
+import { PlanUpgradeBanner } from "@/components/capacity/PlanUpgradeBanner";
 
 export function AppShell({ children }: { children: ReactNode }) {
   return (
@@ -10,6 +11,8 @@ export function AppShell({ children }: { children: ReactNode }) {
       {/* A deploy swaps the client chunks under an open page; without this the next interaction throws. */}
       <BuildVersionWatchdog />
       <BuildVersionPoller />
+      {/* Red, one line, every operator screen: an event still to run will not fit the plans we are on. */}
+      <PlanUpgradeBanner />
       <div className="flex min-w-0 flex-col lg:flex-row">
         <Sidebar />
         <main className="min-h-screen min-w-0 flex-1">
