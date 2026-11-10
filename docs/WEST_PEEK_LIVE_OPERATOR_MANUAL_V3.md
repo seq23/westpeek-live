@@ -558,7 +558,9 @@ Both are saved per event and both are optional. If what you type is not a meetin
 
 ![Plans and capacity](images/manual/11-capacity.jpg)
 
-**Switch back to Ship ≥7 days before the first real show** — Build's 60 transcode minutes cannot carry one 90-minute show. `/app/capacity`, the launchpad and the event's readiness list show `LIVEKIT_PLAN_TOO_SMALL` until you do.
+**The red line at the top of the screen.** While any event still to run will not fit the plans we are on, every operator screen — the `/app` pages, the event pages, the crew console where you go live, and the launchpad — shows one thin red line, for example: *⚠ Upgrade before Founders Night (Sat 9 Jan, in 60 days): LiveKit to Ship, Zoom to Pro, Resend to Pro, StreamYard to a paid plan. Open ›*. It names the soonest event, the days left and only the services that fall short (several events: *⚠ 2 events need upgrades first …*). **Open ›** goes to `/app/capacity`, which lists each event, each service and why. The line goes away by itself once every service carries every event.
+
+How to clear each one: **LiveKit** — switch to Ship in the LiveKit dashboard ≥7 days before the show (Build's 60 transcode minutes cannot carry one 90-minute show), then set the LiveKit tier in **Settings**. **Zoom** (Basic ends a meeting at 40 minutes), **Resend** (Free sends 100 emails a day, so a reminder to more than 100 registered people fails) and **StreamYard** (Free carries its branding and unstated limits; stage shows only) — upgrade on their own sites, then have whoever looks after the app record the new plan. A plan nobody recorded is shown as *plan not recorded*, never assumed to fit. The event's readiness list carries the same check as its *Service plans* line.
 
 **`/app/capacity`** shows the month against these allowances, transcode minutes first because that is the cliff we reach first. Anything the provider will not tell the app reads **unknown** and points at the dashboard that knows — no bar is ever drawn against a number nobody checked.
 

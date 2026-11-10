@@ -3,9 +3,8 @@ import { listSpeakerCueDecks, listSpeakerStageStates, listSpeakerTechChecks, lis
 import { listEventAssets } from "@/services/assets/eventAssetService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
-import { livekitPlan, type LiveKitTier } from "@/lib/capacity/capacityPlans";
-import { eventLivekitPlanFit } from "@/services/capacity/livekitPlanFitService";
-import { houseLivekitTier } from "@/services/agencies/houseDefaultsService";
+import { LIVEKIT_DASHBOARD_URL, type RecordedPlans } from "@/lib/capacity/capacityPlans";
+import { currentPlans, eventShortfalls, registeredAudience } from "@/services/capacity/livekitPlanFitService";
 import type { SpeakerStageStatus, SponsorBoothState } from "@/types/specialGuest";
 
 /**
@@ -116,15 +115,17 @@ export async function listWorkspaceSponsors(eventId: string): Promise<WorkspaceS
  * percentage was computed from the seed arrays: an event created a minute earlier scored 87% ready
  * because every fixture list it filtered came back empty and an empty list scored full marks.
  */
-export function workspaceReadiness(input: { event: RuntimeEventRecord; speakers: WorkspaceSpeaker[]; sponsors: WorkspaceSponsor[]; segments: WorkspaceSegment[]; assetsInReview: number; livekitTier?: LiveKitTier; registrations?: number }): WorkspaceReadinessItem[] {
+export function workspaceReadiness(input: { event: RuntimeEventRecord; speakers: WorkspaceSpeaker[]; sponsors: WorkspaceSponsor[]; segments: WorkspaceSegment[]; assetsInReview: number; plans?: RecordedPlans; registrations?: number; planAudience?: number }): WorkspaceReadinessItem[] {
   const { event, speakers, sponsors, segments, assetsInReview } = input;
   const planItems: WorkspaceReadinessItem[] = [];
-  if (input.livekitTier) {
-    const audience = input.registrations ?? 0;
-    const fit = eventLivekitPlanFit(event, input.livekitTier, audience);
-    planItems.push(fit
-      ? { id: "livekit-plan", label: "LiveKit plan", ready: false, detail: `${fit.code}: ${fit.message}. ${fit.reasons.join(" ")} Dashboard: ${fit.dashboardUrl}` }
-      : { id: "livekit-plan", label: "LiveKit plan", ready: true, detail: `${livekitPlan(input.livekitTier).label} carries this show with ${audience} registered.` });
+  if (input.plans) {
+    // The same people the red banner counts: one per registered person.
+    const audience = input.planAudience ?? input.registrations ?? 0;
+    const shortfalls = eventShortfalls(event, input.plans, audience);
+    const livekitShort = shortfalls.some((item) => item.service === "LiveKit");
+    planItems.push(shortfalls.length
+      ? { id: "service-plans", label: "Service plans", ready: false, detail: `Upgrade first: ${shortfalls.map((item) => (item.planRecorded ? `${item.service} to ${item.upgradeTo}` : `${item.service} (plan not recorded)`)).join(", ")}. ${shortfalls.flatMap((item) => item.reasons).join(" ")}${livekitShort ? ` LiveKit dashboard: ${LIVEKIT_DASHBOARD_URL}` : ""}` }
+      : { id: "service-plans", label: "Service plans", ready: true, detail: `The plans we are on carry this show with ${audience} registered.` });
   }
   const techChecked = speakers.filter((speaker) => speaker.techCheck === "ready").length;
   const publishedBooths = sponsors.filter((sponsor) => sponsor.booth?.published).length;
@@ -141,12 +142,13 @@ export function workspaceReadiness(input: { event: RuntimeEventRecord; speakers:
 }
 
 export async function getEventWorkspaceReadModel(event: RuntimeEventRecord): Promise<EventWorkspaceReadModel> {
-  const [speakers, sponsors, assets, snapshot, livekitTier] = await Promise.all([
+  const [speakers, sponsors, assets, snapshot, plans, planAudience] = await Promise.all([
     listWorkspaceSpeakers(event.id),
     listWorkspaceSponsors(event.id),
     listEventAssets(event.id).catch(() => []),
     getRuntimeStore().readSnapshot().catch(() => undefined),
-    houseLivekitTier().catch(() => undefined),
+    currentPlans().catch(() => undefined),
+    registeredAudience(event.id),
   ]);
   const registrations = snapshot ? snapshot.registrations.filter((item) => item.eventId === event.id).length : 0;
   const segments = workspaceSegments(event);
@@ -160,6 +162,6 @@ export async function getEventWorkspaceReadModel(event: RuntimeEventRecord): Pro
     assetsInReview,
     registrations,
     analyticsEvents: snapshot ? snapshot.analyticsEvents.filter((item) => item.eventId === event.id).length : 0,
-    readiness: workspaceReadiness({ event, speakers, sponsors, segments, assetsInReview, livekitTier, registrations }),
+    readiness: workspaceReadiness({ event, speakers, sponsors, segments, assetsInReview, plans, registrations, planAudience }),
   };
 }

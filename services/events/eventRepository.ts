@@ -282,6 +282,15 @@ function defaultSessions(eventId: string, name: string, format: RuntimeEventForm
   return [{ id: `${eventId}-main-stage`, title: format === "room" ? `${name} room` : "Main stage", room: format === "room" ? "Room" : "Main Stage", startAt, endAt }];
 }
 
+/**
+ * After an event is created, scheduled, re-timed or restored: if it will not fit the plans we are
+ * on, the server logs one NOTICE [PLAN_TOO_SMALL] line (and the next page shows the red banner).
+ * Imported lazily: the plan-fit service reads this module, so a static import would be a cycle.
+ */
+async function noticePlanFit(record: RuntimeEventRecord) {
+  await import("@/services/capacity/livekitPlanFitService").then((mod) => mod.noticeEventPlanFit(record)).catch(() => undefined);
+}
+
 export async function createEventRecord(input: CreateEventInput, actor: WorkspaceActor): Promise<RuntimeEventRecord> {
   const name = input.name.trim();
   if (!name) throw new Error("Event name is required.");
@@ -342,6 +351,7 @@ export async function createEventRecord(input: CreateEventInput, actor: Workspac
     resourceId: record.id,
     visibility: "internal_agency",
   }).catch(() => undefined);
+  await noticePlanFit(record);
   return record;
 }
 
@@ -370,6 +380,7 @@ export async function updateEventRecord(id: string, patch: EventPatch, actor: Wo
   const updated: RuntimeEventRecord = { ...event, ...patch, updatedAt: new Date().toISOString() };
   await getRuntimeStore().upsertRuntimeEvent(updated);
   await createAuditLog({ agencyId: "west-peek", clientId: updated.clientId, eventId: updated.id, actorUserId: actor.id, actorRole: actor.role, action: "event_updated", resourceType: "event", resourceId: updated.id, visibility: "internal_agency" }).catch(() => undefined);
+  if (patch.startAt !== undefined || patch.endAt !== undefined || patch.format !== undefined) await noticePlanFit(updated);
   return updated;
 }
 
@@ -390,6 +401,7 @@ export async function setEventStatus(id: string, status: EventStatus, actor: Wor
     }
   }
   await createAuditLog({ agencyId: "west-peek", clientId: updated.clientId, eventId: updated.id, actorUserId: actor.id, actorRole: actor.role, action: "event_status_changed", previousValue: event.status, newValue: status, resourceType: "event", resourceId: updated.id, visibility: "internal_agency" }).catch(() => undefined);
+  await noticePlanFit(updated);
   return updated;
 }
 
@@ -411,6 +423,7 @@ export async function restoreEventRecord(id: string, actor: WorkspaceActor) {
   const updated: RuntimeEventRecord = { ...event, status: restoredStatus, statusBeforeArchive: undefined, archivedAt: undefined, updatedAt: new Date().toISOString() };
   await getRuntimeStore().upsertRuntimeEvent(updated);
   await createAuditLog({ agencyId: "west-peek", clientId: updated.clientId, eventId: updated.id, actorUserId: actor.id, actorRole: actor.role, action: "event_restored", resourceType: "event", resourceId: updated.id, visibility: "internal_agency" }).catch(() => undefined);
+  await noticePlanFit(updated);
   return updated;
 }
 

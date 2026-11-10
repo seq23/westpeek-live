@@ -8,7 +8,7 @@ import { LocalTime } from "@/components/shared/LocalTime";
 import { displayCode } from "@/lib/access/accessCodes";
 import { listEventRecords } from "@/services/events/eventRepository";
 import { scheduledEventsTooBigForPlan } from "@/services/capacity/livekitPlanFitService";
-import { LivekitPlanWarnings } from "@/components/capacity/LivekitPlanWarnings";
+import { PlanUpgradeBannerView, planBannerModelFrom } from "@/components/capacity/PlanUpgradeBanner";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
 /**
@@ -59,8 +59,8 @@ async function LaunchpadBody() {
   const toc = SECTIONS.map((section) => ({ ...section, count: section.id === "your-events" ? events.length : section.id === "run-a-show" ? runnable.length : undefined }));
   return (
     <div className="space-y-4">
+      <PlanUpgradeBannerView model={planBannerModelFrom(fit.warnings)} />
       <ConsoleToc items={toc} />
-      <LivekitPlanWarnings warnings={fit.warnings} />
 
       <ConsoleSection storagePrefix="wpl-launchpad" id="your-events" title="Your events" count={events.length} blurb="Everything on the books, newest first. Open one, drop into its crew console, or look at the venue a guest sees." defaultOpen>
         {events.length ? (
