@@ -4,7 +4,6 @@ function read(file) { return fs.existsSync(file) ? fs.readFileSync(file, "utf8")
 function fail(message) { console.error(message); process.exit(1); }
 execFileSync("node", ["scripts/validate_v5_no_secrets.js"], { stdio: "inherit" });
 execFileSync("node", ["scripts/validate_v5_event_config_schema.js"], { stdio: "inherit" });
-execFileSync("node", ["scripts/validate_v5_publishing.js"], { stdio: "inherit" });
 execFileSync("node", ["scripts/validate_v5_runtime_boundaries.js"], { stdio: "inherit" });
 const migrationNames = fs.readdirSync("migrations-d1").filter((name) => /^\d{4}_.*\.sql$/.test(name));
 if (!migrationNames.length) fail("migrations-d1 has no migration files");

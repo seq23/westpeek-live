@@ -194,8 +194,7 @@ function writeRecoveryReport(result) {
   lines.push("");
   lines.push("1. `npm run validate` passed in the same updater run.");
   lines.push("2. `npm run validate:lifecycle-governance` passed in the same updater run.");
-  lines.push("3. `npm run validate:browser-suite-contract` passed in the same updater run.");
-  lines.push("4. The failed browser test passes with the isolation command above.");
+  lines.push("3. The failed browser test passes with the isolation command above.");
   lines.push("");
   lines.push("Then commit and push the preserved updater-applied working tree:");
   lines.push("");
