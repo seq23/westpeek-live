@@ -15,7 +15,7 @@ for (const migration of migrationNames) {
 }
 const routeAuth = read("lib/auth/v5RouteAuthorization.ts");
 if (routeAuth.includes("pathname.includes(`/${eventId}`)")) fail("Route authorization must not use substring event matching.");
-if (!routeAuth.includes("eventIdFromPath") || !routeAuth.includes("canPerformCrewAction")) fail("Route/action authorization helpers missing.");
+if (!routeAuth.includes("eventIdFromPath") || !read("lib/auth/liveControlRequestGuard.ts").includes("export function authorizeLiveControl")) fail("Route/action authorization helpers missing.");
 const videoPolicy = read("services/video/roomFallbackService.ts") + read("services/video/videoFallbackPolicy.ts");
 if (!videoPolicy.includes("zoom") || !videoPolicy.includes("confirmedByCrew")) fail("Zoom crew confirmation is missing.");
 if (videoPolicy.includes("provider === \"zoom\" && canAutoSwitch")) fail("Zoom must not auto-switch.");

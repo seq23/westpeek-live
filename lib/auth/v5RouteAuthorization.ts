@@ -1,6 +1,6 @@
 import type { V5AccessCookiePayload } from "@/lib/auth/productionAccess";
 import type { V4SpecialGuestRole } from "@/types/v4";
-import { crewActionPermissions, effectiveCrewRole, roleAllows, type CrewAction } from "@/lib/auth/crewRolePermissions";
+import { crewActionPermissions } from "@/lib/auth/crewRolePermissions";
 import { canViewAsGuest, isViewAsPath } from "@/lib/auth/viewAsGuard";
 
 export { crewActionPermissions };
@@ -156,16 +156,6 @@ export function canViewAsAccessPath(pathname: string, viewAs: string | null | un
   const pathEventId = eventIdFromPath(pathname);
   if (!pathEventId) return false;
   return canViewAsGuest(payloads, pathEventId).ok;
-}
-
-export function canPerformCrewAction(payload: V5AccessCookiePayload | undefined, action: string, eventId?: string) {
-  if (!payload || payload.kind !== "crew") return false;
-  if (eventId && payload.eventId && !eventIdsMatch(eventId, payload.eventId)) return false;
-  return roleAllows(effectiveCrewRole(payload), action as CrewAction);
-}
-
-export function assertCanPerformCrewAction(payload: V5AccessCookiePayload | undefined, action: string, eventId?: string) {
-  if (!canPerformCrewAction(payload, action, eventId)) throw new Error(`Forbidden crew action: ${action}`);
 }
 
 export function specialGuestEntryPathFor(pathname: string) {

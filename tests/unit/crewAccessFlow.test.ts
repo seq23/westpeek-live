@@ -1,5 +1,6 @@
 import { describe, expect, it } from "vitest";
-import { canCrewAccessPath, canOperatorAccessPath, canPerformCrewAction } from "@/lib/auth/v5RouteAuthorization";
+import { canCrewAccessPath, canOperatorAccessPath } from "@/lib/auth/v5RouteAuthorization";
+import { authorizeLiveControl } from "@/lib/auth/liveControlRequestGuard";
 
 describe("crew/operator access flow", () => {
   it("keeps crew access limited to crew workspace routes", () => {
@@ -26,7 +27,7 @@ describe("crew/operator access flow", () => {
   it("requires explicit role capability for fallback switching", () => {
     const support = { kind: "crew" as const, eventId: "event-summit", role: "support" as const, issuedAt: Date.now(), expiresAt: Date.now() + 10000 };
     const td = { kind: "crew" as const, eventId: "event-summit", role: "technical_director" as const, issuedAt: Date.now(), expiresAt: Date.now() + 10000 };
-    expect(canPerformCrewAction(support, "switch_video_fallback", "event-summit")).toBe(false);
-    expect(canPerformCrewAction(td, "switch_video_fallback", "event-summit")).toBe(true);
+    expect(authorizeLiveControl({ crew: support }, "event-summit", "switch_video_fallback").ok).toBe(false);
+    expect(authorizeLiveControl({ crew: td }, "event-summit", "switch_video_fallback").ok).toBe(true);
   });
 });

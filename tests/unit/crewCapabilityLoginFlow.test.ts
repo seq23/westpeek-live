@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { canPerformCrewAction } from "@/lib/auth/v5RouteAuthorization";
+import { authorizeLiveControl } from "@/lib/auth/liveControlRequestGuard";
 import { createV5AccessCookie, readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import type { V4CrewRole } from "@/types/v4";
@@ -13,15 +13,15 @@ describe("crew capability login flow", () => {
     expect(access.role).toBe("technical_director");
     const cookie = await createV5AccessCookie({ kind: "crew", eventId: access.eventId, role: access.role as V4CrewRole, issuedAt: Date.now(), expiresAt: Date.now() + 10000 }, secret);
     const payload = await readV5AccessCookie(cookie, secret);
-    expect(canPerformCrewAction(payload, "run_video_health_check", access.eventId)).toBe(true);
-    expect(canPerformCrewAction(payload, "switch_video_fallback", access.eventId)).toBe(true);
+    expect(authorizeLiveControl({ crew: payload }, access.eventId, "run_video_health_check").ok).toBe(true);
+    expect(authorizeLiveControl({ crew: payload }, access.eventId, "switch_video_fallback").ok).toBe(true);
   });
 
   it("keeps support crew from switching video fallback", async () => {
     const access = await resolveCrewAccess(undefined, "support");
     const cookie = await createV5AccessCookie({ kind: "crew", role: access.role as V4CrewRole, issuedAt: Date.now(), expiresAt: Date.now() + 10000 }, secret);
     const payload = await readV5AccessCookie(cookie, secret);
-    expect(canPerformCrewAction(payload, "switch_video_fallback")).toBe(false);
-    expect(canPerformCrewAction(payload, "log_incident")).toBe(true);
+    expect(authorizeLiveControl({ crew: payload }, undefined, "switch_video_fallback").ok).toBe(false);
+    expect(authorizeLiveControl({ crew: payload }, undefined, "log_incident").ok).toBe(true);
   });
 });

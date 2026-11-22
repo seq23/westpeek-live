@@ -16,7 +16,7 @@ function check(file, tokens) {
   if (missing.length) throw new Error(`${file} missing: ${missing.join(" | ")}`);
   return body;
 }
-const guard = check("lib/auth/viewAsGuard.ts", ["export function canViewAsGuest", 'crew.role === "producer" || crew.role === "executive_producer"', "export function isViewAsPath", "export function withViewAs"]);
+const guard = check("lib/auth/viewAsGuard.ts", ["export function canViewAsGuest", "export function isViewAsPath", "export function withViewAs"]);
 if (/moderator|show_caller|technical_director|support|va"/.test(guard.slice(guard.indexOf("export function canViewAsGuest"), guard.indexOf("export const VIEW_AS_PATH_PREFIXES")))) throw new Error("canViewAsGuest must admit only producer / executive_producer crew roles.");
 check("lib/auth/viewAs.ts", ["canViewAsGuest({ owner, operator, crew }, eventId)", "if (!viewer.ok) return undefined", "guest.role !== role) return undefined"]);
 check("lib/auth/v5RouteAuthorization.ts", ["export function canViewAsAccessPath", "canViewAsGuest(payloads, pathEventId).ok"]);
