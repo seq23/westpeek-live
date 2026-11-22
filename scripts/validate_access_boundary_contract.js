@@ -4,9 +4,15 @@ function read(file) { if (!fs.existsSync(file)) fail("missing " + file); return 
 const envTs = read("lib/env.ts");
 const productionAccess = read("lib/auth/productionAccess.ts");
 const routeAuth = read("lib/auth/v5RouteAuthorization.ts");
-const crew = read("app/production-access/crew/page.tsx");
-const operator = read("app/production-access/operator/page.tsx");
-const owner = read("app/production-access/owner/page.tsx");
+// The gate logic lives in the API routes; each page's form posts there, so every attempt passes the limiter.
+const crew = read("app/api/production-access/crew/route.ts");
+const operator = read("app/api/production-access/operator/route.ts");
+const owner = read("app/api/production-access/owner/route.ts");
+for (const gate of ["owner", "operator", "crew", "special-guest"]) {
+  const page = read(`app/production-access/${gate}/page.tsx`);
+  if (!page.includes(`action="/api/production-access/${gate}" method="post"`) || page.includes('"use server"')) fail(`${gate} page must post to /api/production-access/${gate} (the rate-limited gate), never a page server action`);
+  if (!read(`app/api/production-access/${gate}/route.ts`).includes("await takeGateAttempt(")) fail(`${gate} route must count the attempt with takeGateAttempt`);
+}
 const launchpad = read("app/production-access/launchpad/page.tsx");
 const middleware = read("middleware.ts");
 if (!envTs.includes("OPERATOR_LAUNCHPAD_PASSWORD")) fail("env missing OPERATOR_LAUNCHPAD_PASSWORD");
@@ -25,7 +31,7 @@ if (!operator.includes("getOperatorLaunchpadPassword") || !operator.includes('ki
 if (!owner.includes("matchOwnerMasterPassword") || !owner.includes('kind: "owner"') || !owner.includes("ownerKey")) fail("owner gate must match either owner master password, set the owner cookie, and record which key was used");
 if (!envTs.includes("OWNER_MASTER_ACCESS_PASSWORD_2") || !envTs.includes("export function matchOwnerMasterPassword")) fail("env must define the optional OWNER_MASTER_ACCESS_PASSWORD_2 and matchOwnerMasterPassword");
 if (!envTs.includes('"OWNER_MASTER_ACCESS_PASSWORD_2", env.OWNER_MASTER_ACCESS_PASSWORD_2')) fail("assertSeparatedProductionPasswords must include the second owner password when set");
-for (const [name, file] of [["owner override", "lib/auth/ownerAccessOverride.ts"], ["gate response", "lib/auth/accessGateResponse.ts"], ["owner api route", "app/api/production-access/owner/route.ts"]]) {
+for (const [name, file] of [["gate response", "lib/auth/accessGateResponse.ts"], ["owner api route", "app/api/production-access/owner/route.ts"]]) {
   const text = read(file);
   if (!text.includes("matchOwnerMasterPassword") || text.includes("getOwnerMasterPassword(")) fail(`${name} must honour both owner master passwords via matchOwnerMasterPassword`);
 }

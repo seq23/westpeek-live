@@ -14,7 +14,7 @@ import { restoreAttendeeOnThisDevice } from "@/services/attendees/attendeeReturn
 import { ATTENDEE_SESSION_COOKIE, createAttendeeSession, currentAttendeeMayHoldPrivilege, getAttendeeSessionStanding, getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
 import { DEFAULT_ATTENDEE_SESSION_DAYS, RETURN_HINT_DAYS, clampSessionDays, dayWord, registeredForWords, remainingWords, sessionMaxAgeSeconds } from "@/services/attendees/attendeeSessionPolicy";
 import { grantVip, isVip } from "@/services/guests/vipGrantService";
-import { resetGateAttemptsForTests, ATTEMPT_LIMIT } from "@/services/access/gateAttemptLimiter";
+import { resetGateAttemptsForTests, GATE_ATTEMPTS_PER_WINDOW } from "@/services/access/gateAttemptLimiter";
 import { sha256Hex } from "@/lib/security/portableCrypto";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 
@@ -134,9 +134,9 @@ describe("registration continuity: one browser, the next device, and the way bac
     await registerHere("ada@example.com");
     newDevice();
     const probe = (n: number) => restoreAttendeeOnThisDevice({ eventId: EVENT, email: `guess${n}@example.com`, ip: "198.51.100.4" });
-    for (let i = 0; i < ATTEMPT_LIMIT - 1; i += 1) expect((await probe(i)).status).toBe("no_match");
+    for (let i = 0; i < GATE_ATTEMPTS_PER_WINDOW; i += 1) expect((await probe(i)).status).toBe("no_match");
     expect((await probe(99)).status).toBe("rate_limited");
-    // The cooldown is blind to whether the next guess would have been right.
+    // The limit is blind to whether the next guess would have been right.
     const real = await restoreAttendeeOnThisDevice({ eventId: EVENT, email: "ada@example.com", ip: "198.51.100.4" });
     expect(real.status).toBe("rate_limited");
     // Another place is unaffected: the limit is per origin, not a global lockout of the event.

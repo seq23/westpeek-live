@@ -6,7 +6,7 @@ import { ownerOverrideResponseIfMatched, redirectTo, safeAccessRedirectTarget } 
 import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
-import { checkGateAttempts, clearGateAttempts, gateAttemptKeyFor, recordGateFailure, requestIpHash } from "@/services/access/gateAttemptLimiter";
+import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import type { V4CrewRole } from "@/types/v4";
 import { CREW_ROLES } from "@/lib/auth/crewRolePermissions";
 import { getHostLinkState } from "@/services/events/hostLinkService";
@@ -31,29 +31,25 @@ export async function POST(request: NextRequest) {
 
   // Readable codes are guessable by design; the gate is where that is paid for.
   const { ip, ipHash } = await requestIpHash(request);
-  const attemptKey = gateAttemptKeyFor({ ip, eventCode, gate: "crew" });
-  const gate = checkGateAttempts(attemptKey);
+  const gate = await takeGateAttempt({ ip, eventCode, gate: "crew" });
   if (!gate.allowed) {
-    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: eventCode || undefined, role: crewRole, reason: "rate_limited", route: "/production-access/crew", ipHash });
-    return redirectTo(request, `/production-access/crew?error=too_many&retry=${gate.retryInSeconds}`);
+    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: eventCode || undefined, role: crewRole, reason: gate.reason === "too_many" ? "rate_limited" : "rate_limiter_unavailable", route: "/production-access/crew", ipHash });
+    return redirectTo(request, `/production-access/crew?${gateRefusalQuery(gate)}`);
   }
 
   const ownerOverride = await ownerOverrideResponseIfMatched({ request, password, route: "/production-access/crew", next: safeNext, fallback: eventCode ? `/crew/events/${eventCode}` : "/crew/events/demo" });
-  if (ownerOverride) { clearGateAttempts(attemptKey); return ownerOverride; }
+  if (ownerOverride) return ownerOverride;
 
   // The global crew password still opens every event; a runtime-created event's own crew code opens just that event.
   const access = await resolveCrewAccess(eventCode || undefined, crewRole, password || "");
   if (!access.ok) {
     const invalidPassword = access.reason === "invalid_password" || !password;
-    const limit = recordGateFailure(attemptKey);
     // The role, the event and the time — never what they typed.
-    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId || eventCode || undefined, role: crewRole, reason: limit.cooling ? "rate_limited_after_failures" : access.reason || "invalid_password", route: "/production-access/crew", ipHash });
-    if (limit.cooling) return redirectTo(request, `/production-access/crew?error=too_many&retry=${limit.retryInSeconds}`);
+    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId || eventCode || undefined, role: crewRole, reason: access.reason || "invalid_password", route: "/production-access/crew", ipHash });
     const superseded = supersededGateQuery(access);
     return redirectTo(request, superseded ? `/production-access/crew?${superseded}` : invalidPassword ? "/production-access/crew?error=invalid" : "/production-access/crew?error=invalid_event");
   }
 
-  clearGateAttempts(attemptKey);
   await logAccessAttempt({ status: "access_granted", accessKind: "crew", eventId: access.eventId, role: access.role || crewRole, route: access.destination, ipHash });
   const { crewCookieName } = getV5AccessCookieNames(env);
   const viaEventCode = Boolean(access.eventId) && password !== (getCrewAccessPassword()?.trim() || "\u0000");

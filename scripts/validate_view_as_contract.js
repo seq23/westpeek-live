@@ -38,7 +38,6 @@ check("components/guests/GuestPreviewLinks.tsx", ["Open their green room", "Open
 check("components/moderation/SpeakerRosterPanel.tsx", ["<GuestPreviewLinkRow", 'viewer.role === "producer" || viewer.role === "executive_producer"']);
 check("app/app/events/[eventId]/access/page.tsx", ["<GuestPreviewList"]);
 check("app/production-access/special-guest/preview/page.tsx", ['if (owner?.kind !== "owner") redirect(`/production-access/owner?next=', "<GuestPreviewList", "preview-role-codes", "emptyHref={accessHref}"]);
-check("app/production-access/special-guest/page.tsx", ["next: `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode)}`"]);
 check("app/api/production-access/special-guest/route.ts", ["next: `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode)}`"]);
 // Ledgers.
 for (const [file, token] of [["config/deployed-route-manifest.json", '"id": "production-access-special-guest-preview"'], ["RUNTIME_ACTION_INVENTORY.json", '"id": "production-access-special-guest-preview"'], ["_hallmark_route_state_contract.json", '"id": "production-access-special-guest-preview"'], ["AUTHENTICATED_ROUTE_MANIFEST.md", "`production-access-special-guest-preview`"], ["VISIBLE_CONTROL_INVENTORY.md", "Open their green room / teleprompter / booth / lobby / overview (view as)"]]) check(file, [token]);

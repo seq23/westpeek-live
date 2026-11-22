@@ -1,57 +1,97 @@
+import { getGateRateLimiter, type RateLimitBindingLike } from "@/lib/d1/binding";
 import { sha256Hex } from "@/lib/security/portableCrypto";
 
 /**
  * Codes are readable by design (WPL-CREW-45MINU), so the protection lives at the gate: a handful of
- * wrong codes from one place, then a short cooldown. The numbers are chosen so a guest who mistypes
- * twice never notices, and someone walking the alphabet gets nowhere.
+ * tries a minute from one place, then a wait. A guest who mistypes twice never notices; someone
+ * walking the alphabet gets nowhere.
  *
- * In-memory per isolate: a Worker isolate handles many requests, so this catches the ordinary case
- * (one prober, one isolate) without a round trip to the database on every gate submission.
+ * The count lives in the Cloudflare Rate Limiting binding `GATE_LIMITER` (wrangler.jsonc), not in
+ * this isolate's memory: a prober's requests land on many isolates, and each one used to count on
+ * its own from zero. Every attempt counts, right or wrong: the binding has no "peek", and a count
+ * that only saw misses would let a right code through after the limit.
+ *
+ * Outside a Worker (`next dev`, `next start` for the e2e suite, unit tests) there is no binding and
+ * exactly one process, so an in-process counter with the same contract stands in, as the file
+ * store stands in for D1. Inside a Worker a missing or failing binding is an outage, handled per gate
+ * by FAIL_CLOSED below.
  */
-export const ATTEMPT_LIMIT = 6;
-export const ATTEMPT_WINDOW_MS = 60_000;
-export const COOLDOWN_MS = 120_000;
+export const GATE_ATTEMPTS_PER_WINDOW = 6; // must match ratelimits[GATE_LIMITER].simple.limit in wrangler.jsonc
+export const GATE_WINDOW_SECONDS = 60; // must match ratelimits[GATE_LIMITER].simple.period
 
-interface Bucket {
-  failures: number[];
-  cooldownUntil?: number;
-}
+export type GateName = "owner" | "operator" | "crew" | "special_guest" | "attendee_return";
 
-const buckets = new Map<string, Bucket>();
+/**
+ * When the limiter itself is down. The production doors (owner opens every event, operator and crew
+ * run the show) refuse rather than go unguarded. The guest doors (a speaker's code, an attendee's
+ * second device) let the attempt through and log it: they open one event's guest view, and a broken
+ * safety check must not keep every speaker out of a show that is already running.
+ */
+const FAIL_CLOSED: Record<GateName, boolean> = {
+  owner: true,
+  operator: true,
+  crew: true,
+  special_guest: false,
+  attendee_return: false,
+};
 
-export function gateAttemptKeyFor(input: { ip?: string; eventCode?: string; gate: string }) {
+export type GateAttempt =
+  | { allowed: true; degraded?: true }
+  | { allowed: false; reason: "too_many"; retryInSeconds: number }
+  | { allowed: false; reason: "limiter_unavailable" };
+
+export function gateAttemptKeyFor(input: { ip?: string; eventCode?: string; gate: GateName }) {
   return `${input.gate}:${(input.eventCode || "-").toLowerCase()}:${input.ip || "unknown"}`;
 }
 
-export function checkGateAttempts(key: string, now = Date.now()): { allowed: true } | { allowed: false; retryInSeconds: number } {
-  const bucket = buckets.get(key);
-  if (!bucket) return { allowed: true };
-  if (bucket.cooldownUntil && bucket.cooldownUntil > now) return { allowed: false, retryInSeconds: Math.ceil((bucket.cooldownUntil - now) / 1000) };
-  return { allowed: true };
-}
-
-/** Records one wrong code. Returns whether that tripped the cooldown. */
-export function recordGateFailure(key: string, now = Date.now()) {
-  const bucket = buckets.get(key) || { failures: [] };
-  bucket.failures = bucket.failures.filter((at) => now - at < ATTEMPT_WINDOW_MS);
-  bucket.failures.push(now);
-  if (bucket.failures.length >= ATTEMPT_LIMIT) {
-    bucket.cooldownUntil = now + COOLDOWN_MS;
-    bucket.failures = [];
-    buckets.set(key, bucket);
-    return { cooling: true, retryInSeconds: Math.ceil(COOLDOWN_MS / 1000) };
+/** Counts one attempt at a gate and says whether it may go ahead. Call before the code is checked. */
+export async function takeGateAttempt(input: { ip?: string; eventCode?: string; gate: GateName }): Promise<GateAttempt> {
+  const key = gateAttemptKeyFor(input);
+  const limiter = testLimiter ?? getGateRateLimiter();
+  const binding = limiter.inWorker ? limiter.binding : localStandIn;
+  try {
+    if (!binding) throw new Error("GATE_LIMITER is not bound on this deployment (ratelimits in wrangler.jsonc).");
+    const { success } = await binding.limit({ key });
+    return success ? { allowed: true } : { allowed: false, reason: "too_many", retryInSeconds: GATE_WINDOW_SECONDS };
+  } catch (error) {
+    console.error(`[gate-limiter] ${input.gate}: limiter unavailable, ${FAIL_CLOSED[input.gate] ? "refusing" : "letting through"}:`, error instanceof Error ? error.message : error);
+    return FAIL_CLOSED[input.gate] ? { allowed: false, reason: "limiter_unavailable" } : { allowed: true, degraded: true };
   }
-  buckets.set(key, bucket);
-  return { cooling: false, retryInSeconds: 0 };
 }
 
-/** A right code clears the record: a guest who finally got it in is not on a naughty list. */
-export function clearGateAttempts(key: string) {
-  buckets.delete(key);
+/** The redirect query for a refused attempt, read by each gate page. */
+export function gateRefusalQuery(attempt: Exclude<GateAttempt, { allowed: true }>) {
+  return attempt.reason === "too_many" ? `error=too_many&retry=${attempt.retryInSeconds}` : "error=paused";
+}
+
+/** A fixed window per key with the binding's contract, for a single process with no binding. */
+export function createInProcessRateLimiter(limit = GATE_ATTEMPTS_PER_WINDOW, periodSeconds = GATE_WINDOW_SECONDS, now: () => number = Date.now): RateLimitBindingLike {
+  const windows = new Map<string, { startedAt: number; count: number }>();
+  return {
+    async limit({ key }) {
+      const at = now();
+      const window = windows.get(key);
+      if (!window || at - window.startedAt >= periodSeconds * 1000) {
+        windows.set(key, { startedAt: at, count: 1 });
+        return { success: true };
+      }
+      window.count += 1;
+      return { success: window.count <= limit };
+    },
+  };
+}
+
+let localStandIn = createInProcessRateLimiter();
+let testLimiter: { inWorker: boolean; binding?: RateLimitBindingLike } | undefined;
+
+/** Tests: `binding` stands for the Worker binding; `undefined` binding means "in a Worker, not bound". */
+export function setGateLimiterForTests(binding: RateLimitBindingLike | undefined | "unset") {
+  testLimiter = binding === "unset" ? undefined : { inWorker: true, binding };
 }
 
 export function resetGateAttemptsForTests() {
-  buckets.clear();
+  localStandIn = createInProcessRateLimiter();
+  testLimiter = undefined;
 }
 
 /** The caller's rough origin, hashed before it is ever stored. Never the value they typed. */

@@ -2,7 +2,7 @@ import { sha256Hex } from "@/lib/security/portableCrypto";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { maskEmail, upsertContactFromProfile } from "@/services/attendees/contactsService";
 import { createAttendeeSession } from "@/services/attendees/attendeeSessionService";
-import { checkGateAttempts, gateAttemptKeyFor, recordGateFailure } from "@/services/access/gateAttemptLimiter";
+import { takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import type { AttendeeProfile } from "@/types/attendeeRegistration";
 
 /**
@@ -50,12 +50,9 @@ export async function restoreAttendeeOnThisDevice(input: { eventId: string; emai
   const email = normalizeReturnEmail(input.email);
   if (!input.eventId || !email.includes("@")) return { status: "invalid" };
 
-  const attemptKey = gateAttemptKeyFor({ ip: input.ip, eventCode: input.eventId, gate: "attendee_return" });
-  const gate = checkGateAttempts(attemptKey);
-  if (!gate.allowed) return { status: "rate_limited", retryInSeconds: gate.retryInSeconds };
   // Counted whether or not it matches: a bucket that only counts misses is a free oracle for hits.
-  const limit = recordGateFailure(attemptKey);
-  if (limit.cooling) return { status: "rate_limited", retryInSeconds: limit.retryInSeconds };
+  const gate = await takeGateAttempt({ ip: input.ip, eventCode: input.eventId, gate: "attendee_return" });
+  if (!gate.allowed) return { status: "rate_limited", retryInSeconds: gate.reason === "too_many" ? gate.retryInSeconds : 60 };
 
   const store = getRuntimeStore();
   const emailHash = await sha256Hex(email);
