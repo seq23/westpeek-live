@@ -166,7 +166,7 @@ export function ZoomEmbeddedRoom({ config, eventId, userName = "Guest", userEmai
 
       <div
         id="west-peek-zoom-room"
-        className="mt-5 min-h-[420px] overflow-hidden rounded-3xl border border-brand-line bg-brand-black/95"
+        className="wpl-as-authored mt-5 min-h-[420px] overflow-hidden rounded-3xl border border-brand-line bg-brand-black/95"
       />
     </section>
   );

@@ -37,7 +37,7 @@ export async function AgencyDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
+      <div className="wpl-as-authored rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
         <HouseLogo size="sm" inverse />
         <p className="mt-4 text-sm font-medium text-slate-300">{settings.agencyName} · signed in as {actor?.label || "unknown"}</p>
         <h1 className="mt-2 text-3xl font-semibold">Run West Peek Rooms and client events from one cockpit.</h1>

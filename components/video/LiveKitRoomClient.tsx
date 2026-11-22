@@ -47,9 +47,9 @@ export function LiveKitRoomClient({
   const [connectionNote, setConnectionNote] = useState("Ready to connect");
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/40 p-6">
+    <div className="wpl-as-authored rounded-3xl border border-white/10 bg-black/40 p-6">
       {!connect ? (
-        <div className="flex aspect-video flex-col items-center justify-center rounded-2xl border border-brand-orange/30 bg-slate-900 p-6 text-center">
+        <div className="wpl-as-authored flex aspect-video flex-col items-center justify-center rounded-2xl border border-brand-orange/30 bg-slate-900 p-6 text-center">
           <p className="text-lg font-semibold">LiveKit room is ready</p>
           <p className="mt-2 max-w-xl text-sm text-slate-400">
             A server-issued LiveKit token is available. Join when the producer is ready to start the room session.

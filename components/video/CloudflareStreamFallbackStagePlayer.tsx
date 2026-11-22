@@ -11,7 +11,7 @@ function isEmbeddableUrl(value?: string) {
 export function CloudflareStreamFallbackStagePlayer({ playbackUrl }: CloudflareStreamFallbackStagePlayerProps) {
   if (!isEmbeddableUrl(playbackUrl)) {
     return (
-      <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white">
+      <div className="wpl-as-authored flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white">
         <div>
           <p className="text-lg font-black">Backup stream is being prepared.</p>
           <p className="mt-2 text-sm text-slate-300">The production team is moving the show to the backup live stream. You can stay on this page.</p>
@@ -20,7 +20,7 @@ export function CloudflareStreamFallbackStagePlayer({ playbackUrl }: CloudflareS
     );
   }
   return (
-    <div className="overflow-hidden rounded-3xl bg-black">
+    <div className="wpl-as-authored overflow-hidden rounded-3xl bg-black">
       <iframe
         title="West Peek Live backup stream"
         src={playbackUrl}
