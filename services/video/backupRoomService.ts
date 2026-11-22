@@ -20,6 +20,16 @@ export function houseGoogleMeetUrl() {
 }
 
 /**
+ * The one Zoom meeting this event may sign for: its own saved number, else the house number. Unlike
+ * getEventBackupRoom this never falls back on a failed read (which would hand out the house meeting
+ * in an outage): a store error throws, and the signing route refuses.
+ */
+export async function signableZoomMeetingNumber(eventId: string, stageId = "main-stage"): Promise<string | undefined> {
+  const stored = await getRuntimeStore().getEventBackupRoom(eventId, stageId);
+  return stored?.zoomMeetingNumber || houseZoomMeetingNumber();
+}
+
+/**
  * What this event's bottom two rungs actually are, the event's own row winning over the house room.
  * Always returns a record, so a caller never has to decide what "no row yet" means.
  */
