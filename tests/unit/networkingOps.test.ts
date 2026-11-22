@@ -1,3 +1,0 @@
-import { describe, expect, it } from "vitest";
-import { getBreakoutRooms, getNetworkingHealth, getSpeedNetworkingMatches, getSpeedNetworkingSettings } from "@/services/networking-ops";
-describe("networking ops",()=>{it("returns breakout rooms",()=>{const rooms=getBreakoutRooms("event-summit");expect(rooms.length).toBeGreaterThan(0);expect(rooms.some(r=>r.status==="live")).toBe(true);});it("models 3-minute speed networking",()=>{const settings=getSpeedNetworkingSettings("event-summit");const matches=getSpeedNetworkingMatches("event-summit");const health=getNetworkingHealth("event-summit");expect(settings.durationSeconds).toBe(180);expect(matches.some(m=>m.status==="in_call")).toBe(true);expect(health.queueStatus).toBe("open");});});

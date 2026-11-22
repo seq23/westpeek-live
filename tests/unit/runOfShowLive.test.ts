@@ -1,5 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { computeShowProgress } from "@/services/run-of-show";
+import { computeShowProgress } from "@/services/run-of-show/showProgress";
 import { showSegmentsFor } from "@/services/run-of-show/eventShow";
 import { RUN_OF_SHOW_VISIBILITY } from "@/types/runOfShowLive";
 import { demoShowStartMs } from "@/lib/mock/demoSchedule";

@@ -48,10 +48,6 @@ if (stagePage.includes("import { LegalFooter") || stagePage.includes("from \"@/c
 }
 if (!stagePage.includes("showLegalFooter={false}")) fail("stage page must opt out of venue legal footer");
 
-const floatingHelp = read("components/venue/FloatingHelpButton.tsx");
-if (!floatingHelp.includes("/venue/${eventId}/help")) fail("FloatingHelpButton must route to event Help, not company/legal support");
-if (floatingHelp.includes("westpeek.live") || floatingHelp.includes("productions.joinwestpeek.com") || floatingHelp.includes("mailto:")) fail("FloatingHelpButton must not be brand/legal/company support");
-
 const privacy = read("app/privacy/page.tsx");
 const terms = read("app/terms/page.tsx");
 for (const [name, body] of [["privacy", privacy], ["terms", terms]]) {

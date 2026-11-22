@@ -171,7 +171,7 @@ sentence, both halves:
   `EVENT_COMMAND_BAR_SURFACES`, cross-checks them against `config/deployed-route-manifest.json` and
   against every layout that actually mounts the bar (so a surface added, renamed or dropped is
   reported as drift rather than silently uncovered), derives the primary actions from
-  `lib/navigation/ownerPrimaryActions.ts` whose ids must match this plan's own parenthetical word
+  `lib/navigation/ownerPrimaryActions.ts` (removed 22 Nov 2026 with its validator, cut in #113) whose ids must match this plan's own parenthetical word
   for word, and then follows imports from each surface's routes to the module that implements each
   action. An action reachable from only one surface fails the build. Hard-fails on zero surfaces,
   zero actions or zero routes.
