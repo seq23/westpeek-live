@@ -18,7 +18,7 @@ import { FileRuntimeStore } from "@/services/runtime/fileRuntimeStore";
 import { setRuntimeStoreForTests } from "@/services/runtime/runtimeStoreFactory";
 import { requestAssetUploadAction } from "@/lib/actions/eventAssetActions";
 
-const svg = { eventId: "event-a", fileName: "logo.svg", mimeType: "image/svg+xml", sizeBytes: 100 };
+const refused = { eventId: "event-a", fileName: "files.zip", mimeType: "application/zip", sizeBytes: 100 };
 
 describe("the server, not the browser, decides which next step an upload refusal offers", () => {
   let tempDir: string;
@@ -31,19 +31,20 @@ describe("the server, not the browser, decides which next step an upload refusal
   afterEach(() => { setRuntimeStoreForTests(undefined); fs.rmSync(tempDir, { recursive: true, force: true }); });
 
   it("a sponsor asking for the library's wording is still given the portal's step, with no link form offered", async () => {
-    const asked = await requestAssetUploadAction({ ...svg, place: "library" });
+    const asked = await requestAssetUploadAction({ ...refused, place: "library" });
     expect(asked.ok).toBe(false);
     if (asked.ok) return;
-    const portal = await requestAssetUploadAction({ ...svg, place: "portal" });
+    const portal = await requestAssetUploadAction({ ...refused, place: "portal" });
     expect(portal.ok).toBe(false);
     if (portal.ok) return;
     expect(asked.reason).toBe(portal.reason);
+    expect(asked.reason).toMatch(/^That kind of file can.t be uploaded\./);
     expect(asked.reason).not.toMatch(/link/i);
   });
 
   it("the crew in the library is offered the link form for the same file", async () => {
     actor.mockResolvedValue({ kind: "operator", email: "crew@example.test" });
-    const library = await requestAssetUploadAction({ ...svg, place: "library" });
+    const library = await requestAssetUploadAction({ ...refused, place: "library" });
     expect(library.ok).toBe(false);
     if (!library.ok) expect(library.reason).toMatch(/paste a link/i);
   });
