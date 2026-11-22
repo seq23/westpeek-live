@@ -10,6 +10,9 @@ export default async function ClientEventLayout({ children, params }: { children
   // The client code was changed since this cookie was minted: back to the gate for the new link.
   // An owner or operator holding the master key is never sent there: they never enter a code.
   const eventId = record?.id ?? resolved.eventId;
-  if (!(await holdsMasterKey(eventId)) && (await guestAccessStale(eventId))) redirect("/production-access/special-guest?error=rotated");
+  if (!(await holdsMasterKey(eventId))) {
+    const stale = await guestAccessStale(eventId);
+    if (stale) redirect(`/production-access/special-guest?error=${stale}`);
+  }
   return <>{children}</>;
 }

@@ -15,7 +15,7 @@ export async function POST(request: Request) {
   const eventId = String(body.eventId || "");
   if (!eventId) return NextResponse.json({ ok: false, error: "eventId is required." }, { status: 400 });
   const auth = await requireLiveEventControlAccessForRequest(eventId);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 401 });
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status ?? 401 });
   const now = Date.now();
   const attendeeId = String(body.attendeeId || `tier4-attendee-${eventId}`);
   const profile: AttendeeProfile = {
