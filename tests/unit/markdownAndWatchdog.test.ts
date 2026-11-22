@@ -2,9 +2,11 @@ import fs from "node:fs";
 import { describe, expect, it } from "vitest";
 import { markdownHeadings, markdownSlug } from "@/lib/markdown/markdownOutline";
 import { buildChanged, typingInProgress } from "@/lib/runtime/buildVersion";
-import { createElement, Fragment } from "react";
+import { createElement } from "react";
 import { renderToStaticMarkup } from "react-dom/server";
-import { renderMarkdownLite } from "@/lib/markdown/markdownLite";
+import { Markdown } from "@/lib/markdown/Markdown";
+
+const render = (source: string) => renderToStaticMarkup(createElement(Markdown, { source }));
 
 /**
  * The manual renderer and the deploy watchdog. The owner kept an Owner Console open across a
@@ -12,7 +14,29 @@ import { renderMarkdownLite } from "@/lib/markdown/markdownLite";
  * no poller at all (it predated one), and a tab that has been in the background should not wait
  * another half minute after she comes back to it.
  */
-describe("markdown-lite", () => {
+describe("the manual renderer (react-markdown)", () => {
+  it("a document's raw HTML is shown as text, never run", () => {
+    const html = render('Hello <script>alert(1)</script> and <img src=x onerror="alert(2)">\n\n<iframe src="https://example.com"></iframe>\n');
+    expect(html).not.toMatch(/<script|<img src="x"|<iframe/);
+    expect(html).not.toContain("onerror=\"alert");
+  });
+
+  it("renders what the hand parser dropped: italics, nested lists, a link with parentheses, multi-line list items", () => {
+    const html = render("Read *this* first.\n\n- Top\n  - Nested\n- Second\n  continues here\n\nSee [the docs](https://example.com/a_(b)).\n");
+    expect(html).toContain("<em>this</em>");
+    expect(html).toMatch(/<li>Top\s*<ul[^>]*>\s*<li>Nested<\/li>/);
+    expect(html).toContain('href="https://example.com/a_(b)"');
+    expect(html).toMatch(/Second\s+continues here/);
+  });
+
+  it("headings carry the anchors the spine links to, and tables render", () => {
+    const html = render("## First section\n\n### Second **section**\n\n| a | b |\n|---|---|\n| 1 | 2 |\n");
+    expect(html).toContain('id="first-section"');
+    expect(html).toContain('id="second-section"');
+    expect(html).toMatch(/<table[^>]*>[\s\S]*<td[^>]*>1<\/td>/);
+  });
+
+
   it("finds the sections for the spine and slugs them the way the anchors do", () => {
     const headings = markdownHeadings("# Title\n\n## First section\n\n### Nested\n\ntext\n\n## Second **section**\n");
     expect(headings.map((heading) => heading.text)).toEqual(["First section", "Nested", "Second section"]);
@@ -34,7 +58,7 @@ describe("markdown-lite", () => {
 describe("house style at render time", () => {
   it("a page never shows an em dash, whoever wrote one into the source; code is left as written", () => {
     const source = "# Go live — now\n\nOpen the room — then wait for **crew — ready** and [the guide — here](/x).\n\n- — a bullet\n\n| a — b |\n|---|\n| c—d |\n\nRun `a—b` exactly.\n\n```\nkeep — this\n```\n";
-    const html = renderToStaticMarkup(createElement(Fragment, null, ...renderMarkdownLite(source)));
+    const html = render(source);
     const outsideCode = html.replace(/<code[^>]*>[\s\S]*?<\/code>/g, "");
     expect(outsideCode).not.toContain("—");
     expect(html).toContain("Open the room, then wait for");

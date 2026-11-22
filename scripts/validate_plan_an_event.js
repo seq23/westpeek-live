@@ -99,7 +99,7 @@ for (const audience of AUDIENCES) {
   if (!new RegExp(`slug: "${audience}"`).test(defaults)) failures.push(`No first draft shipped for /how-it-works/${audience}; the page would be blank before its first edit.`);
 }
 // The crew page's promise that it stands alone. (Em dashes are swapped at render time by
-// renderMarkdownLite via lib/presentation/houseStyle.ts, never checked here.)
+// lib/markdown/Markdown.tsx via lib/presentation/houseStyle.ts, never checked here.)
 const INSTRUCTION_TARGET_CHARS = 800;
 const bodies = defaults.split("body: `").slice(1).map((chunk) => chunk.split("`,")[0]);
 if (bodies.length !== AUDIENCES.length) failures.push(`Expected ${AUDIENCES.length} instruction drafts, found ${bodies.length}.`);
@@ -112,7 +112,7 @@ for (const topic of ["production-access/crew", "crew code", "Go live", "stream c
 }
 
 const audiencePage = read("app/how-it-works/[audience]/page.tsx");
-needs("app/how-it-works/[audience]/page.tsx", audiencePage, ["readHowItWorksPage", "renderMarkdownLite", "getWorkspaceActor", 'actor?.kind === "owner"', 'actor?.kind === "operator"', "HowItWorksEditor"]);
+needs("app/how-it-works/[audience]/page.tsx", audiencePage, ["readHowItWorksPage", "<Markdown source=", "getWorkspaceActor", 'actor?.kind === "owner"', 'actor?.kind === "operator"', "HowItWorksEditor"]);
 const editorAction = read("lib/actions/howItWorksActions.ts");
 needs("lib/actions/howItWorksActions.ts", editorAction, ["requireOperatorAccessForRequest", "saveHowItWorksPage", "isHowItWorksAudience"]);
 if (!/const auth = await requireOperatorAccessForRequest\(\);[\s\S]{0,120}throw new Error/.test(editorAction)) {
