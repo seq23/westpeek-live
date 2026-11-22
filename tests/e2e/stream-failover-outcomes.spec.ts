@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("stream failover proves pre-stream, 4-second buffer, StreamYard, LiveKit, Daily, switching, and private URL boundaries", async ({ page }) => {
   await page.goto("/venue/demo/stage");

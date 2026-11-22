@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 
 const forbidden = /Application error|Internal Server Error|unknown event|forbidden|not authorized|blank/i;
