@@ -18,8 +18,10 @@ describe("security headers", () => {
     expect(matches("/api/assets/file")).toEqual([]);
   });
 
-  it("names no script or connect origins that would break a video room", () => {
-    const csp = nextConfig.SECURITY_HEADERS.find((h: { key: string }) => h.key === "Content-Security-Policy").value as string;
+  it("names no script or connect origins that would break a video room, and never rewrites http (e2e runs on it)", async () => {
+    const rules: Rule[] = await nextConfig.headers();
+    const csp = rules[0].headers.find((h) => h.key === "Content-Security-Policy")!.value;
     expect(csp).not.toMatch(/(default|script|connect|frame|media|img)-src/);
+    expect(csp).not.toContain("upgrade-insecure-requests");
   });
 });

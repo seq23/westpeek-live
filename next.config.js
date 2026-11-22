@@ -23,10 +23,12 @@ function resolveBuildId() {
  * changes. It shuts what an injected page would need instead: plugins, a foreign <base>, being framed
  * by another site, and forms posting off-site. /api/assets/file is left out: it sets its own, stricter
  * sandbox CSP per file type, and object-src 'none' there would stop the browser's PDF viewer.
+ * No upgrade-insecure-requests: HSTS already keeps every visit on https, and on plain-http
+ * `next start` (the e2e suite, local runs) it rewrote same-site requests to https that does not exist.
  */
 const SECURITY_HEADERS = [
   { key: "Strict-Transport-Security", value: "max-age=31536000" },
-  { key: "Content-Security-Policy", value: "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests" },
+  { key: "Content-Security-Policy", value: "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'" },
   { key: "X-Content-Type-Options", value: "nosniff" },
   { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
 ];
@@ -41,4 +43,3 @@ const nextConfig = {
 };
 
 module.exports = nextConfig;
-module.exports.SECURITY_HEADERS = SECURITY_HEADERS;
