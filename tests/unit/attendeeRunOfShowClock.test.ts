@@ -9,11 +9,11 @@ import type { ShowSegment } from "@/services/run-of-show/eventShow";
  * decided by index (the second row was always "current") while the lobby read the clock, and the
  * two disagreed mid-show.
  */
-const segment = (id: string, title: string, startAt: string, endAt: string, room = "Main stage"): ShowSegment => ({ id, title, startAt, endAt, room, description: "", durationMinutes: 30, speakerIds: [], speakers: [], cueNotes: "producer only: cue the bumper" });
+const segment = (id: string, title: string, startAt: string, endAt: string, room = "Main stage", networking = false): ShowSegment => ({ id, title, startAt, endAt, room, description: "", durationMinutes: 30, speakerIds: [], speakers: [], cueNotes: "producer only: cue the bumper", networking });
 const SEGMENTS = [
   segment("a", "Doors", "2026-09-16T14:00:00.000Z", "2026-09-16T14:30:00.000Z"),
   segment("b", "Talk", "2026-09-16T14:30:00.000Z", "2026-09-16T15:30:00.000Z"),
-  segment("c", "Networking", "2026-09-16T15:30:00.000Z", "2026-09-16T16:00:00.000Z", "Lounge"),
+  segment("c", "Coffee with the founders", "2026-09-16T15:30:00.000Z", "2026-09-16T16:00:00.000Z", "Lounge", true),
 ];
 const view = (at: string, marks: ShowMark[] = []) => attendeeRunOfShowFromShow(computeShowProgress(SEGMENTS, marks, Date.parse(at)));
 
@@ -21,10 +21,18 @@ describe("the attendee run of show reads the shared show clock", () => {
   it("picks now and next from the instant, not from an index", () => {
     const during = view("2026-09-16T14:45:00.000Z");
     expect(during.now?.title).toBe("Talk");
-    expect(during.next?.title).toBe("Networking");
+    expect(during.next?.title).toBe("Coffee with the founders");
     expect(during.position).toBe(2);
-    // A networking block is flagged so the strip can point straight at the queue.
+    // The producer's networking flag, not the words in a title, points the row at the queue.
     expect(during.next?.networking).toBe(true);
+    expect(during.now?.networking).toBe(false);
+  });
+
+  it("a title or room that merely says 'networking' does not make a networking block", () => {
+    const worded = [segment("x", "Why networking is overrated", "2026-09-16T14:00:00.000Z", "2026-09-16T15:00:00.000Z", "Networking Lounge")];
+    const row = attendeeRunOfShowFromShow(computeShowProgress(worded, [], Date.parse("2026-09-16T14:30:00.000Z"))).now;
+    expect(row?.title).toBe("Why networking is overrated");
+    expect(row?.networking).toBe(false);
   });
 
   it("before the first segment there is no now, only a next", () => {
@@ -43,7 +51,7 @@ describe("the attendee run of show reads the shared show clock", () => {
 
   it("the last segment has nothing after it, and nothing is invented to fill the row", () => {
     const last = view("2026-09-16T15:45:00.000Z");
-    expect(last.now?.title).toBe("Networking");
+    expect(last.now?.title).toBe("Coffee with the founders");
     expect(last.next).toBeUndefined();
   });
 
@@ -52,13 +60,13 @@ describe("the attendee run of show reads the shared show clock", () => {
     const marks: ShowMark[] = [{ segmentId: "b", action: "mark_live", createdAt: "2026-09-16T14:31:00.000Z" }];
     const running = view("2026-09-16T15:40:00.000Z", marks);
     expect(running.now?.title).toBe("Talk");
-    expect(running.next?.title).toBe("Networking");
+    expect(running.next?.title).toBe("Coffee with the founders");
     expect(running.segments.map((s) => s.state)).toEqual(["finished", "now", "later"]);
   });
 
   it("leaves a skipped segment out of the guest's running order", () => {
     const skipped = view("2026-09-16T14:10:00.000Z", [{ segmentId: "b", action: "skip", createdAt: "2026-09-16T14:05:00.000Z" }]);
-    expect(skipped.segments.map((s) => s.title)).toEqual(["Doors", "Networking"]);
+    expect(skipped.segments.map((s) => s.title)).toEqual(["Doors", "Coffee with the founders"]);
     expect(skipped.total).toBe(2);
   });
 

@@ -30,6 +30,8 @@ export interface RuntimeEventSession {
   host?: string;
   alsoOn?: string;
   cueNotes?: string;
+  /** The producer marked this a networking block (22 Nov 2026): guests get the queue link on its row. */
+  networking?: boolean;
 }
 
 export interface RuntimeEventBranding {

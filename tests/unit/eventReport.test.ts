@@ -9,7 +9,7 @@ import type { ShowSegment } from "@/services/run-of-show/eventShow";
  * producer and the client. It used to show three counts; it must never show an invented one.
  */
 const E = "evt";
-const seg = (id: string, start: string, end: string): ShowSegment => ({ id, title: id, startAt: `2026-10-30T${start}:00.000Z`, endAt: `2026-10-30T${end}:00.000Z`, durationMinutes: 10, room: "Main", description: "", speakerIds: [], speakers: [] });
+const seg = (id: string, start: string, end: string): ShowSegment => ({ id, title: id, startAt: `2026-10-30T${start}:00.000Z`, endAt: `2026-10-30T${end}:00.000Z`, durationMinutes: 10, room: "Main", description: "", speakerIds: [], speakers: [], networking: false });
 const SEGMENTS = [seg("welcome", "18:00", "18:10"), seg("panel", "18:10", "18:30"), seg("close", "18:30", "18:40")];
 const values = (report: ReturnType<typeof buildEventReport>) => Object.fromEntries(report.sections.flatMap((section) => section.figures.map((item) => [item.id, item.value])));
 

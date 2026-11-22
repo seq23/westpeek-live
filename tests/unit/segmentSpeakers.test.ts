@@ -8,6 +8,7 @@ import { ensureRuntimeEvent, resetOverlayForTests } from "@/services/events/runt
 import { createEventRecord, updateEventRecord } from "@/services/events/eventRepository";
 import { getEventShow, segmentIdForSession, segmentsForSpeaker, showSegmentsFor, whoIsOn } from "@/services/run-of-show/eventShow";
 import { getRunOfShowForEvent } from "@/lib/runtime/getRuntimeData";
+import { attendeeRunOfShowView } from "@/services/run-of-show/attendeeRunOfShow";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 
@@ -69,5 +70,20 @@ describe("segment speakers", () => {
     const show = await getEventShow(eventId);
     expect(show.segments.every((run) => run.segment.speakers.length === 0)).toBe(true);
     expect(JSON.stringify(show.segments.map((run) => whoIsOn(run.segment)))).not.toContain("guest-abc123");
+  });
+
+  it("a networking block is the producer's flag on the session: stored, read by the attendee row, and absent means no", async () => {
+    const event = (await ensureRuntimeEvent(eventId))!;
+    const [first, ...rest] = event.sessions;
+    // Saved before the flag existed: no queue link, whatever the title says.
+    await updateEventRecord(eventId, { sessions: [{ ...first, title: "Networking hour" }, ...rest] }, owner);
+    await ensureRuntimeEvent(eventId);
+    expect((await attendeeRunOfShowView(eventId)).segments.find((row) => row.id === segmentIdForSession(first.id))?.networking).toBe(false);
+
+    await updateEventRecord(eventId, { sessions: [{ ...first, title: "Coffee with the founders", networking: true }, ...rest] }, owner);
+    await ensureRuntimeEvent(eventId);
+    const rows = (await attendeeRunOfShowView(eventId)).segments;
+    expect(rows.find((row) => row.id === segmentIdForSession(first.id))?.networking).toBe(true);
+    expect(rows.filter((row) => row.networking)).toHaveLength(1);
   });
 });

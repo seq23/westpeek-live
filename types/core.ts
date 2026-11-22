@@ -196,6 +196,8 @@ export interface RunOfShowSegment {
   pollCue?: string;
   qAndACue?: string;
   sponsorMention?: string;
+  /** A networking block: guests get the link to the networking queue on its row. Set by the producer. */
+  networking?: boolean;
   readinessStatus: "not_started" | "needs_assets" | "needs_speaker" | "needs_approval" | "ready" | "at_risk" | "blocked";
   approvalStatus: ApprovalStatus;
   clientVisible: boolean;

@@ -35,6 +35,8 @@ export interface ShowSegment {
   host?: string;
   alsoOn?: string;
   cueNotes?: string;
+  /** The producer marked this a networking block; the attendee row links to the queue. */
+  networking: boolean;
 }
 
 export type EventShow = ShowProgress<ShowSegment>;
@@ -86,6 +88,7 @@ export function showSegmentsFor(eventId: string, names: Map<string, string>): Sh
           host: clean(session.host),
           alsoOn: clean(session.alsoOn),
           cueNotes: clean(session.cueNotes),
+          networking: session.networking === true,
         };
       })
       .sort((a, b) => a.startAt.localeCompare(b.startAt));
@@ -104,6 +107,7 @@ export function showSegmentsFor(eventId: string, names: Map<string, string>): Sh
         speakerIds,
         speakers: people(speakerIds),
         cueNotes: clean(segment.technicalCues),
+        networking: segment.networking === true,
       };
     })
     .sort((a, b) => a.startAt.localeCompare(b.startAt));

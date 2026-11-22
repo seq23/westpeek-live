@@ -88,6 +88,7 @@ export async function saveSegmentPeopleAction(formData: FormData) {
       host: limit(clean(formData.get("host")), 120) || undefined,
       alsoOn: limit(clean(formData.get("alsoOn")), 240) || undefined,
       cueNotes: limit(clean(formData.get("cueNotes")), 1000) || undefined,
+      networking: formData.get("networking") === "on" || undefined,
     }
     : session);
   await updateEventRecord(event.id, { sessions: next }, actor);
