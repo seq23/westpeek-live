@@ -1,5 +1,12 @@
 import fs from "node:fs";
-import { describe, expect, it } from "vitest";
+import { describe, expect, it, vi } from "vitest";
+import { createElement } from "react";
+import { renderToStaticMarkup } from "react-dom/server";
+
+let pathname = "/app";
+vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
+vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: unknown }) => createElement("a", { href, ...rest }, children as never) }));
+import { WorkspaceNavList } from "@/components/navigation/WorkspaceNavList";
 import { activeNavHref, NEW_EVENT_ITEM, WORKSPACE_NAV } from "@/lib/navigation/workspaceNav";
 import { OWNER_ACTOR_LABEL, ownerKeyLabel } from "@/lib/auth/workspaceActor";
 
@@ -38,13 +45,22 @@ describe("sidebar: exactly one current item, and it is the right one", () => {
     expect(activeNavHref("/venue/demo/lobby")).toBeUndefined();
   });
 
-  it("the nav list is a client component that marks aria-current and does not reuse the CTA styling", () => {
-    const list = fs.readFileSync("components/navigation/WorkspaceNavList.tsx", "utf8");
-    expect(list).toContain('"use client"');
-    expect(list).toContain("usePathname");
-    expect(list).toContain('aria-current={current ? "page" : undefined}');
-    // The active item is a slab with an orange rule; the CTA stays a solid orange button.
-    expect(list).toContain("border-l-brand-orange");
+  it("the rendered nav marks exactly one link as current, the right one, and the phone menu starts closed", () => {
+    for (const [path, href] of [["/app/events/x/assets", "/app/events"], ["/app/events/new", "/app/events/new"], ["/app/people", "/app/people"]]) {
+      pathname = path;
+      const html = renderToStaticMarkup(createElement(WorkspaceNavList));
+      const current = html.match(/<a\b[^>]*aria-current="page"[^>]*>/g) || [];
+      expect(current, path).toHaveLength(1);
+      expect(current[0]).toContain(`href="${href}"`);
+      // The current item is a slab with an orange rule; the New event CTA is never styled as one.
+      if (href !== NEW_EVENT_ITEM.href) expect(current[0]).toContain("border-l-brand-orange");
+      const cta = html.match(/<a\b[^>]*data-testid="sidebar-new-event"[^>]*>/)?.[0] || "";
+      expect(cta).not.toContain("border-l-brand-orange");
+      const menu = html.match(/<button\b[^>]*data-testid="sidebar-menu"[^>]*>([^<]*)</);
+      expect(menu?.[0]).toContain('aria-expanded="false"');
+      expect(menu?.[0]).toContain('aria-controls="workspace-nav-links"');
+      expect(html).toMatch(/id="workspace-nav-links" class="hidden /);
+    }
     expect(fs.readFileSync("components/navigation/Sidebar.tsx", "utf8")).toContain("WorkspaceNavList");
   });
 });

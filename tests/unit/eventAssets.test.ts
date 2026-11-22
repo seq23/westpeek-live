@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { FileRuntimeStore } from "@/services/runtime/fileRuntimeStore";
 import { getRuntimeStore, setRuntimeStoreForTests } from "@/services/runtime/runtimeStoreFactory";
 import { archiveAsset, listAssetsAcrossEvents, listEventAssets, recordUploadedAsset, requestAssetUpload, setAssetReview, setAssetVisibility } from "@/services/assets/eventAssetService";
@@ -24,14 +24,22 @@ describe("event assets", () => {
   it("refuses what it cannot take, in words", () => {
     expect(assetUploadRefusal({ mimeType: "application/pdf", sizeBytes: 1000 })).toBeUndefined();
     expect(assetUploadRefusal({ mimeType: "application/pdf", sizeBytes: EVENT_ASSET_MAX_BYTES + 1 })).toContain("the limit is");
-    expect(assetUploadRefusal({ mimeType: "application/x-msdownload", sizeBytes: 10 })).toContain("We do not take");
+    expect(assetUploadRefusal({ mimeType: "application/x-msdownload", sizeBytes: 10 })).toContain("can't be uploaded");
     expect(assetUploadRefusal({ mimeType: "application/pdf", sizeBytes: 0 })).toContain("empty");
   });
 
-  it("without the R2 bucket bound the upload is refused with the reason and the link path is offered", async () => {
-    const ticket = await requestAssetUpload({ eventId: "event-a", fileName: "deck.pdf", mimeType: "application/pdf", sizeBytes: 1000 });
+  it("without the R2 bucket bound the upload is refused with the reason; the library offers its link form, a guest portal a next step it can take", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const ticket = await requestAssetUpload({ eventId: "event-a", fileName: "deck.pdf", mimeType: "application/pdf", sizeBytes: 1000, place: "library" });
     expect(ticket.ok).toBe(false);
     if (!ticket.ok) expect(ticket.reason).toMatch(/not bound on this deployment \(R2 binding ASSETS_BUCKET\)\. Paste a link/);
+    const guest = await requestAssetUpload({ eventId: "event-a", fileName: "deck.pdf", mimeType: "application/pdf", sizeBytes: 1000 });
+    expect(guest.ok).toBe(false);
+    // A guest is not told about bindings or offered a link form they don't have, but is given a step to take.
+    if (!guest.ok) {
+      expect(guest.reason).not.toMatch(/bound|R2|ASSETS_BUCKET|link/i);
+      expect(guest.reason).toMatch(/producer/);
+    }
   });
 
   it("a speaker's upload waits in review; production's own does not", async () => {

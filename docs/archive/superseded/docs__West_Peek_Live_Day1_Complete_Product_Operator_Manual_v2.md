@@ -59,19 +59,19 @@ The video model is layered on purpose. StreamYard is the production feed/source.
 
 | Key | Value |
 | --- | --- |
-| OWNER_MASTER_ACCESS_PASSWORD | Owner-Command-2026! |
+| OWNER_MASTER_ACCESS_PASSWORD | set in Cloudflare (vault: WESTPEEK_LIVE_OWNER_MASTER_ACCESS_PASSWORD) |
 
 ### Operator
 
 | Key | Value |
 | --- | --- |
-| OPERATOR_LAUNCHPAD_PASSWORD | Show-Runner-2026! |
+| OPERATOR_LAUNCHPAD_PASSWORD | set in Cloudflare (vault: WESTPEEK_LIVE_OPERATOR_LAUNCHPAD_PASSWORD) |
 
 ### Crew
 
 | Key | Value |
 | --- | --- |
-| CREW_ACCESS_PASSWORD | Crew-Call-2026! |
+| CREW_ACCESS_PASSWORD | set in Cloudflare (vault: WESTPEEK_LIVE_CREW_ACCESS_PASSWORD) |
 
 ### Demo Event
 
