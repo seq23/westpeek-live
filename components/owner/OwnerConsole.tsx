@@ -18,7 +18,7 @@ import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import { getCrewAccessPassword, getEnv, getOperatorLaunchpadPassword } from "@/lib/env";
 import { getRuntimeSchemaStatus, listEventRecords } from "@/services/events/eventRepository";
 import { getWorkspaceActor, ownerKeyLabel } from "@/lib/auth/workspaceActor";
-import { getHostLinkState, hostLinkPath } from "@/services/events/hostLinkService";
+import { getHostLinkState, hostLinkPathFor } from "@/services/events/hostLinkService";
 import { listGuestProfiles } from "@/services/guests/guestIdentityService";
 import { listSpeakerStageStates } from "@/services/guests/guestStateService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -117,6 +117,7 @@ function GoLiveRowControl({ event }: { event: RuntimeEventRecord }) {
 
 async function CrewRow({ event, crewSessions, base }: { event: RuntimeEventRecord; crewSessions: Array<{ role?: string; createdAt: string }>; base: string }) {
   const host = await getHostLinkState(event.id).catch(() => ({ codeVersion: 0, links: [] }));
+  const hostPath = await hostLinkPathFor(event).catch(() => undefined);
   const activeLinks = host.links.filter((link) => !link.revokedAt).length;
   return (
     <li className="rounded-2xl border border-brand-line p-4" data-testid={`console-crew-${event.id}`}>
@@ -124,7 +125,7 @@ async function CrewRow({ event, crewSessions, base }: { event: RuntimeEventRecor
       <p className="mt-1 text-xs text-brand-muted">Crew code <code className="font-mono font-bold text-brand-black">{displayCode(event.accessCodes.crew)}</code> · {activeLinks} active host link{activeLinks === 1 ? "" : "s"} · {crewSessions.length ? `crew sessions in the last 8h: ${crewSessions.map((session) => session.role || "crew").join(", ")}` : "no crew session in the last 8h"}</p>
       <div className="mt-2 flex flex-wrap gap-2">
         <CopyButton value={displayCode(event.accessCodes.crew)} label="Copy crew code" />
-        <CopyButton value={`${base}${hostLinkPath(event)}`} label="Copy host link" />
+        {hostPath ? <CopyButton value={`${base}${hostPath}`} label="Copy host link" /> : null}
         <Link href={`/crew/events/${event.id}`} className="rounded-full border border-brand-black px-3 py-1 text-xs font-black hover:border-brand-orange hover:text-brand-orange">Crew deck</Link>
       </div>
       <div className="mt-3"><SafeSection label="Host" compact render={() => HostPanel({ eventId: event.id, compact: true })} /></div>
@@ -165,6 +166,8 @@ export async function OwnerConsole() {
   const archived = events.filter((event) => event.status === "archived");
   const active = events.filter((event) => event.status !== "archived");
   const base = await appBaseUrl();
+  // Host links carry the host code, which is made from the access secret per event: worked out once here.
+  const hostPaths = new Map(await Promise.all(events.map(async (event) => [event.id, await hostLinkPathFor(event).catch(() => undefined)] as const)));
   // Who holds sessions right now: access-audit rows granted in the last 8 hours (the cookie's life). Diagnostic; fail-soft.
   const since = Date.now() - 8 * 60 * 60 * 1000;
   const attempts = (await getRuntimeStore().readSnapshot().then((snapshot) => snapshot.accessAttempts).catch(() => []))
@@ -205,7 +208,7 @@ export async function OwnerConsole() {
         {[["Live", live], ["Upcoming", upcoming], ["Drafts", drafts], ["Ended", ended], ["Archived", archived]].map(([label, list]) => (
           <details key={String(label)} className="mb-2 rounded-2xl bg-brand-ash p-3" open={String(label) !== "Archived" && (list as RuntimeEventRecord[]).length > 0} data-testid={`console-events-${String(label).toLowerCase()}`}>
             <summary className="cursor-pointer text-sm font-black">{String(label)} · {(list as RuntimeEventRecord[]).length}</summary>
-            {(list as RuntimeEventRecord[]).length ? <ul className="mt-2 space-y-2">{(list as RuntimeEventRecord[]).map((event) => <EventRow key={event.id} event={event}><GoLiveRowControl event={event} /><CopyButton value={`${base}${hostLinkPath(event)}`} label="Copy host link" className="!px-3 !py-1 !text-xs" /><EventArchiveControl eventId={event.id} eventName={event.name} archived={event.status === "archived"} /></EventRow>)}</ul> : <p className="mt-2 text-xs text-brand-muted">None.</p>}
+            {(list as RuntimeEventRecord[]).length ? <ul className="mt-2 space-y-2">{(list as RuntimeEventRecord[]).map((event) => <EventRow key={event.id} event={event}><GoLiveRowControl event={event} />{hostPaths.get(event.id) ? <CopyButton value={`${base}${hostPaths.get(event.id)}`} label="Copy host link" className="!px-3 !py-1 !text-xs" /> : null}<EventArchiveControl eventId={event.id} eventName={event.name} archived={event.status === "archived"} /></EventRow>)}</ul> : <p className="mt-2 text-xs text-brand-muted">None.</p>}
           </details>
         ))}
       </ConsoleSection>

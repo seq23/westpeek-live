@@ -187,26 +187,40 @@ An operator is West Peek staff running the control room. Same building as the ow
 
 ### The shape
 
-Every code for an event is built from the same stem: **the first six letters or digits of the event name**, uppercased. So an event called "Nova Summit" has the stem `NOVASU`, and its six codes are the prefixes below with that stem on the end. No real code appears in this document, and a validator fails the build if one ever does.
+The **event code** is built from the event name: `WPL-` plus **the first six letters or digits of the name**, uppercased. An event called "Nova Summit" has the event code `WPL-NOVASU`. Every attendee holds it, so it is meant to be easy to read out.
+
+The **role codes** are secrets. Each one names its role and then carries **ten random characters** in two groups of five. Nothing in a role code comes from the event name or the event code, so holding the event code tells nobody a role code. No real code appears in this document, and a validator fails the build if one ever does.
 
 | Who | Code | Opens |
 | --- | --- | --- |
 | Attendees — **the event code** | `WPL-` + the stem | The venue, via `/join` |
-| Crew | `WPL-CREW-` + the stem | `/crew/events/…` — moderation, go-live, end the show |
-| Speaker | `WPL-SPEAKER-` + the stem | `/speaker/events/…` — green room, cue cards, stage |
-| Sponsor | `WPL-SPONSOR-` + the stem | `/sponsor/events/…` — booth, leads |
-| Client | `WPL-CLIENT-` + the stem | `/client/…` — approvals, reports, scoped to their own slug |
-| VIP | `WPL-VIP-` + the stem | The venue plus the VIP badge and lounge |
+| Crew | `WPL-CREW-` + two random groups | `/crew/events/…` — moderation, cues, the show |
+| Speaker | `WPL-SPEAKER-` + two random groups | `/speaker/events/…` — green room, cue cards, stage |
+| Sponsor | `WPL-SPONSOR-` + two random groups | `/sponsor/events/…` — booth, leads |
+| Client | `WPL-CLIENT-` + two random groups | `/client/…` — approvals, reports, scoped to their own slug |
+| VIP | `WPL-VIP-` + two random groups | The venue plus the VIP badge and lounge |
 
-Codes are **UPPERCASE**, matched **case-insensitively**, and the event code is accepted with or without the `WPL-` prefix — typing the stem alone gets in.
+Codes are **UPPERCASE**, matched **case-insensitively**, with or without the dashes; the event code is also accepted without the `WPL-` prefix. Send the **link** rather than reading a role code out: the link fills the code in.
 
 **Why the roles are separate credentials:** the code *is* the role. A sponsor holding the client's code would be reading the paying client's approvals and reports. Each one opens a different area and nothing else.
 
-**Collisions:** two events whose names begin the same way — "Sequoia's first Room" and "Sequoia's second Room" both give `SEQUOI` — get a disambiguated stem (`SEQUOI2`), applied across all six roles for that event.
+**The executive producer (the host) never comes in on the crew code.** The crew code lets a person pick any other crew role. Executive producer opens only with a **host link**, which the owner, the operator or the current host hands out from the Host panel; it carries its own host code. Revoking host links ends that code too.
 
-**Renaming an event does not change its codes.** Links already sent keep working. If you want the codes to follow the new name, press **Regenerate codes from the new name** — deliberately, knowing the old ones die.
+**Collisions:** two events whose names begin the same way — "Sequoia's first Room" and "Sequoia's second Room" both give `SEQUOI` — get a disambiguated event code (`SEQUOI2`).
 
-Because codes are derived from the event name they are guessable by design. The protection is at the door, not in the string: **code entry is rate-limited at every gate**, and failed attempts on privileged codes are logged and visible in the Owner Console.
+**Renaming an event does not change its codes.** Links already sent keep working.
+
+Code entry is still **rate-limited at every gate**, and failed attempts on privileged codes are logged and visible in the Owner Console.
+
+### Events made before 22 November 2026: press New codes
+
+Until 22 November 2026 the role codes were built from the event code (`WPL-CREW-` + the stem), so anyone holding the event code could work them out. Those codes were not changed for you: producers had already sent them. Instead:
+
+1. The event's **Access** page shows an amber notice naming the role codes that are built from the event code.
+2. Press **New codes**. The crew, speaker, sponsor, VIP and client codes are replaced with random ones in one press; the event code stays, so attendees notice nothing.
+3. Send the new links to your crew, speakers, sponsors, VIPs and client. Anyone using an old one is told it was changed and to ask the production team.
+
+Codes built from the event code **stop working at the end of Saturday 28 November 2026 (Central)** whether or not New codes was pressed. **Adopt safe codes** in the Owner Console does the same replacement for one event while keeping any code set by hand.
 
 ### Custom codes
 
@@ -215,7 +229,9 @@ Any code can be set by hand instead.
 1. Owner Console → **Access codes**, or the event's **Access** page.
 2. Type your own: **4–24 characters, letters, digits and hyphens, unique across events.**
 3. Save. The old code **stops opening anything immediately**, and the notice says exactly what that killed — crew sessions and crew links, or guests sent back to the gate, or old event-code links. For the next 90 days it is still recognised, so an old link gets an honest answer rather than a dead end; see below.
-4. **Regenerate** puts a code back to the automatic `WPL-…` form.
+4. **Regenerate** puts a code back to the automatic `WPL-…` form: for a role code, a fresh random one.
+
+A hand-set role code may not be built from the event code (the save is refused): every attendee holds the event code.
 
 A hand-set code **wins over the generated one** and survives a rename. Who can do this: owner, operator, and producers holding `manage_access_codes`; anyone else sees the row read-only with the reason.
 
@@ -267,7 +283,7 @@ Those values render **only** under an owner session — an operator never receiv
 
 ### Before the doors open
 
-1. Open the host link you were sent, or `/production-access/crew` + the event's crew code.
+1. Open the host link you were sent, or `/production-access/crew` + the event's crew code. The crew code opens every crew role except executive producer, which comes only with a host link.
 2. Read **What to do now**, then **Call Sheet**, **Run of Show**, **Tasks**.
 3. Confirm the event's call time and show start at the top of the page — they render in **your** time zone.
 

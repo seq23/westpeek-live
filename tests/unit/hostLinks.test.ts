@@ -7,7 +7,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
  * Host = the executive_producer crew role for one event.
  *   an executive_producer crew cookie → host banner + the full deck; plain crew → not host;
  *   minting a host link records the grant and the link carries the event code, the role, and the
- *   event's crew code; revoking rotates the crew code and bumps the version, so a cookie minted with
+ *   event's host code (never the crew code); revoking rotates the crew code and bumps the version, so a cookie minted with
  *   the old code is refused by the guard and the viewer, while a global-password cookie is not.
  */
 vi.mock("next/cache", () => ({ revalidatePath: () => undefined }));
@@ -18,7 +18,9 @@ import { FileRuntimeStore } from "@/services/runtime/fileRuntimeStore";
 import { setRuntimeStoreForTests } from "@/services/runtime/runtimeStoreFactory";
 import { resetOverlayForTests } from "@/services/events/runtimeEventOverlay";
 import { createEventRecord, findEventRecord } from "@/services/events/eventRepository";
-import { crewCookieCurrent, getHostLinkState, hostLinkPath, mintHostLink, revokeHostLinks } from "@/services/events/hostLinkService";
+import { crewCookieCurrent, getHostLinkState, hostCodeFor, hostLinkPathFor, mintHostLink, revokeHostLinks } from "@/services/events/hostLinkService";
+import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
+import { getCrewAccessPassword } from "@/lib/env";
 import { authorizeLiveControl, REVOKED_HOST_LINK_ERROR, requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { crewViewerFromPayloads, getCrewViewer, viewerCan } from "@/lib/auth/crewViewer";
 import { createV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/productionAccess";
@@ -73,9 +75,12 @@ describe("host links against the store", () => {
   });
   afterEach(() => { setRuntimeStoreForTests(undefined); resetOverlayForTests(); fs.rmSync(tempDir, { recursive: true, force: true }); jar.clear(); });
 
-  it("mint records the grant; the link is the crew gate prefilled with event code, role, and the crew code; revoke rotates the code and ends old cookies", async () => {
+  it("mint records the grant; the link is the crew gate prefilled with event code, role, and the host code; revoke rotates the code and ends old cookies", async () => {
     const before = (await findEventRecord(eventId))!;
-    expect(hostLinkPath(before)).toBe(`/production-access/crew?event=${before.joinCode.toUpperCase()}&role=executive_producer&code=${before.accessCodes.crew}`);
+    const hostCode0 = await hostCodeFor(eventId, 0);
+    expect(hostCode0).toMatch(/^WPL-HOST-[A-Z2-9]{5}-[A-Z2-9]{5}$/);
+    expect(await hostLinkPathFor(before)).toBe(`/production-access/crew?event=${before.joinCode.toUpperCase()}&role=executive_producer&code=${hostCode0}`);
+    expect(await hostLinkPathFor(before)).not.toContain(before.accessCodes.crew);
 
     // Only the executive producer, owner, or operator may mint; a producer is refused with the reason.
     const form = new FormData(); form.set("eventId", eventId);
@@ -104,11 +109,33 @@ describe("host links against the store", () => {
     // A fresh link is against the new code and the new version.
     await signInAsCrew("executive_producer", eventId, 1);
     expect((await getCrewViewer(eventId)).isHost).toBe(true);
-    expect(hostLinkPath(after)).toContain(`code=${after.accessCodes.crew}`);
+    expect(await hostLinkPathFor(after)).toContain(`code=${await hostCodeFor(eventId, 1)}`);
+    expect(await hostCodeFor(eventId, 1)).not.toBe(hostCode0);
     // Direct service calls agree.
     await mintHostLink(eventId, "owner");
     expect((await getHostLinkState(eventId)).links.filter((link) => !link.revokedAt)).toHaveLength(1);
     await revokeHostLinks(eventId, "owner");
     expect((await getHostLinkState(eventId)).codeVersion).toBe(2);
+  });
+
+  it("the crew code never opens executive producer: only the event's current host code does", async () => {
+    const event = (await findEventRecord(eventId))!;
+    const join = event.joinCode.toUpperCase();
+    // The crew code opens a crew role…
+    expect(await resolveCrewAccess(join, "producer", event.accessCodes.crew)).toMatchObject({ ok: true, role: "producer" });
+    // …but picking Executive producer from the list with it, or with the global crew password, is refused.
+    expect(await resolveCrewAccess(join, "executive_producer", event.accessCodes.crew)).toMatchObject({ ok: false, reason: "host_link_required" });
+    const globalPassword = getCrewAccessPassword()?.trim();
+    if (globalPassword) expect(await resolveCrewAccess(join, "executive_producer", globalPassword)).toMatchObject({ ok: false, reason: "host_link_required" });
+    expect(await resolveCrewAccess(join, "executive_producer", "")).toMatchObject({ ok: false, reason: "host_link_required" });
+    // The host code from a host link opens it; once the links are revoked the old host code is dead.
+    const hostCode = await hostCodeFor(eventId, 0);
+    expect(await resolveCrewAccess(join, "executive_producer", hostCode.toLowerCase().replaceAll("-", " "))).toMatchObject({ ok: true, role: "executive_producer", eventId });
+    await revokeHostLinks(eventId, "owner");
+    expect(await resolveCrewAccess(join, "executive_producer", hostCode)).toMatchObject({ ok: false, reason: "host_link_required" });
+    expect(await resolveCrewAccess(join, "executive_producer", await hostCodeFor(eventId, 1))).toMatchObject({ ok: true });
+    // The host code is per event: one event's host code never opens another.
+    const other = await createEventRecord({ name: `Other ${Date.now()}`, when: "now" }, owner);
+    expect(await resolveCrewAccess(other.joinCode, "executive_producer", await hostCodeFor(eventId, 1))).toMatchObject({ ok: false });
   });
 });

@@ -1,4 +1,4 @@
-import { codesMatch } from "@/lib/access/accessCodes";
+import { codesMatch, liveRoleCode } from "@/lib/access/accessCodes";
 import { getAccessCodeVersions } from "@/services/events/accessCodeService";
 import { findEventRecord } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -92,7 +92,9 @@ export async function vipCodeFor(eventId: string) {
 
 /** The lobby card and the gate both land here: the code has to actually match. */
 export async function redeemVipCode(eventId: string, typedCode: string, attendee: { attendeeId: string; name: string; email?: string }) {
-  const expected = await vipCodeFor(eventId);
+  const event = await findEventRecord(eventId);
+  // A stem-built VIP code past the cut-off opens nothing, here as at the gate.
+  const expected = event ? liveRoleCode(event, "vip") : undefined;
   if (!expected) return { ok: false as const, reason: "This event has no VIP code." };
   if (!codesMatch(typedCode, expected)) return { ok: false as const, reason: "That is not this event's VIP code." };
   const grant = await grantVip(eventId, { attendeeId: attendee.attendeeId, name: attendee.name, email: attendee.email, source: "entered_code" });

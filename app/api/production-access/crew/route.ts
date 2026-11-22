@@ -5,6 +5,7 @@ import { missingAccessEnv } from "@/lib/env/safeEnv";
 import { ownerOverrideResponseIfMatched, redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
 import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
+import { crewRefusalQuery } from "@/components/access/crewRefusal";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { checkGateAttempts, clearGateAttempts, gateAttemptKeyFor, recordGateFailure, requestIpHash } from "@/services/access/gateAttemptLimiter";
 import type { V4CrewRole } from "@/types/v4";
@@ -50,7 +51,7 @@ export async function POST(request: NextRequest) {
     await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId || eventCode || undefined, role: crewRole, reason: limit.cooling ? "rate_limited_after_failures" : access.reason || "invalid_password", route: "/production-access/crew", ipHash });
     if (limit.cooling) return redirectTo(request, `/production-access/crew?error=too_many&retry=${limit.retryInSeconds}`);
     const superseded = supersededGateQuery(access);
-    return redirectTo(request, superseded ? `/production-access/crew?${superseded}` : invalidPassword ? "/production-access/crew?error=invalid" : "/production-access/crew?error=invalid_event");
+    return redirectTo(request, `/production-access/crew?${superseded || crewRefusalQuery(access.reason, invalidPassword)}`);
   }
 
   clearGateAttempts(attemptKey);

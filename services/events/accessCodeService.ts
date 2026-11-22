@@ -1,8 +1,8 @@
 import { cookies } from "next/headers";
-import { codeStem, codesMatch, codeKey, displayCode, isDerivedCode, isLegacyGeneratedCode, stemForEvent, stemFromCode, validateCustomCode, type AccessCodeField } from "@/lib/access/accessCodes";
+import { codeStem, codesMatch, codeKey, displayCode, isBuiltFromJoinCode, isLegacyGeneratedCode, isRandomRoleCode, joinCodeForStem, ROLE_CODE_FIELDS, stemBuiltRoleCode, stemForEvent, validateCustomCode, type AccessCodeField, type RoleCodeField } from "@/lib/access/accessCodes";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
-import { codesFromStem, freeCodeStem, mintAccessCodes, mintJoinCode } from "@/services/events/eventRepository";
+import { freeCodeStem, mintAccessCodes, mintJoinCode } from "@/services/events/eventRepository";
 import { revokeHostLinks } from "@/services/events/hostLinkService";
 import { recordSupersededCode } from "@/services/events/supersededCodeService";
 import type { SupersededCodeReason } from "@/types/supersededCode";
@@ -70,6 +70,8 @@ export async function setEventAccessCode(eventId: string, field: AccessCodeField
     const validated = validateCustomCode(input.value, field);
     if (!validated.ok) return { ok: false, reason: validated.reason };
     stored = validated.stored;
+    // Anyone holding the event code could type WPL-CREW-<its letters>: a role code is never built from it.
+    if (field !== "join" && isBuiltFromJoinCode(stored, event.joinCode, field)) return { ok: false, reason: "A role code cannot be built from the event code: every attendee holds that and could type it. Press Regenerate for a random one." };
   }
   const current = field === "join" ? event.joinCode : event.accessCodes[field];
   if (codeKey(current) === codeKey(stored)) return { ok: true, event, field, code: displayCode(stored) };
@@ -113,10 +115,12 @@ export async function guestAccessStale(eventId: string): Promise<boolean> {
 
 
 /**
- * Adopt the readable scheme for one event, or rotate the whole stem at once. Both do the same
- * thing — give every role the code its stem implies — and both kill every link and cookie minted
- * under the old codes, which is the point of rotating. A code a producer set by hand is left alone
- * unless `includeCustom` says otherwise: a custom code is a decision, not an accident.
+ * Adopt the readable event code for one event, or move it to a new stem, and replace every role
+ * code that is not a secret. A role code is replaced when it is one we generated in an old shape
+ * (CREW-93H7SD) or was built from the event code (WPL-CREW-STEM, refused after the cut-off anyway);
+ * a random code (WPL-CREW-7KQ3X-M9P2T) is kept, and a code a producer set by hand is kept unless
+ * `includeCustom` says otherwise: a custom code is a decision, not an accident. Every replacement
+ * goes through setEventAccessCode, so links and cookies minted under the old code stop working.
  */
 export interface AdoptCodesResult {
   ok: boolean;
@@ -126,6 +130,13 @@ export interface AdoptCodesResult {
   reason?: string;
 }
 
+/** True when this role code is ours to replace: an old generated shape, or one built from any stem of ours. */
+function roleCodeIsOurs(event: RuntimeEventRecord, field: RoleCodeField, stem: string | undefined) {
+  const current = event.accessCodes[field];
+  if (isRandomRoleCode(current, field)) return false;
+  return isLegacyGeneratedCode(current, field) || isBuiltFromJoinCode(current, event.joinCode, field) || Boolean(stem && codesMatch(current, stemBuiltRoleCode(stem, field)));
+}
+
 export async function adoptReadableCodes(eventId: string, actor: string, options: { includeCustom?: boolean; newStem?: boolean } = {}): Promise<AdoptCodesResult> {
   const store = getRuntimeStore();
   const event = await store.getRuntimeEvent(eventId);
@@ -133,37 +144,52 @@ export async function adoptReadableCodes(eventId: string, actor: string, options
   const all = await store.listRuntimeEvents().catch(() => [] as RuntimeEventRecord[]);
   const currentStem = stemForEvent(event.joinCode, event.name, event.id);
   const stem = options.newStem || !currentStem ? await freeCodeStem(event.name, event.id, all) : currentStem;
-  const target = codesFromStem(stem);
   const changed: AccessCodeField[] = [];
   const kept: AccessCodeField[] = [];
-  const fields: AccessCodeField[] = ["join", "crew", "speaker", "sponsor", "vip", "client"];
-  for (const field of fields) {
-    const current = field === "join" ? event.joinCode : event.accessCodes[field];
-    const next = field === "join" ? target.joinCode : target.accessCodes[field];
-    if (codesMatch(current, next)) { kept.push(field); continue; }
-    // A hand-set code is kept unless the owner asked for everything.
-    // Ours to replace: the derived code for another stem, or one of the old generated shapes.
-    const custom = !isLegacyGeneratedCode(current, field) && (currentStem ? !isDerivedCode(current, currentStem, field) : !stemFromCode(current));
-    if (custom && !options.includeCustom) { kept.push(field); continue; }
-    const result = await setEventAccessCode(eventId, field, { value: next, reason: "adopt" }, actor);
+  const targetJoin = joinCodeForStem(stem).toLowerCase();
+  const joinIsOurs = Boolean(currentStem) || isLegacyGeneratedCode(event.joinCode, "join");
+  if (codesMatch(event.joinCode, targetJoin) || (!joinIsOurs && !options.includeCustom)) kept.push("join");
+  else if ((await setEventAccessCode(eventId, "join", { value: targetJoin, reason: "adopt" }, actor)).ok) changed.push("join");
+  else kept.push("join");
+  for (const field of ROLE_CODE_FIELDS) {
+    // `includeCustom` is "replace everything": hand-set and random codes too.
+    const replace = roleCodeIsOurs(event, field, currentStem) || Boolean(options.includeCustom);
+    if (!replace) { kept.push(field); continue; }
+    const result = await setEventAccessCode(eventId, field, { regenerate: true, reason: "adopt" }, actor);
     if (result.ok) changed.push(field); else kept.push(field);
   }
   return { ok: true, stem, changed, kept };
 }
 
-/** What the vault shows per event: the stem, whether each code is the derived one, and what it would be. */
+/**
+ * "New codes" (22 Nov 2026): every role code for the event replaced by a fresh random one in one
+ * press. The event code stays, so attendees notice nothing; every crew, speaker, sponsor, client
+ * and VIP link handed out before stops working and has to be sent again.
+ */
+export async function rotateAllRoleCodes(eventId: string, actor: string): Promise<AdoptCodesResult> {
+  const changed: AccessCodeField[] = [];
+  const kept: AccessCodeField[] = [];
+  for (const field of ROLE_CODE_FIELDS) {
+    const result = await setEventAccessCode(eventId, field, { regenerate: true, reason: "rotate" }, actor);
+    if (!result.ok) return { ok: false, reason: result.reason, changed, kept };
+    changed.push(field);
+  }
+  return { ok: true, changed, kept };
+}
+
+/** Role codes still built from the public event code: anyone with the event code can type them. */
+export function roleCodesBuiltFromJoinCode(event: Pick<RuntimeEventRecord, "joinCode" | "accessCodes">) {
+  return ROLE_CODE_FIELDS.filter((field) => isBuiltFromJoinCode(event.accessCodes[field], event.joinCode, field));
+}
+
+/** What the vault shows per event: the stem, and whether the event code is readable and every role code a secret. */
 export function codeSchemeSummary(event: RuntimeEventRecord) {
   const stem = stemForEvent(event.joinCode, event.name, event.id) || codeStem(event.name, event.id);
-  const target = codesFromStem(stem);
-  const fields: AccessCodeField[] = ["join", "crew", "speaker", "sponsor", "vip", "client"];
+  const joinOnScheme = codesMatch(event.joinCode, joinCodeForStem(stem));
+  const unsafeRoles = ROLE_CODE_FIELDS.filter((field) => isBuiltFromJoinCode(event.accessCodes[field], event.joinCode, field) || isLegacyGeneratedCode(event.accessCodes[field], field));
   return {
     stem,
-    onScheme: fields.every((field) => codesMatch(field === "join" ? event.joinCode : event.accessCodes[field], field === "join" ? target.joinCode : target.accessCodes[field])),
-    rows: fields.map((field) => ({
-      field,
-      current: displayCode(field === "join" ? event.joinCode : event.accessCodes[field]),
-      derived: displayCode(field === "join" ? target.joinCode : target.accessCodes[field]),
-      custom: !codesMatch(field === "join" ? event.joinCode : event.accessCodes[field], field === "join" ? target.joinCode : target.accessCodes[field]),
-    })),
+    onScheme: joinOnScheme && unsafeRoles.length === 0,
+    unsafeRoles,
   };
 }

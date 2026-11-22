@@ -1,4 +1,4 @@
-import { codeStem, derivedCodes, stemWithSuffix, codeKey } from "@/lib/access/accessCodes";
+import { codeStem, joinCodeForStem, mintRoleCode, randomCodeChars, stemWithSuffix, codeKey } from "@/lib/access/accessCodes";
 import type { RegistrationQuestion } from "@/types/attendeeRegistration";
 import { releaseIngressForEvent } from "@/services/video/livekitIngressService";
 import { applyStageStreamSignal, getOrCreateStageStreamState } from "@/services/video/stageStreamStateService";
@@ -80,37 +80,28 @@ export function slugify(value: string) {
   return value.toLowerCase().replace(/[^a-z0-9]+/g, "-").replace(/^-|-$/g, "").slice(0, 60);
 }
 
-const CODE_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
-
-function randomCode(length: number) {
-  const bytes = new Uint8Array(length);
-  globalThis.crypto.getRandomValues(bytes);
-  let out = "";
-  for (let index = 0; index < length; index += 1) out += CODE_ALPHABET[bytes[index] % CODE_ALPHABET.length];
-  return out;
-}
-
 /** Join codes are short, lower-case, and typeable from a phone: `wpl-k7m2` style. */
 export function mintJoinCode() {
-  return `wpl-${randomCode(4).toLowerCase()}${randomCode(2).toLowerCase()}`;
+  return `wpl-${randomCodeChars(4).toLowerCase()}${randomCodeChars(2).toLowerCase()}`;
 }
 
+/** Fresh role codes: WPL-CREW-7KQ3X-M9P2T and so on, each from crypto randomness, none from the event. */
 export function mintAccessCodes(): RuntimeAccessCodes {
   return {
-    crew: `CREW-${randomCode(6)}`,
-    speaker: `SPK-${randomCode(6)}`,
-    sponsor: `SPN-${randomCode(6)}`,
-    vip: `VIP-${randomCode(6)}`,
-    client: `CLT-${randomCode(6)}`,
+    crew: mintRoleCode("crew"),
+    speaker: mintRoleCode("speaker"),
+    sponsor: mintRoleCode("sponsor"),
+    vip: mintRoleCode("vip"),
+    client: mintRoleCode("client"),
   };
 }
 
 /**
- * The readable scheme (16 Sep 2026): every code for an event is WPL-[ROLE-]STEM, where the stem is
- * the first six letters of the event's own name. One stem to remember, the role written in the
- * code. Two live events can want the same stem ("Sequoia's first Room" and "…second Room" both
- * give SEQUOI), so the stem is checked against every other non-archived event and takes the next
- * free digit — never two live events on one code.
+ * The readable event code (16 Sep 2026): WPL-STEM, the stem being the first six letters of the
+ * event's own name. Two live events can want the same stem ("Sequoia's first Room" and "…second
+ * Room" both give SEQUOI), so the stem is checked against every other non-archived event's codes
+ * and takes the next free digit — never two live events on one event code. Role codes are random
+ * (mintAccessCodes) and play no part in the stem.
  */
 export async function freeCodeStem(name: string, eventId: string, events?: RuntimeEventRecord[]): Promise<string> {
   const all = events || await getRuntimeStore().listRuntimeEvents().catch(() => [] as RuntimeEventRecord[]);
@@ -123,21 +114,15 @@ export async function freeCodeStem(name: string, eventId: string, events?: Runti
   const base = codeStem(name, eventId);
   for (let attempt = 1; attempt <= 50; attempt += 1) {
     const stem = stemWithSuffix(base, attempt);
-    const candidate = derivedCodes(stem);
-    const clashes = [candidate.join, candidate.crew, candidate.speaker, candidate.sponsor, candidate.vip, candidate.client].some((code) => takenKeys.has(codeKey(code)));
-    if (!clashes) return stem;
+    if (!takenKeys.has(codeKey(joinCodeForStem(stem)))) return stem;
   }
   // 50 events sharing one six-letter stem is not a thing, but never hand back a colliding code.
-  return `${base}${randomCode(2)}`;
+  return `${base}${randomCodeChars(2)}`;
 }
 
-/** The six codes an event gets from its stem. Join codes are stored lowercase, role codes uppercase. */
+/** A new event's codes: the readable event code from its stem (stored lowercase) and fresh random role codes. */
 export function codesFromStem(stem: string): { joinCode: string; accessCodes: RuntimeAccessCodes } {
-  const derived = derivedCodes(stem);
-  return {
-    joinCode: derived.join.toLowerCase(),
-    accessCodes: { crew: derived.crew, speaker: derived.speaker, sponsor: derived.sponsor, vip: derived.vip, client: derived.client },
-  };
+  return { joinCode: joinCodeForStem(stem).toLowerCase(), accessCodes: mintAccessCodes() };
 }
 
 export interface CreateEventInput {
@@ -231,13 +216,13 @@ export async function listEventRecords(options: EventListOptions = {}): Promise<
 async function uniqueSlug(base: string) {
   const store = getRuntimeStore();
   let candidate = base || "event";
-  if (isSeedEventId(candidate)) candidate = `${candidate}-${randomCode(3).toLowerCase()}`;
+  if (isSeedEventId(candidate)) candidate = `${candidate}-${randomCodeChars(3).toLowerCase()}`;
   for (let attempt = 0; attempt < 5; attempt += 1) {
     const existing = await store.getRuntimeEvent(candidate);
     if (!existing) return candidate;
-    candidate = `${base}-${randomCode(3).toLowerCase()}`;
+    candidate = `${base}-${randomCodeChars(3).toLowerCase()}`;
   }
-  return `${base}-${randomCode(6).toLowerCase()}`;
+  return `${base}-${randomCodeChars(6).toLowerCase()}`;
 }
 
 /**

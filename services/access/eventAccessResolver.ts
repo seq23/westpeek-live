@@ -2,7 +2,9 @@ import { destinationForRole, findEventIndexRecord, getEventAccessConfig, getEven
 import { ensureRuntimeEvent, peekOverlayEvent } from "@/services/events/runtimeEventOverlay";
 import { getCrewAccessPassword } from "@/lib/env";
 import type { V4AccessResolution, V4CrewRole, V4SpecialGuestRole } from "@/types/v4";
-import { codesMatch, type AccessCodeField } from "@/lib/access/accessCodes";
+import { codesMatch, isBuiltFromJoinCode, liveRoleCode, ROLE_CODE_FIELDS, type AccessCodeField } from "@/lib/access/accessCodes";
+import { matchesHostCode } from "@/services/events/hostLinkService";
+import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 import { findSupersededCodeForField } from "@/services/events/supersededCodeService";
 import { supersededPrivilegedMessage } from "@/types/supersededCode";
 
@@ -30,6 +32,17 @@ async function supersededRoleRefusal(eventId: string, typedCode: string, roles: 
     return { ok: false, accessKind: "special_guest", eventId, reason: "superseded_code", supersededAt: hit.record.replacedAt, supersededField: field, message: supersededPrivilegedMessage(field, hit.record.replacedAt) };
   }
   return undefined;
+}
+
+/**
+ * A role code built from the event code (WPL-CREW-STEM) after LEGACY_ROLE_CODE_CUTOFF: refused like
+ * any other wrong code, but told the production team changed it so the holder asks for a new link.
+ */
+function retiredRoleCodeRefusal(event: Pick<RuntimeEventRecord, "joinCode" | "accessCodes"> | undefined, typed: string, accessKind: "crew" | "special_guest", eventId: string | undefined): V4AccessResolution | undefined {
+  if (!event) return undefined;
+  const retired = ROLE_CODE_FIELDS.some((field) => codesMatch(event.accessCodes?.[field], typed) && isBuiltFromJoinCode(typed, event.joinCode, field) && !liveRoleCode(event, field));
+  if (!retired) return undefined;
+  return { ok: false, accessKind, eventId, reason: "rotated", message: "That code was changed by the production team. Ask them for the new link." };
 }
 
 function readEnvCode(envKey: string) {
@@ -62,6 +75,8 @@ export async function resolveSpecialGuestAccess(eventCode: string | undefined, r
 
   if (!matchingRole) {
     // Only on a miss, and it never grants: it turns the generic "no" into one the holder can act on.
+    const retired = retiredRoleCodeRefusal(runtimeEvent, normalizedRoleCode, "special_guest", eventRecord.eventId);
+    if (retired) return retired;
     const superseded = await supersededRoleRefusal(eventRecord.eventId, normalizedRoleCode, accessConfig.specialGuestCodes.map((item) => item.role));
     if (superseded) return superseded;
     return { ok: false, accessKind: "special_guest", eventId: eventRecord.eventId, reason: "invalid_role_code", message: "That access code is not valid for this event." };
@@ -93,12 +108,24 @@ export async function resolveCrewAccess(eventCode: string | undefined, crewRole:
   }
   const hydrated = await ensureRuntimeEvent(eventCode);
   const eventRecord = findEventIndexRecord(hydrated?.id || eventCode);
+  if (crewRole === "executive_producer") {
+    // The host: only the host code opens it, never the crew code or the global crew password, so
+    // a crew link cannot be turned into the host by picking a different line in the role list.
+    const runtimeEvent = eventRecord ? peekOverlayEvent(eventRecord.slug) : undefined;
+    if (!eventRecord || !runtimeEvent) return { ok: false, accessKind: "crew", eventId: eventRecord?.eventId, reason: "host_link_required", message: "The executive producer comes in with a host link from the owner or the operator." };
+    if (!(await matchesHostCode(eventRecord.eventId, password).catch(() => false))) {
+      return { ok: false, accessKind: "crew", eventId: eventRecord.eventId, reason: "host_link_required", message: "The executive producer comes in with a host link from the owner or the operator." };
+    }
+    return { ok: true, accessKind: "crew", eventId: eventRecord.eventId, role: crewRole, destination: `/crew/events/${eventRecord.eventId}`, message: "Host access granted." };
+  }
   if (password !== undefined) {
     const runtimeEvent = eventRecord ? peekOverlayEvent(eventRecord.slug) : undefined;
-    const eventCrewCode = runtimeEvent?.accessCodes.crew;
+    const eventCrewCode = runtimeEvent ? liveRoleCode(runtimeEvent, "crew") : undefined;
     const matchesGlobal = Boolean(globalPassword && password === globalPassword);
     const matchesEvent = Boolean(eventCrewCode && codesMatch(eventCrewCode, password));
     if (!matchesGlobal && !matchesEvent) {
+      const retired = retiredRoleCodeRefusal(runtimeEvent, password, "crew", eventRecord?.eventId);
+      if (retired) return retired;
       // A rotated crew code still fails — that is the point of rotating it — but it says which
       // credential went and when, so the crew member asks the producer instead of retyping.
       const hit = eventRecord ? await findSupersededCodeForField(password, "crew", eventRecord.eventId) : undefined;

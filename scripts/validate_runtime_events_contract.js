@@ -47,7 +47,7 @@ requireTokens("services/runtime/fileRuntimeStore.ts", ["upsertRuntimeEvent", "li
 
 // 3. Every public entry resolves runtime events before compiled seed JSON.
 requireTokens("services/events/eventStateResolver.ts", ["await ensureRuntimeEvent("]);
-requireTokens("services/access/eventAccessResolver.ts", ["await ensureRuntimeEvent(", "accessCodes.crew", "getGeneratedEventRoleCode"]);
+requireTokens("services/access/eventAccessResolver.ts", ["await ensureRuntimeEvent(", "liveRoleCode(runtimeEvent, \"crew\")", "getGeneratedEventRoleCode"]);
 requireTokens("app/join/page.tsx", ["await resolveEventJoinCode("]);
 for (const page of ["app/venue/[eventId]/lobby/page.tsx", "app/events/[slug]/page.tsx", "app/app/events/[eventId]/page.tsx", "app/app/events/[eventId]/access/page.tsx", "app/app/events/[eventId]/publish/page.tsx", "app/venue/[eventId]/run-of-show/page.tsx", "app/crew/events/[eventId]/page.tsx"]) {
   requireTokens(page, ["ensureRuntimeEvent("]);

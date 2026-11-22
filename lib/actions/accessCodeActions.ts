@@ -2,7 +2,7 @@
 import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
-import { adoptReadableCodes, setEventAccessCode } from "@/services/events/accessCodeService";
+import { adoptReadableCodes, rotateAllRoleCodes, setEventAccessCode } from "@/services/events/accessCodeService";
 import { createAuditLog } from "@/services/audit";
 import type { AccessCodeField } from "@/lib/access/accessCodes";
 
@@ -48,4 +48,22 @@ export async function adoptReadableCodesAction(formData: FormData): Promise<void
   for (const path of [`/app/events/${eventId}/access`, `/app/events/${eventId}`, "/app/owner", "/app/events"]) revalidatePath(path);
   if (!result.ok) redirect(`/app/events/${eventId}/access?codeError=${encodeURIComponent(result.reason || "The codes could not be changed.")}`);
   redirect(`/app/events/${eventId}/access?codeSaved=scheme`);
+}
+
+/**
+ * "New codes": the five role codes replaced by fresh random ones in one press (owner, operator,
+ * executive producer, producer). The event code stays. Every link carrying an old role code stops
+ * working, so the producer resends them.
+ */
+export async function rotateRoleCodesAction(formData: FormData): Promise<void> {
+  const eventId = String(formData.get("eventId") || "").trim();
+  if (!eventId) return;
+  const auth = await requireLiveEventControlAccessForRequest(eventId, "manage_access_codes");
+  if (!auth.ok) throw new Error(auth.error);
+  const actor = auth.actorRole === "crew" ? `crew:${auth.crewRole}` : auth.actorRole;
+  const result = await rotateAllRoleCodes(eventId, actor);
+  await createAuditLog({ agencyId: "west-peek", eventId, actorUserId: actor, actorRole: actor, action: "access_code_rotated", resourceType: "event", resourceId: `${eventId}:roles`, visibility: "internal_agency" }).catch(() => undefined);
+  for (const path of [`/app/events/${eventId}/access`, `/app/events/${eventId}`, `/crew/events/${eventId}`, `/venue/${eventId}/lobby`, "/app/owner", "/app/events"]) revalidatePath(path);
+  if (!result.ok) redirect(`/app/events/${eventId}/access?codeError=${encodeURIComponent(result.reason || "The codes could not be changed.")}`);
+  redirect(`/app/events/${eventId}/access?codeSaved=roles`);
 }

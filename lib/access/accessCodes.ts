@@ -53,18 +53,19 @@ export function guestGatePath(event: Pick<RuntimeEventRecord, "joinCode" | "acce
 }
 
 /**
- * Readable codes (16 Sep 2026, the owner's scheme). Every code for an event is
- * `WPL-[ROLE-]STEM`, where STEM is the first six letters/digits of the event name, uppercased:
+ * The event code is readable (16 Sep 2026, the owner's scheme): `WPL-STEM`, where STEM is the first
+ * six letters/digits of the event name, uppercased ("45 Minute AI workshop" → WPL-45MINU). A name
+ * that yields fewer than six characters is padded from a stable hash of the event id, and when a
+ * stem is already taken by another live event the next one gets a digit: SEQUOI, SEQUOI2, SEQUOI3.
+ * Every attendee holds the event code, so it is public by design.
  *
- *   "45 Minute AI workshop" → WPL-45MINU · WPL-CREW-45MINU · WPL-SPEAKER-45MINU ·
- *                             WPL-SPONSOR-45MINU · WPL-CLIENT-45MINU · WPL-VIP-45MINU
- *
- * One stem to remember per event, the role right there in the code. A name that yields fewer than
- * six characters is padded from a stable hash of the event id (never a short stem), and when a stem
- * is already taken by another live event the next one gets a digit: SEQUOI, SEQUOI2, SEQUOI3.
- *
- * These are derivable from a public event name on purpose; the protection is at the gate (attempt
- * limits and logged failures), not in an unreadable code.
+ * Role codes are secrets (22 Nov 2026). Until then they were `WPL-CREW-STEM`, `WPL-VIP-STEM` …:
+ * the role word plus the public stem, so anyone holding the event code could type the crew code
+ * on the first try. A role code is now the role word plus ten characters from crypto randomness
+ * (`WPL-CREW-7KQ3X-M9P2T`, about 50 bits), nothing taken from the event: still readable down a
+ * phone line, never worked out. Codes are shown to producers and sent in links, so they are kept
+ * as written, not hashed. The old stem-built role codes are refused after LEGACY_ROLE_CODE_CUTOFF
+ * (see roleCodeRetired); a producer replaces them sooner with "New codes".
  */
 export const CODE_PREFIX = "WPL";
 export const ROLE_SEGMENT: Record<Exclude<AccessCodeField, "join">, string> = {
@@ -74,9 +75,42 @@ export const ROLE_SEGMENT: Record<Exclude<AccessCodeField, "join">, string> = {
   client: "CLIENT",
   vip: "VIP",
 };
+export type RoleCodeField = Exclude<AccessCodeField, "join">;
+export const ROLE_CODE_FIELDS: RoleCodeField[] = ["crew", "speaker", "sponsor", "vip", "client"];
 
 const STEM_LENGTH = 6;
 const PAD_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+/** 32 symbols, so a byte modulo 32 is unbiased; no 0/O or 1/I to misread. */
+const SECRET_ALPHABET = PAD_ALPHABET;
+const ROLE_SECRET_LENGTH = 10;
+
+/** `length` characters from the platform's cryptographic random source. */
+export function randomCodeChars(length: number) {
+  const bytes = new Uint8Array(length);
+  globalThis.crypto.getRandomValues(bytes);
+  let out = "";
+  for (let index = 0; index < length; index += 1) out += SECRET_ALPHABET[bytes[index] % SECRET_ALPHABET.length];
+  return out;
+}
+
+/** A fresh role code: WPL-CREW-7KQ3X-M9P2T. Nothing in it comes from the event. */
+export function mintRoleCode(role: RoleCodeField) {
+  const secret = randomCodeChars(ROLE_SECRET_LENGTH);
+  return `${CODE_PREFIX}-${ROLE_SEGMENT[role]}-${secret.slice(0, 5)}-${secret.slice(5)}`;
+}
+
+/** True for a role code minted by mintRoleCode (the random shape). */
+export function isRandomRoleCode(code: string | undefined | null, role: RoleCodeField) {
+  return new RegExp(`^${CODE_PREFIX}-${ROLE_SEGMENT[role]}-[${SECRET_ALPHABET}]{5}-[${SECRET_ALPHABET}]{5}$`).test(String(code || "").trim().toUpperCase());
+}
+
+/**
+ * Stem-built role codes (WPL-CREW-STEM) stop opening any door at this moment: end of Saturday
+ * 28 Nov 2026, Central. Chosen on 22 Nov 2026 against the calendar: no event in D1 starts before
+ * then (every non-archived event is a draft dated in the past), so no show loses a working link
+ * mid-run, and producers have a week to press "New codes" before a draft becomes a show.
+ */
+export const LEGACY_ROLE_CODE_CUTOFF = "2026-11-29T06:00:00.000Z";
 
 /** A small, stable, dependency-free hash — the same event id always pads to the same characters. */
 function stableHash(seed: string) {
@@ -110,30 +144,27 @@ export function joinCodeForStem(stem: string) {
   return `${CODE_PREFIX}-${stem}`.toUpperCase();
 }
 
-export function roleCodeForStem(stem: string, role: Exclude<AccessCodeField, "join">) {
+/** The old stem-built shape, kept only to recognise (and retire) codes minted before 22 Nov 2026. */
+export function stemBuiltRoleCode(stem: string, role: RoleCodeField) {
   return `${CODE_PREFIX}-${ROLE_SEGMENT[role]}-${stem}`.toUpperCase();
 }
 
-export interface DerivedCodes {
-  stem: string;
-  join: string;
-  crew: string;
-  speaker: string;
-  sponsor: string;
-  vip: string;
-  client: string;
+/** True when a role code is the old WPL-ROLE-STEM built from this event's own (public) event code. */
+export function isBuiltFromJoinCode(code: string | undefined | null, joinCode: string | undefined | null, role: RoleCodeField) {
+  const stem = stemFromCode(joinCode);
+  return Boolean(stem) && codesMatch(code, stemBuiltRoleCode(stem!, role));
 }
 
-export function derivedCodes(stem: string): DerivedCodes {
-  return {
-    stem,
-    join: joinCodeForStem(stem),
-    crew: roleCodeForStem(stem, "crew"),
-    speaker: roleCodeForStem(stem, "speaker"),
-    sponsor: roleCodeForStem(stem, "sponsor"),
-    vip: roleCodeForStem(stem, "vip"),
-    client: roleCodeForStem(stem, "client"),
-  };
+/** A stem-built role code opens nothing once the cut-off has passed; any other code is unaffected. */
+export function roleCodeRetired(code: string | undefined | null, joinCode: string | undefined | null, role: RoleCodeField, now = new Date()) {
+  return now.getTime() >= Date.parse(LEGACY_ROLE_CODE_CUTOFF) && isBuiltFromJoinCode(code, joinCode, role);
+}
+
+/** The role code a door may accept for this event right now: the stored one, unless it is a retired stem-built code. */
+export function liveRoleCode(event: Pick<RuntimeEventRecord, "joinCode" | "accessCodes">, role: RoleCodeField, now = new Date()) {
+  const code = event.accessCodes?.[role];
+  if (!code || roleCodeRetired(code, event.joinCode, role, now)) return undefined;
+  return code;
 }
 
 /** The stem a code carries, if it is one of ours: WPL-CREW-45MINU → 45MINU, WPL-45MINU → 45MINU. */
@@ -144,11 +175,6 @@ export function stemFromCode(code: string | undefined | null): string | undefine
   return last && last !== CODE_PREFIX ? last : undefined;
 }
 
-/** True when the code is exactly what this stem and role would produce (a code nobody has customised). */
-export function isDerivedCode(code: string | undefined | null, stem: string, role: AccessCodeField) {
-  const expected = role === "join" ? joinCodeForStem(stem) : roleCodeForStem(stem, role);
-  return codesMatch(code, expected);
-}
 
 
 /**

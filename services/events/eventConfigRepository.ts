@@ -1,3 +1,4 @@
+import { liveRoleCode } from "@/lib/access/accessCodes";
 import eventsIndex from "@/data/events/events.json";
 import accessIndex from "@/data/access/event-access-config.json";
 import demoEvent from "@/data/events/demo/event.json";
@@ -231,8 +232,8 @@ function dynamicAccessConfig(code: string | undefined): EventAccessConfigRecord 
 export function getGeneratedEventRoleCode(eventCode: string | undefined, role: V4SpecialGuestRole): string | undefined {
   const event = peekOverlayEvent(eventCode);
   if (!event) return undefined;
-  if (role === "crew_lite") return event.accessCodes.crew || undefined;
-  return event.accessCodes[role] || undefined;
+  // A stem-built code past the cut-off is no code at all here (liveRoleCode).
+  return liveRoleCode(event, role === "crew_lite" ? "crew" : role);
 }
 
 const eventConfigPackages: Record<string, Omit<EventConfigPackage, "event" | "attendee">> = {

@@ -66,12 +66,12 @@ export function AccessCodesVaultTable({ events }: { events: VaultEvent[] }) {
           <button type="button" onClick={() => copy(block, `${event.id}:all`, event.id, "all")} className="rounded-full bg-brand-black px-3 py-1 text-xs font-black text-white" data-testid={`vault-copy-all-${event.id}`}>{copied === `${event.id}:all` ? "Copied all codes" : "Copy all codes for this event"}</button>
         </div>
         <p className="mt-1 text-xs text-brand-muted" data-testid={`vault-stem-${event.id}`}>
-          Every code for this event is <strong>WPL-[ROLE-]{event.stem}</strong> — the role is written in the code, so there is one stem to remember.{event.onScheme ? "" : " Some codes here were set by hand or predate the scheme."}
+          The event code is <strong>WPL-{event.stem}</strong>. Each role code names its role and carries its own random part, so holding the event code tells nobody a role code.{event.onScheme ? "" : " Some role codes here are made from the event code or predate the scheme: anyone with the event code could work them out."}
         </p>
         {event.onScheme ? null : (
-          <form action={adoptReadableCodesAction} className="mt-2" onSubmit={(submit) => { if (!window.confirm(`Give ${event.name} the readable codes (WPL-[ROLE-]${event.stem})?\n\n${event.adoptImpact}\n\nCodes set by hand are kept. An old event code still lands attendees on this event for 90 days, with a line saying it changed; old crew, speaker, sponsor, client and VIP codes are refused from now on.`)) submit.preventDefault(); }}>
+          <form action={adoptReadableCodesAction} className="mt-2" onSubmit={(submit) => { if (!window.confirm(`Give ${event.name} the event code WPL-${event.stem} and new random role codes?\n\n${event.adoptImpact}\n\nCodes set by hand are kept. An old event code still lands attendees on this event for 90 days, with a line saying it changed; old crew, speaker, sponsor, client and VIP codes are refused from now on, so send the new links.`)) submit.preventDefault(); }}>
             <input type="hidden" name="eventId" value={event.id} />
-            <button className="rounded-full border border-brand-black px-3 py-1 text-xs font-black" data-testid={`vault-adopt-${event.id}`}>Adopt the readable codes</button>
+            <button className="rounded-full border border-brand-black px-3 py-1 text-xs font-black" data-testid={`vault-adopt-${event.id}`}>Adopt safe codes</button>
           </form>
         )}
         <details className="mt-2 rounded-xl bg-brand-ash p-2 text-xs" data-testid={`vault-custom-${event.id}`}>
@@ -84,7 +84,7 @@ export function AccessCodesVaultTable({ events }: { events: VaultEvent[] }) {
             <input name="value" placeholder="4–24 letters, digits, hyphens" className="min-w-[14rem] rounded-lg border border-brand-line px-2 py-1" data-testid={`vault-custom-value-${event.id}`} />
             <button className="rounded-full bg-brand-black px-3 py-1 font-black text-white" data-testid={`vault-custom-save-${event.id}`}>Set it</button>
           </form>
-          <p className="mt-1 text-brand-muted">A custom code wins over the generated one and survives &ldquo;Adopt the readable codes&rdquo;. The old code stops opening anything at once; for 90 days it is still recognised, so an old event-code link lands on this event and an old role code is told it was replaced.</p>
+          <p className="mt-1 text-brand-muted">A custom code wins over the generated one and survives &ldquo;Adopt safe codes&rdquo;. The old code stops opening anything at once; for 90 days it is still recognised, so an old event-code link lands on this event and an old role code is told it was replaced.</p>
         </details>
         <ul className="mt-2 grid gap-2 md:grid-cols-2">
           {event.codes.map((code) => {

@@ -11,6 +11,7 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { SupersededGateNotice, supersededGateQuery } from "@/components/access/SupersededGateNotice";
+import { crewRefusalQuery } from "@/components/access/crewRefusal";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { grantOwnerOverrideIfMatched } from "@/lib/auth/ownerAccessOverride";
 import { alreadyAuthorisedDestination } from "@/lib/auth/ownerNeverEntersACode";
@@ -45,7 +46,7 @@ async function enterCrew(formData: FormData) {
   if (!access.ok) {
     await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId, role: crewRole, reason: access.reason || "invalid_password", route: "/production-access/crew" });
     const superseded = supersededGateQuery(access);
-    redirect(superseded ? `/production-access/crew?${superseded}` : access.reason === "invalid_password" || !password ? "/production-access/crew?error=invalid" : "/production-access/crew?error=invalid_event");
+    redirect(`/production-access/crew?${superseded || crewRefusalQuery(access.reason, access.reason === "invalid_password" || !password)}`);
   }
   await logAccessAttempt({ status: "access_granted", accessKind: "crew", eventId: access.eventId, role: access.role || crewRole, route: access.destination });
   const { crewCookieName } = getV5AccessCookieNames(env);
@@ -115,6 +116,8 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
         </form>
         {resolvedSearchParams?.error === "too_many" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="gate-too-many">Too many wrong codes from here. Wait about {resolvedSearchParams?.retry || "60"} seconds and try again — or ask the producer for the link, which fills the code in for you.</p> : null}
         {resolvedSearchParams?.error === "superseded" ? <SupersededGateNotice field={resolvedSearchParams?.codeField} replacedAt={resolvedSearchParams?.on} testId="crew-code-superseded" /> : null}
+        {resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="crew-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : null}
+        {resolvedSearchParams?.error === "host_only" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="crew-host-only">Executive producer comes only with a host link from the owner or the operator. With the crew code, pick your own crew role.</p> : null}
         {resolvedSearchParams?.error === "invalid" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That crew password did not match. Check the Day 1 internal password or ask the operator/admin.</p> : null}
         {resolvedSearchParams?.error === "launchpad_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter the crew password first. The Operator Launchpad requires the separate operator password.</p> : null}
         {resolvedSearchParams?.error === "operator_packet_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter operator access first. The Operator Packet contains internal launchpad instructions and stays behind the operator gate.</p> : null}

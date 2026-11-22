@@ -1,17 +1,23 @@
-import { randomId } from "@/lib/security/portableCrypto";
+import { hmacSha256Base64Url, randomId } from "@/lib/security/portableCrypto";
+import { getV5AccessCookieSecret } from "@/lib/env";
 import { appBaseUrl } from "@/lib/runtime/appBaseUrl";
 import { mintAccessCodes } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
-import { displayCode } from "@/lib/access/accessCodes";
+import { codesMatch, displayCode } from "@/lib/access/accessCodes";
 import { recordSupersededCode } from "@/services/events/supersededCodeService";
 import type { SupersededCodeReason } from "@/types/supersededCode";
 
 /**
  * "Changing host should be super easy." The host of an event is the executive_producer crew role
  * for that one event. A host link is the crew gate prefilled with the event code, that role, and
- * the event's crew code — the person still presses Enter. Minting records who handed it out;
+ * the event's HOST code — the person still presses Enter. Since 22 Nov 2026 the crew code never
+ * opens the executive producer role (anyone with a crew link could pick it from the list): only
+ * the host code does, and the host code reaches people only through a host link handed out by the
+ * owner, the operator or the current host. It is an HMAC of the event id and the code version
+ * under the access-cookie secret, so it is never stored, cannot be worked out without the secret,
+ * and changes whenever the version bumps. Minting records who handed it out;
  * revoking rotates the event's crew code and bumps `codeVersion`, so every crew cookie minted
  * with the old code (the cookie carries the version it was minted at) is refused from then on.
  */
@@ -43,13 +49,37 @@ async function setHostLinkState(eventId: string, state: HostLinkState) {
   return state;
 }
 
-/** The link itself: the crew gate, prefilled. Pure on the event row; never auto-submits. */
-export function hostLinkPath(event: Pick<RuntimeEventRecord, "joinCode" | "accessCodes">) {
-  return `/production-access/crew?event=${encodeURIComponent(displayCode(event.joinCode))}&role=executive_producer&code=${encodeURIComponent(displayCode(event.accessCodes.crew))}`;
+const BASE64URL = "ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789-_";
+const HOST_ALPHABET = "ABCDEFGHJKLMNPQRSTUVWXYZ23456789";
+
+/** WPL-HOST-XXXXX-XXXXX for this event at this code version. Throws when the access secret is missing (the gates are shut then anyway). */
+export async function hostCodeFor(eventId: string, codeVersion: number, secret = getV5AccessCookieSecret()) {
+  if (!secret) throw new Error("V5_ACCESS_COOKIE_SECRET is missing, so no host code can be made.");
+  const mac = await hmacSha256Base64Url(`west-peek-live host code v1|${eventId}|${codeVersion}`, secret);
+  // 64 symbols onto 32: each maps to exactly two, so no letter is likelier than another.
+  const chars = Array.from(mac.slice(0, 10), (char) => HOST_ALPHABET[BASE64URL.indexOf(char) % 32]).join("");
+  return `WPL-HOST-${chars.slice(0, 5)}-${chars.slice(5)}`;
 }
 
-export async function hostLinkUrl(event: Pick<RuntimeEventRecord, "joinCode" | "accessCodes">) {
-  return `${await appBaseUrl()}${hostLinkPath(event)}`;
+/** True when `typed` is this event's current host code. */
+export async function matchesHostCode(eventId: string, typed: string | undefined) {
+  if (!typed?.trim()) return false;
+  const { codeVersion } = await getHostLinkState(eventId);
+  return codesMatch(typed, await hostCodeFor(eventId, codeVersion));
+}
+
+/** The link itself: the crew gate, prefilled with the host code. Never auto-submits. */
+export function hostLinkPath(event: Pick<RuntimeEventRecord, "joinCode">, hostCode: string) {
+  return `/production-access/crew?event=${encodeURIComponent(displayCode(event.joinCode))}&role=executive_producer&code=${encodeURIComponent(hostCode)}`;
+}
+
+export async function hostLinkPathFor(event: Pick<RuntimeEventRecord, "id" | "joinCode">) {
+  const { codeVersion } = await getHostLinkState(event.id);
+  return hostLinkPath(event, await hostCodeFor(event.id, codeVersion));
+}
+
+export async function hostLinkUrl(event: Pick<RuntimeEventRecord, "id" | "joinCode">) {
+  return `${await appBaseUrl()}${await hostLinkPathFor(event)}`;
 }
 
 /** Records a grant against the current code version and returns the state; the caller renders the link. */

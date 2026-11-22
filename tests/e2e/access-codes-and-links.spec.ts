@@ -28,8 +28,8 @@ test("codes are uppercase with links; a speaker link prefills the gate and one C
   const eventId = await createNowEvent(page, `Codes ${Date.now()}`);
   await gotoAndAssert(page, `/app/events/${eventId}/access`);
   const speakerCode = (await page.getByTestId("generated-speaker-code").innerText()).trim();
-  // Readable scheme (16 Sep 2026): WPL-[ROLE-]STEM, the stem from the event name.
-  expect(speakerCode).toMatch(/^WPL-SPEAKER-[A-Z0-9]{6,8}$/);
+  // The event code is WPL-STEM; role codes carry ten random characters (22 Nov 2026).
+  expect(speakerCode).toMatch(/^WPL-SPEAKER-[A-Z2-9]{5}-[A-Z2-9]{5}$/);
   await expect(page.getByTestId("access-join-code")).toHaveText(/^WPL-[A-Z0-9]{6,8}$/);
   for (const role of ["crew", "speaker", "sponsor", "vip", "client"]) await expect(page.getByTestId(`copy-${role}-link`)).toBeVisible();
   const joinCode = (await page.getByTestId("access-join-code").innerText()).trim();

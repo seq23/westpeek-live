@@ -70,7 +70,7 @@ describe("custom and rotated access codes", () => {
     resetOverlayForTests();
     expect((await resolveCrewAccess(event.joinCode, "moderator", "crew day one")).ok).toBe(true);
     const regenerated = await setEventAccessCode(event.id, "crew", { regenerate: true }, "owner");
-    expect(regenerated.ok && regenerated.code).toMatch(/^CREW-[A-Z0-9]{6}$/);
+    expect(regenerated.ok && regenerated.code).toMatch(/^WPL-CREW-[A-Z2-9]{5}-[A-Z2-9]{5}$/);
     expect((await getHostLinkState(event.id)).codeVersion).toBe(2);
   });
 

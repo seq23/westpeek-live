@@ -31,7 +31,7 @@ export interface V4AccessResolution {
   clientSlug?: string;
   role?: V4SpecialGuestRole | V4CrewRole;
   destination?: string;
-  reason?: "missing_code" | "invalid_event" | "invalid_role_code" | "invalid_password" | "expired" | "forbidden" | "superseded_code";
+  reason?: "missing_code" | "invalid_event" | "invalid_role_code" | "invalid_password" | "expired" | "forbidden" | "superseded_code" | "rotated" | "host_link_required";
   /** For "superseded_code": the day the credential was replaced, so the refusal can name it. */
   supersededAt?: string;
   /** For "superseded_code": which credential it was, so the refusal can name that too. */

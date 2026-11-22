@@ -13,7 +13,7 @@ function when(value: string) {
 /**
  * "Make someone the host." The host of an event is the executive_producer crew role for that one
  * event. One click mints a host link — the crew gate prefilled with the event code, the role, and
- * the event's crew code (the person still presses Enter) — with Copy. The current hosts list is
+ * the event's host code, which the crew code never stands in for (the person still presses Enter) — with Copy. The current hosts list is
  * the links handed out (who minted, when) plus anyone here as owner / operator / executive
  * producer. "Revoke host link" rotates the event's crew code: every link and every crew cookie
  * minted with the old code stops working. Seed events have no crew code on the row, so nothing to mint.

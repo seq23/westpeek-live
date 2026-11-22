@@ -32,12 +32,14 @@ describe("VIP is code-bound", () => {
 
   it("the event has a VIP code and typing it is what admits you", async () => {
     const code = await vipCodeFor(eventId);
-    expect(code).toBe("WPL-VIP-VIPROO");
+    expect(code).toMatch(/^WPL-VIP-[A-Z2-9]{5}-[A-Z2-9]{5}$/);
+    // The event code is public; the VIP code is not built from it.
+    expect(code).not.toContain("VIPROO");
     const wrong = await redeemVipCode(eventId, "WPL-VIP-NOPE", { attendeeId: "att-1", name: "Cal" });
     expect(wrong.ok).toBe(false);
     expect(await isVip(eventId, "att-1")).toBe(false);
     // Case, spaces and dashes are forgiven, the way every other code is.
-    const right = await redeemVipCode(eventId, " wpl vip viproo ", { attendeeId: "att-1", name: "Cal" });
+    const right = await redeemVipCode(eventId, ` ${code!.toLowerCase().replaceAll("-", " ")} `, { attendeeId: "att-1", name: "Cal" });
     expect(right.ok).toBe(true);
     expect(await isVip(eventId, "att-1")).toBe(true);
     expect((await vipStandingFor(eventId, "att-1"))?.source).toBe("entered_code");

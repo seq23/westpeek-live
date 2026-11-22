@@ -229,12 +229,9 @@ test("Day 1 showtime master gauntlet proves role journeys, transactions, outcome
     vip: (await operator.getByTestId("generated-vip-code").innerText()).trim(),
     crew_lite: (await operator.getByTestId("generated-crew-lite-code").innerText()).trim(),
   };
-  // Readable codes (16 Sep 2026): WPL-ROLE-STEM, the stem from the event name, a digit when taken.
-  expect(generatedCodes.speaker).toMatch(/^WPL-SPEAKER-PLAYWR\d*$/);
-  const stem = generatedCodes.speaker.replace("WPL-SPEAKER-", "");
-  expect(generatedCodes.sponsor).toBe(`WPL-SPONSOR-${stem}`);
-  expect(generatedCodes.client).toBe(`WPL-CLIENT-${stem}`);
-  expect(generatedCodes.vip).toBe(`WPL-VIP-${stem}`);
+  // Role codes name the role and carry ten random characters (22 Nov 2026), never the event code's stem.
+  for (const [role, code] of Object.entries(generatedCodes)) expect(code, role).toMatch(new RegExp(`^WPL-${role === "crew_lite" ? "CREW" : role.toUpperCase()}-[A-Z2-9]{5}-[A-Z2-9]{5}$`));
+  for (const code of Object.values(generatedCodes)) expect(code).not.toContain("PLAYWR");
   expect(new Set(Object.values(generatedCodes)).size).toBe(5);
 
   await gotoAndAssert(operator, `/events/${createdEventSlug}`);
