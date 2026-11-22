@@ -1,0 +1,29 @@
+name: tmp capture headers
+on:
+  push:
+    branches: [tmp/capture-headers]
+permissions:
+  contents: read
+jobs:
+  capture:
+    runs-on: ubuntu-24.04
+    timeout-minutes: 30
+    env:
+      CI: true
+      PLAYWRIGHT_DISABLE_VIDEO: "1"
+    steps:
+      - uses: actions/checkout@v5
+      - uses: actions/setup-node@v5
+        with:
+          node-version-file: .nvmrc
+          cache: npm
+      - run: npm ci --no-audit --no-fund
+      - run: npx playwright install --with-deps chromium
+      - run: mkdir -p capture && npx playwright test tests/e2e/zz-capture-headers.spec.ts --project=desktop-chromium --reporter=list
+      - uses: actions/upload-artifact@v4
+        if: always()
+        with:
+          name: headers-390
+          path: |
+            capture/
+            test-results/
