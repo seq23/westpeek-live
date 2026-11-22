@@ -18,7 +18,7 @@ async function visit(page: Page, who: string, path: string, name: string) {
   expect(headers["content-security-policy"], path).toContain("frame-ancestors 'self'");
   await page.waitForLoadState("networkidle").catch(() => undefined);
   console.log(`CAPTURE ${name} scrollWidth=${await page.evaluate(() => document.documentElement.scrollWidth)}`);
-  console.log(`WIDE ${name} ${await page.evaluate(() => [...document.querySelectorAll("body *")].filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1).slice(0, 4).map((el) => `${el.tagName.toLowerCase()}.${String(el.className).slice(0, 40)} right=${Math.round(el.getBoundingClientRect().right)}`).join(" | "))}`);
+  console.log(`WIDE ${name} ${await page.evaluate(() => Array.from(document.querySelectorAll("body *")).filter((el) => el.getBoundingClientRect().right > window.innerWidth + 1).slice(0, 4).map((el) => `${el.tagName.toLowerCase()}.${String(el.className).slice(0, 40)} right=${Math.round(el.getBoundingClientRect().right)}`).join(" | "))}`);
   await page.screenshot({ path: `capture/${name}.png` });
 }
 
