@@ -18,7 +18,7 @@ import { SafeSection } from "@/components/system/SafeSection";
 
 export const dynamic = "force-dynamic";
 
-export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string; leaveTo?: string; saved?: string; vip?: "1" | "no"; returned?: string }> }) {
+export default async function LobbyPage({ params, searchParams }: { params: Promise<{ eventId: string }>; searchParams?: Promise<{ created?: string; error?: string; viewAs?: string; leaveTo?: string; saved?: string; vip?: "1" | "no" | "wait"; returned?: string }> }) {
   const resolvedParams = await params;
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   const runtimeEvent = await ensureRuntimeEvent(resolvedParams.eventId);
