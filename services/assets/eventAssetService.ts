@@ -8,7 +8,7 @@ import { EVENT_ASSET_BUCKET, assetUploadRefusal, type EventAssetRecord, type Eve
 /**
  * Real files for an event, in the private R2 bucket (binding ASSETS_BUCKET). The server mints a
  * short-lived, single-use signed upload link to this Worker's own /api/assets/upload, the browser
- * PUTs the bytes there and worker.ts pipes them into R2 under `pending/`; the confirm step moves the
+ * PUTs the bytes there and worker.ts pipes them into R2 under `_pending/`; the confirm step moves the
  * object to its final key and only then is the row written. Downloads are signed on demand and expire. Storage that is not bound says
  * so in words rather than failing silently.
  */
@@ -43,7 +43,7 @@ async function uploadTicket(storagePath: string, assetId: string, mimeType: stri
 }
 
 /**
- * The confirm step: the uploaded object moves from `pending/` to its final key, and the size R2
+ * The confirm step: the uploaded object moves from `_pending/` to its final key, and the size R2
  * really holds is returned (never the size the browser claimed). Refused when nothing arrived, or
  * when the final key already exists (a link used twice never replaces a confirmed file).
  */

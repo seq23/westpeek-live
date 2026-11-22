@@ -1,8 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setAssetsBucketForTests, type R2BucketLike } from "@/lib/d1/binding";
 import { signDownloadUrl, signUploadUrl, verifyDownloadUrl, verifyUploadUrl } from "@/services/assets/signedUrlService";
-import { promoteUpload } from "@/services/assets/eventAssetService";
-import { handleAssetUpload } from "@/services/assets/assetUploadHandler";
+import { promoteUpload, requestAssetUpload } from "@/services/assets/eventAssetService";
+import { slugify } from "@/services/events/eventRepository";
+import lifecycle from "../../r2-lifecycle.json";
+import { handleAssetUpload, PENDING_UPLOAD_PREFIX } from "@/services/assets/assetUploadHandler";
 import { uploadRefusalMessage } from "@/types/eventAssets";
 
 /**
@@ -101,11 +103,37 @@ function rawUpload(link: string, chunks: Uint8Array[], options: { contentLength?
 const PDF = new TextEncoder().encode("%PDF-1.4 test");
 
 describe("the upload handler (worker.ts, before OpenNext) pipes bytes into R2 only on a valid link", () => {
-  it("round-trips a file through pending/ to its final key, and refuses tampering, the wrong type and a link used twice", async () => {
+  it("an event named \"Pending\" keeps its finished files: the lifecycle rule deletes only uploads in progress, under a prefix no event id can start", async () => {
+    const { bucket, objects } = memoryBucket();
+    setAssetsBucketForTests(bucket);
+    const eventId = slugify("Pending");
+    expect(eventId).toBe("pending");
+    // Event ids are slugs ([a-z0-9-]); the upload prefix starts with a character a slug never has.
+    for (const name of ["Pending", "_pending", "  _Pending/ ", "pending uploads"]) expect(slugify(name).startsWith(PENDING_UPLOAD_PREFIX.slice(0, -1)), name).toBe(false);
+
+    const ticket = await requestAssetUpload({ eventId, fileName: "deck.pdf", mimeType: "application/pdf", sizeBytes: PDF.byteLength });
+    if (!ticket.ok) throw new Error(ticket.reason);
+    const pendingKey = ticket.storagePath;
+    expect(pendingKey.startsWith(`${PENDING_UPLOAD_PREFIX}pending/`)).toBe(true);
+    const link = new URL(ticket.signedUrl, "https://westpeek.live");
+    expect((await handleAssetUpload(rawUpload(`${link.pathname}${link.search}`, [PDF], { contentLength: PDF.byteLength }).request, { bucket })).status).toBe(200);
+    const stored = await promoteUpload(pendingKey);
+    if (!stored.ok) throw new Error("promote failed");
+    expect(stored.storagePath.startsWith("pending/")).toBe(true);
+    expect(objects.has(stored.storagePath)).toBe(true);
+
+    // What the R2 lifecycle rule (set from r2-lifecycle.json on every deploy) would delete after a day.
+    const deletes = (key: string) => lifecycle.rules.some((rule) => rule.enabled && "deleteObjectsTransition" in rule && key.startsWith(rule.conditions.prefix));
+    expect(deletes(pendingKey)).toBe(true);
+    expect(deletes(stored.storagePath)).toBe(false);
+    for (const key of Array.from(objects.keys())) expect(deletes(key), key).toBe(false);
+  });
+
+  it("round-trips a file through _pending/ to its final key, and refuses tampering, the wrong type and a link used twice", async () => {
     const { bucket, objects } = memoryBucket();
     setAssetsBucketForTests(bucket);
     const { GET } = await import("@/app/api/assets/file/route");
-    const link = await signUploadUrl({ key: "pending/evt/as-1/deck.pdf", mimeType: "application/pdf", sizeBytes: PDF.byteLength });
+    const link = await signUploadUrl({ key: "_pending/evt/as-1/deck.pdf", mimeType: "application/pdf", sizeBytes: PDF.byteLength });
 
     expect((await handleAssetUpload(rawUpload(link, [PDF], { contentLength: PDF.byteLength, type: "text/html" }).request, { bucket })).status).toBe(415);
     expect((await handleAssetUpload(rawUpload(link.replace("as-1", "as-2"), [PDF], { contentLength: PDF.byteLength }).request, { bucket })).status).toBe(403);
@@ -115,16 +143,16 @@ describe("the upload handler (worker.ts, before OpenNext) pipes bytes into R2 on
 
     const ok = await handleAssetUpload(rawUpload(link, [PDF], { contentLength: PDF.byteLength }).request, { bucket });
     expect(ok.status).toBe(200);
-    expect(objects.get("pending/evt/as-1/deck.pdf")?.contentType).toBe("application/pdf");
+    expect(objects.get("_pending/evt/as-1/deck.pdf")?.contentType).toBe("application/pdf");
     const replay = await handleAssetUpload(rawUpload(link, [new TextEncoder().encode("%PDF-1.4 evil")], { contentLength: PDF.byteLength }).request, { bucket });
     expect(replay.status).toBe(409);
 
-    const stored = await promoteUpload("pending/evt/as-1/deck.pdf");
+    const stored = await promoteUpload("_pending/evt/as-1/deck.pdf");
     expect(stored).toEqual({ ok: true, storagePath: "evt/as-1/deck.pdf", sizeBytes: PDF.byteLength });
-    expect(objects.has("pending/evt/as-1/deck.pdf")).toBe(false);
+    expect(objects.has("_pending/evt/as-1/deck.pdf")).toBe(false);
     // After confirm, the same link still cannot write: the final key exists.
     expect((await handleAssetUpload(rawUpload(link, [PDF], { contentLength: PDF.byteLength }).request, { bucket })).status).toBe(409);
-    expect(await promoteUpload("pending/evt/as-1/deck.pdf")).toMatchObject({ ok: false });
+    expect(await promoteUpload("_pending/evt/as-1/deck.pdf")).toMatchObject({ ok: false });
 
     const download = await signDownloadUrl({ key: "evt/as-1/deck.pdf" });
     const file = await GET(new Request(`https://westpeek.live${download}`));
@@ -134,7 +162,7 @@ describe("the upload handler (worker.ts, before OpenNext) pipes bytes into R2 on
 
   it("no Content-Length: 411, and none of the body is read", async () => {
     const { bucket, objects } = memoryBucket();
-    const link = await signUploadUrl({ key: "pending/evt/as-5/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
+    const link = await signUploadUrl({ key: "_pending/evt/as-5/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
     const { request, pulled } = rawUpload(link, [PDF]);
     const response = await handleAssetUpload(request, { bucket });
     expect(response.status).toBe(411);
@@ -145,7 +173,7 @@ describe("the upload handler (worker.ts, before OpenNext) pipes bytes into R2 on
 
   it("a declared length over the link: 413 before any of the body is read", async () => {
     const { bucket, objects } = memoryBucket();
-    const link = await signUploadUrl({ key: "pending/evt/as-2/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
+    const link = await signUploadUrl({ key: "_pending/evt/as-2/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
     const { request, pulled } = rawUpload(link, [new Uint8Array(1_001)], { contentLength: 1_001 });
     expect((await handleAssetUpload(request, { bucket })).status).toBe(413);
     expect(pulled.chunks).toBe(0);
@@ -155,7 +183,7 @@ describe("the upload handler (worker.ts, before OpenNext) pipes bytes into R2 on
   it("a client that lies about its length (says 10, sends 30,000) stores nothing, and reading stops at the lie", async () => {
     const { bucket, objects } = memoryBucket();
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const link = await signUploadUrl({ key: "pending/evt/as-3/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
+    const link = await signUploadUrl({ key: "_pending/evt/as-3/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
     const { request, pulled } = rawUpload(link, Array.from({ length: 50 }, () => new Uint8Array(600)), { contentLength: 10 });
     const response = await handleAssetUpload(request, { bucket });
     expect(response.status).toBe(502);
@@ -167,7 +195,7 @@ describe("the upload handler (worker.ts, before OpenNext) pipes bytes into R2 on
   it("a body shorter than declared stores nothing", async () => {
     const { bucket, objects } = memoryBucket();
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
-    const link = await signUploadUrl({ key: "pending/evt/as-6/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
+    const link = await signUploadUrl({ key: "_pending/evt/as-6/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
     expect((await handleAssetUpload(rawUpload(link, [PDF], { contentLength: 500 }).request, { bucket })).status).toBe(502);
     expect(objects.size).toBe(0);
     consoleError.mockRestore();
@@ -178,20 +206,20 @@ describe("the upload handler (worker.ts, before OpenNext) pipes bytes into R2 on
     const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
     const broken = { ...bucket, put: async () => { throw new Error("R2 internal error"); } };
     setAssetsBucketForTests(broken);
-    const link = await signUploadUrl({ key: "pending/evt/as-4/deck.pdf", mimeType: "application/pdf", sizeBytes: PDF.byteLength });
+    const link = await signUploadUrl({ key: "_pending/evt/as-4/deck.pdf", mimeType: "application/pdf", sizeBytes: PDF.byteLength });
     const response = await handleAssetUpload(rawUpload(link, [PDF], { contentLength: PDF.byteLength }).request, { bucket: broken });
     expect(response.status).toBe(502);
     expect(consoleError).toHaveBeenCalled();
     expect(await uploadRefusalMessage(response, "The file did not reach storage")).toBe("Storage did not accept the file, so nothing was saved. Try the upload again.");
     expect(await uploadRefusalMessage(new Response("<html>gateway</html>", { status: 504 }), "The file did not reach storage")).toBe("The file did not reach storage (storage answered 504).");
     // The confirm step finds nothing, so no library row is written.
-    expect(await promoteUpload("pending/evt/as-4/deck.pdf")).toMatchObject({ ok: false });
+    expect(await promoteUpload("_pending/evt/as-4/deck.pdf")).toMatchObject({ ok: false });
     consoleError.mockRestore();
   });
 
   it("answers 503 in words when the bucket is not bound (the Next route under next start)", async () => {
     const { PUT } = await import("@/app/api/assets/upload/route");
-    const link = await signUploadUrl({ key: "pending/evt/as-9/a.pdf", mimeType: "application/pdf", sizeBytes: 3 });
+    const link = await signUploadUrl({ key: "_pending/evt/as-9/a.pdf", mimeType: "application/pdf", sizeBytes: 3 });
     const response = await PUT(rawUpload(link, [new Uint8Array(3)], { contentLength: 3 }).request);
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ ok: false, error: expect.stringMatching(/ASSETS_BUCKET/) });

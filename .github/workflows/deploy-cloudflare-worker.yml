@@ -92,7 +92,7 @@ jobs:
       - name: Apply D1 migrations
         run: timeout --signal=TERM 5m npx wrangler d1 migrations apply west-peek-live --remote
 
-      # Uploads land under pending/ and move to their final key on confirm; this rule (r2-lifecycle.json,
+      # Uploads land under _pending/ and move to their final key on confirm; this rule (r2-lifecycle.json,
       # replacing the bucket's whole lifecycle config, so it is idempotent) clears what was never confirmed.
       - name: Apply R2 lifecycle rules
         run: timeout --signal=TERM 2m npx wrangler r2 bucket lifecycle set west-peek-live-assets --file r2-lifecycle.json --force

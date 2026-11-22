@@ -12,11 +12,11 @@ import type { R2BucketLike } from "@/lib/d1/binding";
  * Under `next start` (the e2e suite) the Next route calls this same function, and a counting stream
  * stands in for FixedLengthStream, which only the Workers runtime has.
  *
- * A link is single-use: the key it signs is written once. Uploads land under `pending/` (an R2
+ * A link is single-use: the key it signs is written once. Uploads land under `_pending/` (an R2
  * lifecycle rule removes anything left there after a day) and the confirm step moves the object to
  * its final key, so an upload that is never confirmed costs nothing for long.
  */
-export const PENDING_UPLOAD_PREFIX = "pending/";
+export const PENDING_UPLOAD_PREFIX = "_pending/";
 
 export function finalKeyFor(pendingKey: string) {
   return pendingKey.startsWith(PENDING_UPLOAD_PREFIX) ? pendingKey.slice(PENDING_UPLOAD_PREFIX.length) : undefined;

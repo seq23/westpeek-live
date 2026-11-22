@@ -3,7 +3,7 @@
     {
       "id": "pending-uploads-1-day",
       "enabled": true,
-      "conditions": { "prefix": "pending/" },
+      "conditions": { "prefix": "_pending/" },
       "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 86400 } }
     },
     {
