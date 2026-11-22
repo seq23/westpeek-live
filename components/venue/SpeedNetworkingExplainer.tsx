@@ -178,7 +178,7 @@ function FactGlyph({ glyph }: { glyph: Glyph }) {
   };
   return (
     <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-black" aria-hidden>
-      <svg viewBox="0 0 24 24" className="h-5 w-5" fill="none" stroke="#f05a1a" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
+      <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 stroke-brand-orange" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {paths[glyph]}
       </svg>
     </span>
@@ -208,24 +208,24 @@ function CycleDiagram({ minutes, pause }: { minutes: number; pause: number }) {
         </title>
         <defs>
           <marker id="wpl-net-arrow" viewBox="0 0 10 10" refX="9" refY="5" markerWidth="6" markerHeight="6" orient="auto-start-reverse">
-            <path d="M 0 0 L 10 5 L 0 10 z" fill="#73706a" />
+            <path d="M 0 0 L 10 5 L 0 10 z" className="fill-brand-muted" />
           </marker>
         </defs>
 
         {beats.map((beat, index) => (
           <g key={beat.label}>
-            <rect x={beat.x} y={16} width={172} height={72} rx={16} fill={index === 1 ? "#050505" : "#f5f3ef"} stroke={index === 1 ? "#050505" : "#e7e3dc"} strokeWidth={1} />
-            <text x={beat.x + 86} y={48} textAnchor="middle" fontSize="16" fontWeight="800" fill={index === 1 ? "#ffffff" : "#050505"}>{beat.label}</text>
-            <text x={beat.x + 86} y={70} textAnchor="middle" fontSize="13" fill={index === 1 ? "#f05a1a" : "#73706a"}>{beat.sub}</text>
+            <rect x={beat.x} y={16} width={172} height={72} rx={16} className={index === 1 ? "fill-brand-black stroke-brand-black" : "fill-brand-ash stroke-brand-line"} strokeWidth={1} />
+            <text x={beat.x + 86} y={48} textAnchor="middle" fontSize="16" fontWeight="800" className={index === 1 ? "fill-white" : "fill-brand-black"}>{beat.label}</text>
+            <text x={beat.x + 86} y={70} textAnchor="middle" fontSize="13" className={index === 1 ? "fill-brand-orange" : "fill-brand-muted"}>{beat.sub}</text>
             {index < beats.length - 1 ? (
-              <line x1={beat.x + 176} y1={52} x2={beat.x + 208} y2={52} stroke="#73706a" strokeWidth="2" markerEnd="url(#wpl-net-arrow)" />
+              <line x1={beat.x + 176} y1={52} x2={beat.x + 208} y2={52} className="stroke-brand-muted" strokeWidth="2" markerEnd="url(#wpl-net-arrow)" />
             ) : null}
           </g>
         ))}
 
         {/* and round again */}
-        <path className="wpl-cycle-flow" d="M 498 92 L 498 126 L 102 126 L 102 94" fill="none" stroke="#f05a1a" strokeWidth="2" strokeDasharray="6 6" markerEnd="url(#wpl-net-arrow)" />
-        <text x={300} y={150} textAnchor="middle" fontSize="13" fontWeight="800" fill="#73706a">and again with somebody new, until you leave</text>
+        <path d="M 498 92 L 498 126 L 102 126 L 102 94" fill="none" className="wpl-cycle-flow stroke-brand-orange" strokeWidth="2" strokeDasharray="6 6" markerEnd="url(#wpl-net-arrow)" />
+        <text x={300} y={150} textAnchor="middle" fontSize="13" fontWeight="800" className="fill-brand-muted">and again with somebody new, until you leave</text>
       </svg>
     </div>
   );

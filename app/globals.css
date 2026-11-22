@@ -2,16 +2,7 @@
 @tailwind components;
 @tailwind utilities;
 
-:root {
-  color-scheme: light;
-  --brand-black: #050505;
-  --brand-white: #ffffff;
-  --brand-charcoal: #171717;
-  --brand-ash: #f5f3ef;
-  --brand-line: #e7e3dc;
-  --brand-muted: #73706a;
-  --brand-orange: #f05a1a;
-}
+/* Colour values and color-scheme live in lib/theme/palette.ts (light + dark), emitted by tailwind.config.ts. */
 
 * {
   box-sizing: border-box;
@@ -19,15 +10,15 @@
 
 html {
   min-width: 320px;
-  background: var(--brand-ash);
+  background: rgb(var(--c-brand-ash));
 }
 
 body {
   margin: 0;
   background:
-    radial-gradient(circle at top right, rgba(240, 90, 26, 0.08), transparent 30rem),
-    linear-gradient(180deg, #ffffff 0%, var(--brand-ash) 45%, #ffffff 100%);
-  color: var(--brand-black);
+    radial-gradient(circle at top right, rgb(var(--c-brand-orange) / 0.08), transparent 30rem),
+    linear-gradient(180deg, rgb(var(--c-white)) 0%, rgb(var(--c-brand-ash)) 45%, rgb(var(--c-white)) 100%);
+  color: rgb(var(--c-brand-black));
   font-family: Inter, ui-sans-serif, system-ui, -apple-system, BlinkMacSystemFont, "Segoe UI", sans-serif;
 }
 
@@ -41,6 +32,41 @@ input,
 select,
 textarea {
   touch-action: manipulation;
+}
+
+/*
+ * 44px tap minimum (Apple HIG, WCAG 2.5.5). Pills (`rounded-full` links and buttons: gate exits,
+ * chips, CTAs) and the native file picker were 22-34px tall on a phone. In the base layer, so a
+ * screen that sets its own height or display with a utility still wins: every selector sits in
+ * :where(), so it adds no specificity and `hidden`, `block`, `flex` or `min-h-*` override it.
+ */
+@layer base {
+  :where(a.rounded-full, button.rounded-full, summary.rounded-full, label.rounded-full, [role="button"].rounded-full) {
+    min-height: 2.75rem;
+  }
+
+  :where(a.rounded-full) {
+    display: inline-flex;
+    align-items: center;
+    justify-content: center;
+  }
+
+  :where(input[type="file"]) {
+    min-height: 2.75rem;
+  }
+
+  :where(input[type="file"])::file-selector-button {
+    min-height: 2.75rem;
+    margin-right: 0.75rem;
+    padding: 0 1.25rem;
+    border: 1px solid rgb(var(--c-brand-black));
+    border-radius: 9999px;
+    background: transparent;
+    color: rgb(var(--c-brand-black));
+    font: inherit;
+    font-weight: 800;
+    cursor: pointer;
+  }
 }
 
 .brand-script {

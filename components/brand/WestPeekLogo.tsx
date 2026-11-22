@@ -39,14 +39,22 @@ const sizeMap = {
 export type WestPeekLogoSize = keyof typeof sizeMap;
 
 export function WestPeekLogo({ size = "sm", inverse = false, className = "", alt = "West Peek" }: { size?: WestPeekLogoSize; inverse?: boolean; className?: string; alt?: string }) {
+  const light = inverse ? "/brand/wp-mark-white.png" : "/brand/wp-mark-black.png";
+  // In the dark scheme every surface flips (lib/theme/palette.ts), so the mark flips with it: the
+  // black glyph would vanish on a near-black card, the white one on a cream button.
+  const dark = inverse ? "/brand/wp-mark-black.png" : "/brand/wp-mark-white.png";
   return (
-    <Image
-      src={inverse ? "/brand/wp-mark-white.png" : "/brand/wp-mark-black.png"}
-      alt={alt}
-      width={INTRINSIC_WIDTH}
-      height={INTRINSIC_HEIGHT}
-      className={`${sizeMap[size]} shrink-0 object-contain ${className}`}
-    />
+    <picture className="contents">
+      <source media="(prefers-color-scheme: dark)" srcSet={dark} />
+      <Image
+        src={light}
+        alt={alt}
+        width={INTRINSIC_WIDTH}
+        height={INTRINSIC_HEIGHT}
+        data-testid="west-peek-mark"
+        className={`${sizeMap[size]} shrink-0 object-contain ${className}`}
+      />
+    </picture>
   );
 }
 

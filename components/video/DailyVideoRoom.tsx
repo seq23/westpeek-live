@@ -15,7 +15,7 @@ export function DailyVideoRoom({ roomUrl, title = "West Peek Live! room", descri
   }
 
   return (
-    <div className="rounded-3xl border border-white/10 bg-black/40 p-4">
+    <div className="wpl-as-authored rounded-3xl border border-white/10 bg-black/40 p-4">
       <div className="mb-4 rounded-2xl bg-slate-950/70 p-4">
         <p className="text-xs font-semibold uppercase tracking-[0.25em] text-brand-orange">West Peek Live! room</p>
         <h2 className="mt-2 text-xl font-semibold text-white">{title}</h2>

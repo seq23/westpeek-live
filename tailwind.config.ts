@@ -1,4 +1,22 @@
 import type { Config } from "tailwindcss";
+import plugin from "tailwindcss/plugin";
+import { cssVars, tailwindColors } from "./lib/theme/palette";
+
+/**
+ * Colours are CSS variables (lib/theme/palette.ts): the light values on :root, the dark values
+ * under prefers-color-scheme, and the light values again inside `.wpl-as-authored` (stage and
+ * video surfaces that are dark by design in both schemes).
+ */
+const themeVariables = plugin(({ addBase }) => {
+  addBase({
+    ":root": { ...cssVars("light"), "color-scheme": "light" },
+    ".wpl-as-authored": cssVars("light"),
+    "@media (prefers-color-scheme: dark)": {
+      ":root": { ...cssVars("dark"), "color-scheme": "dark" },
+      ".wpl-as-authored": cssVars("light"),
+    },
+  });
+});
 
 const config: Config = {
   content: [
@@ -9,18 +27,7 @@ const config: Config = {
   ],
   theme: {
     extend: {
-      colors: {
-        brand: {
-          black: "#050505",
-          white: "#ffffff",
-          charcoal: "#171717",
-          ash: "#f5f3ef",
-          line: "#e7e3dc",
-          muted: "#73706a",
-          orange: "#f05a1a",
-          orangeSoft: "#fff1e9",
-        },
-      },
+      colors: tailwindColors(),
       boxShadow: {
         brand: "0 24px 80px rgba(5, 5, 5, 0.08)",
       },
@@ -29,7 +36,7 @@ const config: Config = {
       },
     },
   },
-  plugins: [],
+  plugins: [themeVariables],
 };
 
 export default config;
