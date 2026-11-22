@@ -381,7 +381,7 @@ A read-only overview: approvals, assets, reports, run of show, timeline. Clients
 
 Every file for an event lives in one place: **the event's Assets page**, with a cross-event view at `/app/assets` grouped by event.
 
-**Uploading.** Drag a file in, or choose one. It goes straight from the browser to storage through a short-lived signed URL — the file never passes through our server. If storage is ever unreachable the page says so plainly and offers **paste a link** instead, which is also how a Drive or Dropbox file gets in.
+**Uploading.** Drag a file in, or choose one. It goes from the browser to storage through a short-lived link that works once; our server passes the file straight through to storage without keeping a copy. If the upload is refused, the page says why in words and nothing is saved. If storage is ever unreachable the page says so plainly and offers **paste a link** instead, which is also how a Drive or Dropbox file gets in.
 
 **Speakers and sponsors upload from their own portals** — the green room and the booth. Their files arrive marked **in review**, and they can only see their own.
 

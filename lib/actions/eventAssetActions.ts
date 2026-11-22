@@ -4,7 +4,8 @@ import { revalidatePath } from "next/cache";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
-import { archiveAsset, recordUploadedAsset, requestAssetUpload, setAssetReview, setAssetVisibility, storedObjectExists } from "@/services/assets/eventAssetService";
+import { PENDING_UPLOAD_PREFIX } from "@/services/assets/assetUploadHandler";
+import { archiveAsset, recordUploadedAsset, requestAssetUpload, setAssetReview, setAssetVisibility, promoteUpload } from "@/services/assets/eventAssetService";
 import type { EventAssetStatus, EventAssetVisibility } from "@/types/eventAssets";
 
 function clean(value: FormDataEntryValue | null) {
@@ -33,7 +34,7 @@ async function guestUploader(eventId: string) {
 
 /**
  * Step one of a real upload: the server checks who is asking and what they are sending, then mints
- * a short-lived signed link to /api/assets/upload, which streams the bytes into the private R2 bucket.
+ * a short-lived, single-use signed link to /api/assets/upload; worker.ts pipes the bytes into the private R2 bucket.
  */
 export async function requestAssetUploadAction(input: { eventId: string; fileName: string; mimeType: string; sizeBytes: number }) {
   const actor = await getWorkspaceActor();
@@ -62,9 +63,11 @@ export async function confirmAssetUploadAction(input: { eventId: string; assetId
     uploadedByLabel = who;
   }
   // The row is written only for an object that is really in the bucket, under this event's prefix.
-  if (!input.storagePath.startsWith(`${input.eventId}/${input.assetId}/`)) return { ok: false as const, reason: "That upload does not belong to this event." };
-  if (!(await storedObjectExists(input.storagePath))) return { ok: false as const, reason: "The file never reached storage. Upload it again." };
-  const asset = await recordUploadedAsset({ ...input, uploadedByKind, uploadedByLabel });
+  if (!input.storagePath.startsWith(`${PENDING_UPLOAD_PREFIX}${input.eventId}/${input.assetId}/`)) return { ok: false as const, reason: "That upload does not belong to this event." };
+  const stored = await promoteUpload(input.storagePath);
+  if (!stored.ok) return { ok: false as const, reason: stored.reason };
+  // The size recorded is what R2 holds, never what the browser said.
+  const asset = await recordUploadedAsset({ ...input, storagePath: stored.storagePath, sizeBytes: stored.sizeBytes, uploadedByKind, uploadedByLabel });
   revalidateAssetSurfaces(input.eventId);
   return { ok: true as const, assetId: asset.id };
 }

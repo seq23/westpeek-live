@@ -1,11 +1,11 @@
 "use client";
 import { useEffect, useRef, useState, useTransition } from "react";
 import { confirmAssetUploadAction, requestAssetUploadAction } from "@/lib/actions/eventAssetActions";
-import { assetSizeLabel, assetUploadRefusal, EVENT_ASSET_MAX_BYTES } from "@/types/eventAssets";
+import { assetSizeLabel, assetUploadRefusal, EVENT_ASSET_MAX_BYTES, uploadRefusalMessage } from "@/types/eventAssets";
 
 /**
- * Drag a file in or choose one. The server mints a short-lived signed link to /api/assets/upload,
- * which streams the bytes into the private R2 bucket; the row is written only once the object is
+ * Drag a file in or choose one. The server mints a short-lived, single-use signed link to
+ * /api/assets/upload, and the Worker pipes the bytes into the private R2 bucket; the row is written only once the object is
  * there. Every refusal is said in words, and when storage is not bound the page says so and offers
  * the link instead.
  */
@@ -25,7 +25,8 @@ export function AssetUploader({ eventId, who = "production" }: { eventId: string
     if (!ticket.ok) { setState({ kind: "error", message: ticket.reason || "The upload was refused and storage gave no reason. Paste a link instead." }); return; }
     try {
       const response = await fetch(ticket.signedUrl, { method: "PUT", body: file, headers: { "content-type": file.type || "application/octet-stream" } });
-      if (!response.ok) throw new Error(`storage answered ${response.status}`);
+      // The server's own sentence ("…so nothing was saved"), not a status code.
+      if (!response.ok) { setState({ kind: "error", message: await uploadRefusalMessage(response, "The file did not reach storage. Try again, or paste a link") }); return; }
     } catch (error) {
       setState({ kind: "error", message: `The file did not reach storage (${error instanceof Error ? error.message : String(error)}). Try again, or paste a link.` });
       return;

@@ -1,6 +1,7 @@
 "use client";
 import { useRef, useState, useTransition } from "react";
 import { confirmHouseLogoUploadAction, requestHouseLogoUploadAction } from "@/lib/actions/houseDefaultsActions";
+import { uploadRefusalMessage } from "@/types/eventAssets";
 
 /**
  * The same two-step signed upload the asset library uses: the server mints a short-lived signed link,
@@ -19,7 +20,7 @@ export function HouseLogoUploader() {
     if (!ticket.ok) { setState({ kind: "error", message: ticket.reason }); return; }
     try {
       const response = await fetch(ticket.signedUrl, { method: "PUT", body: file, headers: { "content-type": file.type || "application/octet-stream" } });
-      if (!response.ok) throw new Error(`storage answered ${response.status}`);
+      if (!response.ok) { setState({ kind: "error", message: await uploadRefusalMessage(response, "The logo did not reach storage") }); return; }
     } catch (error) {
       setState({ kind: "error", message: `The logo did not reach storage (${error instanceof Error ? error.message : String(error)}).` });
       return;

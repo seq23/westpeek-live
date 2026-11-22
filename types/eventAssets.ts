@@ -62,3 +62,9 @@ export function assetUploadRefusal(input: { mimeType: string; sizeBytes: number 
   if (input.mimeType && !EVENT_ASSET_ALLOWED_MIME.includes(input.mimeType)) return `We do not take ${input.mimeType} files. Decks, documents, images, MP4 video and plain text — or paste a link.`;
   return undefined;
 }
+
+/** What an uploader shows when the PUT was refused: the server's own sentence, or a plain fallback. */
+export async function uploadRefusalMessage(response: Response, fallback: string): Promise<string> {
+  const body = (await response.json().catch(() => ({}))) as { error?: unknown };
+  return typeof body.error === "string" && body.error.trim() ? body.error : `${fallback} (storage answered ${response.status}).`;
+}

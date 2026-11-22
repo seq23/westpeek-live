@@ -1,7 +1,8 @@
 {
   "$schema": "node_modules/wrangler/config-schema.json",
   "name": "west-peek-live",
-  "main": ".open-next/worker.js",
+  // worker.ts answers PUT /api/assets/upload before OpenNext (which buffers bodies) and wraps .open-next/worker.js.
+  "main": "worker.ts",
   "compatibility_date": "2024-12-30",
   "compatibility_flags": ["nodejs_compat", "global_fetch_strictly_public"],
   "assets": {
