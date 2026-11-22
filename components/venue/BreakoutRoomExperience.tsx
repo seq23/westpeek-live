@@ -9,7 +9,7 @@ export async function BreakoutRoomExperience({ model, roomId = "general-breakout
   const [control, identity] = await Promise.all([getAttendeeLiveControlState(model.eventId, "breakout", roomId), getCurrentAttendeeIdentity(model.eventId).catch(() => undefined)]);
   return (
     <div className="grid items-start gap-6 xl:grid-cols-[minmax(0,1fr)_24rem]">
-      <section className="rounded-3xl bg-slate-950 p-6 text-white">
+      <section className="wpl-as-authored rounded-3xl bg-slate-950 p-6 text-white">
         <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Breakout room</p>
         <h1 className="mt-2 text-3xl font-black">Live breakout room</h1>
         <p className="mt-3 text-slate-300">Everyone in this room can talk to each other here. The crew decides when cameras and microphones can go on.</p>

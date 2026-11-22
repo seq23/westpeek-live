@@ -19,7 +19,7 @@ export async function VipLobbyPanel({ eventId, error, viewAs, grantedName }: { e
   if (stale) return <section className="rounded-3xl bg-brand-black p-5 text-white" data-testid="vip-lobby-panel" data-vip-stale="true"><p className="text-lg font-black">Your VIP code was changed by the production team.</p><p className="mt-1 text-sm text-white/70">Ask them for the new link, then enter again at the <a href="/production-access/special-guest?error=rotated" className="underline">special-guest gate</a>.</p></section>;
   return (
     <div className="space-y-4" data-testid="vip-lobby-panel" data-vip-room-open={room.open ? "true" : "false"} data-view-as={viewAs?.guest.guestId}>
-      <section className="flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand-black p-5 text-white">
+      <section className="wpl-as-authored flex flex-wrap items-center justify-between gap-3 rounded-3xl bg-brand-black p-5 text-white">
         <div>
           <span className="rounded-full bg-brand-orange px-3 py-1 text-xs font-black uppercase tracking-[0.25em]" data-testid="vip-badge">VIP</span>
           <p className="mt-2 text-lg font-black">{vip ? `Welcome, ${vip.name}.` : "Welcome. Tell us who you are so the crew knows you by name."}</p>

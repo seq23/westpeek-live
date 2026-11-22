@@ -208,7 +208,7 @@ export function BrowserDiagnosticsPanel({ eventId, onResultsChange }: { eventId:
             These checks run in the operator or participant browser. They do not join a real video provider yet; they prove the device/browser layer before Phase 7 room integration.
           </p>
         </div>
-        <div className="rounded-2xl bg-slate-950 px-4 py-3 text-white">
+        <div className="wpl-as-authored rounded-2xl bg-slate-950 px-4 py-3 text-white">
           <p className="text-xs uppercase tracking-wide text-slate-400">Readiness</p>
           <p className="text-xl font-semibold">{summary.status.replace(/_/g, " ").toUpperCase()} · {summary.score}%</p>
         </div>

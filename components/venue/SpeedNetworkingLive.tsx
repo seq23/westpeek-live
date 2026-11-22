@@ -190,7 +190,7 @@ function MatchRoom({ eventId, match, nextAction, leaveAction }: { eventId: strin
           <h3 className="mt-1 text-2xl font-black text-slate-950" data-testid="networking-partner-name">{match.partner.name}</h3>
           <p className="text-sm text-slate-600" data-testid="networking-partner-detail">{[match.partner.company, match.partner.title].filter(Boolean).join(" · ") || "Registered attendee"}</p>
         </div>
-        <div className="rounded-2xl bg-slate-950 px-4 py-2 text-white" data-testid="networking-timer" data-seconds-left={secondsLeft}>
+        <div className="wpl-as-authored rounded-2xl bg-slate-950 px-4 py-2 text-white" data-testid="networking-timer" data-seconds-left={secondsLeft}>
           <p className="text-[10px] font-black uppercase tracking-wide text-slate-300">Time left</p>
           <p className="text-2xl font-black tabular-nums">{mmss(secondsLeft)}</p>
         </div>
@@ -203,7 +203,7 @@ function MatchRoom({ eventId, match, nextAction, leaveAction }: { eventId: strin
             <ControlBar variation="minimal" controls={{ camera: true, microphone: true, screenShare: false, chat: false, leave: false }} />
           </LiveKitRoom>
         ) : (
-          <div className="flex min-h-[200px] items-center justify-center rounded-2xl bg-slate-950 p-6 text-center text-sm text-slate-200" data-testid="networking-room-notice">{error ? `Video room: ${error}` : "Connecting your camera and microphone…"}</div>
+          <div className="wpl-as-authored flex min-h-[200px] items-center justify-center rounded-2xl bg-slate-950 p-6 text-center text-sm text-slate-200" data-testid="networking-room-notice">{error ? `Video room: ${error}` : "Connecting your camera and microphone…"}</div>
         )}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">

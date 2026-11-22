@@ -29,7 +29,7 @@ export async function CrewLiveModerationDeck({ eventId, search, searchAction, di
       {includeStreamConsole ? (
         <section className="space-y-3" data-testid="crew-go-live">
           <SafeSection label="Go live" render={() => GoLiveCard({ eventId, viewer, compact: true, returnTo: `/crew/events/${eventId}` })} />
-          <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
+          <div className="wpl-as-authored rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
             <p className="text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Go live</p>
             <h2 className="mt-2 text-2xl font-black tracking-tight">Make the stage live, and move it if the feed fails</h2>
             <p className="mt-2 max-w-3xl text-sm text-slate-300">Generate the RTMP credentials once, paste them into StreamYard → Custom RTMP, and start the broadcast there; the stage flips within seconds. The ladder below moves attendees to a backup room when the feed drops, and back up when it returns.</p>

@@ -69,6 +69,32 @@ textarea {
   }
 }
 
+/*
+ * Artwork that has a light and a dark copy (the West Peek mark). The copy follows the colour
+ * tokens: flipped in the dark scheme, as authored inside a `wpl-as-authored` surface.
+ */
+.wpl-dark-only {
+  display: none !important;
+}
+
+@media (prefers-color-scheme: dark) {
+  .wpl-light-only {
+    display: none !important;
+  }
+
+  .wpl-dark-only {
+    display: revert !important;
+  }
+
+  .wpl-as-authored .wpl-light-only {
+    display: revert !important;
+  }
+
+  .wpl-as-authored .wpl-dark-only {
+    display: none !important;
+  }
+}
+
 .brand-script {
   font-family: "Brush Script MT", "Segoe Script", "Apple Chancery", "Snell Roundhand", cursive;
   font-weight: 700;

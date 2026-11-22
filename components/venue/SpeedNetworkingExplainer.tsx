@@ -61,7 +61,7 @@ export function SpeedNetworkingHero({ matchMinutes = SPEED_NETWORKING_DEFAULT_MI
   const minutes = roundMinutes(matchMinutes);
   return (
     <section
-      className="overflow-hidden rounded-brand bg-brand-black px-5 py-7 shadow-brand sm:px-8 sm:py-10"
+      className="wpl-as-authored overflow-hidden rounded-brand bg-brand-black px-5 py-7 shadow-brand sm:px-8 sm:py-10"
       data-testid="speed-networking-hero"
       data-match-minutes={minutes}
     >

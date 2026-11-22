@@ -29,6 +29,14 @@ function luminanceOf(color: string) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+/** The src of the first West Peek mark actually on screen (each mark ships a light and a dark copy). */
+async function visibleMarkSrc(page: Page, within = "body") {
+  return page.locator(`${within} [data-testid="west-peek-mark"]`).evaluateAll((imgs) => {
+    const shown = imgs.find((img) => getComputedStyle(img).display !== "none" && (img as HTMLElement).offsetParent !== null);
+    return shown ? (shown as HTMLImageElement).currentSrc : "none visible";
+  });
+}
+
 async function groundAndInk(page: Page) {
   return page.evaluate(() => ({
     ground: getComputedStyle(document.documentElement).backgroundColor,
@@ -69,9 +77,15 @@ test("dark mode is dark, light mode is light, and the mark flips with the surfac
   expect(luminanceOf(dark.ink)).toBeGreaterThan(0.7);
 
   await gotoAndAssert(page, "/join");
-  const mark = page.getByTestId("west-peek-mark").first();
-  await expect(mark).toBeVisible();
-  await expect.poll(() => mark.evaluate((img) => (img as HTMLImageElement).currentSrc)).toMatch(/wp-mark-white/);
+  // On the white card the black mark would vanish in the dark: the white copy shows instead.
+  await expect.poll(() => visibleMarkSrc(page)).toMatch(/wp-mark-white/);
+
+  // The workspace header is dark by design (wpl-as-authored): it stays near-black in the dark
+  // scheme, with its white mark, rather than flipping to a cream block.
+  await loginAsOperator(page, "/app");
+  const header = page.locator("aside").first();
+  expect(luminanceOf(await header.evaluate((el) => getComputedStyle(el).backgroundColor))).toBeLessThan(0.01);
+  await expect.poll(() => visibleMarkSrc(page, "aside")).toMatch(/wp-mark-white/);
 
   await page.emulateMedia({ colorScheme: "light" });
   await gotoAndAssert(page, "/production-access/crew");
@@ -80,5 +94,5 @@ test("dark mode is dark, light mode is light, and the mark flips with the surfac
   expect(luminanceOf(light.ground)).toBeGreaterThan(0.85);
   expect(luminanceOf(light.ink)).toBeLessThan(0.01);
   await gotoAndAssert(page, "/join");
-  await expect.poll(() => page.getByTestId("west-peek-mark").first().evaluate((img) => (img as HTMLImageElement).currentSrc)).toMatch(/wp-mark-black/);
+  await expect.poll(() => visibleMarkSrc(page)).toMatch(/wp-mark-black/);
 });

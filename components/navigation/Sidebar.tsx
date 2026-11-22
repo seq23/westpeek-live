@@ -5,7 +5,7 @@ import { WorkspaceNavList } from "@/components/navigation/WorkspaceNavList";
 
 export function Sidebar() {
   return (
-    <aside className="border-b border-brand-line bg-brand-black text-white lg:sticky lg:top-0 lg:block lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r lg:border-white/10">
+    <aside className="wpl-as-authored border-b border-brand-line bg-brand-black text-white lg:sticky lg:top-0 lg:block lg:min-h-screen lg:w-72 lg:border-b-0 lg:border-r lg:border-white/10">
       <div className="flex items-center justify-between gap-3 px-4 py-4 lg:block lg:p-5">
         <div className="flex items-center gap-3 lg:block">
           <WestPeekLogoHomeLink size="md" inverse />
