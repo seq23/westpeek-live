@@ -302,7 +302,7 @@ Everyone is **permitted to watch by default**. You only approve people to come *
 ![Run of show with the readiness panel](images/manual/17-run-of-show.jpg)
 
 - **Run of show** (event page → **Run of show**, and the crew deck → **Run of Show**): the timeline of segments with speaker, sponsor, approval, producer cue and technical cue. Under **Call the show**, press **Mark live** when a segment really starts and **Mark complete** when it really ends. Your mark overrides the clock and every screen follows within a page load; without marks, the clock decides.
-- **Who is on**: each segment lists its **Speakers** (people who entered with the speaker code) plus anyone you name under *Also on*, a moderator, and a note. Press **Save who is on**.
+- **Who is on**: each segment lists its **Speakers** (people who entered with the speaker code) plus anyone you name under *Also on*, a moderator, and a note. Tick **Networking block** on a networking segment: only ticked segments give guests the *Join the networking queue* link on their row of the agenda (a title with "networking" in it is not enough). Press **Save segment**. A ticked segment shows *Networking block* on its closed heading.
 
 ![Incident log](images/manual/18-incidents.jpg)
 

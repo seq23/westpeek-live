@@ -11,7 +11,10 @@ export function SegmentPeopleEditor({ eventId, segment, speakers }: { eventId: s
   if (!segment.sessionId) return null;
   return (
     <details className="mt-3 rounded-2xl border border-slate-200 bg-white p-3" data-testid={`segment-people-editor-${segment.sessionId}`}>
-      <summary className="cursor-pointer text-sm font-bold text-slate-900">Who is on{segment.speakers.length || segment.host || segment.alsoOn ? "" : " (nobody named yet)"}</summary>
+      <summary className="cursor-pointer text-sm font-bold text-slate-900">
+        Who is on{segment.speakers.length || segment.host || segment.alsoOn ? "" : " (nobody named yet)"}
+        {segment.networking ? <span className="ml-2 rounded-full bg-emerald-100 px-2 py-0.5 text-xs font-bold text-emerald-800" data-testid={`segment-networking-badge-${segment.sessionId}`}>Networking block</span> : null}
+      </summary>
       <form action={saveSegmentPeopleAction} className="mt-3 grid gap-3">
         <input type="hidden" name="eventId" value={eventId} />
         <input type="hidden" name="sessionId" value={segment.sessionId} />
@@ -40,7 +43,7 @@ export function SegmentPeopleEditor({ eventId, segment, speakers }: { eventId: s
           <input type="checkbox" name="networking" defaultChecked={segment.networking} className="mt-1" data-testid={`segment-networking-${segment.sessionId}`} />
           <span><span className="font-bold text-slate-900">Networking block</span><span className="block text-xs text-slate-600">Guests see a &ldquo;Join the networking queue&rdquo; link on this row of the agenda.</span></span>
         </label>
-        <div><button className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white" data-testid={`segment-people-save-${segment.sessionId}`}>Save who is on</button></div>
+        <div><button className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white" data-testid={`segment-people-save-${segment.sessionId}`}>Save segment</button></div>
       </form>
     </details>
   );
