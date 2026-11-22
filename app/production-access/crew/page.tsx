@@ -50,6 +50,7 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
         {/* Refusals sit above the form: at phone width the form is two screens tall. */}
         <GateRefusalNotice error={resolvedSearchParams?.error} retry={resolvedSearchParams?.retry} hint="or ask the producer for the link, which fills the code in for you." />
         {resolvedSearchParams?.error === "superseded" ? <SupersededGateNotice field={resolvedSearchParams?.codeField} replacedAt={resolvedSearchParams?.on} testId="crew-code-superseded" /> : null}
+        {resolvedSearchParams?.error === "unavailable" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="crew-access-unavailable">Can&apos;t check access right now. Try again in a minute.</p> : null}
         {resolvedSearchParams?.error === "invalid" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That crew password did not match. Check the Day 1 internal password or ask the operator/admin.</p> : null}
         {resolvedSearchParams?.error === "launchpad_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter the crew password first. The Operator Launchpad requires the separate operator password.</p> : null}
         {resolvedSearchParams?.error === "operator_packet_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter operator access first. The Operator Packet contains internal launchpad instructions and stays behind the operator gate.</p> : null}
