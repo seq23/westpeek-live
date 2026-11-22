@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 /**
  * Host = the executive_producer crew role for one event.
@@ -18,7 +18,10 @@ import { FileRuntimeStore } from "@/services/runtime/fileRuntimeStore";
 import { setRuntimeStoreForTests } from "@/services/runtime/runtimeStoreFactory";
 import { resetOverlayForTests } from "@/services/events/runtimeEventOverlay";
 import { createEventRecord, findEventRecord } from "@/services/events/eventRepository";
-import { crewCookieCurrent, getHostLinkState, hostLinkPath, mintHostLink, revokeHostLinks } from "@/services/events/hostLinkService";
+import { ACCESS_UNAVAILABLE_MESSAGE, crewCookieCurrent, getHostLinkState, hostLinkPath, mintHostLink, revokeHostLinks } from "@/services/events/hostLinkService";
+import { getAccessCodeVersions, guestAccessStale } from "@/services/events/accessCodeService";
+import { HostPanel } from "@/components/events/HostPanel";
+import { renderToStaticMarkup } from "react-dom/server";
 import { authorizeLiveControl, REVOKED_HOST_LINK_ERROR, requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { crewViewerFromPayloads, getCrewViewer, viewerCan } from "@/lib/auth/crewViewer";
 import { createV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/productionAccess";
@@ -64,10 +67,12 @@ describe("host = executive_producer crew role", () => {
 describe("host links against the store", () => {
   let tempDir: string;
   let eventId: string;
+  let store: FileRuntimeStore;
   beforeEach(async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wpl-host-"));
     process.env.AGENCY_EVENT_OS_RUNTIME_STORE = "file";
-    setRuntimeStoreForTests(new FileRuntimeStore(path.join(tempDir, "runtime.json")));
+    store = new FileRuntimeStore(path.join(tempDir, "runtime.json"));
+    setRuntimeStoreForTests(store);
     resetOverlayForTests();
     eventId = (await createEventRecord({ name: `Host ${Date.now()}`, when: "now" }, owner)).id;
   });
@@ -110,5 +115,80 @@ describe("host links against the store", () => {
     expect((await getHostLinkState(eventId)).links.filter((link) => !link.revokedAt)).toHaveLength(1);
     await revokeHostLinks(eventId, "owner");
     expect((await getHostLinkState(eventId)).codeVersion).toBe(2);
+  });
+
+  function storeDown() {
+    const read = vi.spyOn(store, "getEventGuestState").mockRejectedValue(new Error("D1_ERROR: no such table: event_guest_states SQLITE_ERROR"));
+    const logged = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    onTestFinished(() => { vi.restoreAllMocks(); });
+    return { read, logged };
+  }
+
+  async function addOperatorCookie(operatorEventId: string) {
+    const env = getEnv();
+    jar.set(getV5AccessCookieNames(env).operatorCookieName, await createV5AccessCookie({ kind: "operator", eventId: operatorEventId, issuedAt, expiresAt }, getV5AccessCookieSecret(env)));
+  }
+
+  it("store outage: a revoked crew cookie gets 503 on live control, never version 0; owner, operator and the global crew password keep working; a revoke writes nothing", async () => {
+    await revokeHostLinks(eventId, "owner");
+    await revokeHostLinks(eventId, "owner");
+    await signInAsCrew("executive_producer", eventId, 0);
+    expect(await requireLiveEventControlAccessForRequest(eventId, "go_live")).toEqual({ ok: false, error: REVOKED_HOST_LINK_ERROR });
+
+    const { read } = storeDown();
+    for (const action of ["go_live", "moderate_chat", "manage_host", undefined] as const) {
+      expect(await requireLiveEventControlAccessForRequest(eventId, action), String(action)).toEqual({ ok: false, error: ACCESS_UNAVAILABLE_MESSAGE, status: 503 });
+    }
+    expect(await getCrewViewer(eventId)).toMatchObject({ kind: "none", isHost: false, allowed: [] });
+    // A current cookie is refused too: nobody can tell it is current.
+    await signInAsCrew("executive_producer", eventId, 2);
+    expect(await requireLiveEventControlAccessForRequest(eventId, "go_live")).toMatchObject({ ok: false, status: 503 });
+    // An operator for this event needs no read.
+    await addOperatorCookie(eventId);
+    expect(await requireLiveEventControlAccessForRequest(eventId, "go_live")).toMatchObject({ ok: true, actorRole: "operator" });
+    // The global crew password (no code version) needs no read: today's codes let in exactly whom they let in before.
+    await signInAsCrew("executive_producer", eventId);
+    expect(await requireLiveEventControlAccessForRequest(eventId, "go_live")).toMatchObject({ ok: true, crewRole: "executive_producer" });
+    // A revoke cannot read the version, so it stops before it writes: not version 1 over 2, not a rotated crew code.
+    const crewCodeBefore = (await findEventRecord(eventId))!.accessCodes.crew;
+    await expect(revokeHostLinks(eventId, "owner")).rejects.toThrow(ACCESS_UNAVAILABLE_MESSAGE);
+    read.mockRestore();
+    expect((await getHostLinkState(eventId)).codeVersion).toBe(2);
+    expect((await findEventRecord(eventId))!.accessCodes.crew).toBe(crewCodeBefore);
+  });
+
+  it("an operator cookie for ANOTHER event does not reopen a revoked host cookie, and in an outage it still gets 503", async () => {
+    await revokeHostLinks(eventId, "owner");
+    await signInAsCrew("executive_producer", eventId, 0);
+    await addOperatorCookie("some-other-event");
+    expect(await requireLiveEventControlAccessForRequest(eventId, "manage_host")).toEqual({ ok: false, error: REVOKED_HOST_LINK_ERROR });
+    storeDown();
+    expect(await requireLiveEventControlAccessForRequest(eventId, "manage_host")).toEqual({ ok: false, error: ACCESS_UNAVAILABLE_MESSAGE, status: 503 });
+  });
+
+  it("the store's own error text never reaches the page; it goes to the server log", async () => {
+    const { logged } = storeDown();
+    const html = await HostPanel({ eventId }).then((node) => renderToStaticMarkup(node), (error: Error) => error.message);
+    expect(html).not.toContain("D1_ERROR");
+    expect(html).not.toContain("event_guest_states");
+    expect(logged.mock.calls.some((call) => call.join(" ").includes("D1_ERROR"))).toBe(true);
+  });
+
+  it("a revoke whose code rotation fails has already ended every old crew cookie", async () => {
+    await signInAsCrew("executive_producer", eventId, 0);
+    vi.spyOn(store, "upsertRuntimeEvent").mockRejectedValueOnce(new Error("write failed"));
+    onTestFinished(() => { vi.restoreAllMocks(); });
+    await expect(revokeHostLinks(eventId, "owner")).rejects.toThrow("write failed");
+    expect(await requireLiveEventControlAccessForRequest(eventId, "go_live")).toEqual({ ok: false, error: REVOKED_HOST_LINK_ERROR });
+  });
+
+  it("store outage on guest codes: a versioned guest cookie is sent to the gate as 'unavailable', never let in as version 0", async () => {
+    const env = getEnv();
+    jar.clear();
+    jar.set(getV5AccessCookieNames(env).specialGuestCookieName, await createV5AccessCookie({ kind: "special_guest", role: "speaker", eventId, codeVersion: 0, issuedAt, expiresAt }, getV5AccessCookieSecret(env)));
+    expect(await guestAccessStale(eventId)).toBe(false);
+    storeDown();
+    expect(await guestAccessStale(eventId)).toBe("unavailable");
+    await expect(getAccessCodeVersions(eventId)).rejects.toThrow(ACCESS_UNAVAILABLE_MESSAGE);
   });
 });

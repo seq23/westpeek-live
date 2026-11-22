@@ -16,6 +16,7 @@ export async function VipLobbyPanel({ eventId, error, viewAs, grantedName }: { e
   const vip: { guestId: string; name: string } | undefined = viewAs?.guest || ownVip || (grantedName ? { guestId: "vip-grant", name: grantedName } : undefined);
   // The VIP code was changed since this cookie was minted: the lounge is closed to it; the badge says why.
   const stale = !viewAs && !grantedName && await guestAccessStale(eventId);
+  if (stale === "unavailable") return <section className="rounded-3xl bg-brand-black p-5 text-white" data-testid="vip-lobby-panel" data-vip-stale="unavailable"><p className="text-lg font-black">Can't check access right now.</p><p className="mt-1 text-sm text-white/70">Try again in a minute.</p></section>;
   if (stale) return <section className="rounded-3xl bg-brand-black p-5 text-white" data-testid="vip-lobby-panel" data-vip-stale="true"><p className="text-lg font-black">Your VIP code was changed by the production team.</p><p className="mt-1 text-sm text-white/70">Ask them for the new link, then enter again at the <a href="/production-access/special-guest?error=rotated" className="underline">special-guest gate</a>.</p></section>;
   return (
     <div className="space-y-4" data-testid="vip-lobby-panel" data-vip-room-open={room.open ? "true" : "false"} data-view-as={viewAs?.guest.guestId}>
