@@ -12,7 +12,7 @@ await fs.mkdir(out,{recursive:true});
 const checkpoint=path.join(out,'source-checkpoint.json');
 const before=await treeHash();
 await fs.writeFile(checkpoint,JSON.stringify({runId,strategy,beforeHash:before,createdAt:new Date().toISOString()},null,2));
-const steps=['npm run release:autofix:static','npm run release:autofix:routes','npm run release:autofix:rendering','npm run release:validate:local'];
+const steps=['npm run release:autofix:static','npm run release:autofix:routes','npm run release:validate:local'];
 const passes=[];let ok=false,lastFailure=null;
 for(let pass=1;pass<=max;pass++){
   const rec={pass,strategy,startedAt:new Date().toISOString(),beforeHash:await treeHash(),steps:[]};

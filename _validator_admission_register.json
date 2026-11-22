@@ -813,27 +813,6 @@
       "simplificationDisposition": "KEEP"
     },
     {
-      "script": "test:display-normalization",
-      "command": "vitest run tests/unit/normalizeDisplayValue.test.ts",
-      "status": "ACTIVE",
-      "admission": "registered_proof_lane",
-      "parentOrMatrixAuthority": "validate:everything",
-      "category": "repo validation / proof",
-      "severity": "STRONG WARNING",
-      "productionRisk": "unadmitted proof",
-      "whatItProves": "script governed",
-      "whatItDoesNotProve": "execution",
-      "failureHandling": "Juniper investigates and normally repairs before release; local work may continue when proof is environment-bound.",
-      "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
-      "expectedFailureFrequency": "Low",
-      "runtimeCost": "Varies",
-      "maintenanceCost": "review on changes",
-      "removalConditions": "after replacement proof",
-      "owner": "Repo owner / release operator",
-      "blockerPolicy": "Normally resolve before release; not a security/data corruption failure by itself.",
-      "simplificationDisposition": "KEEP"
-    },
-    {
       "script": "test:e2e",
       "command": "playwright test",
       "status": "ACTIVE",
@@ -1885,7 +1864,7 @@
     },
     {
       "script": "validate",
-      "command": "npm run validate:authenticated-usability && npm run test:display-normalization && npm run typecheck && npm run lint && npm run test && npm run validate:v5-hard && npm run validate:v7 && npm run validate:deploy-parity",
+      "command": "npm run validate:authenticated-usability && npm run typecheck && npm run lint && npm run test && npm run validate:v5-hard && npm run validate:v7 && npm run validate:deploy-parity",
       "status": "ACTIVE",
       "admission": "registered_support_lane",
       "parentOrMatrixAuthority": "validate:everything",

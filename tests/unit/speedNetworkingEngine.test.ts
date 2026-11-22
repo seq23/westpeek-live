@@ -6,7 +6,7 @@ import {
   endSpeedNetworkingMatch,
   normalizedSpeedNetworkingPairKey,
   selectNextSpeedNetworkingPair,
-} from "@/services/speed-networking";
+} from "@/services/speed-networking/speedNetworkingEngine";
 import type { SpeedNetworkingEntry, SpeedNetworkingMatch, SpeedNetworkingPairHistory } from "@/types/speedNetworkingEngine";
 
 const entries: SpeedNetworkingEntry[] = [

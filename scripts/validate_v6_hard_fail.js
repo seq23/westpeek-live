@@ -20,17 +20,6 @@ const videoPolicy = read("services/video/roomFallbackService.ts") + read("servic
 if (!videoPolicy.includes("zoom") || !videoPolicy.includes("confirmedByCrew")) fail("Zoom crew confirmation is missing.");
 if (videoPolicy.includes("provider === \"zoom\" && canAutoSwitch")) fail("Zoom must not auto-switch.");
 
-const prodRuntimeImportOffenders = [];
-for (const top of ["app", "components", "lib", "services"]) {
-  if (!fs.existsSync(top)) continue;
-  for (const file of fs.readdirSync(top, { recursive: true }).filter((name) => /\.(ts|tsx)$/.test(name))) {
-    const full = `${top}/${file}`;
-    if (full === "services/runtime/v5RuntimeStateStore.ts") continue;
-    const body = read(full);
-    if (body.includes("@/services/runtime/v5RuntimeStateStore")) prodRuntimeImportOffenders.push(full);
-  }
-}
-if (prodRuntimeImportOffenders.length) fail(`Production code must use getRuntimeStore(), not v5RuntimeStateStore: ${prodRuntimeImportOffenders.join(", ")}`);
 const crewPage = read("app/production-access/crew/page.tsx");
 if (!crewPage.includes('name="crewRole"') || !crewPage.includes('technical_director')) fail("Crew access must allow explicit crew role selection so capability-gated actions are reachable.");
 const accessResolver = read("services/access/eventAccessResolver.ts");

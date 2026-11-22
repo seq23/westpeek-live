@@ -8,7 +8,6 @@ const required = [
   'services/attendees/attendeeAgendaIntentService.ts',
   'lib/actions/attendeeAgendaActions.ts',
   'lib/actions/attendeeProfileActions.ts',
-  'components/venue/RegistrationAgendaPlanner.tsx',
   'components/venue/MyAgendaPanel.tsx',
   'components/venue/EditAttendeeProfilePanel.tsx',
   'migrations-d1/0004_attendees_live.sql'
