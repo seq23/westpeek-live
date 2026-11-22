@@ -16,7 +16,7 @@ V7 repairs the product experience after over-hardening. Intentional demo/sales/o
 
 ## Day 1 passwords
 
-- Crew: Crew-Call-2026!
+- Crew: set in Cloudflare (vault: WESTPEEK_LIVE_CREW_ACCESS_PASSWORD)
 - Speaker: Demo-Speaker-2026!
 - Sponsor: Demo-Sponsor-2026!
 - VIP / Client Preview: Demo-VIP-2026!

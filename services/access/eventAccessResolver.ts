@@ -5,6 +5,7 @@ import type { V4AccessResolution, V4CrewRole, V4SpecialGuestRole } from "@/types
 import { codesMatch, type AccessCodeField } from "@/lib/access/accessCodes";
 import { findSupersededCodeForField } from "@/services/events/supersededCodeService";
 import { supersededPrivilegedMessage } from "@/types/supersededCode";
+import { UNKNOWN_EVENT_SCOPE } from "@/services/access/gateAttemptLimiter";
 
 /**
  * A privileged code is a credential, and the reason to rotate one is to END somebody's access — so
@@ -34,6 +35,17 @@ async function supersededRoleRefusal(eventId: string, typedCode: string, roles: 
 
 function readEnvCode(envKey: string) {
   return process.env[envKey]?.trim();
+}
+
+/**
+ * What an access attempt counts against at the gate limiter: the event the typed code resolves to,
+ * forgiving case, spaces and dashes exactly as the resolvers below do, or one shared
+ * UNKNOWN_EVENT_SCOPE. Never the raw text, which an attacker can vary for a fresh count each try.
+ */
+export async function gateScopeForEventCode(eventCode: string | undefined) {
+  if (!eventCode?.trim()) return UNKNOWN_EVENT_SCOPE;
+  const hydrated = await ensureRuntimeEvent(eventCode).catch(() => undefined);
+  return findEventIndexRecord(hydrated?.id || eventCode)?.eventId || UNKNOWN_EVENT_SCOPE;
 }
 
 export async function resolveSpecialGuestAccess(eventCode: string | undefined, roleCode: string | undefined): Promise<V4AccessResolution> {

@@ -70,7 +70,6 @@ check("app/api/production-access/crew/route.ts", ["CREW_ROLES.includes(role as V
 check("services/events/hostLinkService.ts", ["export function hostLinkPath", "role=executive_producer&code=", "export async function revokeHostLinks", "crew: newCode || mintAccessCodes().crew", "codeVersion: state.codeVersion + 1", "export function crewCookieCurrent"]);
 check("lib/auth/liveControlRequestGuard.ts", ["crewCookieCurrent(crew.codeVersion, currentCodeVersion)", "REVOKED_HOST_LINK_ERROR"]);
 check("lib/auth/crewViewer.ts", ["crewCookieCurrent(crew.codeVersion, currentCodeVersion)"]);
-check("app/production-access/crew/page.tsx", ["codeVersion, issuedAt"]);
 check("app/api/production-access/crew/route.ts", ["codeVersion, issuedAt"]);
 check("lib/actions/hostActions.ts", ['requireLiveEventControlAccessForRequest(eventId, "manage_host")', "mintHostLink(", "revokeHostLinks("]);
 if (!/manage_host: \["executive_producer"\]/.test(read("tests/unit/crewRolePermissions.test.ts"))) throw new Error("manage_host must belong to the executive producer only (plus owner/operator).");

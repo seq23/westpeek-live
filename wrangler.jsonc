@@ -9,6 +9,9 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Workers AI: reads an attendee's networking goal into a stored intent when it is saved
+  // (services/speed-networking/networkingGoalIntent.ts), capped per month in code.
+  "ai": { "binding": "AI" },
   // The runtime store. Schema: migrations-d1/, applied by the deploy workflow before every deploy.
   "d1_databases": [
     {
@@ -24,6 +27,20 @@
     {
       "binding": "ASSETS_BUCKET",
       "bucket_name": "west-peek-live-assets"
+    }
+  ],
+  // Access-gate attempts (services/access/gateAttemptLimiter.ts): 6 per minute per gate, event and
+  // address, counted across isolates. Free on every plan. namespace_id is this account's own label.
+  "ratelimits": [
+    {
+      "name": "GATE_LIMITER",
+      "namespace_id": "1001",
+      "simple": { "limit": 6, "period": 60 }
+    },
+    {
+      "name": "GATE_LIMITER_WIDE",
+      "namespace_id": "1002",
+      "simple": { "limit": 20, "period": 60 }
     }
   ]
 }

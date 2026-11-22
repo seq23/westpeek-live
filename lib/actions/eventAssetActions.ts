@@ -36,13 +36,14 @@ async function guestUploader(eventId: string) {
  * Step one of a real upload: the server checks who is asking and what they are sending, then mints
  * a short-lived, single-use signed link to /api/assets/upload; worker.ts pipes the bytes into the private R2 bucket.
  */
-export async function requestAssetUploadAction(input: { eventId: string; fileName: string; mimeType: string; sizeBytes: number }) {
+export async function requestAssetUploadAction(input: { eventId: string; fileName: string; mimeType: string; sizeBytes: number; place?: "library" | "portal" }) {
   const actor = await getWorkspaceActor();
   const guest = actor ? undefined : await guestUploader(input.eventId);
   if (!actor && !guest) {
     try { await requireAssetControl(input.eventId); } catch (error) { return { ok: false as const, reason: error instanceof Error ? error.message : "You cannot add files to this event." }; }
   }
-  return requestAssetUpload(input);
+  // Only the crew's library has a link form; a guest is always told the portal's next step.
+  return requestAssetUpload({ ...input, place: guest ? "portal" : input.place });
 }
 
 /** Step two: the bytes are in the bucket, so the row goes in the library. */
