@@ -1,7 +1,7 @@
 import { CopyButton } from "@/components/shared/CopyButton";
 import { joinLinkFor } from "@/components/events/EventJoinCodePanel";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
-import { displayCode, guestGatePath, LEGACY_ROLE_CODE_CUTOFF, type AccessCodeField } from "@/lib/access/accessCodes";
+import { displayCode, guestGatePath, legacyRoleCodeLastDay, roleCodeListLabel, type AccessCodeField } from "@/lib/access/accessCodes";
 import { rotateRoleCodesAction, setEventAccessCodeAction } from "@/lib/actions/accessCodeActions";
 import { roleCodesBuiltFromJoinCode } from "@/services/events/accessCodeService";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
@@ -43,15 +43,15 @@ function CodeEditor({ eventId, field, viewer, current }: { eventId: string; fiel
 export async function EventAccessCodesPanel({ event, notice }: { event: RuntimeEventRecord; notice?: { saved?: string; error?: string; field?: string } }) {
   const [joinLink, base, viewer, impact, superseded] = await Promise.all([joinLinkFor(event), appBaseUrl(), getCrewViewer(event.id), describeCodeChangeImpact(event.id), liveSupersededCodesFor(event.id)]);
   const guessable = roleCodesBuiltFromJoinCode(event);
-  const cutoff = new Date(LEGACY_ROLE_CODE_CUTOFF).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Chicago" });
+  const lastDay = legacyRoleCodeLastDay();
   return (
     <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm" data-testid="generated-event-role-codes">
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Access codes for {event.name}</p>
       <p className="mt-2 text-sm text-brand-muted">Codes are shown in capitals and accepted in any case, with or without the dash. Send the link and the person only presses Continue; or read them the event code <strong>{displayCode(event.joinCode)}</strong> plus their role code.</p>
       {guessable.length ? (
         <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" data-testid="role-codes-guessable" data-roles={guessable.join(",")}>
-          <p className="font-black">The {guessable.join(", ")} code{guessable.length === 1 ? " is" : "s are"} made from the event code, so anyone holding the event code can work {guessable.length === 1 ? "it" : "them"} out.</p>
-          <p className="mt-1">{guessable.length === 1 ? "It stops" : "They stop"} working at the end of {cutoff}. Press New codes, then send the new links to your crew, speakers, sponsors, VIPs and client.</p>
+          <p className="font-black">The {roleCodeListLabel(guessable)} {guessable.length === 1 ? "is" : "are"} made from the event code, so anyone holding the event code can work {guessable.length === 1 ? "it" : "them"} out.</p>
+          <p className="mt-1">{guessable.length === 1 ? "It stops" : "They stop"} working at the end of {lastDay}. Press New codes, then send the new links to your crew, speakers, sponsors, VIPs and client.</p>
           <p className="mt-1" data-testid="old-host-links-stopped">Host links sent before 22 November no longer work: make a new one in the Host panel.</p>
         </div>
       ) : null}

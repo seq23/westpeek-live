@@ -117,6 +117,23 @@ export function isRandomRoleCode(code: string | undefined | null, role: RoleCode
  */
 export const LEGACY_ROLE_CODE_CUTOFF = "2026-11-29T06:00:00.000Z";
 
+/**
+ * The last day the stem-built codes work, as a producer reads it: the cut-off is the first moment
+ * they are refused (midnight starting Sunday in Chicago), so the day named is the one before it.
+ */
+export function legacyRoleCodeLastDay(cutoff = LEGACY_ROLE_CODE_CUTOFF) {
+  return new Date(Date.parse(cutoff) - 1).toLocaleDateString("en-US", { weekday: "long", month: "long", day: "numeric", timeZone: "America/Chicago" });
+}
+
+const ROLE_LABEL: Record<RoleCodeField, string> = { crew: "crew", speaker: "speaker", sponsor: "sponsor", vip: "VIP", client: "client" };
+
+/** "crew, speaker, sponsor, VIP and client codes" / "VIP code", for notices. */
+export function roleCodeListLabel(roles: RoleCodeField[]) {
+  const names = roles.map((role) => ROLE_LABEL[role]);
+  const list = names.length > 1 ? `${names.slice(0, -1).join(", ")} and ${names[names.length - 1]}` : names[0] || "";
+  return `${list} code${names.length === 1 ? "" : "s"}`;
+}
+
 /** A small, stable, dependency-free hash — the same event id always pads to the same characters. */
 function stableHash(seed: string) {
   let hash = 2166136261;

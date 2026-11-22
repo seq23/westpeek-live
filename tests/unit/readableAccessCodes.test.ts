@@ -10,7 +10,7 @@ import { adoptReadableCodes, codeSchemeSummary, roleCodesBuiltFromJoinCode, rota
 import { resolveCrewAccess, resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
 import { getGeneratedEventRoleCode } from "@/services/events/eventConfigRepository";
 import { liveSupersededCodesFor } from "@/services/events/supersededCodeService";
-import { codeStem, codesMatch, codeKey, isRandomRoleCode, joinCodeForStem, LEGACY_ROLE_CODE_CUTOFF, liveRoleCode, mintRoleCode, ROLE_CODE_FIELDS, stemBuiltRoleCode, stemFromCode } from "@/lib/access/accessCodes";
+import { codeStem, codesMatch, codeKey, isRandomRoleCode, joinCodeForStem, LEGACY_ROLE_CODE_CUTOFF, legacyRoleCodeLastDay, liveRoleCode, mintRoleCode, ROLE_CODE_FIELDS, roleCodeListLabel, stemBuiltRoleCode, stemFromCode } from "@/lib/access/accessCodes";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 
 /**
@@ -230,5 +230,23 @@ describe("events with role codes built from the event code", () => {
     const after = (await getRuntimeStore().getRuntimeEvent(event.id))!;
     expect(after.joinCode).toBe(event.joinCode);
     expect(codeSchemeSummary(after).onScheme).toBe(true);
+  });
+});
+
+describe("the cut-off notice names the right day", () => {
+  it("names the last day the old codes work (the Chicago day before the cut-off moment), not the day the cut-off falls on", () => {
+    const lastMoment = new Date(Date.parse(LEGACY_ROLE_CODE_CUTOFF) - 1);
+    const chicagoWeekday = lastMoment.toLocaleDateString("en-US", { weekday: "long", timeZone: "America/Chicago" });
+    expect(legacyRoleCodeLastDay()).toBe("Saturday, November 28");
+    expect(legacyRoleCodeLastDay().startsWith(chicagoWeekday)).toBe(true);
+    // Still refused at the cut-off itself, still working 1 ms before: the named day really is the last one.
+    expect(liveRoleCode({ joinCode: "WPL-45MINU", accessCodes: { crew: "WPL-CREW-45MINU" } } as never, "crew", lastMoment)).toBeTruthy();
+    expect(liveRoleCode({ joinCode: "WPL-45MINU", accessCodes: { crew: "WPL-CREW-45MINU" } } as never, "crew", new Date(LEGACY_ROLE_CODE_CUTOFF))).toBeFalsy();
+  });
+
+  it("lists the roles in words, VIP in capitals", () => {
+    expect(roleCodeListLabel(["crew", "speaker", "sponsor", "vip", "client"])).toBe("crew, speaker, sponsor, VIP and client codes");
+    expect(roleCodeListLabel(["vip"])).toBe("VIP code");
+    expect(roleCodeListLabel(["crew", "vip"])).toBe("crew and VIP codes");
   });
 });
