@@ -1,8 +1,5 @@
 import type { V4CrewRole, V4SpecialGuestRole } from "@/types/v4";
 
-export const V5_CREW_COOKIE_DEFAULT = "wpl_crew_access";
-export const V5_SPECIAL_GUEST_COOKIE_DEFAULT = "wpl_guest_access";
-
 interface V5AccessCookieBase {
   issuedAt: number;
   expiresAt: number;
@@ -82,7 +79,6 @@ export async function readV5AccessCookie(value: string | undefined, secret: stri
     return undefined;
   }
 }
-
 
 export function getV5CookieOptions(maxAgeSeconds: number) {
   return {
