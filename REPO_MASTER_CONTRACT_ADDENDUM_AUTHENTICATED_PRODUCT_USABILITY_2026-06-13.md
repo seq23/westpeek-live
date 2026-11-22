@@ -593,7 +593,7 @@ Fixtures must not reproduce unnecessary PII, credentials, private message conten
 The validation matrix must include separate rows for:
 
 - production-shaped fixture contract
-- display-normalization unit tests
+- display normalization (React escapes text by default; the postdeploy click audit fails on raw payload markers and horizontal overflow; see `DISPLAY_NORMALIZATION_CONTRACT.md`)
 - route coverage manifest
 - authenticated click audit
 - entity lifecycle matrix consistency
