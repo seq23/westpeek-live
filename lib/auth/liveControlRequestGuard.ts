@@ -3,14 +3,16 @@ import { readV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/produ
 import { crewDeniedReason, roleAllows, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import type { V4CrewRole } from "@/types/v4";
-import { crewCookieCurrent, getHostLinkState } from "@/services/events/hostLinkService";
+import { crewCookieCurrent, getHostLinkState, HostLinkStateUnavailableError } from "@/services/events/hostLinkService";
 import { effectiveCrewRole } from "@/lib/auth/crewRolePermissions";
 
 export const REVOKED_HOST_LINK_ERROR = "Your crew link for this event was revoked. Ask the host or the owner for a new link.";
 
+export const HOST_LINK_STATE_UNAVAILABLE_ERROR = "Crew access can't be checked right now. Try again in a minute.";
+
 export type LiveControlAuthorization =
   | { ok: true; actorRole: "owner" | "operator" | "crew"; crewRole?: V4CrewRole; payload: V5AccessCookiePayload }
-  | { ok: false; error: string };
+  | { ok: false; error: string; status?: 503 };
 
 /**
  * Pure decision: which of the three cookies opens live control of this event, and — when the
@@ -42,6 +44,16 @@ export async function requireLiveEventControlAccessForRequest(eventId?: string, 
     readV5AccessCookie(cookieStore.get(names.crewCookieName)?.value, secret),
   ]);
   // A crew cookie minted with the event's crew code is checked against the current code version (host-link revocation).
-  const codeVersion = crew?.kind === "crew" && crew.codeVersion !== undefined && eventId ? (await getHostLinkState(eventId)).codeVersion : 0;
+  let codeVersion = 0;
+  if (crew?.kind === "crew" && crew.codeVersion !== undefined && eventId && owner?.kind !== "owner" && operator?.kind !== "operator") {
+    try {
+      codeVersion = (await getHostLinkState(eventId)).codeVersion;
+    } catch (error) {
+      if (!(error instanceof HostLinkStateUnavailableError)) throw error;
+      // Fail closed: an unknown version never lets a possibly revoked cookie through.
+      console.error("[live-control] refusing crew cookie:", error.message);
+      return { ok: false, error: HOST_LINK_STATE_UNAVAILABLE_ERROR, status: 503 };
+    }
+  }
   return authorizeLiveControl({ owner, operator, crew }, eventId, action, codeVersion);
 }

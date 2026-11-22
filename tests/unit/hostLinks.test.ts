@@ -21,7 +21,7 @@ import { createEventRecord, findEventRecord } from "@/services/events/eventRepos
 import { crewCookieCurrent, getHostLinkState, hostCodeFor, hostLinkPathFor, mintHostLink, revokeHostLinks } from "@/services/events/hostLinkService";
 import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { getCrewAccessPassword } from "@/lib/env";
-import { authorizeLiveControl, REVOKED_HOST_LINK_ERROR, requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
+import { authorizeLiveControl, HOST_LINK_STATE_UNAVAILABLE_ERROR, REVOKED_HOST_LINK_ERROR, requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { crewViewerFromPayloads, getCrewViewer, viewerCan } from "@/lib/auth/crewViewer";
 import { createV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
@@ -73,10 +73,12 @@ describe("host = executive_producer crew role", () => {
 describe("host links against the store", () => {
   let tempDir: string;
   let eventId: string;
+  let store: FileRuntimeStore;
   beforeEach(async () => {
     tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wpl-host-"));
     process.env.AGENCY_EVENT_OS_RUNTIME_STORE = "file";
-    setRuntimeStoreForTests(new FileRuntimeStore(path.join(tempDir, "runtime.json")));
+    store = new FileRuntimeStore(path.join(tempDir, "runtime.json"));
+    setRuntimeStoreForTests(store);
     resetOverlayForTests();
     eventId = (await createEventRecord({ name: `Host ${Date.now()}`, when: "now" }, owner)).id;
   });
@@ -189,5 +191,35 @@ describe("host links against the store", () => {
     // The host code is per event: one event's host code never opens another.
     const other = await createEventRecord({ name: `Other ${Date.now()}`, when: "now" }, owner);
     expect(await resolveCrewAccess(other.joinCode, "executive_producer", await hostCodeFor(eventId, 1))).toMatchObject({ ok: false });
+  });
+
+  it("store outage: a revoked crew cookie is refused with 503 on live control, never treated as version 0; a revoke during the outage writes nothing", async () => {
+    await revokeHostLinks(eventId, "owner");
+    await revokeHostLinks(eventId, "owner");
+    expect((await getHostLinkState(eventId)).codeVersion).toBe(2);
+    // The cookie a revoked host still holds, from before both revokes.
+    await signInAsCrew("executive_producer", eventId, 0);
+    expect(await requireLiveEventControlAccessForRequest(eventId, "go_live")).toEqual({ ok: false, error: REVOKED_HOST_LINK_ERROR });
+
+    const read = vi.spyOn(store, "getEventGuestState").mockRejectedValue(new Error("D1_ERROR: network connection lost"));
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    onTestFinished(() => { vi.restoreAllMocks(); });
+    for (const action of ["go_live", "moderate_chat", "manage_host", undefined] as const) {
+      expect(await requireLiveEventControlAccessForRequest(eventId, action), String(action)).toEqual({ ok: false, error: HOST_LINK_STATE_UNAVAILABLE_ERROR, status: 503 });
+    }
+    expect(await getCrewViewer(eventId)).toMatchObject({ kind: "none", isHost: false, allowed: [] });
+    // A current cookie is refused too: nobody can tell it is current.
+    await signInAsCrew("executive_producer", eventId, 2);
+    expect(await requireLiveEventControlAccessForRequest(eventId, "go_live")).toMatchObject({ ok: false, status: 503 });
+    // Owner and the global crew password (no code version) need no read and still work.
+    expect(authorizeLiveControl({ owner: { kind: "owner", issuedAt, expiresAt } }, eventId, "go_live")).toMatchObject({ ok: true });
+    await signInAsCrew("crew", eventId);
+    expect(await requireLiveEventControlAccessForRequest(eventId)).toMatchObject({ ok: true, crewRole: "crew" });
+    // A revoke cannot read the version, so it must fail before it writes anything: not version 1 over version 2, not a rotated crew code with the old version.
+    const crewCodeBefore = (await findEventRecord(eventId))!.accessCodes.crew;
+    await expect(revokeHostLinks(eventId, "owner")).rejects.toThrow(/could not be read/);
+    read.mockRestore();
+    expect((await getHostLinkState(eventId)).codeVersion).toBe(2);
+    expect((await findEventRecord(eventId))!.accessCodes.crew).toBe(crewCodeBefore);
   });
 });

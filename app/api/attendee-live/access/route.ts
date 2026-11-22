@@ -35,7 +35,7 @@ export async function GET(request: Request) {
   const roomId = url.searchParams.get("roomId") || "main-stage";
   const attendeeId = url.searchParams.get("attendeeId") || "";
   const auth = await requireLiveEventControlAccessForRequest(eventId);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 401 });
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status ?? 401 });
   const [control, capability, stageLog] = await Promise.all([
     getAttendeeLiveControlState(eventId, roomKind, roomId),
     attendeeId ? getAttendeeLiveCapability(eventId, roomKind, roomId, attendeeId).catch(() => undefined) : Promise.resolve(undefined),
@@ -54,7 +54,7 @@ export async function POST(request: Request) {
   const action = String(body.action || "permit");
   if (!eventId || !attendeeId) return NextResponse.json({ ok: false, error: "eventId and attendeeId are required." }, { status: 400 });
   const auth = await requireLiveEventControlAccessForRequest(eventId);
-  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 401 });
+  if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: auth.status ?? 401 });
   const revoke = action === "revoke" || bool(body.revoked);
   const permit = action === "permit" || action === "repermit" || action === "approve";
   // One-click roster decisions share the server-action rules exactly.

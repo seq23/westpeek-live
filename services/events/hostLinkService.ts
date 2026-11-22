@@ -39,8 +39,26 @@ export interface HostLinkState {
 
 const EMPTY: HostLinkState = { codeVersion: 0, links: [] };
 
+/** The store could not say which code version is current, so no crew cookie can be checked against it. */
+export class HostLinkStateUnavailableError extends Error {
+  constructor(eventId: string, cause: unknown) {
+    super(`Host-link state for ${eventId} could not be read: ${cause instanceof Error ? cause.message : String(cause)}`);
+    this.name = "HostLinkStateUnavailableError";
+  }
+}
+
+/**
+ * No record means version 0 (no link was ever revoked). A FAILED read is not "no record": treating it
+ * as version 0 would let every revoked crew cookie back in during a store outage, and would make a
+ * revoke write version 1 over a higher one. So a failed read throws and every caller refuses.
+ */
 export async function getHostLinkState(eventId: string): Promise<HostLinkState> {
-  const record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "host_links")).catch(() => undefined);
+  let record: EventGuestStateRecord | undefined;
+  try {
+    record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "host_links"));
+  } catch (error) {
+    throw new HostLinkStateUnavailableError(eventId, error);
+  }
   return (record?.state as HostLinkState | undefined) || EMPTY;
 }
 
@@ -100,12 +118,13 @@ export async function mintHostLink(eventId: string, grantedBy: string) {
  */
 export async function revokeHostLinks(eventId: string, revokedBy: string, newCode?: string, reason: SupersededCodeReason = "rotate") {
   const store = getRuntimeStore();
+  // Read the version first: if the store can't say what it is, nothing is rotated or recorded.
+  const state = await getHostLinkState(eventId);
   const event = await store.getRuntimeEvent(eventId);
   if (!event) throw new Error("Only a runtime-created event has a crew code to rotate.");
   await recordSupersededCode({ eventId, field: "crew", previousCode: event.accessCodes.crew, replacedBy: revokedBy, reason });
   const rotated: RuntimeEventRecord = { ...event, accessCodes: { ...event.accessCodes, crew: newCode || mintAccessCodes().crew }, updatedAt: new Date().toISOString() };
   await store.upsertRuntimeEvent(rotated);
-  const state = await getHostLinkState(eventId);
   const now = new Date().toISOString();
   const next: HostLinkState = { codeVersion: state.codeVersion + 1, links: state.links.map((link) => (link.revokedAt ? link : { ...link, revokedAt: now })), rotatedAt: now, rotatedBy: revokedBy };
   await setHostLinkState(eventId, next);
