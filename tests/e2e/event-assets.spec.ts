@@ -1,5 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
-import { gotoAndAssert } from "./helpers/assertNoAppError";
+import { assertNoAppError, gotoAndAssert } from "./helpers/assertNoAppError";
+import { ASSET_LINK_REFUSAL } from "@/types/eventAssets";
 import { grantSpecialGuestAccess, isDeployedBrowserRun, loginAsOperator } from "./helpers/roleJourney";
 
 /**
@@ -33,11 +34,22 @@ test("assets: honest storage message, a pasted link, a speaker's upload in revie
   await page.getByTestId("asset-file-input").setInputFiles({ name: "deck.pdf", mimeType: "application/pdf", buffer: Buffer.from("%PDF-1.4 playwright") });
   await expect(page.getByTestId("asset-upload-error")).toContainText(/storage|link/i, { timeout: 30_000 });
 
+  // A link the server refuses (a lying form that skips the browser's https check) shows the
+  // server's sentence under the field, keeps what was typed, saves nothing, and the page stays up.
+  await page.getByTestId("asset-link-url").evaluate((input) => { input.removeAttribute("pattern"); input.setAttribute("type", "text"); });
+  await page.getByTestId("asset-link-url").fill("http://drive.example.com/plain.pdf");
+  await page.getByTestId("asset-link-submit").click();
+  await expect(page.getByTestId("asset-link-error")).toHaveText(ASSET_LINK_REFUSAL);
+  await expect(page.getByTestId("asset-link-url")).toHaveValue("http://drive.example.com/plain.pdf");
+  await assertNoAppError(page);
+  await expect(library).toHaveAttribute("data-count", "0");
+
   // The link path works and the row is real.
   await page.getByTestId("asset-link-url").fill("https://drive.example.com/run-of-show.pdf");
   await page.getByTestId("asset-link-name").fill("Run of show (client copy)");
   await page.getByTestId("asset-link-submit").click();
   await expect(page.getByTestId("event-asset-library")).toHaveAttribute("data-count", "1");
+  await expect(page.getByTestId("asset-link-error")).toHaveCount(0);
   const row = page.locator('[data-testid^="asset-row-"]').first();
   await expect(row).toContainText("Run of show (client copy)");
   await expect(row).toHaveAttribute("data-visibility", "internal");
