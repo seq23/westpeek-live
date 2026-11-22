@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { loginAsOperator } from './helpers/roleJourney';
 
 const enabled = () => process.env.STREAMYARD_REAL_PROVIDER_SMOKE === '1';

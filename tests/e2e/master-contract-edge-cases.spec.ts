@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { gotoAndAssert } from './helpers/assertNoAppError';
 import { requiredDay1Default } from './helpers/day1AccessDefaults';
 

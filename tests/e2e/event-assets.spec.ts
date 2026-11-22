@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { assertNoAppError, gotoAndAssert } from "./helpers/assertNoAppError";
 import { ASSET_LINK_REFUSAL } from "@/types/eventAssets";
 import { grantSpecialGuestAccess, isDeployedBrowserRun, loginAsOperator } from "./helpers/roleJourney";
