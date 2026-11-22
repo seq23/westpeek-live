@@ -220,7 +220,7 @@
     "react-dom": "19.2.9",
     "react-hook-form": "7.53.0",
     "tailwind-merge": "2.5.2",
-    "zod": "3.23.8"
+    "zod": "4.6.7"
   },
   "devDependencies": {
     "@opennextjs/cloudflare": "1.20.18",
