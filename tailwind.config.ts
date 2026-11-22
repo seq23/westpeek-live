@@ -10,10 +10,10 @@ import { cssVars, tailwindColors } from "./lib/theme/palette";
 const themeVariables = plugin(({ addBase }) => {
   addBase({
     ":root": { ...cssVars("light"), "color-scheme": "light" },
-    ".wpl-as-authored": cssVars("light"),
+    // Set on the element itself, so it beats the dark values the element would inherit from :root.
+    ".wpl-as-authored": { ...cssVars("light"), "color-scheme": "light" },
     "@media (prefers-color-scheme: dark)": {
       ":root": { ...cssVars("dark"), "color-scheme": "dark" },
-      ".wpl-as-authored": cssVars("light"),
     },
   });
 });
