@@ -17,10 +17,28 @@ function resolveBuildId() {
   }
 }
 
+/**
+ * Security headers on every page and API answer. The CSP names no origins on purpose: the video rooms
+ * (LiveKit, Daily, Zoom, Stream) load from many hosts, and a host list would break a show the day one
+ * changes. It shuts what an injected page would need instead: plugins, a foreign <base>, being framed
+ * by another site, and forms posting off-site. /api/assets/file is left out: it sets its own, stricter
+ * sandbox CSP per file type, and object-src 'none' there would stop the browser's PDF viewer.
+ */
+const SECURITY_HEADERS = [
+  { key: "Strict-Transport-Security", value: "max-age=31536000" },
+  { key: "Content-Security-Policy", value: "object-src 'none'; base-uri 'self'; frame-ancestors 'self'; form-action 'self'; upgrade-insecure-requests" },
+  { key: "X-Content-Type-Options", value: "nosniff" },
+  { key: "Referrer-Policy", value: "strict-origin-when-cross-origin" },
+];
+
 const nextConfig = {
+  async headers() {
+    return [{ source: "/((?!api/assets/file).*)", headers: SECURITY_HEADERS }];
+  },
   env: {
     NEXT_PUBLIC_BUILD_ID: process.env.NEXT_PUBLIC_BUILD_ID || (process.env.NODE_ENV === "development" ? "dev" : resolveBuildId()),
   },
 };
 
 module.exports = nextConfig;
+module.exports.SECURITY_HEADERS = SECURITY_HEADERS;
