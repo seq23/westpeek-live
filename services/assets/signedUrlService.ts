@@ -30,14 +30,6 @@ export interface SignedDownloadResponse extends SignedStorageRequest {
   mode: "r2-signed-download";
 }
 
-export function buildSignedUploadRequest(input: { bucketName: string; storagePath: string; expiresInSeconds?: number }): SignedStorageRequest {
-  return { bucketName: input.bucketName, storagePath: input.storagePath, expiresInSeconds: input.expiresInSeconds ?? 60 * 10 };
-}
-
-export function buildSignedDownloadRequest(input: { bucketName: string; storagePath: string; expiresInSeconds?: number }): SignedStorageRequest {
-  return { bucketName: input.bucketName, storagePath: input.storagePath, expiresInSeconds: input.expiresInSeconds ?? 60 * 60 };
-}
-
 function signingSecret(secret?: string) {
   const value = secret ?? getV5AccessCookieSecret(getEnv());
   if (!value) throw new Error("V5_ACCESS_COOKIE_SECRET is not set, so no storage link can be signed.");

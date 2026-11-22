@@ -1,5 +1,4 @@
 import type { SpeedNetworkingEntry, SpeedNetworkingMatch, SpeedNetworkingPairHistory, SpeedNetworkingProducerSummary } from "@/types/speedNetworkingEngine";
-import { createVideoRoom } from "@/services/video";
 
 function participantKey(entry: SpeedNetworkingEntry) {
   return entry.attendeeId || entry.id;
@@ -50,42 +49,6 @@ export function createPairHistoryRecord(match: SpeedNetworkingMatch, participant
     attendeeBId,
     firstMatchedAt: match.startsAt,
     matchId: match.id,
-  };
-}
-
-export async function createSpeedNetworkingMatch(input: {
-  agencyId: string;
-  eventId: string;
-  queueId: string;
-  participantA: SpeedNetworkingEntry;
-  participantB: SpeedNetworkingEntry;
-  matchDurationSeconds?: number;
-}): Promise<SpeedNetworkingMatch> {
-  const normalizedPairKey = normalizedSpeedNetworkingPairKey(input.eventId, input.participantA, input.participantB);
-  const room = await createVideoRoom({
-    agencyId: input.agencyId,
-    eventId: input.eventId,
-    provider: "livekit",
-    roomType: "speed_networking",
-    label: `Speed match ${input.participantA.displayName} + ${input.participantB.displayName}`,
-    recordingEnabled: false,
-  });
-
-  const now = new Date();
-  const expires = new Date(now.getTime() + (input.matchDurationSeconds ?? 180) * 1000);
-
-  return {
-    id: `match-${participantKey(input.participantA)}-${participantKey(input.participantB)}-${now.getTime()}`,
-    agencyId: input.agencyId,
-    eventId: input.eventId,
-    queueId: input.queueId,
-    participantAEntryId: input.participantA.id,
-    participantBEntryId: input.participantB.id,
-    normalizedPairKey,
-    videoRoomId: room.id,
-    status: "created",
-    startsAt: now.toISOString(),
-    expiresAt: expires.toISOString(),
   };
 }
 

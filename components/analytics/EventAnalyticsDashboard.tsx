@@ -106,24 +106,3 @@ export async function ClientReportBuilder({ eventId }: { eventId: string }) {
     </div>
   );
 }
-
-export async function SponsorReportBuilder() {
-  const runtime = await getRuntimeStore().readSnapshot();
-  const boothVisits = runtime.analyticsEvents.filter((item) => item.kind === "attendee_visited_sponsor_booth").length;
-  const ctaClicks = runtime.analyticsEvents.filter((item) => item.kind === "sponsor_cta_clicked").length;
-  return (
-    <main className="min-h-screen bg-slate-50 p-6">
-      <div className="mx-auto max-w-5xl space-y-6">
-        <div className="rounded-3xl border border-brand-line bg-white p-4 shadow-sm sm:p-6">
-          <p className="text-sm text-slate-500">Sponsor report</p>
-          <h1 className="mt-2 text-3xl font-semibold">Runtime sponsor performance</h1>
-          <p className="mt-2 text-slate-600">Sponsor report values come from booth and CTA runtime analytics.</p>
-        </div>
-        <div className="grid gap-4 md:grid-cols-2">
-          <MetricCard label="Booth visits" value={boothVisits} />
-          <MetricCard label="CTA clicks" value={ctaClicks} />
-        </div>
-      </div>
-    </main>
-  );
-}

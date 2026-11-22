@@ -1,4 +1,4 @@
-import { RECORDED_SERVICE_PLANS, eventPlanShortfalls, livekitPlanFit, type LiveKitPlanTooSmall, type LiveKitTier, type PlanShortfall, type RecordedPlans } from "@/lib/capacity/capacityPlans";
+import { RECORDED_SERVICE_PLANS, eventPlanShortfalls, type PlanShortfall, type RecordedPlans } from "@/lib/capacity/capacityPlans";
 import { houseLivekitTier } from "@/services/agencies/houseDefaultsService";
 import { listEventRecords } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -12,10 +12,6 @@ import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 export function eventRunMinutes(event: Pick<RuntimeEventRecord, "startAt" | "endAt">): number {
   const span = new Date(event.endAt).getTime() - new Date(event.startAt).getTime();
   return Number.isFinite(span) ? Math.max(0, Math.round(span / 60_000)) : 0;
-}
-
-export function eventLivekitPlanFit(event: Pick<RuntimeEventRecord, "startAt" | "endAt">, tier: LiveKitTier, expectedAudience: number): LiveKitPlanTooSmall | null {
-  return livekitPlanFit({ tier, runMinutes: eventRunMinutes(event), expectedAudience });
 }
 
 export function eventShortfalls(event: Pick<RuntimeEventRecord, "startAt" | "endAt" | "format">, plans: RecordedPlans, audience: number): PlanShortfall[] {

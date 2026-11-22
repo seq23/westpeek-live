@@ -18,12 +18,3 @@ export async function recordAnalyticsEvent(input: Omit<V4AnalyticsEvent, "id" | 
     return event;
   }
 }
-
-export const requiredV4AnalyticsEvents: V4AnalyticsEvent["kind"][] = [
-  "attendee_joined_lobby",
-  "attendee_joined_session",
-  "sponsor_cta_clicked",
-  "support_requested",
-  "replay_watched",
-  "networking_joined",
-];

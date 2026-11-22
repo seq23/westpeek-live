@@ -1,4 +1,3 @@
-import { codeKey } from "@/lib/access/accessCodes";
 import type { AccessCodeField } from "@/lib/access/accessCodes";
 
 /**
@@ -53,11 +52,6 @@ export function supersededCodeIsLive(record: Pick<SupersededCodeRecord, "replace
   const replaced = new Date(record.replacedAt).getTime();
   if (Number.isNaN(replaced)) return false;
   return now.getTime() - replaced < SUPERSEDED_CODE_WINDOW_DAYS * DAY_MS;
-}
-
-/** The lookup form. A phone's capitals, spaces and dropped hyphens all flatten to the same key. */
-export function supersededCodeKey(raw: string | undefined | null) {
-  return codeKey(raw);
 }
 
 /**

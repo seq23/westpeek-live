@@ -7,7 +7,6 @@ import {
   getBreakoutAvailability,
   groupReplaysByStatus,
   groupSessionsByStatus,
-  routeHelpTopic,
   searchPeople,
 } from "@/services/venue";
 
@@ -34,6 +33,5 @@ describe("virtual venue completion", () => {
     expect(getBreakoutAvailability(model.breakouts[0]).remaining).toBeGreaterThanOrEqual(0);
     expect(searchPeople(model.people, model.people[0].displayName).length).toBeGreaterThan(0);
     expect(groupReplaysByStatus(model.replays).available.length).toBeGreaterThanOrEqual(0);
-    expect(routeHelpTopic("Video problem")).toBe("technical");
   });
 });

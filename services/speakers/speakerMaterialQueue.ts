@@ -69,7 +69,3 @@ export function submitSpeakerMaterial(input: {
   writeQueue(next);
   return item;
 }
-
-export function clearSpeakerMaterialSubmissions(eventId: string) {
-  writeQueue(readQueue().filter((item) => item.eventId !== eventId));
-}

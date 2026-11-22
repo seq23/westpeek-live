@@ -1,12 +1,5 @@
 import type { V4CrewRole, V4SpecialGuestRole } from "@/types/v4";
 
-export const V5_CREW_COOKIE_DEFAULT = "wpl_crew_access";
-export const V5_SPECIAL_GUEST_COOKIE_DEFAULT = "wpl_guest_access";
-export const V5_OPERATOR_COOKIE_DEFAULT = "wpl_operator_access";
-export const V5_OWNER_COOKIE_DEFAULT = "wpl_owner_access";
-export const V4_CREW_COOKIE_DEFAULT = V5_CREW_COOKIE_DEFAULT;
-export const V4_SPECIAL_GUEST_COOKIE_DEFAULT = V5_SPECIAL_GUEST_COOKIE_DEFAULT;
-
 interface V5AccessCookieBase {
   issuedAt: number;
   expiresAt: number;
@@ -87,9 +80,6 @@ export async function readV5AccessCookie(value: string | undefined, secret: stri
   }
 }
 
-export const createV4AccessCookie = createV5AccessCookie;
-export const readV4AccessCookie = readV5AccessCookie;
-
 export function getV5CookieOptions(maxAgeSeconds: number) {
   return {
     httpOnly: true,
@@ -99,5 +89,3 @@ export function getV5CookieOptions(maxAgeSeconds: number) {
     maxAge: maxAgeSeconds,
   };
 }
-
-export const getV4CookieOptions = getV5CookieOptions;

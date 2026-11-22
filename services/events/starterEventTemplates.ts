@@ -1,5 +1,7 @@
 import type { EventTemplateRecord } from "@/types/eventTemplates";
 
+export interface StarterEventTemplate extends Omit<EventTemplateRecord, "createdAt" | "updatedAt"> {}
+
 /**
  * The four shapes West Peek Live actually runs, installed once so the shelf is never empty.
  *
@@ -15,15 +17,6 @@ import type { EventTemplateRecord } from "@/types/eventTemplates";
  * (16:00–19:00), the workshop is the 45-minute workshop the access-code examples are cut from, and
  * the Room is the short on-demand session West Peek opens for itself.
  */
-export const STARTER_TEMPLATE_IDS = [
-  "template-starter-west-peek-room",
-  "template-starter-45-minute-workshop",
-  "template-starter-client-webinar",
-  "template-starter-demo-day",
-] as const;
-
-export interface StarterEventTemplate extends Omit<EventTemplateRecord, "createdAt" | "updatedAt"> {}
-
 export const STARTER_EVENT_TEMPLATES: StarterEventTemplate[] = [
   {
     id: "template-starter-west-peek-room",

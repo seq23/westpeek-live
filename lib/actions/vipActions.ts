@@ -4,7 +4,7 @@ import { revalidatePath } from "next/cache";
 import { redirect } from "next/navigation";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
-import { grantVip, redeemVipCode, revokeVip, setVipInviteList, vipCodeFor } from "@/services/guests/vipGrantService";
+import { grantVip, redeemVipCode, revokeVip, setVipInviteList } from "@/services/guests/vipGrantService";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || "").trim();
@@ -63,12 +63,4 @@ export async function redeemVipCodeAction(formData: FormData) {
   const result = await redeemVipCode(eventId, code, { attendeeId: profile!.attendeeId, name: profile!.name, email: profile!.email });
   revalidateVipSurfaces(eventId);
   redirect(`/venue/${eventId}/lobby?vip=${result.ok ? "1" : "no"}`);
-}
-
-/** What the crew sends after "Make VIP" — the code itself, to the person they just admitted. */
-export async function vipCodeForCrewAction(eventId: string) {
-  const auth = await requireLiveEventControlAccessForRequest(eventId, "manage_stage_access");
-  if (!auth.ok) return { ok: false as const, reason: auth.error };
-  const code = await vipCodeFor(eventId);
-  return code ? { ok: true as const, code } : { ok: false as const, reason: "This event has no VIP code." };
 }
