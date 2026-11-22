@@ -34,10 +34,6 @@ export function AccessSetupPanel({ crewKey, roles }: { crewKey: string; roles: A
   return <div className="space-y-4"><Row label="Crew password env key" value={crewKey} /><div className="grid gap-3 md:grid-cols-2">{roles.map((role) => <Row key={role.role} label={role.role.replaceAll("_", " ")} value={`${role.envKey} → ${role.destinationTemplate}`} />)}</div></div>;
 }
 
-export function CommunicationsSetupPanel({ templates }: { templates: string[] }) {
-  return <div className="grid gap-3 md:grid-cols-2">{templates.map((template) => <Row key={template} label={template.replaceAll("_", " ")} value="Configured; send readiness depends on Resend env" />)}</div>;
-}
-
 export function EventPreviewPanel({ paths }: { paths: string[] }) {
   return <div className="grid gap-3 md:grid-cols-2">{paths.map((path) => <a key={path} href={path} className="rounded-2xl border border-slate-200 bg-white p-4 text-sm font-bold text-brand-orange hover:border-brand-orange">{path}</a>)}</div>;
 }

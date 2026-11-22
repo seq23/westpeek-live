@@ -58,9 +58,9 @@ export function getEnv(): AppEnv {
   return envSchema.parse({
     NEXT_PUBLIC_APP_URL: process.env.NEXT_PUBLIC_APP_URL || "http://localhost:3000",
     AUTH_SESSION_COOKIE_NAME: process.env.AUTH_SESSION_COOKIE_NAME || "agency_event_os_session",
-    V5_ACCESS_COOKIE_SECRET: requiredInProduction("V5_ACCESS_COOKIE_SECRET", process.env.V5_ACCESS_COOKIE_SECRET || process.env.V4_ACCESS_COOKIE_SECRET, devOnlyCookieSecret),
-    V5_CREW_COOKIE_NAME: process.env.V5_CREW_COOKIE_NAME || process.env.V4_CREW_COOKIE_NAME || "wpl_crew_access",
-    V5_SPECIAL_GUEST_COOKIE_NAME: process.env.V5_SPECIAL_GUEST_COOKIE_NAME || process.env.V4_SPECIAL_GUEST_COOKIE_NAME || "wpl_guest_access",
+    V5_ACCESS_COOKIE_SECRET: requiredInProduction("V5_ACCESS_COOKIE_SECRET", process.env.V5_ACCESS_COOKIE_SECRET, devOnlyCookieSecret),
+    V5_CREW_COOKIE_NAME: process.env.V5_CREW_COOKIE_NAME || "wpl_crew_access",
+    V5_SPECIAL_GUEST_COOKIE_NAME: process.env.V5_SPECIAL_GUEST_COOKIE_NAME || "wpl_guest_access",
     V5_OPERATOR_COOKIE_NAME: process.env.V5_OPERATOR_COOKIE_NAME || "wpl_operator_access",
     V5_OWNER_COOKIE_NAME: process.env.V5_OWNER_COOKIE_NAME || "wpl_owner_access",
     CREW_ACCESS_PASSWORD: requiredInProduction("CREW_ACCESS_PASSWORD", process.env.CREW_ACCESS_PASSWORD, devOnlyCrewPassword),
@@ -108,11 +108,6 @@ export function getLiveKitEnv() {
   };
 }
 
-export function hasLiveKitEnv() {
-  const env = getLiveKitEnv();
-  return Boolean(env.livekitUrl && env.livekitApiKey && env.livekitApiSecret);
-}
-
 export function getDailyEnv(env: Partial<AppEnv> = getEnv()) {
   return {
     dailyApiKey: env.DAILY_API_KEY || "",
@@ -127,22 +122,8 @@ export function isDailyConfigured(env: Partial<AppEnv> = getEnv()) {
   return Boolean(daily.dailyApiKey && daily.dailyApiBaseUrl && daily.dailyDomain);
 }
 
-export function getStageStreamEnv(env: Partial<AppEnv> = getEnv()) {
-  return {
-    livekitIngressRtmpBaseUrl: env.LIVEKIT_INGRESS_RTMP_BASE_URL || "",
-    livekitWebhookSecret: env.LIVEKIT_WEBHOOK_SECRET || "",
-    streamyardPrimaryEnabled: env.STREAMYARD_PRIMARY_ENABLED === "true",
-    defaultStageStreamSource: env.STAGE_STREAM_DEFAULT_SOURCE || "LIVEKIT_INGRESS",
-    dailyStageFallbackRequiresToken: env.DAILY_STAGE_FALLBACK_REQUIRES_TOKEN !== "false",
-  };
-}
-
 export function isDailyFallbackEnabled(env: Partial<AppEnv> = getEnv()) {
   return env.DAILY_FALLBACK_ENABLED === "true" && isDailyConfigured(env);
-}
-
-export function getV4AccessCookieNames(env: AppEnv = getEnv()) {
-  return getV5AccessCookieNames(env);
 }
 
 export function getV5AccessCookieNames(env: AppEnv = getEnv()) {

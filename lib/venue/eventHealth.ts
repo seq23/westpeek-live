@@ -34,9 +34,6 @@ export interface HealthSignal {
 export type HealthSignalKey =
   | "feed" | "stage" | "webhook" | "fallback" | "database" | "chat" | "attendees" | "build" | "capacity";
 
-/** The order the panel lists them in — worst first would hide the shape of the show; this is the pipeline order. */
-export const HEALTH_SIGNAL_ORDER: readonly HealthSignalKey[] = ["feed", "stage", "webhook", "fallback", "database", "chat", "attendees", "build", "capacity"] as const;
-
 export const HEALTH_SIGNAL_LABELS: Record<HealthSignalKey, string> = {
   feed: "Feed",
   stage: "Stage",

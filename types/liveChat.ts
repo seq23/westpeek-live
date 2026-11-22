@@ -89,8 +89,6 @@ export type LiveChatPostRejection = "locked" | "silenced" | "not_registered" | "
 
 export const LIVE_CHAT_SILENCED_MESSAGE = "You have been silenced by the crew";
 export const LIVE_CHAT_LOCKED_MESSAGE = "Chat is locked by the crew";
-export const LIVE_CHAT_SLOW_MODE_MESSAGE = "Slow mode is on";
-export const LIVE_CHAT_RATE_LIMITED_MESSAGE = "You are sending messages too quickly";
 
 export function liveChatRoomModerationKey(eventId: string, roomKind: LiveChatRoomKind, roomId: string) {
   return `${eventId}:${roomKind}:${roomId}`;

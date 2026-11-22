@@ -78,10 +78,6 @@ function workflowFor(input: GroupSendInput): EmailWorkflowType {
   return audienceOption(input.audience)?.customWorkflow ?? "instructions_attendee";
 }
 
-export function templateChoices() {
-  return MANUAL_WORKFLOWS;
-}
-
 export async function sendGroupEmail(input: GroupSendInput): Promise<GroupSendResult> {
   const option = audienceOption(input.audience);
   if (!option) return { ok: false, sent: 0, failed: 0, reason: "That is not an audience this composer knows." };

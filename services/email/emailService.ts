@@ -33,21 +33,3 @@ export async function withHouseAddresses(message: EmailMessage): Promise<EmailMe
 export async function sendEmail(message: EmailMessage, provider: EmailProvider = createEmailProvider()): Promise<EmailSendResult> {
   return provider.send(await withHouseAddresses(message));
 }
-
-export async function sendApprovalRequestedEmail(input: {
-  to: string;
-  eventName: string;
-  approvalTitle: string;
-  approvalUrl: string;
-}) {
-  return sendEmail({
-    to: input.to,
-    subject: `Approval requested: ${input.approvalTitle}`,
-    html: `
-      <h1>Approval requested</h1>
-      <p>You have a new approval request for <strong>${input.eventName}</strong>.</p>
-      <p><a href="${input.approvalUrl}">Review approval</a></p>
-    `,
-    text: `Approval requested for ${input.eventName}: ${input.approvalUrl}`,
-  });
-}

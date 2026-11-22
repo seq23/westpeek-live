@@ -32,10 +32,6 @@ export function crewDeckPath(eventId: string) {
   return `/crew/events/${eventId}`;
 }
 
-export function stagePath(eventId: string) {
-  return `/venue/${eventId}/stage`;
-}
-
 /** The surface a pathname belongs to, or undefined when the bar does not belong there. */
 export function surfaceForPath(pathname: string, eventId: string): EventSurface | undefined {
   return EVENT_COMMAND_BAR_SURFACES.find((surface) => {

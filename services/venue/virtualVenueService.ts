@@ -164,7 +164,3 @@ export function buildVirtualVenueModel(eventId: string): VirtualVenueModel {
     helpTopics: ["Video/audio issue", "Cannot join room", "Schedule question", "Sponsor/expo issue", "Networking issue", "Accessibility request", "Other"],
   };
 }
-
-export function getVenueSurface(model: VirtualVenueModel, surface: VenueNavItem["surface"]) {
-  return model.nav.find((item) => item.surface === surface);
-}

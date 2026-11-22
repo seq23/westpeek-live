@@ -116,24 +116,9 @@ export class RuntimeSchemaMissingError extends Error {
  * The D1 migration file that creates each family of runtime tables. The Postgres history these
  * names come from (db/migrations 0023-0046) was flattened into migrations-d1/ on 6 Oct 2026.
  */
-export const REQUEST_EVENT_INTAKE_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
 export const RUNTIME_EVENTS_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
-export const LIVE_CHAT_MODERATION_MIGRATION_FILE = "migrations-d1/0004_attendees_live.sql";
-export const SPECIAL_GUEST_MIGRATION_FILE = "migrations-d1/0004_attendees_live.sql";
 export const SPEED_NETWORKING_MIGRATION_FILE = "migrations-d1/0005_networking_email.sql";
-export const SPEED_NETWORKING_RUNTIME_TABLES_MIGRATION_FILE = "migrations-d1/0005_networking_email.sql";
-export const ATTENDEE_VISIBILITY_MIGRATION_FILE = "migrations-d1/0004_attendees_live.sql";
-export const CONTACT_ARCHIVE_MIGRATION_FILE = "migrations-d1/0001_core.sql";
-export const EVENT_ASSETS_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
-export const EMAIL_SEND_LOG_MIGRATION_FILE = "migrations-d1/0005_networking_email.sql";
-export const SUPPLIERS_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
 export const LIVE_CHAT_SCALE_MIGRATION_FILE = "migrations-d1/0004_attendees_live.sql";
-export const EVENT_TEMPLATES_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
-export const PLAN_AN_EVENT_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
-export const ATTENDEE_CLIENT_TELEMETRY_MIGRATION_FILE = "migrations-d1/0004_attendees_live.sql";
-export const ATTENDEE_SESSION_LIFETIME_MIGRATION_FILE = "migrations-d1/0004_attendees_live.sql";
-export const GROUP_EMAIL_MIGRATION_FILE = "migrations-d1/0005_networking_email.sql";
-export const HOUSE_DEFAULTS_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
 export const EVENT_BACKUP_ROOMS_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
 export const SUPERSEDED_CODES_MIGRATION_FILE = "migrations-d1/0003_runtime.sql";
 

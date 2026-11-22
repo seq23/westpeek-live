@@ -6,8 +6,6 @@ import type { RuntimeEventRecord } from "@/types/runtimeEvent";
  * live in extra_answers keyed by question key, and the four legacy columns stay populated when the
  * keys match so existing UI (People cards, networking) keeps working. Pure.
  */
-export const LEGACY_KEYS = new Set(["reasonForAttending", "interestingFact", "topicsOfInterest", "networkingGoals"]);
-
 export function questionsForEvent(event: Pick<RuntimeEventRecord, "registrationQuestions"> | undefined): RegistrationQuestion[] {
   const list = event?.registrationQuestions;
   return Array.isArray(list) && list.length ? list.slice(0, MAX_REGISTRATION_QUESTIONS) : DEFAULT_REGISTRATION_QUESTIONS;

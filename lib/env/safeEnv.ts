@@ -22,12 +22,8 @@ export function missingAccessEnv() {
   const missing: string[] = [];
   if (!process.env.CREW_ACCESS_PASSWORD) missing.push('CREW_ACCESS_PASSWORD');
   if (!process.env.OPERATOR_LAUNCHPAD_PASSWORD) missing.push('OPERATOR_LAUNCHPAD_PASSWORD');
-  if (!process.env.V5_ACCESS_COOKIE_SECRET && !process.env.V4_ACCESS_COOKIE_SECRET) missing.push('V5_ACCESS_COOKIE_SECRET');
+  if (!process.env.V5_ACCESS_COOKIE_SECRET) missing.push('V5_ACCESS_COOKIE_SECRET');
   return missing;
-}
-
-export function hasAccessEnv() {
-  return missingAccessEnv().length === 0;
 }
 
 export function accessDefaultLines() {
@@ -43,8 +39,8 @@ export function accessDefaultLines() {
 
 export function safeAccessCookieNames() {
   return {
-    crewCookieName: process.env.V5_CREW_COOKIE_NAME || process.env.V4_CREW_COOKIE_NAME || 'wpl_crew_access',
-    specialGuestCookieName: process.env.V5_SPECIAL_GUEST_COOKIE_NAME || process.env.V4_SPECIAL_GUEST_COOKIE_NAME || 'wpl_guest_access',
+    crewCookieName: process.env.V5_CREW_COOKIE_NAME || 'wpl_crew_access',
+    specialGuestCookieName: process.env.V5_SPECIAL_GUEST_COOKIE_NAME || 'wpl_guest_access',
     operatorCookieName: process.env.V5_OPERATOR_COOKIE_NAME || 'wpl_operator_access',
     ownerCookieName: process.env.V5_OWNER_COOKIE_NAME || 'wpl_owner_access',
   };

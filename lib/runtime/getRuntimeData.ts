@@ -1,4 +1,4 @@
-import { mockData as runtimeSeedData, mockUsers as runtimeSeedUsers } from "@/lib/mock/mockData";
+import { mockData as runtimeSeedData } from "@/lib/mock/mockData";
 import { listOverlayEvents, peekOverlayEvent } from "@/services/events/runtimeEventOverlay";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
 
@@ -147,39 +147,17 @@ export function getRuntimeData() {
   };
 }
 
-export function getCurrentRuntimeUser() {
-  return runtimeSeedUsers[0];
-}
-
-export function getRuntimeUsers() {
-  return runtimeSeedUsers;
-}
-
 export function getEvent(eventId: string) {
   const normalizedEventId = eventId === "demo" ? "event-summit" : eventId;
   return dynamicDraftEvent(normalizedEventId) ?? runtimeSeedData.events.find((event) => event.id === normalizedEventId || event.slug === normalizedEventId) ?? fallbackRuntimeEvent(normalizedEventId);
-}
-
-/** True when the id belongs to a runtime-created (non-seed) event currently hydrated. */
-export function isRuntimeCreatedEvent(eventId: string) {
-  return Boolean(peekOverlayEvent(eventId));
 }
 
 export function getClient(clientId: string) {
   return getRuntimeData().clients.find((client) => client.id === clientId) ?? runtimeSeedData.clients[0];
 }
 
-export function getEventClient(eventId: string) {
-  const event = getEvent(eventId);
-  return getClient(event.clientId);
-}
-
 export function getClientBySlug(slug: string) {
   return runtimeSeedData.clients.find((client) => client.slug === slug) ?? runtimeSeedData.clients[0];
-}
-
-export function getEventBySlug(slug: string) {
-  return dynamicDraftEvent(slug) ?? runtimeSeedData.events.find((event) => event.slug === slug) ?? fallbackRuntimeEvent(slug);
 }
 
 export function getTasksForEvent(eventId: string) {
@@ -226,8 +204,4 @@ export function getContractorAssignmentsForEvent(eventId: string) {
 
 export function getVendorAssignmentsForEvent(eventId: string) {
   return runtimeSeedData.vendorAssignments.filter((assignment) => assignment.eventId === eventId);
-}
-
-export function getAnalyticsForEvent(eventId: string) {
-  return runtimeSeedData.analyticsEvents.filter((event) => event.eventId === eventId);
 }

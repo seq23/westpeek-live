@@ -114,7 +114,7 @@ Operational rules:
 
 ## Master Plan v4
 
-V4 env adds CREW_ACCESS_PASSWORD, V4_ACCESS_COOKIE_SECRET, V4 cookie names, LiveKit/Daily/Zoom/Google Meet keys, and GitHub event config workflow variables.
+V4 env adds CREW_ACCESS_PASSWORD, the access cookie secret and cookie names (now V5_ACCESS_COOKIE_SECRET and V5_*_COOKIE_NAME; the V4_* fallbacks were removed 22 Nov 2026), LiveKit/Daily/Zoom/Google Meet keys, and GitHub event config workflow variables.
 
 
 ## Operator Launchpad Secret Split

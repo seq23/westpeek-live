@@ -104,9 +104,6 @@ Purpose: safe env contract for local, CI, Cloudflare Worker, postdeploy, and pro
 | `GITHUB_EVENT_CONFIG_WORKFLOW` | Optional development/config helper. |
 | `GOOGLE_MEET_EMERGENCY_URL` | Optional development/config helper. |
 | `NEXT_PUBLIC_ENABLE_ZOOM_EMBEDDED_FALLBACK` | Optional development/config helper. |
-| `V4_ACCESS_COOKIE_SECRET` | Optional development/config helper. |
-| `V4_CREW_COOKIE_NAME` | Optional development/config helper. |
-| `V4_SPECIAL_GUEST_COOKIE_NAME` | Optional development/config helper. |
 | `ZOOM_SDK_KEY` | Optional development/config helper. |
 | `ZOOM_SDK_SECRET` | Optional development/config helper. |
 

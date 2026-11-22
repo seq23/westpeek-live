@@ -1,5 +1,4 @@
 export const PRODUCT_NAME = "West Peek Live!";
-export const BRAND_ORGANIZATION = "West Peek";
 export const BRAND_TAGLINE = "Virtual event production platform by West Peek.";
 export const BRAND_REPLY_TO = "hello@westpeek.live";
 export const BRAND_FROM_EMAIL = "notifications@events.westpeek.live";
@@ -44,17 +43,4 @@ export function isBrandSendingIdentity(identity: string): boolean {
  */
 export function resolveSendingIdentity(candidate?: string | null): string {
   return isBrandSendingIdentity(String(candidate || "")) ? String(candidate).trim() : BRAND_FROM_EMAIL;
-}
-
-export const brandColors = {
-  black: "#050505",
-  white: "#ffffff",
-  charcoal: "#171717",
-  muted: "#737373",
-  line: "#e5e5e5",
-  orange: "#f05a1a",
-};
-
-export function formatProductName() {
-  return PRODUCT_NAME;
 }

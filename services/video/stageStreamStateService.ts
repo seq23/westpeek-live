@@ -1,4 +1,4 @@
-import { randomId, base64UrlEncode } from "@/lib/security/portableCrypto";
+import { randomId } from "@/lib/security/portableCrypto";
 import { recordAutomaticIncident } from "@/services/incidents/incidentLog";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { findEventRecord } from "@/services/events/eventRepository";
@@ -335,9 +335,4 @@ export async function recordStagePollHeartbeat(eventId: string, stageId = "main-
   const last = current.lastHealthCheckAt ? new Date(current.lastHealthCheckAt).getTime() : 0;
   if (Date.now() - last < 60_000) return;
   await store.setStageStreamState(key, { ...current, lastHealthCheckAt: now() }).catch(() => undefined);
-}
-
-export function createStreamKey(eventId: string, stageId: string) {
-  const secret = process.env.LIVEKIT_API_SECRET || process.env.V5_ACCESS_COOKIE_SECRET || "dev-only-stage-stream-secret";
-  return base64UrlEncode(`${eventId}:${stageId}:${Date.now()}:${randomId("stream")}:${secret}`).slice(0, 48);
 }

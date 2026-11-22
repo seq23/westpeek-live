@@ -35,10 +35,6 @@ function eventIdsMatch(routeEventId?: string, payloadEventId?: string) {
   return false;
 }
 
-export function pathIncludesEvent(pathname: string, eventId: string) {
-  return eventIdsMatch(eventIdFromPath(pathname), eventId);
-}
-
 function clientSlugFromPath(pathname: string): string | undefined {
   const parts = segments(pathname);
   if (parts[0] === "client" && parts[1]) return parts[1];

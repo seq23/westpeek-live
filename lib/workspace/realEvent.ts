@@ -16,7 +16,3 @@ export function realRuntimeEvent(eventId: string): RuntimeEventRecord | undefine
   const event = peekOverlayEvent(eventId);
   return event && event.source !== "seed" ? event : undefined;
 }
-
-export function isRealRuntimeEvent(eventId: string) {
-  return Boolean(realRuntimeEvent(eventId));
-}

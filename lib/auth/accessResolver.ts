@@ -62,17 +62,3 @@ export function resolvePermissionUser(snapshot: AuthAccessSnapshot): PermissionU
     sponsorIds: snapshot.sponsorIds,
   };
 }
-
-export function hasAnyResolvedAccess(user: PermissionUser) {
-  return Boolean(
-    user.roles.length ||
-      user.agencyIds.length ||
-      user.clientIds?.length ||
-      user.eventIds?.length ||
-      user.contractorAssignmentIds?.length ||
-      user.vendorAssignmentIds?.length ||
-      user.speakerProfileIds?.length ||
-      user.sponsorIds?.length ||
-      user.attendeeIds?.length,
-  );
-}

@@ -283,8 +283,6 @@ You gave a name and an email to get in. Those are used for this event and for th
   },
 };
 
-export const HOW_IT_WORKS_DEFAULT_LIST: HowItWorksDefault[] = Object.values(HOW_IT_WORKS_DEFAULTS);
-
 /** The shipped draft as a record, for a slug that has never been edited. */
 export function defaultHowItWorksPage(slug: HowItWorksAudience): HowItWorksPageRecord {
   const draft = HOW_IT_WORKS_DEFAULTS[slug];
