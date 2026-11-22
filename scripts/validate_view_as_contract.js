@@ -5,7 +5,7 @@ const fs = require("fs");
  *   one pure rule (canViewAsGuest: owner, operator for the event, producer / executive_producer crew
  *   for the event; nobody else) shared by the middleware and the page resolver; the resolver checks
  *   the guest's role; every guest surface resolves ?viewAs and renders the banner with the guest's
- *   actions disabled; the special-guest gate's owner override lands on the preview page; the
+ *   actions disabled; the special-guest gate takes no owner password and the owner console links to the preview; the
  *   preview route is registered in every ledger; the proofs exist.
  */
 function read(file) { if (!fs.existsSync(file)) throw new Error(`Missing ${file}`); return fs.readFileSync(file, "utf8"); }
@@ -38,7 +38,11 @@ check("components/guests/GuestPreviewLinks.tsx", ["Open their green room", "Open
 check("components/moderation/SpeakerRosterPanel.tsx", ["<GuestPreviewLinkRow", 'viewer.role === "producer" || viewer.role === "executive_producer"']);
 check("app/app/events/[eventId]/access/page.tsx", ["<GuestPreviewList"]);
 check("app/production-access/special-guest/preview/page.tsx", ['if (owner?.kind !== "owner") redirect(`/production-access/owner?next=', "<GuestPreviewList", "preview-role-codes", "emptyHref={accessHref}"]);
-check("app/api/production-access/special-guest/route.ts", ["next: `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode)}`"]);
+// The guest door fails open in an outage, so it never takes a production password (22 Nov 2026): the
+// owner reaches the preview from the owner console, signed in, and the door has no owner override.
+const guestDoor = check("app/api/production-access/special-guest/route.ts", ["resolveSpecialGuestAccess(eventCode, roleCode)"]);
+if (/ownerOverride|OWNER_MASTER|getOwnerMaster|special-guest\/preview\?event=\$\{/.test(guestDoor.replace(/\/\/.*$/gm, ""))) throw new Error("app/api/production-access/special-guest/route.ts must not take the owner password or route it to the preview: the guest door fails open.");
+check("components/owner/OwnerConsole.tsx", ["/production-access/special-guest/preview?event=${encodeURIComponent(event.joinCode)}", "Preview a guest"]);
 // Ledgers.
 for (const [file, token] of [["config/deployed-route-manifest.json", '"id": "production-access-special-guest-preview"'], ["RUNTIME_ACTION_INVENTORY.json", '"id": "production-access-special-guest-preview"'], ["_hallmark_route_state_contract.json", '"id": "production-access-special-guest-preview"'], ["AUTHENTICATED_ROUTE_MANIFEST.md", "`production-access-special-guest-preview`"], ["VISIBLE_CONTROL_INVENTORY.md", "Open their green room / teleprompter / booth / lobby / overview (view as)"]]) check(file, [token]);
 // Proofs.
