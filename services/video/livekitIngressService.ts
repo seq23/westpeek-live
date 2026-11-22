@@ -67,8 +67,15 @@ function twirpCode(text: string) {
   }
 }
 
-function isLiveKitError(error: unknown, code: string, status: number) {
-  return error instanceof LiveKitApiError && (error.code === code || error.status === status);
+/**
+ * The Twirp code decides when LiveKit sent one. The bare HTTP status is a fallback only where
+ * guessing wrong is harmless (pass `status`); "not found" is never read from a status alone, since a
+ * proxy 404 or a Twirp bad_route says nothing about whether the ingress still exists.
+ */
+function isLiveKitError(error: unknown, code: string, status?: number) {
+  if (!(error instanceof LiveKitApiError)) return false;
+  if (error.code) return error.code === code;
+  return status !== undefined && error.status === status;
 }
 
 export async function livekitTwirp<T>(input: { livekitUrl: string; token: string; method: string; body: unknown }): Promise<T> {
@@ -240,7 +247,7 @@ export async function releaseIngressForEvent(eventId: string, stageId = "main-st
     await livekitTwirp<unknown>({ livekitUrl: livekit.livekitUrl, token, method: "Ingress/DeleteIngress", body: { ingress_id: state.livekitIngressId } });
   } catch (error) {
     // An ingress LiveKit no longer has is already released; anything else is reported, not hidden.
-    if (!isLiveKitError(error, "not_found", 404)) return { released: false, reason: (error as Error).message };
+    if (!isLiveKitError(error, "not_found")) return { released: false, reason: (error as Error).message };
   }
   const cleared = { ...state, livekitIngressId: undefined, livekitIngressUrl: undefined, livekitStreamKey: undefined, lastProvisionError: undefined, updatedAt: new Date().toISOString() };
   await getRuntimeStore().setStageStreamState(stageStreamKey(eventId, stageId), cleared);

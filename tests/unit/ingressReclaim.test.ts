@@ -148,6 +148,14 @@ describe("LiveKit ingress reclaim", () => {
     expect(result.released).toBe(false);
     expect(result.reason).toMatch(/503/);
     expect((await getOrCreateStageStreamState(down.id)).livekitIngressId).toBe("IN_down");
+
+    // A 404 that is not LiveKit's not_found (a Twirp bad_route, or a proxy page with no code) is
+    // unknown too: the credentials stay.
+    for (const reply of [{ status: 404, body: { code: "bad_route", msg: "no handler for path" } }, { status: 404, body: "<html>Not Found</html>" }]) {
+      fakeLiveKit({ "Ingress/DeleteIngress": () => reply }, []);
+      expect((await releaseIngressForEvent(down.id)).released).toBe(false);
+      expect((await getOrCreateStageStreamState(down.id)).livekitIngressId).toBe("IN_down");
+    }
   });
 
   it("a CreateRoom refusal that is not already_exists stops provisioning, even when its wording says 'already exists'", async () => {
