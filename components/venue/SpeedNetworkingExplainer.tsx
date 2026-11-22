@@ -177,7 +177,7 @@ function FactGlyph({ glyph }: { glyph: Glyph }) {
     leave: <><path d="M14 4H6a2 2 0 0 0 -2 2v12a2 2 0 0 0 2 2h8" /><path d="M11 12h10" /><path d="M17 8l4 4l-4 4" /></>,
   };
   return (
-    <span className="mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-black" aria-hidden>
+    <span className="wpl-as-authored mt-0.5 inline-flex h-9 w-9 shrink-0 items-center justify-center rounded-xl bg-brand-black" aria-hidden>
       <svg viewBox="0 0 24 24" fill="none" className="h-5 w-5 stroke-brand-orange" strokeWidth="2" strokeLinecap="round" strokeLinejoin="round">
         {paths[glyph]}
       </svg>
@@ -213,7 +213,9 @@ function CycleDiagram({ minutes, pause }: { minutes: number; pause: number }) {
         </defs>
 
         {beats.map((beat, index) => (
-          <g key={beat.label}>
+          // The middle beat is the dark, on-camera one in both schemes (wpl-as-authored): flipped to cream,
+          // its orange line would drop to about 2:1.
+          <g key={beat.label} className={index === 1 ? "wpl-as-authored" : undefined} data-testid={`networking-beat-${index}`}>
             <rect x={beat.x} y={16} width={172} height={72} rx={16} className={index === 1 ? "fill-brand-black stroke-brand-black" : "fill-brand-ash stroke-brand-line"} strokeWidth={1} />
             <text x={beat.x + 86} y={48} textAnchor="middle" fontSize="16" fontWeight="800" className={index === 1 ? "fill-white" : "fill-brand-black"}>{beat.label}</text>
             <text x={beat.x + 86} y={70} textAnchor="middle" fontSize="13" className={index === 1 ? "fill-brand-orange" : "fill-brand-muted"}>{beat.sub}</text>

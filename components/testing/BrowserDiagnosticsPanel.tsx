@@ -216,7 +216,7 @@ export function BrowserDiagnosticsPanel({ eventId, onResultsChange }: { eventId:
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[420px_1fr]">
         <div className="space-y-4">
-          <video ref={videoRef} muted playsInline className="aspect-video w-full rounded-2xl bg-slate-950 object-cover" />
+          <video ref={videoRef} muted playsInline className="wpl-as-authored aspect-video w-full rounded-2xl bg-slate-950 object-cover" />
           <div className="rounded-2xl bg-slate-50 p-4">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-slate-700">Microphone peak</span>

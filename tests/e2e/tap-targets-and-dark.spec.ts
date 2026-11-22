@@ -29,6 +29,11 @@ function luminanceOf(color: string) {
   return 0.2126 * r + 0.7152 * g + 0.0722 * b;
 }
 
+function contrast(a: string, b: string) {
+  const [hi, lo] = [luminanceOf(a), luminanceOf(b)].sort((x, y) => y - x);
+  return (hi + 0.05) / (lo + 0.05);
+}
+
 /** The src of the first West Peek mark actually on screen (each mark ships a light and a dark copy). */
 async function visibleMarkSrc(page: Page, within = "body") {
   return page.locator(`${within} [data-testid="west-peek-mark"]`).evaluateAll((imgs) => {
@@ -86,6 +91,15 @@ test("dark mode is dark, light mode is light, and the mark flips with the surfac
   const header = page.locator("aside").first();
   expect(luminanceOf(await header.evaluate((el) => getComputedStyle(el).backgroundColor))).toBeLessThan(0.01);
   await expect.poll(() => visibleMarkSrc(page, "aside")).toMatch(/wp-mark-white/);
+
+  // The speed-networking loop's on-camera beat is dark by design: it stays near-black, and its
+  // orange line stays readable on it, rather than flipping to cream with orange at about 2:1.
+  await gotoAndAssert(page, "/venue/demo/networking");
+  const beat = page.getByTestId("networking-beat-1");
+  await expect(beat).toBeVisible();
+  const [ground, label] = await beat.evaluate((g) => [getComputedStyle(g.querySelector("rect")!).fill, getComputedStyle(g.querySelectorAll("text")[1]).fill]);
+  expect(luminanceOf(ground)).toBeLessThan(0.01);
+  expect(contrast(label, ground)).toBeGreaterThanOrEqual(4.5);
 
   await page.emulateMedia({ colorScheme: "light" });
   await gotoAndAssert(page, "/production-access/crew");
