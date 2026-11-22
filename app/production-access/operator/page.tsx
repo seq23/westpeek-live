@@ -25,6 +25,9 @@ export default async function OperatorAccessPage({ searchParams }: { searchParam
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Operator gate</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Operator Launchpad access</h1>
         <p className="mt-4 text-sm leading-6 text-brand-muted">Use the separate operator launchpad password from the Day 1 Operator Packet or your secure production vault. This public gate never displays the password.</p>
+        {/* Refusals sit above the form, where a phone shows them without scrolling. */}
+        <GateRefusalNotice error={resolvedSearchParams?.error} retry={resolvedSearchParams?.retry} />
+        {resolvedSearchParams?.error === "invalid" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That operator password did not match. Use the operator launchpad password, not the crew password.</p> : null}
         <form action="/api/production-access/operator" method="post" className="mt-6 space-y-5">
           <input type="hidden" name="next" value={resolvedSearchParams?.next || "/production-access/launchpad"} />
           <div>
@@ -34,8 +37,6 @@ export default async function OperatorAccessPage({ searchParams }: { searchParam
           </div>
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Enter Operator Launchpad</button>
         </form>
-        <GateRefusalNotice error={resolvedSearchParams?.error} retry={resolvedSearchParams?.retry} />
-        {resolvedSearchParams?.error === "invalid" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That operator password did not match. Use the operator launchpad password, not the crew password.</p> : null}
         <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>

@@ -36,6 +36,8 @@ export default async function SpecialGuestAccessPage({ searchParams }: { searchP
           <p className="font-black text-brand-black">Day 1 access</p>
           <p>Use the role-scoped password from the Day 1 Operator Packet or your secure production vault. This public gate never displays speaker, sponsor, VIP, or client passwords.</p>
         </div>
+        {/* Refusals sit above the form, where a phone shows them without scrolling. */}
+        {resolvedSearchParams?.error === "superseded" ? <SupersededGateNotice field={resolvedSearchParams?.codeField} replacedAt={resolvedSearchParams?.on} testId="guest-code-superseded" /> : resolvedSearchParams?.error === "too_many" ? <GateRefusalNotice error="too_many" retry={resolvedSearchParams?.retry} hint="the invitation link fills the code in for you." /> : resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="guest-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
         <form action="/api/production-access/special-guest" method="post" className="mt-6 space-y-5">
           <input type="hidden" name="next" value={resolvedSearchParams?.next || "/app"} />
           <div>
@@ -51,7 +53,6 @@ export default async function SpecialGuestAccessPage({ searchParams }: { searchP
           </div>
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Continue to assigned portal</button>
         </form>
-        {resolvedSearchParams?.error === "superseded" ? <SupersededGateNotice field={resolvedSearchParams?.codeField} replacedAt={resolvedSearchParams?.on} testId="guest-code-superseded" /> : resolvedSearchParams?.error === "too_many" ? <GateRefusalNotice error="too_many" retry={resolvedSearchParams?.retry} hint="the invitation link fills the code in for you." /> : resolvedSearchParams?.error === "rotated" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800" data-testid="guest-code-rotated">That code was changed by the production team. Ask them for the new link.</p> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That access code did not match a speaker, sponsor, client, or VIP access group for this event.</p> : null}
         <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>

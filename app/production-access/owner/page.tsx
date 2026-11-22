@@ -25,6 +25,8 @@ export default async function OwnerAccessPage({ searchParams }: { searchParams?:
             Use this only for owner-level show control, billing, settings, admin testing, and full event workspace access.
             Operator, crew, speaker, sponsor, client, and VIP access do not grant this authority.
           </p>
+          {/* Refusals sit above the form, where a phone shows them without scrolling. */}
+          {resolvedSearchParams?.error === "too_many" || resolvedSearchParams?.error === "paused" ? <GateRefusalNotice error={resolvedSearchParams.error} retry={resolvedSearchParams.retry} /> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Owner password did not match.</p> : null}
           <form action="/api/production-access/owner" method="post" className="mt-6 space-y-5">
             <input type="hidden" name="next" value={resolvedSearchParams?.next || "/app/owner"} />
             <div>
@@ -33,7 +35,6 @@ export default async function OwnerAccessPage({ searchParams }: { searchParams?:
             </div>
             <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Enter owner workspace</button>
           </form>
-          {resolvedSearchParams?.error === "too_many" || resolvedSearchParams?.error === "paused" ? <GateRefusalNotice error={resolvedSearchParams.error} retry={resolvedSearchParams.retry} /> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Owner password did not match.</p> : null}
           <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>
