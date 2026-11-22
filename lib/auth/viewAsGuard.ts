@@ -1,4 +1,5 @@
 import type { V5AccessCookiePayload } from "@/lib/auth/productionAccess";
+import { effectiveCrewRole } from "@/lib/auth/crewRolePermissions";
 
 /**
  * Who may open a special guest's real pages as that guest (`?viewAs=<guestId>`): an owner cookie,
@@ -18,7 +19,8 @@ export function canViewAsGuest(input: { owner?: V5AccessCookiePayload; operator?
   const { owner, operator, crew } = input;
   if (owner?.kind === "owner") return { ok: true, kind: "owner", label: "the owner" };
   if (operator?.kind === "operator" && eventMatches(operator.eventId, eventId)) return { ok: true, kind: "operator", label: "the operator" };
-  if (crew?.kind === "crew" && eventMatches(crew.eventId, eventId) && (crew.role === "producer" || crew.role === "executive_producer")) return { ok: true, kind: "producer", label: crew.role === "executive_producer" ? "the executive producer" : "the producer" };
+  const crewRole = crew?.kind === "crew" ? effectiveCrewRole(crew) : undefined;
+  if (crew?.kind === "crew" && crewRole && eventMatches(crew.eventId, eventId) && (crewRole === "producer" || crewRole === "executive_producer")) return { ok: true, kind: "producer", label: crewRole === "executive_producer" ? "the executive producer" : "the producer" };
   return { ok: false };
 }
 

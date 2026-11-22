@@ -26,6 +26,11 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
 import { endTheShow, generateStreamYardCredentials } from "@/lib/actions/stageStreamActions";
 import { lockLiveChatRoom, moderateLiveChatMessage } from "@/lib/actions/liveChatActions";
 import { bringSpeakerToStageAction } from "@/lib/actions/speakerStageActions";
+import { switchRoomFallbackAction } from "@/lib/actions/videoFallbackActions";
+import { getRoomFallbackState } from "@/services/video/roomFallbackService";
+import { revokeHostLinks } from "@/services/events/hostLinkService";
+import { canPerformCrewAction } from "@/lib/auth/v5RouteAuthorization";
+import { canViewAsGuest } from "@/lib/auth/viewAsGuard";
 import { getSpeakerStageState } from "@/services/guests/guestStateService";
 import { postLiveRoomChatMessage } from "@/services/venue/liveChatService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -40,11 +45,11 @@ function form(entries: Record<string, string>) {
   return data;
 }
 
-async function signInAsCrew(role: V4CrewRole, eventId: string) {
+async function signInAsCrew(role: V4CrewRole, eventId: string, codeVersion?: number) {
   const env = getEnv();
   const { crewCookieName } = getV5AccessCookieNames(env);
   jar.clear();
-  jar.set(crewCookieName, await createV5AccessCookie({ kind: "crew", role, eventId, issuedAt: Date.now(), expiresAt: Date.now() + 60_000 }, getV5AccessCookieSecret(env)));
+  jar.set(crewCookieName, await createV5AccessCookie({ kind: "crew", role, eventId, codeVersion, issuedAt: Date.now(), expiresAt: Date.now() + 60_000 }, getV5AccessCookieSecret(env)));
 }
 
 describe("crew server actions by role", () => {
@@ -105,5 +110,42 @@ describe("crew server actions by role", () => {
   it("a crew cookie for another event is refused regardless of role", async () => {
     await signInAsCrew("executive_producer", "some-other-event");
     await expect(endTheShow(form({ eventId }))).rejects.toThrow(/Owner, showrunner\/operator, or crew access required/);
+  });
+
+  it("video fallback: a current technical director may switch it; one whose link was revoked may not, and nothing changes", async () => {
+    await signInAsCrew("technical_director", eventId, 0);
+    await switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "daily" }));
+    const switched = await getRoomFallbackState(eventId, "main_stage");
+    expect(switched.activeProvider).toBe("daily");
+
+    await revokeHostLinks(eventId, "owner");
+    await expect(switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "livekit" }))).rejects.toThrow();
+    expect((await getRoomFallbackState(eventId, "main_stage")).activeProvider).toBe("daily");
+  });
+
+  it("video fallback: a crew cookie for another event, or a role without it, is refused", async () => {
+    await signInAsCrew("technical_director", "some-other-event", 0);
+    await expect(switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "daily" }))).rejects.toThrow();
+    await signInAsCrew("moderator", eventId, 0);
+    await expect(switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "daily" }))).rejects.toThrow(/Moderator can't switch the video fallback/);
+  });
+});
+
+describe("one rule for the crew role: an old executive producer cookie with no event or code version is plain crew everywhere", () => {
+  const now = Date.now();
+  const unscoped = { kind: "crew" as const, role: "executive_producer" as const, issuedAt: now, expiresAt: now + 60_000 };
+  const unversioned = { ...unscoped, eventId: "event-a" };
+  const host = { ...unscoped, eventId: "event-a", codeVersion: 0 };
+
+  it("video fallback actions", () => {
+    expect(canPerformCrewAction(unscoped, "switch_video_fallback", "event-a")).toBe(false);
+    expect(canPerformCrewAction(unversioned, "switch_video_fallback", "event-a")).toBe(false);
+    expect(canPerformCrewAction(host, "switch_video_fallback", "event-a")).toBe(true);
+  });
+
+  it("previewing a guest's pages (?viewAs=)", () => {
+    expect(canViewAsGuest({ crew: unscoped }, "event-a")).toEqual({ ok: false });
+    expect(canViewAsGuest({ crew: unversioned }, "event-a")).toEqual({ ok: false });
+    expect(canViewAsGuest({ crew: host }, "event-a")).toMatchObject({ ok: true, label: "the executive producer" });
   });
 });

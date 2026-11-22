@@ -3,7 +3,8 @@ import { readV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/produ
 import { crewDeniedReason, roleAllows, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import type { V4CrewRole } from "@/types/v4";
-import { crewCookieCurrent, effectiveCrewRole, getHostLinkState } from "@/services/events/hostLinkService";
+import { crewCookieCurrent, getHostLinkState } from "@/services/events/hostLinkService";
+import { effectiveCrewRole } from "@/lib/auth/crewRolePermissions";
 
 export const REVOKED_HOST_LINK_ERROR = "Your crew link for this event was revoked. Ask the host or the owner for a new link.";
 

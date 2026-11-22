@@ -2,7 +2,7 @@ import type { V4CrewRole } from "@/types/v4";
 
 /**
  * THE crew permission map. One table, used by the server guards
- * (`requireLiveEventControlAccessForRequest`, `requireCrewCapability`), the deck (which renders a
+ * (`requireLiveEventControlAccessForRequest`), the deck (which renders a
  * control disabled with the reason when the role may not use it), the crew gate (which describes
  * each role before the choice is made), and the role badge on every crew page.
  *
@@ -96,6 +96,18 @@ function shortLabel(role: V4CrewRole) {
 
 export function rolesAllowed(action: CrewAction): V4CrewRole[] {
   return CREW_ROLES.filter((role) => crewActionPermissions[role].includes(action));
+}
+
+/**
+ * Pure: the role a crew cookie really carries. Executive producer comes only from a host code, which
+ * always names one event and records its code version; a cookie claiming it without both (one
+ * minted from the global crew password with no event code before 22 Nov 2026) is plain crew, so it
+ * can never host every event or outlive a revoke.
+ */
+export function effectiveCrewRole(crew: { role?: string; eventId?: string; codeVersion?: number }): V4CrewRole {
+  const role = (crew.role || "crew") as V4CrewRole;
+  if (role === "executive_producer" && (!crew.eventId || crew.codeVersion === undefined)) return "crew";
+  return role;
 }
 
 export function roleAllows(role: V4CrewRole | undefined, action: CrewAction) {
