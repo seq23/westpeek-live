@@ -33,12 +33,12 @@ export function GuestRoomVideo({ eventId, roomId, roomType, role, displayName, t
   }, [eventId, roomId, roomType, role, displayName]);
   const state = token && serverUrl ? "token-issued" : error ? "token-error" : "loading";
   return (
-    <div className="rounded-3xl bg-slate-950 p-4 text-white" data-testid={`guest-room-video-${roomType}`} data-room-state={state}>
+    <div className="wpl-as-authored rounded-3xl bg-slate-950 p-4 text-white" data-testid={`guest-room-video-${roomType}`} data-room-state={state}>
       <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">{title}</p>
       {token && serverUrl ? (
         <div className="mt-3"><LiveKitRoomClient serverUrl={serverUrl} token={token} canPublishAudio={permissions.canPublishAudio} canPublishVideo={permissions.canPublishVideo} canShareScreen={permissions.canShareScreen} /></div>
       ) : (
-        <div className="mt-3 flex aspect-video items-center justify-center rounded-2xl bg-slate-900 p-6 text-center text-sm text-slate-300" data-testid="guest-room-video-message">{error || "Connecting…"}</div>
+        <div className="wpl-as-authored mt-3 flex aspect-video items-center justify-center rounded-2xl bg-slate-900 p-6 text-center text-sm text-slate-300" data-testid="guest-room-video-message">{error || "Connecting…"}</div>
       )}
     </div>
   );

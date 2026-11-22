@@ -1,3 +1,4 @@
+import { withNetworkingGoalIntent } from "@/services/speed-networking/networkingGoalIntent";
 import { getDbClient } from "@/lib/d1/binding";
 import type { DbClient } from "@/lib/d1/query";
 import type { AuditLog } from "@/types/core";
@@ -64,7 +65,7 @@ function mapEventGuestState(row: Record<string, unknown>): EventGuestStateRecord
 }
 
 function mapAttendeeProfile(row: Record<string, unknown>): AttendeeProfile {
-  return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), email: row.email ? String(row.email) : undefined, extraAnswers: (row.extra_answers && typeof row.extra_answers === "object" ? (row.extra_answers as Record<string, string>) : {}), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingOptIn: Boolean(row.networking_opt_in), hiddenFromDirectory: Boolean(row.hidden_from_directory), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
+  return { attendeeId: String(row.attendee_id || ""), eventId: String(row.event_id || ""), emailHash: String(row.email_hash || ""), email: row.email ? String(row.email) : undefined, extraAnswers: (row.extra_answers && typeof row.extra_answers === "object" ? (row.extra_answers as Record<string, string>) : {}), name: String(row.name || ""), emailMasked: row.email_masked ? String(row.email_masked) : undefined, company: String(row.company || ""), title: String(row.title || ""), personalWebsite: row.personal_website ? String(row.personal_website) : undefined, socialLinks: Array.isArray(row.social_links) ? row.social_links.map(String) : [], reasonForAttending: row.reason_for_attending ? String(row.reason_for_attending) : undefined, interestingFact: row.interesting_fact ? String(row.interesting_fact) : undefined, topicsOfInterest: Array.isArray(row.topics_of_interest) ? row.topics_of_interest.map(String) : [], networkingGoals: row.networking_goals ? String(row.networking_goals) : undefined, networkingGoalIntent: row.networking_goal_intent && typeof row.networking_goal_intent === "object" ? (row.networking_goal_intent as AttendeeProfile["networkingGoalIntent"]) : undefined, networkingOptIn: Boolean(row.networking_opt_in), hiddenFromDirectory: Boolean(row.hidden_from_directory), role: "attendee", status: (row.status as AttendeeProfile["status"]) || "active", createdAt: String(row.created_at || ""), updatedAt: String(row.updated_at || "") };
 }
 
 function mapEventTemplate(row: Record<string, unknown>): EventTemplateRecord {
@@ -650,9 +651,10 @@ export class D1RuntimeStore implements RuntimeStore {
   }
 
 
-  async upsertAttendeeProfile(profile: AttendeeProfile) {
+  async upsertAttendeeProfile(given: AttendeeProfile) {
+    const profile = await withNetworkingGoalIntent(given);
     const { error } = await this.client.from("attendee_profiles").upsert({
-      attendee_id: profile.attendeeId, event_id: profile.eventId, email_hash: profile.emailHash, email: profile.email ?? null, extra_answers: profile.extraAnswers || {}, name: profile.name, email_masked: profile.emailMasked, company: profile.company, title: profile.title, personal_website: profile.personalWebsite, social_links: profile.socialLinks || [], reason_for_attending: profile.reasonForAttending, interesting_fact: profile.interestingFact, topics_of_interest: profile.topicsOfInterest || [], networking_goals: profile.networkingGoals, networking_opt_in: profile.networkingOptIn, hidden_from_directory: Boolean(profile.hiddenFromDirectory), role: profile.role, status: profile.status, created_at: profile.createdAt, updated_at: profile.updatedAt,
+      attendee_id: profile.attendeeId, event_id: profile.eventId, email_hash: profile.emailHash, email: profile.email ?? null, extra_answers: profile.extraAnswers || {}, name: profile.name, email_masked: profile.emailMasked, company: profile.company, title: profile.title, personal_website: profile.personalWebsite, social_links: profile.socialLinks || [], reason_for_attending: profile.reasonForAttending, interesting_fact: profile.interestingFact, topics_of_interest: profile.topicsOfInterest || [], networking_goals: profile.networkingGoals, networking_goal_intent: profile.networkingGoalIntent ?? null, networking_opt_in: profile.networkingOptIn, hidden_from_directory: Boolean(profile.hiddenFromDirectory), role: profile.role, status: profile.status, created_at: profile.createdAt, updated_at: profile.updatedAt,
     });
     if (error) fail(`attendee_profiles upsert: ${error.message}`);
     return profile;

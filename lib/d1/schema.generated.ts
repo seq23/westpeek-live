@@ -702,7 +702,11 @@ export const D1_SCHEMA: Record<string, D1TableSchema> = {
       "updated_at": "text",
       "hidden_from_directory": "bool",
       "email": "text",
-      "extra_answers": "json"
+      "extra_answers": "json",
+      "networking_goal_intent": "json"
+    },
+    "addedColumns": {
+      "networking_goal_intent": "migrations-d1/0008_networking_goal_intent.sql"
     }
   },
   "attendee_sessions": {
@@ -1206,6 +1210,20 @@ export const D1_SCHEMA: Record<string, D1TableSchema> = {
       "created_at": "text",
       "expires_at": "text",
       "used_at": "text"
+    }
+  },
+  "ai_usage_monthly": {
+    "file": "migrations-d1/0008_networking_goal_intent.sql",
+    "primaryKey": [
+      "feature",
+      "month"
+    ],
+    "columns": {
+      "feature": "text",
+      "month": "text",
+      "neurons": "real",
+      "calls": "int",
+      "updated_at": "text"
     }
   }
 };

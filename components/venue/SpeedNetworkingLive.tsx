@@ -16,13 +16,13 @@ type Snapshot = MyNetworkingState & { registered: boolean; attendeeId: string | 
  */
 function PairTile({ caption, trackRef, notice, mirror = false, testId }: { caption: string; trackRef?: TrackReference; notice?: string; mirror?: boolean; testId: string }) {
   return (
-    <div className="relative aspect-video max-h-[42vh] overflow-hidden rounded-2xl bg-slate-900" data-testid={testId} data-tile-state={trackRef ? "video" : "notice"}>
+    <div className="wpl-as-authored relative aspect-video max-h-[42vh] overflow-hidden rounded-2xl bg-slate-900" data-testid={testId} data-tile-state={trackRef ? "video" : "notice"}>
       {trackRef ? (
         <VideoTrack trackRef={trackRef} className={`h-full w-full object-cover${mirror ? " -scale-x-100" : ""}`} />
       ) : (
         <p className="flex h-full w-full items-center justify-center px-3 text-center text-xs font-black text-slate-200 sm:text-sm" data-testid={`${testId}-notice`}>{notice}</p>
       )}
-      <p className="absolute bottom-0 left-0 right-0 truncate bg-gradient-to-t from-black/80 to-transparent px-2 py-1 text-[11px] font-black text-white">{caption}</p>
+      <p className="wpl-as-authored absolute bottom-0 left-0 right-0 truncate bg-gradient-to-t from-black/80 to-transparent px-2 py-1 text-[11px] font-black text-white">{caption}</p>
     </div>
   );
 }
@@ -109,13 +109,13 @@ function CameraPreview({ testId }: { testId: string }) {
     return () => { cancelled = true; stream?.getTracks().forEach((track) => track.stop()); };
   }, []);
   return (
-    <div className="relative aspect-video max-h-[30vh] overflow-hidden rounded-2xl bg-slate-900" data-testid={testId} data-preview-state={denied ? "denied" : "live"}>
+    <div className="wpl-as-authored relative aspect-video max-h-[30vh] overflow-hidden rounded-2xl bg-slate-900" data-testid={testId} data-preview-state={denied ? "denied" : "live"}>
       {denied ? (
         <p className="flex h-full w-full items-center justify-center px-3 text-center text-xs font-black text-slate-200">Your camera is not available on this device. The match still works with audio.</p>
       ) : (
         <video ref={videoRef} autoPlay playsInline muted className="h-full w-full -scale-x-100 object-cover" />
       )}
-      <p className="absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1 text-[11px] font-black text-white">You, before you are on</p>
+      <p className="wpl-as-authored absolute bottom-0 left-0 right-0 bg-gradient-to-t from-black/80 to-transparent px-2 py-1 text-[11px] font-black text-white">You, before you are on</p>
     </div>
   );
 }
@@ -190,20 +190,20 @@ function MatchRoom({ eventId, match, nextAction, leaveAction }: { eventId: strin
           <h3 className="mt-1 text-2xl font-black text-slate-950" data-testid="networking-partner-name">{match.partner.name}</h3>
           <p className="text-sm text-slate-600" data-testid="networking-partner-detail">{[match.partner.company, match.partner.title].filter(Boolean).join(" · ") || "Registered attendee"}</p>
         </div>
-        <div className="rounded-2xl bg-slate-950 px-4 py-2 text-white" data-testid="networking-timer" data-seconds-left={secondsLeft}>
+        <div className="wpl-as-authored rounded-2xl bg-slate-950 px-4 py-2 text-white" data-testid="networking-timer" data-seconds-left={secondsLeft}>
           <p className="text-[10px] font-black uppercase tracking-wide text-slate-300">Time left</p>
           <p className="text-2xl font-black tabular-nums">{mmss(secondsLeft)}</p>
         </div>
       </div>
       <div className="mt-4">
         {token && serverUrl ? (
-          <LiveKitRoom token={token} serverUrl={serverUrl} connect audio video className="space-y-3 rounded-3xl bg-black/80 p-3 text-white" onError={(e) => setError(e.message)}>
+          <LiveKitRoom token={token} serverUrl={serverUrl} connect audio video className="wpl-as-authored space-y-3 rounded-3xl bg-black/80 p-3 text-white" onError={(e) => setError(e.message)}>
             <PairStage partnerIdentity={match.partner.attendeeId} partnerName={match.partner.name} />
             <RoomAudioRenderer />
             <ControlBar variation="minimal" controls={{ camera: true, microphone: true, screenShare: false, chat: false, leave: false }} />
           </LiveKitRoom>
         ) : (
-          <div className="flex min-h-[200px] items-center justify-center rounded-2xl bg-slate-950 p-6 text-center text-sm text-slate-200" data-testid="networking-room-notice">{error ? `Video room: ${error}` : "Connecting your camera and microphone…"}</div>
+          <div className="wpl-as-authored flex min-h-[200px] items-center justify-center rounded-2xl bg-slate-950 p-6 text-center text-sm text-slate-200" data-testid="networking-room-notice">{error ? `Video room: ${error}` : "Connecting your camera and microphone…"}</div>
         )}
       </div>
       <div className="mt-4 flex flex-wrap gap-2">
