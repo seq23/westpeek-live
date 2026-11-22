@@ -12,6 +12,7 @@ Checked against the code and live DNS on 31 Oct 2026.
 | Cloudflare Workers (Paid) | Hosts the app | Worker `west-peek-live`; fallback URL `west-peek-live.seq-taylor.workers.dev`; Workers Builds uploads a preview version per branch | `wrangler.jsonc` |
 | Cloudflare D1 | The database | database `west-peek-live`, binding `DB`; schema in `migrations-d1/` | applied by `deploy-cloudflare-worker.yml` |
 | Cloudflare R2 | Uploaded files, private | bucket `west-peek-live-assets`, binding `ASSETS_BUCKET` | signed links only |
+| Cloudflare Workers AI | Reads an attendee's networking goal into labels when it is saved (Llama 3.1 8B) | binding `AI`; month-to-date neurons in D1 `ai_usage_monthly`, capped at 50,000 | `wrangler.jsonc` |
 | Cloudflare DNS | `westpeek.live` zone (Cloudflare nameservers) | see DNS below | dashboard |
 | Cloudflare Stream Live | Fallback rung 2 | live input `westpeek-fallback` | `CLOUDFLARE_STREAM_*` |
 | LiveKit Cloud (Build plan, $0, since 2 Nov 2026; back to Ship $50/mo ≥7 days before the first real show — 60 transcode minutes can't carry one 90-minute show) | Main stage, rooms, RTMP ingress from StreamYard | project `westpeek-live`; webhooks: `docs/LIVEKIT_WEBHOOKS.md` | `LIVEKIT_*` |

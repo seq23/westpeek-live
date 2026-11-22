@@ -8,6 +8,9 @@
     "directory": ".open-next/assets",
     "binding": "ASSETS"
   },
+  // Workers AI: reads an attendee's networking goal into a stored intent when it is saved
+  // (services/speed-networking/networkingGoalIntent.ts), capped per month in code.
+  "ai": { "binding": "AI" },
   // The runtime store. Schema: migrations-d1/, applied by the deploy workflow before every deploy.
   "d1_databases": [
     {
