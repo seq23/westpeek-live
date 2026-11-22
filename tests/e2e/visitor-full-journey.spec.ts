@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { expectLinksStayFirstParty, expectRouteMatrix, expectVisibleRoute } from "./helpers/roleJourney";
 
 test("visitor can discover, evaluate, register, and reach safe first-party entry points", async ({ page }) => {

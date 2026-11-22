@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "./fixtures";
 import { expectRouteMatrix, grantAgencySession } from "./helpers/roleJourney";
 
 test("producer/admin can inspect event setup, operations, publishing, and video-health surfaces", async ({ page }) => {
