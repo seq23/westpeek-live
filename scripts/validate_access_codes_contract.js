@@ -17,7 +17,7 @@ if (/autoSubmit|requestSubmit|\.submit\(\)/.test(read("app/production-access/spe
 check("app/production-access/crew/page.tsx", ["defaultValue={prefilledCode}"]);
 check("services/events/accessCodeService.ts", ["export async function setEventAccessCode", "export function codeIsFree", "validateCustomCode(input.value, field)", "revokeHostLinks(eventId, actor, stored, reason)", "bumpAccessCodeVersion(eventId, field)", "export async function guestAccessStale"]);
 for (const gate of ["app/production-access/special-guest/page.tsx", "app/api/production-access/special-guest/route.ts"]) check(gate, ["getAccessCodeVersions(access.eventId)", "codeVersion, issuedAt"]);
-for (const layout of ["app/speaker/events/[eventId]/layout.tsx", "app/sponsor/events/[eventId]/layout.tsx", "app/client/[clientSlug]/events/[eventId]/layout.tsx"]) check(layout, ["guestAccessStale(", 'redirect("/production-access/special-guest?error=rotated")']);
+for (const layout of ["app/speaker/events/[eventId]/layout.tsx", "app/sponsor/events/[eventId]/layout.tsx", "app/client/[clientSlug]/events/[eventId]/layout.tsx"]) check(layout, ["guestAccessStale(", "redirect(`/production-access/special-guest?error=${stale}`)"]);
 check("components/venue/VipLobbyPanel.tsx", ["guestAccessStale(eventId)"]);
 check("components/events/EventAccessCodesPanel.tsx", ["displayCode(", "guestGatePath(event, row.key)", 'testId={`copy-${row.key}-link`}', 'action="manage_access_codes"', "code-regenerate-", "code-save-"]);
 check("components/events/EventJoinCodePanel.tsx", ["displayCode(event.joinCode)"]);
