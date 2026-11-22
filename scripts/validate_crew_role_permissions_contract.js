@@ -47,7 +47,7 @@ if (!map.includes("export function crewDeniedReason")) throw new Error("crewDeni
 
 check("lib/auth/liveControlRequestGuard.ts", ["export function authorizeLiveControl", "roleAllows(crewRole, action)", "crewDeniedReason(crewRole, action)", 'if (owner?.kind === "owner") return { ok: true', 'operator?.kind === "operator"']);
 check("lib/auth/crewViewer.ts", ["export function crewViewerFromPayloads", "isHost: role === \"executive_producer\"", "export function viewerDenied"]);
-check("lib/auth/requireCrewCapability.ts", ["operatorPayload?.kind === \"operator\""]);
+check("lib/actions/videoFallbackActions.ts", ["requireLiveEventControlAccessForRequest(eventId, action)"]);
 check("lib/actions/stageStreamActions.ts", ['action: CrewAction = "go_live"', "requireLiveEventControlAccessForRequest(eventId, action)"]);
 check("lib/actions/liveChatActions.ts", ['requireLiveEventControlAccessForRequest(eventId, "moderate_chat")']);
 check("lib/actions/attendeeLiveActions.ts", ['requireLiveEventControlAccessForRequest(eventId, "manage_stage_access")']);

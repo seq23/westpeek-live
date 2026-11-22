@@ -7,7 +7,8 @@ import type { V4CrewRole } from "@/types/v4";
 /** Who may open a guest's real pages as that guest: owner, operator (event), producer / EP crew (event). Nobody else. */
 const issuedAt = Date.now();
 const expiresAt = issuedAt + 60_000;
-const crew = (role: V4CrewRole, eventId = "room-1"): V5AccessCookiePayload => ({ kind: "crew", role, eventId, issuedAt, expiresAt });
+// codeVersion 0: a real host cookie always records one (an executive producer without it is plain crew).
+const crew = (role: V4CrewRole, eventId = "room-1"): V5AccessCookiePayload => ({ kind: "crew", role, eventId, codeVersion: 0, issuedAt, expiresAt });
 const owner: V5AccessCookiePayload = { kind: "owner", role: "owner", issuedAt, expiresAt };
 const operator = (eventId?: string): V5AccessCookiePayload => ({ kind: "operator", role: "executive_producer", eventId, issuedAt, expiresAt });
 const guest: V5AccessCookiePayload = { kind: "special_guest", role: "speaker", eventId: "room-1", issuedAt, expiresAt };

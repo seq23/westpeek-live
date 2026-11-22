@@ -25,7 +25,6 @@
     "app/operator-packet/page.tsx",
     "app/production-access/launchpad/page.tsx",
     "app/production-access/logout/route.ts",
-    "lib/auth/requireCrewCapability.ts",
     "lib/auth/requireEventRole.ts",
     "lib/env/safeEnv.ts",
     "scripts/validate_access_boundary_contract.js",

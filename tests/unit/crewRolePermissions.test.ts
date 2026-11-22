@@ -2,7 +2,6 @@ import { describe, expect, it } from "vitest";
 import { CREW_ROLES, crewActionPermissions, crewDeniedReason, crewRoleDescriptions, roleAllows, rolesAllowed, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { authorizeLiveControl } from "@/lib/auth/liveControlRequestGuard";
 import { crewViewerFromPayloads, viewerCan, viewerDenied } from "@/lib/auth/crewViewer";
-import { canPerformCrewAction } from "@/lib/auth/v5RouteAuthorization";
 import type { V5AccessCookiePayload } from "@/lib/auth/productionAccess";
 import type { V4CrewRole } from "@/types/v4";
 
@@ -69,10 +68,10 @@ describe("crew permission map", () => {
     expect(roleAllows("va", "edit_draft_setup")).toBe(true);
   });
 
-  it("the cookie helper reads the same map", () => {
-    expect(canPerformCrewAction(crew("moderator"), "go_live", "room-1")).toBe(false);
-    expect(canPerformCrewAction(crew("technical_director"), "go_live", "room-1")).toBe(true);
-    expect(canPerformCrewAction(crew("technical_director", "room-2"), "go_live", "room-1")).toBe(false);
+  it("the live-control guard reads the same map", () => {
+    expect(authorizeLiveControl({ crew: crew("moderator") }, "room-1", "go_live").ok).toBe(false);
+    expect(authorizeLiveControl({ crew: crew("technical_director") }, "room-1", "go_live").ok).toBe(true);
+    expect(authorizeLiveControl({ crew: crew("technical_director", "room-2") }, "room-1", "go_live").ok).toBe(false);
   });
 
   it("every role has a one-line description for the gate and the badge", () => {

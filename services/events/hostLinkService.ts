@@ -112,18 +112,6 @@ export async function revokeHostLinks(eventId: string, revokedBy: string, newCod
   return { event: rotated, state: next };
 }
 
-/**
- * Pure: the role a crew cookie really carries. Executive producer comes only from a host code, which
- * always names one event and records its code version; a cookie claiming it without both (one
- * minted from the global crew password with no event code before 22 Nov 2026) is plain crew, so it
- * can never host every event or outlive a revoke.
- */
-export function effectiveCrewRole(crew: { role?: string; eventId?: string; codeVersion?: number }): V4CrewRole {
-  const role = (crew.role || "crew") as V4CrewRole;
-  if (role === "executive_producer" && (!crew.eventId || crew.codeVersion === undefined)) return "crew";
-  return role;
-}
-
 /** Pure: a crew cookie minted with an event crew code is only good for the version it was minted at. */
 export function crewCookieCurrent(cookieCodeVersion: number | undefined, currentCodeVersion: number) {
   if (cookieCodeVersion === undefined) return true; // global crew password login: never rotated

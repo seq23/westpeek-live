@@ -26,6 +26,12 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
 import { endTheShow, generateStreamYardCredentials } from "@/lib/actions/stageStreamActions";
 import { lockLiveChatRoom, moderateLiveChatMessage } from "@/lib/actions/liveChatActions";
 import { bringSpeakerToStageAction } from "@/lib/actions/speakerStageActions";
+import { runVideoHealthCheckAction, switchRoomFallbackAction } from "@/lib/actions/videoFallbackActions";
+import { authorizeVideoTokenRequest } from "@/lib/auth/videoTokenRequestGuard";
+import { getRoomFallbackState } from "@/services/video/roomFallbackService";
+import { revokeHostLinks } from "@/services/events/hostLinkService";
+import { authorizeLiveControl } from "@/lib/auth/liveControlRequestGuard";
+import { canViewAsGuest } from "@/lib/auth/viewAsGuard";
 import { getSpeakerStageState } from "@/services/guests/guestStateService";
 import { postLiveRoomChatMessage } from "@/services/venue/liveChatService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -40,11 +46,11 @@ function form(entries: Record<string, string>) {
   return data;
 }
 
-async function signInAsCrew(role: V4CrewRole, eventId: string) {
+async function signInAsCrew(role: V4CrewRole, eventId: string, codeVersion?: number) {
   const env = getEnv();
   const { crewCookieName } = getV5AccessCookieNames(env);
   jar.clear();
-  jar.set(crewCookieName, await createV5AccessCookie({ kind: "crew", role, eventId, issuedAt: Date.now(), expiresAt: Date.now() + 60_000 }, getV5AccessCookieSecret(env)));
+  jar.set(crewCookieName, await createV5AccessCookie({ kind: "crew", role, eventId, codeVersion, issuedAt: Date.now(), expiresAt: Date.now() + 60_000 }, getV5AccessCookieSecret(env)));
 }
 
 describe("crew server actions by role", () => {
@@ -105,5 +111,117 @@ describe("crew server actions by role", () => {
   it("a crew cookie for another event is refused regardless of role", async () => {
     await signInAsCrew("executive_producer", "some-other-event");
     await expect(endTheShow(form({ eventId }))).rejects.toThrow(/Owner, showrunner\/operator, or crew access required/);
+  });
+
+  it("video fallback: a current technical director may switch it; one whose link was revoked may not, and nothing changes", async () => {
+    await signInAsCrew("technical_director", eventId, 0);
+    await switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "daily" }));
+    const switched = await getRoomFallbackState(eventId, "main_stage");
+    expect(switched.activeProvider).toBe("daily");
+
+    await revokeHostLinks(eventId, "owner");
+    await expect(switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "livekit" }))).rejects.toThrow();
+    expect((await getRoomFallbackState(eventId, "main_stage")).activeProvider).toBe("daily");
+  });
+
+  it("video fallback: a crew cookie for another event, or a role without it, is refused", async () => {
+    await signInAsCrew("technical_director", "some-other-event", 0);
+    await expect(switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "daily" }))).rejects.toThrow();
+    await signInAsCrew("moderator", eventId, 0);
+    await expect(switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "daily" }))).rejects.toThrow(/Moderator can't switch the video fallback/);
+  });
+});
+
+async function signInAsOperator(eventId?: string) {
+  const env = getEnv();
+  const { operatorCookieName } = getV5AccessCookieNames(env);
+  jar.clear();
+  jar.set(operatorCookieName, await createV5AccessCookie({ kind: "operator", eventId, issuedAt: Date.now(), expiresAt: Date.now() + 60_000 }, getV5AccessCookieSecret(env)));
+}
+
+describe("host and producer video tokens follow the live-control rule (they make the holder a room owner)", () => {
+  let tempDir: string;
+  let eventId: string;
+  beforeEach(async () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wpl-video-token-"));
+    process.env.AGENCY_EVENT_OS_RUNTIME_STORE = "file";
+    setRuntimeStoreForTests(new FileRuntimeStore(path.join(tempDir, "runtime.json")));
+    resetOverlayForTests();
+    eventId = (await createEventRecord({ name: `Tokens ${Date.now()}`, when: "now" }, owner)).id;
+  });
+  afterEach(() => {
+    setRuntimeStoreForTests(undefined);
+    resetOverlayForTests();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    jar.clear();
+  });
+
+  it("crew whose link was revoked gets no host or producer token", async () => {
+    await signInAsCrew("executive_producer", eventId, 0);
+    expect((await authorizeVideoTokenRequest({ role: "host", eventId })).ok).toBe(true);
+    await revokeHostLinks(eventId, "owner");
+    for (const role of ["host", "producer"] as const) {
+      const refused = await authorizeVideoTokenRequest({ role, eventId });
+      expect(refused).toMatchObject({ ok: false, error: expect.stringMatching(/revoked/) });
+    }
+  });
+
+  it("an operator scoped to one event gets no host token for another event", async () => {
+    await signInAsOperator("some-other-event");
+    for (const role of ["host", "producer", "speaker"] as const) expect((await authorizeVideoTokenRequest({ role, eventId })).ok).toBe(false);
+    await signInAsOperator(eventId);
+    expect((await authorizeVideoTokenRequest({ role: "host", eventId })).ok).toBe(true);
+  });
+
+  it("crew for another event gets no host token", async () => {
+    await signInAsCrew("executive_producer", "some-other-event", 0);
+    expect((await authorizeVideoTokenRequest({ role: "host", eventId })).ok).toBe(false);
+  });
+});
+
+describe("the video fallback audit names who really pressed it", () => {
+  let tempDir: string;
+  let eventId: string;
+  beforeEach(async () => {
+    tempDir = fs.mkdtempSync(path.join(os.tmpdir(), "wpl-fallback-audit-"));
+    process.env.AGENCY_EVENT_OS_RUNTIME_STORE = "file";
+    setRuntimeStoreForTests(new FileRuntimeStore(path.join(tempDir, "runtime.json")));
+    resetOverlayForTests();
+    eventId = (await createEventRecord({ name: `Audit ${Date.now()}`, when: "now" }, owner)).id;
+  });
+  afterEach(() => {
+    setRuntimeStoreForTests(undefined);
+    resetOverlayForTests();
+    fs.rmSync(tempDir, { recursive: true, force: true });
+    jar.clear();
+    vi.restoreAllMocks();
+  });
+
+  it("an executive producer's switch is logged as executive_producer; an operator's health check as operator", async () => {
+    const audit = vi.spyOn(getRuntimeStore(), "appendFallbackEvent");
+    await signInAsCrew("executive_producer", eventId, 0);
+    await switchRoomFallbackAction(form({ eventId, roomType: "main_stage", provider: "daily" }));
+    await signInAsOperator(eventId);
+    await runVideoHealthCheckAction(form({ eventId, roomType: "main_stage" }));
+    expect(audit.mock.calls.map(([event]) => event.actorRole)).toEqual(["executive_producer", "operator"]);
+  });
+});
+
+describe("one rule for the crew role: an old executive producer cookie with no event or code version is plain crew everywhere", () => {
+  const now = Date.now();
+  const unscoped = { kind: "crew" as const, role: "executive_producer" as const, issuedAt: now, expiresAt: now + 60_000 };
+  const unversioned = { ...unscoped, eventId: "event-a" };
+  const host = { ...unscoped, eventId: "event-a", codeVersion: 0 };
+
+  it("video fallback actions", () => {
+    expect(authorizeLiveControl({ crew: unscoped }, "event-a", "switch_video_fallback").ok).toBe(false);
+    expect(authorizeLiveControl({ crew: unversioned }, "event-a", "switch_video_fallback").ok).toBe(false);
+    expect(authorizeLiveControl({ crew: host }, "event-a", "switch_video_fallback").ok).toBe(true);
+  });
+
+  it("previewing a guest's pages (?viewAs=)", () => {
+    expect(canViewAsGuest({ crew: unscoped }, "event-a")).toEqual({ ok: false });
+    expect(canViewAsGuest({ crew: unversioned }, "event-a")).toEqual({ ok: false });
+    expect(canViewAsGuest({ crew: host }, "event-a")).toMatchObject({ ok: true, label: "the executive producer" });
   });
 });

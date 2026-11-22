@@ -3,7 +3,8 @@ import { readV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/produ
 import { crewActionPermissions, crewDeniedReason, crewRoleDescriptions, crewRoleLabels, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import type { V4CrewRole } from "@/types/v4";
-import { crewCookieCurrent, effectiveCrewRole, getHostLinkState } from "@/services/events/hostLinkService";
+import { crewCookieCurrent, getHostLinkState } from "@/services/events/hostLinkService";
+import { effectiveCrewRole } from "@/lib/auth/crewRolePermissions";
 
 /**
  * Who is looking at a crew surface, as plain data the deck and the role badge can render:
