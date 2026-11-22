@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 import registry from "@/data/testing/cta-promise-registry.json";
 
 test("CTA promise registry prevents public surprise routes and covers protected auth disclosure", async () => {

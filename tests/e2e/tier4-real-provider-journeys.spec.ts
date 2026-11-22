@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { loginAsMasterOperator } from './helpers/roleJourney';
 
 const tier4Enabled = () => process.env.TIER4_LIVE_PROVIDER_OPERATIONAL_PROOF === '1';

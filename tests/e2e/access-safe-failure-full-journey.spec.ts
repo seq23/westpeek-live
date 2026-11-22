@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { expectRouteMatrix } from "./helpers/roleJourney";
 
 test("access and safe-failure surfaces explain missing setup without crashing or leaking raw secrets", async ({ page }) => {

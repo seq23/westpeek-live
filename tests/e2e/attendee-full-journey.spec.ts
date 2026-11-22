@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { expectRouteMatrix, expectVisibleRoute } from "./helpers/roleJourney";
 
 test("attendee can move through the complete virtual venue without dead ends", async ({ page }) => {
