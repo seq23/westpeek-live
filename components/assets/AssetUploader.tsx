@@ -49,7 +49,7 @@ export function AssetUploader({ eventId, who = "production", place = "portal" }:
       onDrop={(event) => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void upload(file); }}
     >
       <p className="font-black text-brand-black">Add a file</p>
-      <p className="mt-1 text-xs text-brand-muted">Drag it here, or choose one: PDF, PowerPoint, Word, Excel, PNG, JPG, WebP, GIF, MP4 or text, up to {assetSizeLabel(EVENT_ASSET_MAX_BYTES)}. Uploaded as {who}.</p>
+      <p className="mt-1 text-xs text-brand-muted">Drag it here, or choose one: PDF, PowerPoint, Word, Excel, PNG, JPG, WebP, SVG, GIF, MP4 or text, up to {assetSizeLabel(EVENT_ASSET_MAX_BYTES)}. Uploaded as {who}.</p>
       <input
         ref={input}
         type="file"

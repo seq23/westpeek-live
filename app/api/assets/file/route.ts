@@ -11,9 +11,9 @@ export const dynamic = "force-dynamic";
  * unsigned links are refused; the object itself is never public.
  *
  * A stored file is someone's upload, so it is never run as a page on this origin: every response is
- * sandboxed with no sources allowed (PDF aside, see assetFileCsp), and only plain images, PDF and MP4
- * open in the browser; every other type (SVG logos stored before SVG was refused, documents, text)
- * is sent as a download.
+ * sandboxed with no sources allowed (PDF and MP4 aside, see assetFileCsp), and only images (SVG
+ * included, sandboxed so its script never runs), PDF and MP4 open in the browser; every other type
+ * (Word, PowerPoint, Excel, text) is sent as a download.
  */
 export async function GET(request: Request) {
   const check = await verifyDownloadUrl(new URL(request.url).searchParams).catch((error) => ({ ok: false as const, status: 403 as const, reason: error instanceof Error ? error.message : String(error) }));

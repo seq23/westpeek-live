@@ -35,8 +35,9 @@ export const EVENT_ASSET_BUCKET = "event-assets";
 export const EVENT_ASSET_MAX_BYTES = 50_000_000;
 
 /**
- * SVG is not taken: an SVG is a document that can carry script, and anyone holding its link could
- * open it as a page. PNG, JPEG, WebP and GIF cover logos and slides.
+ * SVG is taken (her call, 22 Nov 2026: "if there is a good reason sure if not why restrict?"). An SVG
+ * can carry script, so the file route serves every one sandboxed with no sources (assetFileCsp) and
+ * nosniff: opened from its link it draws, and its script never runs.
  */
 export const EVENT_ASSET_ALLOWED_MIME = [
   "application/pdf",
@@ -46,6 +47,7 @@ export const EVENT_ASSET_ALLOWED_MIME = [
   "image/png",
   "image/jpeg",
   "image/webp",
+  "image/svg+xml",
   "image/gif",
   "video/mp4",
   "text/plain",
@@ -54,7 +56,7 @@ export const EVENT_ASSET_ALLOWED_MIME = [
 ];
 
 /** Types the file route lets a browser show in place; anything else is sent as a download. */
-export const ASSET_INLINE_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "video/mp4"];
+export const ASSET_INLINE_MIME = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif", "application/pdf", "video/mp4"];
 
 function baseMime(contentType: string) {
   return contentType.split(";")[0].trim().toLowerCase();
@@ -65,7 +67,8 @@ export function assetOpensInline(contentType: string) {
 }
 
 /**
- * Everything is sandboxed with no sources, except PDF and MP4: browsers will not run their PDF viewer
+ * Everything (SVG included: a sandboxed SVG draws but its script never runs) is sandboxed with no
+ * sources, except PDF and MP4: browsers will not run their PDF viewer
  * or their video player in a sandboxed document (Chrome shows a dead player at 0:00). Neither runs
  * page script on this origin: a PDF's scripts stay inside the viewer, a media document has none, and
  * nosniff keeps the bytes from ever being read as HTML. MP4 keeps its sources locked to this origin.
@@ -89,12 +92,9 @@ export function assetSizeLabel(bytes: number) {
  */
 export type AssetUploadPlace = "library" | "portal" | "logo";
 
-const ACCEPTED_NAMES = "PDF, PowerPoint, Word, Excel, PNG, JPG, WebP, GIF, MP4 or a text file";
-const LOGO_NAMES = "PNG, JPG, WebP or GIF";
-
-function isSvg(mimeType: string, fileName?: string) {
-  return baseMime(mimeType) === "image/svg+xml" || /\.svgz?$/i.test(fileName || "");
-}
+const ACCEPTED_NAMES = "PDF, PowerPoint, Word, Excel, PNG, JPG, WebP, SVG, GIF, MP4 or a text file";
+const LOGO_MIME = ["image/png", "image/jpeg", "image/webp", "image/svg+xml", "image/gif"];
+const LOGO_NAMES = "PNG, JPG, WebP, SVG or GIF";
 
 export function assetUploadRefusal(input: { mimeType: string; sizeBytes: number; fileName?: string; place?: AssetUploadPlace }): string | undefined {
   const place = input.place || "portal";
@@ -104,12 +104,7 @@ export function assetUploadRefusal(input: { mimeType: string; sizeBytes: number;
     return place === "library" ? `${size} Paste a link to it instead.` : `${size} Save a smaller copy and upload that.`;
   }
   if (!input.sizeBytes) return "That file is empty. Choose the file again.";
-  if (isSvg(input.mimeType, input.fileName)) {
-    return place === "logo"
-      ? "SVG logos can't be uploaded. Save the logo as a PNG and upload that."
-      : `SVG files can't be uploaded. Save it as a PNG or PDF and upload that.${orLink}`;
-  }
-  const allowed = place === "logo" ? ["image/png", "image/jpeg", "image/webp", "image/gif"] : EVENT_ASSET_ALLOWED_MIME;
+  const allowed = place === "logo" ? LOGO_MIME : EVENT_ASSET_ALLOWED_MIME;
   if (input.mimeType && !allowed.includes(input.mimeType)) {
     return place === "logo"
       ? `That kind of file can't be a logo. Save it as ${LOGO_NAMES} and upload that.`

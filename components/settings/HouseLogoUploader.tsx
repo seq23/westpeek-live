@@ -34,11 +34,11 @@ export function HouseLogoUploader() {
   return (
     <div className="rounded-2xl border-2 border-dashed border-brand-line p-4 text-sm" data-testid="house-logo-uploader" data-state={state.kind}>
       <p className="font-black text-brand-black">Upload a logo</p>
-      <p className="mt-1 text-xs text-brand-muted">PNG, JPG, WebP or GIF. A square image reads best — it renders at 48 to 96 pixels.</p>
+      <p className="mt-1 text-xs text-brand-muted">PNG, JPG, WebP, SVG or GIF. A square image reads best — it renders at 48 to 96 pixels.</p>
       <input
         ref={input}
         type="file"
-        accept="image/png,image/jpeg,image/webp,image/gif"
+        accept="image/png,image/jpeg,image/webp,image/svg+xml,image/gif"
         className="mt-3 block w-full text-xs"
         data-testid="house-logo-file-input"
         onChange={(event) => { const file = event.target.files?.[0]; if (file) void upload(file); }}

@@ -104,23 +104,32 @@ describe("the upload and file routes move bytes only on a valid link", () => {
     expect(new Uint8Array(await file.arrayBuffer())).toEqual(body);
   });
 
-  it("a stored upload never runs as a page: SVG is refused at upload, and an SVG or HTML already stored downloads sandboxed", async () => {
-    expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100 })).toBeTruthy();
+  it("SVG is taken again and served sandboxed inline: an SVG carrying <script> opens with the sandbox CSP and nosniff; HTML and Office files download", async () => {
+    for (const place of ["portal", "library", "logo"] as const) expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100, fileName: "logo.svg", place }), place).toBeUndefined();
     const { bucket } = memoryBucket();
     setAssetsBucketForTests(bucket);
     const { GET } = await import("@/app/api/assets/file/route");
     const svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>fetch("/api/owner")</script></svg>';
-    await bucket.put("house/logo/logo-1/old.svg", new TextEncoder().encode(svg), { httpMetadata: { contentType: "image/svg+xml" } });
+    await bucket.put("house/logo/logo-1/logo.svg", new TextEncoder().encode(svg), { httpMetadata: { contentType: "image/svg+xml" } });
     await bucket.put("evt/as-2/page.html", new TextEncoder().encode("<script>alert(1)</script>"), { httpMetadata: { contentType: "text/html" } });
     await bucket.put("evt/as-3/slide.png", new Uint8Array([137, 80, 78, 71]), { httpMetadata: { contentType: "image/png" } });
     await bucket.put("evt/as-4/deck.pdf", new TextEncoder().encode("%PDF-1.4"), { httpMetadata: { contentType: "application/pdf" } });
+    const office = { "evt/as-6/talk.pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation", "evt/as-7/brief.docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "evt/as-8/budget.xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
+    for (const [key, contentType] of Object.entries(office)) await bucket.put(key, new Uint8Array([80, 75, 3, 4]), { httpMetadata: { contentType } });
 
-    for (const key of ["house/logo/logo-1/old.svg", "evt/as-2/page.html"]) {
+    const logo = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "house/logo/logo-1/logo.svg" })}`));
+    expect(logo.status).toBe(200);
+    expect(logo.headers.get("content-type")).toBe("image/svg+xml");
+    expect(logo.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(logo.headers.get("content-security-policy")).toMatch(/^sandbox; default-src 'none'(;|$)/);
+    expect(logo.headers.get("content-security-policy")).not.toMatch(/script-src|allow-scripts/);
+    expect(logo.headers.get("x-content-type-options")).toBe("nosniff");
+    for (const key of ["evt/as-2/page.html", ...Object.keys(office)]) {
       const response = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key })}`));
-      expect(response.status).toBe(200);
-      expect(response.headers.get("content-disposition")).toMatch(/^attachment;/);
-      expect(response.headers.get("content-security-policy")).toMatch(/^sandbox; default-src 'none'/);
-      expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+      expect(response.status, key).toBe(200);
+      expect(response.headers.get("content-disposition"), key).toMatch(/^attachment;/);
+      expect(response.headers.get("content-security-policy"), key).toMatch(/^sandbox; default-src 'none'/);
+      expect(response.headers.get("x-content-type-options"), key).toBe("nosniff");
     }
     const png = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "evt/as-3/slide.png" })}`));
     expect(png.headers.get("content-disposition")).toMatch(/^inline;/);
@@ -137,14 +146,8 @@ describe("the upload and file routes move bytes only on a valid link", () => {
   });
 
   it("a refused file is told, in words, what to do next, and only the library offers a link", () => {
-    const portal = assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100, fileName: "logo.svg", place: "portal" })!;
-    expect(portal).toBe("SVG files can't be uploaded. Save it as a PNG or PDF and upload that.");
-    expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100, fileName: "logo.svg", place: "library" })).toBe("SVG files can't be uploaded. Save it as a PNG or PDF and upload that. Or paste a link to it instead.");
-    expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100, place: "logo" })).toBe("SVG logos can't be uploaded. Save the logo as a PNG and upload that.");
-    // An SVG the browser typed oddly is still named for what it is.
-    expect(assetUploadRefusal({ mimeType: "application/octet-stream", sizeBytes: 100, fileName: "Logo.SVG" })).toMatch(/^SVG files/);
     for (const place of ["portal", "logo", undefined] as const) {
-      for (const input of [{ mimeType: "image/svg+xml", sizeBytes: 100 }, { mimeType: "application/zip", sizeBytes: 100 }, { mimeType: "application/pdf", sizeBytes: 999_000_000 }]) {
+      for (const input of [{ mimeType: "text/html", sizeBytes: 100 }, { mimeType: "application/zip", sizeBytes: 100 }, { mimeType: "application/pdf", sizeBytes: 999_000_000 }]) {
         const message = assetUploadRefusal({ ...input, place })!;
         expect(message, `${place} ${input.mimeType}`).not.toMatch(/link|\//i);
         expect(message).toMatch(/upload that\.$/);
