@@ -65,11 +65,15 @@ export function assetOpensInline(contentType: string) {
 }
 
 /**
- * Everything is sandboxed with no sources, except PDF: browsers will not run their PDF viewer in a
- * sandboxed document, and a PDF's own scripts run inside that viewer, never on this origin.
+ * Everything is sandboxed with no sources, except PDF and MP4: browsers will not run their PDF viewer
+ * or their video player in a sandboxed document (Chrome shows a dead player at 0:00). Neither runs
+ * page script on this origin: a PDF's scripts stay inside the viewer, a media document has none, and
+ * nosniff keeps the bytes from ever being read as HTML. MP4 keeps its sources locked to this origin.
  */
 export function assetFileCsp(contentType: string) {
-  if (baseMime(contentType) === "application/pdf") return "frame-ancestors 'self'";
+  const mime = baseMime(contentType);
+  if (mime === "application/pdf") return "frame-ancestors 'self'";
+  if (mime === "video/mp4") return "default-src 'none'; media-src 'self'; frame-ancestors 'self'";
   return "sandbox; default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'";
 }
 
@@ -79,9 +83,37 @@ export function assetSizeLabel(bytes: number) {
   return `${bytes} B`;
 }
 
-export function assetUploadRefusal(input: { mimeType: string; sizeBytes: number }): string | undefined {
-  if (input.sizeBytes > EVENT_ASSET_MAX_BYTES) return `That file is ${assetSizeLabel(input.sizeBytes)}; the limit is ${assetSizeLabel(EVENT_ASSET_MAX_BYTES)}. Send a link instead.`;
-  if (!input.sizeBytes) return "That file is empty.";
-  if (input.mimeType && !EVENT_ASSET_ALLOWED_MIME.includes(input.mimeType)) return `We do not take ${input.mimeType} files. Decks, documents, images, MP4 video and plain text — or paste a link.`;
+/**
+ * Where a file is being added, so a refusal only offers what that screen has: the producer's library
+ * has a paste-a-link form, a speaker's or sponsor's portal and the house-logo setting do not.
+ */
+export type AssetUploadPlace = "library" | "portal" | "logo";
+
+const ACCEPTED_NAMES = "PDF, PowerPoint, Word, Excel, PNG, JPG, WebP, GIF, MP4 or a text file";
+const LOGO_NAMES = "PNG, JPG, WebP or GIF";
+
+function isSvg(mimeType: string, fileName?: string) {
+  return baseMime(mimeType) === "image/svg+xml" || /\.svgz?$/i.test(fileName || "");
+}
+
+export function assetUploadRefusal(input: { mimeType: string; sizeBytes: number; fileName?: string; place?: AssetUploadPlace }): string | undefined {
+  const place = input.place || "portal";
+  const orLink = place === "library" ? " Or paste a link to it instead." : "";
+  if (input.sizeBytes > EVENT_ASSET_MAX_BYTES) {
+    const size = `That file is ${assetSizeLabel(input.sizeBytes)}; the limit is ${assetSizeLabel(EVENT_ASSET_MAX_BYTES)}.`;
+    return place === "library" ? `${size} Paste a link to it instead.` : `${size} Save a smaller copy and upload that.`;
+  }
+  if (!input.sizeBytes) return "That file is empty. Choose the file again.";
+  if (isSvg(input.mimeType, input.fileName)) {
+    return place === "logo"
+      ? "SVG logos can't be uploaded. Save the logo as a PNG and upload that."
+      : `SVG files can't be uploaded. Save it as a PNG or PDF and upload that.${orLink}`;
+  }
+  const allowed = place === "logo" ? ["image/png", "image/jpeg", "image/webp", "image/gif"] : EVENT_ASSET_ALLOWED_MIME;
+  if (input.mimeType && !allowed.includes(input.mimeType)) {
+    return place === "logo"
+      ? `That kind of file can't be a logo. Save it as ${LOGO_NAMES} and upload that.`
+      : `That kind of file can't be uploaded. Save it as ${ACCEPTED_NAMES} and upload that.${orLink}`;
+  }
   return undefined;
 }

@@ -9,7 +9,8 @@ import { assetSizeLabel, assetUploadRefusal, EVENT_ASSET_MAX_BYTES } from "@/typ
  * there. Every refusal is said in words, and when storage is not bound the page says so and offers
  * the link instead.
  */
-export function AssetUploader({ eventId, who = "production" }: { eventId: string; who?: string }) {
+export function AssetUploader({ eventId, who = "production", place = "portal" }: { eventId: string; who?: string; place?: "library" | "portal" }) {
+  const orLink = place === "library" ? " Or paste a link." : "";
   const input = useRef<HTMLInputElement>(null);
   const [state, setState] = useState<{ kind: "idle" | "busy" | "done" | "error"; message?: string }>({ kind: "idle" });
   const [dragging, setDragging] = useState(false);
@@ -18,16 +19,16 @@ export function AssetUploader({ eventId, who = "production" }: { eventId: string
   const [pending, startTransition] = useTransition();
 
   async function upload(file: File) {
-    const refusal = assetUploadRefusal({ mimeType: file.type, sizeBytes: file.size });
+    const refusal = assetUploadRefusal({ mimeType: file.type, sizeBytes: file.size, fileName: file.name, place });
     if (refusal) { setState({ kind: "error", message: refusal }); return; }
     setState({ kind: "busy", message: `Uploading ${file.name} (${assetSizeLabel(file.size)})…` });
-    const ticket = await requestAssetUploadAction({ eventId, fileName: file.name, mimeType: file.type || "application/octet-stream", sizeBytes: file.size });
-    if (!ticket.ok) { setState({ kind: "error", message: ticket.reason || "The upload was refused and storage gave no reason. Paste a link instead." }); return; }
+    const ticket = await requestAssetUploadAction({ eventId, fileName: file.name, mimeType: file.type || "application/octet-stream", sizeBytes: file.size, place });
+    if (!ticket.ok) { setState({ kind: "error", message: ticket.reason || `The upload was refused. Try again in a minute.${orLink}` }); return; }
     try {
       const response = await fetch(ticket.signedUrl, { method: "PUT", body: file, headers: { "content-type": file.type || "application/octet-stream" } });
       if (!response.ok) throw new Error(`storage answered ${response.status}`);
     } catch (error) {
-      setState({ kind: "error", message: `The file did not reach storage (${error instanceof Error ? error.message : String(error)}). Try again, or paste a link.` });
+      setState({ kind: "error", message: `The file did not reach storage (${error instanceof Error ? error.message : String(error)}). Try again.${orLink}` });
       return;
     }
     startTransition(async () => {
@@ -48,7 +49,7 @@ export function AssetUploader({ eventId, who = "production" }: { eventId: string
       onDrop={(event) => { event.preventDefault(); setDragging(false); const file = event.dataTransfer.files?.[0]; if (file) void upload(file); }}
     >
       <p className="font-black text-brand-black">Add a file</p>
-      <p className="mt-1 text-xs text-brand-muted">Drag it here, or choose one. Decks, documents, images, MP4 and plain text up to {assetSizeLabel(EVENT_ASSET_MAX_BYTES)}. Uploaded as {who}.</p>
+      <p className="mt-1 text-xs text-brand-muted">Drag it here, or choose one: PDF, PowerPoint, Word, Excel, PNG, JPG, WebP, GIF, MP4 or text, up to {assetSizeLabel(EVENT_ASSET_MAX_BYTES)}. Uploaded as {who}.</p>
       <input
         ref={input}
         type="file"

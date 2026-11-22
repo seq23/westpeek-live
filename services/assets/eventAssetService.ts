@@ -2,7 +2,7 @@ import { randomId } from "@/lib/security/portableCrypto";
 import { getAssetsBucket } from "@/lib/d1/binding";
 import { signDownloadUrl, signUploadUrl } from "./signedUrlService";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
-import { EVENT_ASSET_BUCKET, assetUploadRefusal, type EventAssetRecord, type EventAssetStatus, type EventAssetUploaderKind, type EventAssetVisibility } from "@/types/eventAssets";
+import { EVENT_ASSET_BUCKET, assetUploadRefusal, type AssetUploadPlace, type EventAssetRecord, type EventAssetStatus, type EventAssetUploaderKind, type EventAssetVisibility } from "@/types/eventAssets";
 
 /**
  * Real files for an event, in the private R2 bucket (binding ASSETS_BUCKET). The server mints a
@@ -53,10 +53,15 @@ export async function requestAssetUpload(input: {
   fileName: string;
   mimeType: string;
   sizeBytes: number;
+  place?: AssetUploadPlace;
 }): Promise<UploadTicket | UploadRefusal> {
-  const refusal = assetUploadRefusal({ mimeType: input.mimeType, sizeBytes: input.sizeBytes });
+  const place = input.place === "library" ? "library" : "portal";
+  const refusal = assetUploadRefusal({ mimeType: input.mimeType, sizeBytes: input.sizeBytes, fileName: input.fileName, place });
   if (refusal) return { ok: false, reason: refusal };
-  if (!getAssetsBucket()) return { ok: false, reason: `${NOT_BOUND} Paste a link to the file instead.` };
+  if (!getAssetsBucket()) {
+    console.error(`[assets] ${NOT_BOUND}`);
+    return { ok: false, reason: place === "library" ? `${NOT_BOUND} Paste a link to the file instead.` : "File uploads are not working right now. Send the file to the producer another way, and they will add it." };
+  }
   const assetId = randomId("asset");
   const storagePath = storagePathFor(input.eventId, assetId, input.fileName);
   return uploadTicket(storagePath, assetId, input.mimeType, input.sizeBytes);
@@ -73,9 +78,8 @@ export async function requestAssetUpload(input: {
 export const HOUSE_LOGO_PREFIX = "house/logo";
 
 export async function requestHouseLogoUpload(input: { fileName: string; mimeType: string; sizeBytes: number }): Promise<UploadTicket | UploadRefusal> {
-  const refusal = assetUploadRefusal({ mimeType: input.mimeType, sizeBytes: input.sizeBytes });
+  const refusal = assetUploadRefusal({ mimeType: input.mimeType, sizeBytes: input.sizeBytes, fileName: input.fileName, place: "logo" });
   if (refusal) return { ok: false, reason: refusal };
-  if (!input.mimeType.startsWith("image/")) return { ok: false, reason: "A logo has to be an image — PNG, JPG, WebP or GIF." };
   if (!getAssetsBucket()) return { ok: false, reason: `${NOT_BOUND} A logo cannot be uploaded; the wordmark stays.` };
   const assetId = randomId("logo");
   const storagePath = storagePathFor(HOUSE_LOGO_PREFIX, assetId, input.fileName);

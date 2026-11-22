@@ -69,7 +69,7 @@ export async function EventAssetLibrary({ eventId, clientFacing = false }: { eve
         <p className="text-sm text-brand-muted">Everything this event has been sent: decks, logos, graphics, contracts. A speaker or sponsor upload lands here as <strong>in review</strong> until the crew approves it. &ldquo;Show the client&rdquo; is what puts a file on their side of the wall. Archiving hides a file from the list; nothing is ever deleted.</p>
         {clientFacing ? null : (
           <div className="mt-4 grid gap-3 lg:grid-cols-2">
-            <AssetUploader eventId={eventId} />
+            <AssetUploader eventId={eventId} place="library" />
             <form action={addAssetLinkAction} className="rounded-2xl border border-brand-line p-4 text-sm" data-testid="asset-link-form">
               <p className="font-black text-brand-black">Or paste a link</p>
               <p className="mt-1 text-xs text-brand-muted">For a file that lives in Drive, Dropbox or a client portal — or if storage is unavailable.</p>

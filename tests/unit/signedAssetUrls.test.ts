@@ -105,7 +105,7 @@ describe("the upload and file routes move bytes only on a valid link", () => {
   });
 
   it("a stored upload never runs as a page: SVG is refused at upload, and an SVG or HTML already stored downloads sandboxed", async () => {
-    expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100 })).toMatch(/do not take image\/svg\+xml/);
+    expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100 })).toBeTruthy();
     const { bucket } = memoryBucket();
     setAssetsBucketForTests(bucket);
     const { GET } = await import("@/app/api/assets/file/route");
@@ -128,6 +128,30 @@ describe("the upload and file routes move bytes only on a valid link", () => {
     const pdf = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "evt/as-4/deck.pdf" })}`));
     expect(pdf.headers.get("content-disposition")).toMatch(/^inline;/);
     expect(pdf.headers.get("content-security-policy")).toBe("frame-ancestors 'self'");
+    // A video opens in the browser's player, which a sandboxed document never starts; its sources stay locked.
+    await bucket.put("evt/as-5/reel.mp4", new Uint8Array([0, 0, 0, 24]), { httpMetadata: { contentType: "video/mp4" } });
+    const mp4 = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "evt/as-5/reel.mp4" })}`));
+    expect(mp4.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(mp4.headers.get("content-security-policy")).toBe("default-src 'none'; media-src 'self'; frame-ancestors 'self'");
+    expect(mp4.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+
+  it("a refused file is told, in words, what to do next, and only the library offers a link", () => {
+    const portal = assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100, fileName: "logo.svg", place: "portal" })!;
+    expect(portal).toBe("SVG files can't be uploaded. Save it as a PNG or PDF and upload that.");
+    expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100, fileName: "logo.svg", place: "library" })).toBe("SVG files can't be uploaded. Save it as a PNG or PDF and upload that. Or paste a link to it instead.");
+    expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100, place: "logo" })).toBe("SVG logos can't be uploaded. Save the logo as a PNG and upload that.");
+    // An SVG the browser typed oddly is still named for what it is.
+    expect(assetUploadRefusal({ mimeType: "application/octet-stream", sizeBytes: 100, fileName: "Logo.SVG" })).toMatch(/^SVG files/);
+    for (const place of ["portal", "logo", undefined] as const) {
+      for (const input of [{ mimeType: "image/svg+xml", sizeBytes: 100 }, { mimeType: "application/zip", sizeBytes: 100 }, { mimeType: "application/pdf", sizeBytes: 999_000_000 }]) {
+        const message = assetUploadRefusal({ ...input, place })!;
+        expect(message, `${place} ${input.mimeType}`).not.toMatch(/link|\//i);
+        expect(message).toMatch(/upload that\.$/);
+      }
+    }
+    expect(assetUploadRefusal({ mimeType: "application/zip", sizeBytes: 100, place: "library" })).toMatch(/paste a link/);
+    expect(assetUploadRefusal({ mimeType: "application/pdf", sizeBytes: 100, place: "logo" })).toMatch(/can't be a logo/);
   });
 
   it("answers 503 in words when the bucket is not bound", async () => {
