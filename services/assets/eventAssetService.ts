@@ -75,7 +75,7 @@ export const HOUSE_LOGO_PREFIX = "house/logo";
 export async function requestHouseLogoUpload(input: { fileName: string; mimeType: string; sizeBytes: number }): Promise<UploadTicket | UploadRefusal> {
   const refusal = assetUploadRefusal({ mimeType: input.mimeType, sizeBytes: input.sizeBytes });
   if (refusal) return { ok: false, reason: refusal };
-  if (!input.mimeType.startsWith("image/")) return { ok: false, reason: "A logo has to be an image — PNG, JPG or SVG." };
+  if (!input.mimeType.startsWith("image/")) return { ok: false, reason: "A logo has to be an image — PNG, JPG, WebP or GIF." };
   if (!getAssetsBucket()) return { ok: false, reason: `${NOT_BOUND} A logo cannot be uploaded; the wordmark stays.` };
   const assetId = randomId("logo");
   const storagePath = storagePathFor(HOUSE_LOGO_PREFIX, assetId, input.fileName);

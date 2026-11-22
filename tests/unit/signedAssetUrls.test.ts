@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setAssetsBucketForTests, type R2BucketLike } from "@/lib/d1/binding";
 import { signDownloadUrl, signUploadUrl, verifyDownloadUrl, verifyUploadUrl } from "@/services/assets/signedUrlService";
+import { assetUploadRefusal } from "@/types/eventAssets";
 
 /**
  * The private R2 bucket opens only to links this Worker signed. Expired, tampered, widened and
@@ -101,6 +102,32 @@ describe("the upload and file routes move bytes only on a valid link", () => {
     expect(file.status).toBe(200);
     expect(file.headers.get("content-type")).toBe("application/pdf");
     expect(new Uint8Array(await file.arrayBuffer())).toEqual(body);
+  });
+
+  it("a stored upload never runs as a page: SVG is refused at upload, and an SVG or HTML already stored downloads sandboxed", async () => {
+    expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100 })).toMatch(/do not take image\/svg\+xml/);
+    const { bucket } = memoryBucket();
+    setAssetsBucketForTests(bucket);
+    const { GET } = await import("@/app/api/assets/file/route");
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>fetch("/api/owner")</script></svg>';
+    await bucket.put("house/logo/logo-1/old.svg", new TextEncoder().encode(svg), { httpMetadata: { contentType: "image/svg+xml" } });
+    await bucket.put("evt/as-2/page.html", new TextEncoder().encode("<script>alert(1)</script>"), { httpMetadata: { contentType: "text/html" } });
+    await bucket.put("evt/as-3/slide.png", new Uint8Array([137, 80, 78, 71]), { httpMetadata: { contentType: "image/png" } });
+    await bucket.put("evt/as-4/deck.pdf", new TextEncoder().encode("%PDF-1.4"), { httpMetadata: { contentType: "application/pdf" } });
+
+    for (const key of ["house/logo/logo-1/old.svg", "evt/as-2/page.html"]) {
+      const response = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key })}`));
+      expect(response.status).toBe(200);
+      expect(response.headers.get("content-disposition")).toMatch(/^attachment;/);
+      expect(response.headers.get("content-security-policy")).toMatch(/^sandbox; default-src 'none'/);
+      expect(response.headers.get("x-content-type-options")).toBe("nosniff");
+    }
+    const png = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "evt/as-3/slide.png" })}`));
+    expect(png.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(png.headers.get("content-security-policy")).toMatch(/^sandbox; default-src 'none'/);
+    const pdf = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "evt/as-4/deck.pdf" })}`));
+    expect(pdf.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(pdf.headers.get("content-security-policy")).toBe("frame-ancestors 'self'");
   });
 
   it("answers 503 in words when the bucket is not bound", async () => {

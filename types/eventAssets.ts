@@ -34,6 +34,10 @@ export const EVENT_ASSET_BUCKET = "event-assets";
 /** 50 MB: bigger than any deck we have been sent, small enough that a Worker request never stalls. */
 export const EVENT_ASSET_MAX_BYTES = 50_000_000;
 
+/**
+ * SVG is not taken: an SVG is a document that can carry script, and anyone holding its link could
+ * open it as a page. PNG, JPEG, WebP and GIF cover logos and slides.
+ */
 export const EVENT_ASSET_ALLOWED_MIME = [
   "application/pdf",
   "application/vnd.openxmlformats-officedocument.presentationml.presentation",
@@ -42,13 +46,32 @@ export const EVENT_ASSET_ALLOWED_MIME = [
   "image/png",
   "image/jpeg",
   "image/webp",
-  "image/svg+xml",
   "image/gif",
   "video/mp4",
   "text/plain",
   "text/csv",
   "text/markdown",
 ];
+
+/** Types the file route lets a browser show in place; anything else is sent as a download. */
+export const ASSET_INLINE_MIME = ["image/png", "image/jpeg", "image/webp", "image/gif", "application/pdf", "video/mp4"];
+
+function baseMime(contentType: string) {
+  return contentType.split(";")[0].trim().toLowerCase();
+}
+
+export function assetOpensInline(contentType: string) {
+  return ASSET_INLINE_MIME.includes(baseMime(contentType));
+}
+
+/**
+ * Everything is sandboxed with no sources, except PDF: browsers will not run their PDF viewer in a
+ * sandboxed document, and a PDF's own scripts run inside that viewer, never on this origin.
+ */
+export function assetFileCsp(contentType: string) {
+  if (baseMime(contentType) === "application/pdf") return "frame-ancestors 'self'";
+  return "sandbox; default-src 'none'; img-src 'self'; media-src 'self'; style-src 'unsafe-inline'; frame-ancestors 'self'";
+}
 
 export function assetSizeLabel(bytes: number) {
   if (bytes >= 1_000_000) return `${(bytes / 1_000_000).toFixed(1)} MB`;
