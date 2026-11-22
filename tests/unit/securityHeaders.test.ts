@@ -12,8 +12,8 @@ describe("security headers", () => {
     for (const path of ["/", "/login", "/venue/evt-1/lobby", "/app/events/evt-1/assets", "/api/assets/upload", "/api/assets/evt/download"]) {
       const headers = Object.fromEntries(matches(path).flatMap((rule) => rule.headers.map((h) => [h.key, h.value])));
       expect(headers["Strict-Transport-Security"], path).toMatch(/^max-age=31536000/);
-      expect(headers["Content-Security-Policy"], path).toContain("frame-ancestors 'self'");
-      expect(headers["Content-Security-Policy"], path).toContain("object-src 'none'");
+      const csp = headers["Content-Security-Policy"] ?? "";
+      for (const directive of ["frame-ancestors 'self'", "object-src 'none'", "base-uri 'self'", "form-action 'self'"]) expect(csp.split("; "), `${path} ${directive}`).toContain(directive);
     }
     expect(matches("/api/assets/file")).toEqual([]);
   });
