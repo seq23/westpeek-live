@@ -56,15 +56,14 @@ check("services/events/eventRepository.ts", ['"attendeeSessionDays"']);
 const restore = check("services/attendees/attendeeReturnService.ts", [
   "export async function restoreAttendeeOnThisDevice",
   'gate: "attendee_return"',
-  "checkGateAttempts(attemptKey)",
-  "recordGateFailure(attemptKey)",
+  'takeGateAttempt({ ip: input.ip, scope: input.eventId, gate: "attendee_return" })',
   "getAttendeeProfileByEmailHash(input.eventId, emailHash)",
   "upsertContactFromProfile(profile)",
   'createAttendeeSession(profile, { assurance: "email_restored" })',
 ]);
 if (/not registered|no such (attendee|email)|never registered/i.test(restore)) throw new Error("The return path must never say whether an address is registered.");
 // The counter must run before the lookup's outcome is known, or a hit is a free oracle.
-if (restore.indexOf("recordGateFailure(attemptKey)") > restore.indexOf("getAttendeeProfileByEmailHash")) {
+if (restore.indexOf("takeGateAttempt(") > restore.indexOf("getAttendeeProfileByEmailHash")) {
   throw new Error("Every attempt must be counted before the match is known, hit or miss.");
 }
 const action = check("lib/actions/attendeeReturnActions.ts", ["restoreRegistrationOnThisDeviceAction", "requestIpHash", "ensureRuntimeEvent(eventId)", "?email=${encodeURIComponent(email)}", "?wait=${outcome.retryInSeconds}", "registration_restored_on_new_device"]);

@@ -68,7 +68,7 @@ deployment/cloudflare-required-secrets.json
 Current Day 1 access values:
 
 ```text
-CREW_ACCESS_PASSWORD=Crew-Call-2026!
+CREW_ACCESS_PASSWORD=set in Cloudflare (vault: WESTPEEK_LIVE_CREW_ACCESS_PASSWORD)
 EVENT_DEMO_SPEAKER_CODE=Demo-Speaker-2026!
 EVENT_DEMO_SPONSOR_CODE=Demo-Sponsor-2026!
 EVENT_DEMO_VIP_CODE=Demo-VIP-2026!

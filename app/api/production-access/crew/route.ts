@@ -2,11 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { missingAccessEnv } from "@/lib/env/safeEnv";
-import { ownerOverrideResponseIfMatched, redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
-import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
+import { redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
+import { gateScopeForEventCode, resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
-import { checkGateAttempts, clearGateAttempts, gateAttemptKeyFor, recordGateFailure, requestIpHash } from "@/services/access/gateAttemptLimiter";
+import { ownerSignInResponse } from "@/lib/auth/ownerAtEveryDoor";
+import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import type { V4CrewRole } from "@/types/v4";
 import { CREW_ROLES } from "@/lib/auth/crewRolePermissions";
 import { getHostLinkState } from "@/services/events/hostLinkService";
@@ -29,31 +30,27 @@ export async function POST(request: NextRequest) {
   const safeNext = safeAccessRedirectTarget(String(formData.get("next") ?? ""), eventCode ? `/crew/events/${eventCode}` : "/crew/events/demo");
   const env = getEnv();
 
-  // Readable codes are guessable by design; the gate is where that is paid for.
+  // Counted against the event the code resolves to, never the typed text (gateScopeForEventCode).
   const { ip, ipHash } = await requestIpHash(request);
-  const attemptKey = gateAttemptKeyFor({ ip, eventCode, gate: "crew" });
-  const gate = checkGateAttempts(attemptKey);
+  const gate = await takeGateAttempt({ ip, scope: await gateScopeForEventCode(eventCode), gate: "crew" });
+  // The owner password works here too, read against this count (ownerAtEveryDoor).
+  const owner = await ownerSignInResponse({ request, password, door: "crew", attempt: gate, next: String(formData.get("next") ?? "") || undefined, fallback: eventCode ? `/crew/events/${encodeURIComponent(eventCode)}` : "/app/owner" });
+  if (owner) return owner;
   if (!gate.allowed) {
-    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: eventCode || undefined, role: crewRole, reason: "rate_limited", route: "/production-access/crew", ipHash });
-    return redirectTo(request, `/production-access/crew?error=too_many&retry=${gate.retryInSeconds}`);
+    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: eventCode || undefined, role: crewRole, reason: gate.reason === "too_many" ? "rate_limited" : "rate_limiter_unavailable", route: "/production-access/crew", ipHash });
+    return redirectTo(request, `/production-access/crew?${gateRefusalQuery(gate)}`);
   }
-
-  const ownerOverride = await ownerOverrideResponseIfMatched({ request, password, route: "/production-access/crew", next: safeNext, fallback: eventCode ? `/crew/events/${eventCode}` : "/crew/events/demo" });
-  if (ownerOverride) { clearGateAttempts(attemptKey); return ownerOverride; }
 
   // The global crew password still opens every event; a runtime-created event's own crew code opens just that event.
   const access = await resolveCrewAccess(eventCode || undefined, crewRole, password || "");
   if (!access.ok) {
     const invalidPassword = access.reason === "invalid_password" || !password;
-    const limit = recordGateFailure(attemptKey);
     // The role, the event and the time — never what they typed.
-    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId || eventCode || undefined, role: crewRole, reason: limit.cooling ? "rate_limited_after_failures" : access.reason || "invalid_password", route: "/production-access/crew", ipHash });
-    if (limit.cooling) return redirectTo(request, `/production-access/crew?error=too_many&retry=${limit.retryInSeconds}`);
+    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId || eventCode || undefined, role: crewRole, reason: access.reason || "invalid_password", route: "/production-access/crew", ipHash });
     const superseded = supersededGateQuery(access);
     return redirectTo(request, superseded ? `/production-access/crew?${superseded}` : invalidPassword ? "/production-access/crew?error=invalid" : "/production-access/crew?error=invalid_event");
   }
 
-  clearGateAttempts(attemptKey);
   await logAccessAttempt({ status: "access_granted", accessKind: "crew", eventId: access.eventId, role: access.role || crewRole, route: access.destination, ipHash });
   const { crewCookieName } = getV5AccessCookieNames(env);
   const viaEventCode = Boolean(access.eventId) && password !== (getCrewAccessPassword()?.trim() || "\u0000");

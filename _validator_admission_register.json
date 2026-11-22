@@ -3069,7 +3069,7 @@
       "severity": "HARD FAIL",
       "productionRisk": "static validation",
       "whatItProves": "Every code an event gets is WPL-[ROLE-]STEM with the stem taken from the event's own name (six letters/digits, hash-padded when short, disambiguated with a digit when another live event holds it); a hand-set code survives adopting the scheme while the old generated shapes do not; and because the codes are derivable by design, both privileged gates rate-limit attempts per place and event and log every failure with role, event, time and a hashed IP, never the attempted value.",
-      "whatItDoesNotProve": "Static contract; derivation, collisions, adopt and the cooldown are proven by tests/unit/readableAccessCodes.test.ts and tests/unit/gateAttemptLimiter.test.ts.",
+      "whatItDoesNotProve": "Static contract; derivation, collisions, adopt and the cross-isolate rate limit are proven by tests/unit/readableAccessCodes.test.ts and tests/unit/gateAttemptLimiter.test.ts.",
       "failureHandling": "Record and repair without blocking unrelated runtime validation.",
       "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
       "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",

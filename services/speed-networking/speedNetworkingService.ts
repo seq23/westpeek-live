@@ -1,3 +1,4 @@
+import { storedGoalIntents } from "@/services/speed-networking/networkingGoalIntent";
 import { randomId } from "@/lib/security/portableCrypto";
 import { refusePreviewWrite } from "@/lib/auth/previewIdentity";
 import { planSpeedNetworkingRound, selectSpeedNetworkingTier, type SpeedNetworkingCandidate, type SpeedNetworkingTier } from "@/services/speed-networking/speedNetworkingTiers";
@@ -186,7 +187,7 @@ async function buildRoundCandidates(eventId: string, entries: SpeedNetworkingQue
   if (!waiting.length) return [];
   const profiles = await getRuntimeStore().listAttendeeProfiles(eventId).catch(() => []);
   const byAttendee = new Map(profiles.map((profile) => [profile.attendeeId, profile]));
-  return waiting.map((entry) => {
+  return Promise.all(waiting.map(async (entry) => {
     const profile = byAttendee.get(entry.attendeeId);
     return {
       attendeeId: entry.attendeeId,
@@ -195,11 +196,12 @@ async function buildRoundCandidates(eventId: string, entries: SpeedNetworkingQue
       title: entry.title || profile?.title,
       topicsOfInterest: profile?.topicsOfInterest || [],
       networkingGoals: profile?.networkingGoals,
+      goalIntents: await storedGoalIntents(profile),
       joinedAt: entry.joinedAt,
       priority: roundState.priorityAttendeeIds.includes(entry.attendeeId),
       timesSatOut: roundState.satOutCounts[entry.attendeeId] || 0,
     };
-  });
+  }));
 }
 
 /**

@@ -2,6 +2,7 @@ import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { updateNetworkingSettingsAction } from "@/lib/actions/networkingActions";
 import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
 import { crewNetworkingSummary } from "@/services/speed-networking/speedNetworkingService";
+import { goalReadCapReached } from "@/services/speed-networking/networkingGoalIntent";
 
 /**
  * The crew's Networking card: queue size, matches in progress (who with whom, time left), the
@@ -25,6 +26,7 @@ export async function NetworkingCrewCard({ eventId, viewer: givenViewer }: { eve
     );
   }
   const { settings } = summary;
+  const goalsByKeywords = await goalReadCapReached();
   return (
     <section className="rounded-3xl border border-slate-200 bg-white p-5 shadow-sm" data-testid="networking-crew-card" data-open={settings.open ? "true" : "false"} data-queue-size={summary.queueSize} data-matches-in-progress={summary.matchesInProgress} data-match-minutes={settings.matchMinutes}>
       <div className="flex flex-wrap items-start justify-between gap-3">
@@ -51,6 +53,7 @@ export async function NetworkingCrewCard({ eventId, viewer: givenViewer }: { eve
           {summary.active.map((match) => <li key={match.id} data-testid={`networking-match-${match.id}`}><strong>{match.a}</strong> ↔ <strong>{match.b}</strong> · {Math.max(0, Math.round((new Date(match.expiresAt).getTime() - Date.now()) / 60_000))} min left · room <code className="text-[11px] text-slate-400">{match.roomName}</code></li>)}
         </ul>
       ) : null}
+      {goalsByKeywords ? <p className="mt-3 rounded-2xl bg-amber-50 px-3 py-2 text-xs text-amber-900" data-testid="networking-goals-by-keywords">Goals saved for the rest of this month are matched by keywords: this month&apos;s allowance for reading goals is used up. Matching still works; new goals are read a little less closely.</p> : null}
       {summary.waiting.length ? <p className="mt-2 text-xs text-slate-500" data-testid="networking-waiting-names">Waiting: {summary.waiting.map((entry) => entry.displayName).join(", ")}</p> : null}
     </section>
   );

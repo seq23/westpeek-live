@@ -1,45 +1,13 @@
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { GateExit } from "@/components/access/GateExit";
+import { GateRefusalNotice } from "@/components/access/GateRefusalNotice";
 export const dynamic = "force-dynamic";
 
-import { cookies } from "next/headers";
 import { redirect } from "next/navigation";
 import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
-import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret, matchOwnerMasterPassword } from "@/lib/env";
-import { logAccessAttempt } from "@/services/access/accessAuditService";
-import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { alreadyAuthorisedDestination } from "@/lib/auth/ownerNeverEntersACode";
 
-async function enterOwner(formData: FormData) {
-  "use server";
-  const password = String(formData.get("password") ?? "");
-  const next = String(formData.get("next") ?? "/app/owner");
-  const env = getEnv();
-
-  // Either owner master password (OWNER_MASTER_ACCESS_PASSWORD or the optional _2) is a full owner.
-  const ownerKey = matchOwnerMasterPassword(password, env);
-  if (!ownerKey) {
-    await logAccessAttempt({ status: "access_denied", accessKind: "owner", role: "owner", reason: "invalid_password", route: "/production-access/owner" });
-    redirect("/production-access/owner?error=invalid");
-  }
-
-  const { ownerCookieName } = getV5AccessCookieNames(env);
-  const cookie = await createV5AccessCookie({
-    kind: "owner",
-    role: "owner",
-    ownerKey,
-    issuedAt: Date.now(),
-    expiresAt: Date.now() + 1000 * 60 * 60 * 12,
-  }, getV5AccessCookieSecret(env));
-
-  (await cookies()).set(ownerCookieName, cookie, getV5CookieOptions(60 * 60 * 12));
-
-  const safeNext = next.startsWith("/") && !next.startsWith("//") ? next : "/app/owner";
-  await logAccessAttempt({ status: "access_granted", accessKind: "owner", role: "owner", reason: `owner_master:${ownerKey}`, route: safeNext });
-  redirect(safeNext);
-}
-
-export default async function OwnerAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; next?: string }> }) {
+export default async function OwnerAccessPage({ searchParams }: { searchParams?: Promise<{ error?: string; retry?: string; next?: string }> }) {
   const resolvedSearchParams = searchParams ? await searchParams : undefined;
   // A cookie that already opens the destination is not asked for the password again.
   if (!resolvedSearchParams?.error) {
@@ -57,7 +25,9 @@ export default async function OwnerAccessPage({ searchParams }: { searchParams?:
             Use this only for owner-level show control, billing, settings, admin testing, and full event workspace access.
             Operator, crew, speaker, sponsor, client, and VIP access do not grant this authority.
           </p>
-          <form action={enterOwner} className="mt-6 space-y-5">
+          {/* Refusals sit above the form, where a phone shows them without scrolling. */}
+          {resolvedSearchParams?.error === "too_many" || resolvedSearchParams?.error === "paused" ? <GateRefusalNotice error={resolvedSearchParams.error} retry={resolvedSearchParams.retry} /> : resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Owner password did not match.</p> : null}
+          <form action="/api/production-access/owner" method="post" className="mt-6 space-y-5">
             <input type="hidden" name="next" value={resolvedSearchParams?.next || "/app/owner"} />
             <div>
               <label htmlFor="owner-password" className="text-sm font-black">Owner master password <span className="text-brand-orange">*</span></label>
@@ -65,7 +35,6 @@ export default async function OwnerAccessPage({ searchParams }: { searchParams?:
             </div>
             <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Enter owner workspace</button>
           </form>
-          {resolvedSearchParams?.error ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Owner password did not match.</p> : null}
           <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>
