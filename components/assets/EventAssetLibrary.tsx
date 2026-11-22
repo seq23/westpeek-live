@@ -74,7 +74,7 @@ export async function EventAssetLibrary({ eventId, clientFacing = false }: { eve
               <p className="font-black text-brand-black">Or paste a link</p>
               <p className="mt-1 text-xs text-brand-muted">For a file that lives in Drive, Dropbox or a client portal — or if storage is unavailable.</p>
               <input type="hidden" name="eventId" value={eventId} />
-              <input name="url" placeholder="https://drive.google.com/…" className="mt-2 w-full rounded-xl border border-brand-line px-3 py-2 text-sm" data-testid="asset-link-url" />
+              <input name="url" type="url" required pattern="https://.+" title="Paste the full address, starting with https://" placeholder="https://drive.google.com/…" className="mt-2 w-full rounded-xl border border-brand-line px-3 py-2 text-sm" data-testid="asset-link-url" />
               <input name="fileName" placeholder="What is it? (optional)" className="mt-2 w-full rounded-xl border border-brand-line px-3 py-2 text-sm" data-testid="asset-link-name" />
               <button className="mt-3 rounded-full bg-brand-black px-4 py-2 text-xs font-black text-white" data-testid="asset-link-submit">Add the link</button>
             </form>
