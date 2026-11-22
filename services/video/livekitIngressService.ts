@@ -47,6 +47,37 @@ export function createLiveKitServerToken(input: { apiKey: string; apiSecret: str
   return `${header}.${payload}.${signature}`;
 }
 
+/**
+ * A LiveKit (Twirp) refusal with its HTTP status and Twirp error code ("already_exists",
+ * "not_found", "resource_exhausted"...), so callers branch on the code, never on the wording.
+ */
+export class LiveKitApiError extends Error {
+  constructor(readonly status: number, readonly code: string, message: string) {
+    super(message);
+    this.name = "LiveKitApiError";
+  }
+}
+
+function twirpCode(text: string) {
+  try {
+    const parsed = JSON.parse(text) as { code?: unknown };
+    return typeof parsed.code === "string" ? parsed.code : "";
+  } catch {
+    return "";
+  }
+}
+
+/**
+ * The Twirp code decides when LiveKit sent one. The bare HTTP status is a fallback only where
+ * guessing wrong is harmless (pass `status`); "not found" is never read from a status alone, since a
+ * proxy 404 or a Twirp bad_route says nothing about whether the ingress still exists.
+ */
+function isLiveKitError(error: unknown, code: string, status?: number) {
+  if (!(error instanceof LiveKitApiError)) return false;
+  if (error.code) return error.code === code;
+  return status !== undefined && error.status === status;
+}
+
 export async function livekitTwirp<T>(input: { livekitUrl: string; token: string; method: string; body: unknown }): Promise<T> {
   const response = await fetch(`${normalizeLiveKitApiBaseUrl(input.livekitUrl)}/twirp/livekit.${input.method}`, {
     method: "POST",
@@ -57,7 +88,7 @@ export async function livekitTwirp<T>(input: { livekitUrl: string; token: string
     body: JSON.stringify(input.body),
   });
   const text = await response.text();
-  if (!response.ok) throw new Error(`LiveKit API ${input.method} failed (${response.status}): ${text.slice(0, 500)}`);
+  if (!response.ok) throw new LiveKitApiError(response.status, twirpCode(text), `LiveKit API ${input.method} failed (${response.status}): ${text.slice(0, 500)}`);
   return text ? JSON.parse(text) as T : {} as T;
 }
 
@@ -65,8 +96,7 @@ async function ensureLiveKitRoom(livekitUrl: string, token: string, roomName: st
   try {
     await livekitTwirp({ livekitUrl, token, method: "RoomService/CreateRoom", body: { name: roomName, empty_timeout: 300, max_participants: 1000 } });
   } catch (error) {
-    const message = error instanceof Error ? error.message.toLowerCase() : "";
-    if (!message.includes("already") && !message.includes("exists")) throw error;
+    if (!isLiveKitError(error, "already_exists", 409)) throw error;
   }
 }
 
@@ -145,7 +175,7 @@ export async function provisionStreamYardLiveKitIngress(input: { eventId: string
       // not get credentials: every earlier event — the demos, an archived throwaway, a planned draft —
       // still held its ingress, because nothing ever deleted one. Reclaim what no live show is using
       // and try once more; the console shows the reason if that is still not enough.
-      if (!/429|resource_exhausted|ingress object limit/i.test(String((error as Error)?.message))) throw error;
+      if (!isLiveKitError(error, "resource_exhausted", 429)) throw error;
       const reclaimed = await reclaimStaleIngresses(livekit.livekitUrl, token, { keepRoomName: roomName });
       if (reclaimed.deleted.length === 0) throw new Error(`${(error as Error).message} — nothing stale to reclaim: every ingress belongs to a live or upcoming event.`);
       ingress = await createLiveKitRtmpIngress(livekit.livekitUrl, token, { eventId: input.eventId, stageId, roomName });
@@ -217,7 +247,7 @@ export async function releaseIngressForEvent(eventId: string, stageId = "main-st
     await livekitTwirp<unknown>({ livekitUrl: livekit.livekitUrl, token, method: "Ingress/DeleteIngress", body: { ingress_id: state.livekitIngressId } });
   } catch (error) {
     // An ingress LiveKit no longer has is already released; anything else is reported, not hidden.
-    if (!/not_found|404|does not exist/i.test(String((error as Error)?.message))) return { released: false, reason: (error as Error).message };
+    if (!isLiveKitError(error, "not_found")) return { released: false, reason: (error as Error).message };
   }
   const cleared = { ...state, livekitIngressId: undefined, livekitIngressUrl: undefined, livekitStreamKey: undefined, lastProvisionError: undefined, updatedAt: new Date().toISOString() };
   await getRuntimeStore().setStageStreamState(stageStreamKey(eventId, stageId), cleared);

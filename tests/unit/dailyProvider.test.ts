@@ -105,4 +105,21 @@ describe("Daily provider implementation", () => {
     expect(room.joinUrl).toBe("https://westpeeklive.daily.co/event-1-main-stage");
     expect(fetchMock).toHaveBeenCalledTimes(2);
   });
+
+  const provider = () => new DailyVideoProvider({ apiKey: "daily_test_secret", apiBaseUrl: "https://api.daily.co/v1", domain: "westpeeklive.daily.co", fallbackEnabled: true });
+  const input = { agencyId: "agency-1", eventId: "event-1", provider: "daily" as const, roomType: "main_stage" as const, label: "Main Stage" };
+
+  it("a 400 with no room behind it is the original error, not a reused room", async () => {
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (url, init) => {
+      if (String(url).endsWith("/rooms") && init?.method === "POST") return new Response(JSON.stringify({ error: "invalid-request-error", info: "properties.exp is invalid" }), { status: 400 });
+      return new Response(JSON.stringify({ error: "not-found" }), { status: 404 });
+    });
+    await expect(provider().createRoom(input)).rejects.toThrow(/400.*properties\.exp is invalid/);
+  });
+
+  it("an auth failure that mentions 'already exists' is never read as a name clash", async () => {
+    const fetchMock = vi.spyOn(globalThis, "fetch").mockImplementation(async () => new Response(JSON.stringify({ error: "authentication-error", info: "key for a room that already exists was revoked" }), { status: 401 }));
+    await expect(provider().createRoom(input)).rejects.toThrow(/401/);
+    expect(fetchMock).toHaveBeenCalledTimes(1);
+  });
 });
