@@ -10,7 +10,7 @@ export * from "@playwright/test";
  * 20 a minute per gate). In production Cloudflare sets `cf-connecting-ip`; under `next start` the
  * whole suite comes from 127.0.0.1, so a few dozen honest sign-ins in a minute read as a prober and
  * every later test is refused with `too_many`. Here each test (and each retry) sends a stable,
- * distinct TEST-NET address instead, so a test sees exactly the limits one real visitor would. A test
+ * distinct private 10.x address instead, so a test sees exactly the limits one real visitor would. A test
  * that probes the limit itself still shares one address across its own attempts.
  */
 export function testAddressFor(key: string) {
@@ -29,7 +29,8 @@ function isLocal(baseURL: string | undefined) {
 
 export const test = base.extend({
   extraHTTPHeaders: async ({ extraHTTPHeaders, baseURL }, use, testInfo) => {
-    // Only the local server trusts this header; a deployed run goes through Cloudflare, which sets it.
+    // A deployed run goes through Cloudflare, which overwrites cf-connecting-ip with the real
+    // address, so the header is only sent to the local server.
     if (!isLocal(baseURL)) return use(extraHTTPHeaders);
     const address = testAddressFor(`${testInfo.project.name}:${testInfo.testId}:${testInfo.retry}`);
     await use({ ...extraHTTPHeaders, "cf-connecting-ip": address });
