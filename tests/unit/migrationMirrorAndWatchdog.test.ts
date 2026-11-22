@@ -13,7 +13,7 @@ describe("the schema has one home: migrations-d1, applied before every deploy", 
     expect(fs.existsSync("supabase")).toBe(false);
     expect(fs.existsSync("db/migrations")).toBe(false);
     const files = fs.readdirSync("migrations-d1").filter((name) => /^\d{4}_.*\.sql$/.test(name)).sort();
-    expect(files).toEqual(["0001_core.sql", "0002_approvals_inbox.sql", "0003_runtime.sql", "0004_attendees_live.sql", "0005_networking_email.sql", "0006_events_audit_auth.sql", "0007_incident_log_and_show_marks.sql"]);
+    expect(files).toEqual(["0001_core.sql", "0002_approvals_inbox.sql", "0003_runtime.sql", "0004_attendees_live.sql", "0005_networking_email.sql", "0006_events_audit_auth.sql", "0007_incident_log_and_show_marks.sql", "0008_networking_goal_intent.sql"]);
     // Every file after the flattened six only widens: additive, so production data keeps working.
     for (const file of files.slice(6)) {
       const sql = fs.readFileSync(path.join("migrations-d1", file), "utf8").replace(/--.*$/gm, "").toUpperCase();

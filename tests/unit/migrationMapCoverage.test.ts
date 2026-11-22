@@ -62,13 +62,13 @@ describe("the runtime migration map cannot be forgotten", () => {
     // The incident log's columns (30 Oct 2026) point at the file that adds them, so an unapplied 0007 is named.
     for (const column of ["source", "reported_by", "updated_at", "resolved_at"]) expect(RUNTIME_TABLE_MIGRATIONS[`v6_incident_events.${column}`]).toBe("migrations-d1/0007_incident_log_and_show_marks.sql");
     expect(RUNTIME_TABLE_MIGRATIONS["v6_incident_events.severity"]).toBe("migrations-d1/0006_events_audit_auth.sql");
-    expect(Object.keys(D1_SCHEMA)).toHaveLength(60);
+    expect(Object.keys(D1_SCHEMA)).toHaveLength(61);
   });
 
   it("the generated manifest is current and the schema validator passes with its count", () => {
     expect(run("scripts/generate_d1_schema_manifest.mjs", ["--check"])).toMatchObject({ code: 0 });
     const { code, output } = run("scripts/validate_d1_schema_parity.js");
-    expect(output).toMatch(/validate_d1_schema_parity: PASS — \d+ checks: 7 migration files, 60 tables, \d+ columns/);
+    expect(output).toMatch(/validate_d1_schema_parity: PASS — \d+ checks: 8 migration files, 61 tables, \d+ columns/);
     expect(code).toBe(0);
   });
 

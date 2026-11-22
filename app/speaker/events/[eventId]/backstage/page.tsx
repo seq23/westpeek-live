@@ -32,7 +32,7 @@ export default async function SpeakerOnStagePage({ params, searchParams }: { par
             <h2 className="mt-2 text-2xl font-black text-slate-950">Your camera and microphone publish to the main stage. Attendees see your tile.</h2>
             <p className="mt-2 text-sm text-slate-700">When the crew sends you backstage, this room closes and you return to the green room.</p>
           </section>
-          {viewAs ? <div className="rounded-3xl bg-slate-950 p-4 text-white" data-testid="guest-room-video-preview-placeholder"><p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Main stage</p><p className="mt-3 rounded-2xl bg-white/10 p-6 text-sm text-slate-200">Not joined in preview: joining would publish to the stage under {speaker.name}&rsquo;s name.</p></div> : <GuestRoomVideo eventId={eventId} roomId="main-stage" roomType="main_stage" role="speaker" displayName={speaker.name} title="Main stage" />}
+          {viewAs ? <div className="wpl-as-authored rounded-3xl bg-slate-950 p-4 text-white" data-testid="guest-room-video-preview-placeholder"><p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">Main stage</p><p className="mt-3 rounded-2xl bg-white/10 p-6 text-sm text-slate-200">Not joined in preview: joining would publish to the stage under {speaker.name}&rsquo;s name.</p></div> : <GuestRoomVideo eventId={eventId} roomId="main-stage" roomType="main_stage" role="speaker" displayName={speaker.name} title="Main stage" />}
         </div>
       )}
     </SpeakerPortalShell>

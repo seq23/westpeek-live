@@ -5,7 +5,7 @@ import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlR
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
 import { archiveAsset, recordUploadedAsset, requestAssetUpload, setAssetReview, setAssetVisibility, storedObjectExists } from "@/services/assets/eventAssetService";
-import type { EventAssetStatus, EventAssetVisibility } from "@/types/eventAssets";
+import { ASSET_LINK_REFUSAL, httpsAssetLink, type EventAssetStatus, type EventAssetVisibility } from "@/types/eventAssets";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || "").trim();
@@ -35,13 +35,14 @@ async function guestUploader(eventId: string) {
  * Step one of a real upload: the server checks who is asking and what they are sending, then mints
  * a short-lived signed link to /api/assets/upload, which streams the bytes into the private R2 bucket.
  */
-export async function requestAssetUploadAction(input: { eventId: string; fileName: string; mimeType: string; sizeBytes: number }) {
+export async function requestAssetUploadAction(input: { eventId: string; fileName: string; mimeType: string; sizeBytes: number; place?: "library" | "portal" }) {
   const actor = await getWorkspaceActor();
   const guest = actor ? undefined : await guestUploader(input.eventId);
   if (!actor && !guest) {
     try { await requireAssetControl(input.eventId); } catch (error) { return { ok: false as const, reason: error instanceof Error ? error.message : "You cannot add files to this event." }; }
   }
-  return requestAssetUpload(input);
+  // Only the crew's library has a link form; a guest is always told the portal's next step.
+  return requestAssetUpload({ ...input, place: guest ? "portal" : input.place });
 }
 
 /** Step two: the bytes are in the bucket, so the row goes in the library. */
@@ -72,10 +73,12 @@ export async function confirmAssetUploadAction(input: { eventId: string; assetId
 /** Production pastes a link when the file lives somewhere else (or storage is not configured). */
 export async function addAssetLinkAction(formData: FormData) {
   const eventId = clean(formData.get("eventId"));
-  const url = clean(formData.get("url"));
-  if (!eventId || !url) return;
+  const pasted = clean(formData.get("url"));
+  if (!eventId || !pasted) return;
   const actor = await getWorkspaceActor();
   const label = actor ? actor.label : await requireAssetControl(eventId);
+  const url = httpsAssetLink(pasted);
+  if (!url) throw new Error(ASSET_LINK_REFUSAL);
   await recordUploadedAsset({
     eventId,
     assetId: `asset-link-${Date.now()}`,

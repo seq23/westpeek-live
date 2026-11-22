@@ -71,7 +71,7 @@ export async function CommandBarGoLive({ eventId, viewer, stageId = "main-stage"
 export async function CommandBarCredentials({ eventId, viewer, stageId = "main-stage" }: { eventId: string; viewer: CrewViewer; stageId?: string }) {
   const shape = await readShape(eventId, stageId);
   return (
-    <details open={shape.hasCredentials || shape.ended} className="rounded-b-3xl bg-brand-black/95 px-4 py-2 text-white shadow-lg" data-testid="command-bar-credentials" data-has-credentials={shape.hasCredentials ? "true" : "false"} data-ended={shape.ended ? "true" : "false"}>
+    <details open={shape.hasCredentials || shape.ended} className="wpl-as-authored rounded-b-3xl bg-brand-black/95 px-4 py-2 text-white shadow-lg" data-testid="command-bar-credentials" data-has-credentials={shape.hasCredentials ? "true" : "false"} data-ended={shape.ended ? "true" : "false"}>
       <summary className="cursor-pointer list-none text-xs font-black uppercase tracking-[0.25em] text-white/70 hover:text-white">
         Stream credentials {shape.hasCredentials ? "▾" : shape.ended ? "▾" : "▸"}
       </summary>

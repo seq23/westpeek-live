@@ -208,7 +208,7 @@ export function BrowserDiagnosticsPanel({ eventId, onResultsChange }: { eventId:
             These checks run in the operator or participant browser. They do not join a real video provider yet; they prove the device/browser layer before Phase 7 room integration.
           </p>
         </div>
-        <div className="rounded-2xl bg-slate-950 px-4 py-3 text-white">
+        <div className="wpl-as-authored rounded-2xl bg-slate-950 px-4 py-3 text-white">
           <p className="text-xs uppercase tracking-wide text-slate-400">Readiness</p>
           <p className="text-xl font-semibold">{summary.status.replace(/_/g, " ").toUpperCase()} · {summary.score}%</p>
         </div>
@@ -216,7 +216,7 @@ export function BrowserDiagnosticsPanel({ eventId, onResultsChange }: { eventId:
 
       <div className="mt-5 grid gap-4 xl:grid-cols-[420px_1fr]">
         <div className="space-y-4">
-          <video ref={videoRef} muted playsInline className="aspect-video w-full rounded-2xl bg-slate-950 object-cover" />
+          <video ref={videoRef} muted playsInline className="wpl-as-authored aspect-video w-full rounded-2xl bg-slate-950 object-cover" />
           <div className="rounded-2xl bg-slate-50 p-4">
             <div className="flex items-center justify-between text-sm">
               <span className="font-semibold text-slate-700">Microphone peak</span>

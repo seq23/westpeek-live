@@ -89,7 +89,7 @@ export async function ClientReportBuilder({ eventId }: { eventId: string }) {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl bg-slate-950 p-6 text-white">
+      <div className="wpl-as-authored rounded-3xl bg-slate-950 p-6 text-white">
         <p className="text-sm text-slate-300">Client report builder</p>
         <h1 className="mt-2 text-3xl font-semibold">{event?.name || eventId}</h1>
         <p className="mt-2 text-slate-300">Every figure is counted from what this event actually recorded. Nothing is estimated and nothing is carried over from another event. The client portal shows the client these same numbers.</p>

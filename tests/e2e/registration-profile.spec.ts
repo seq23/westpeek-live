@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 
 /** Registration asks for three things (plus an optional title); the rich profile fields live on "Tell us more" inside the venue. */
