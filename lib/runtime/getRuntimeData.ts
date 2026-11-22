@@ -95,6 +95,7 @@ function dynamicDraftRunOfShow(eventId: string): SeedRunOfShow[] | undefined {
     responsibleUserId: "",
     producerNotes: own.get(session.id)?.cueNotes || "No producer notes yet. Add them on Run of Show.",
     technicalCues: own.get(session.id)?.cueNotes || "No technical cues yet.",
+    networking: own.get(session.id)?.networking === true,
     clientFacingDescription: session.name,
     backupPlan: "If the feed drops, the stage moves down the fallback ladder; the producer decides when.",
     pollCue: "",

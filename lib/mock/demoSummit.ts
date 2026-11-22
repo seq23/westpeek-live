@@ -59,6 +59,7 @@ interface SegmentPlan {
   pollCue?: string;
   qAndACue?: string;
   sponsorMention?: string;
+  networking?: boolean;
   readinessStatus: RunOfShowSegment["readinessStatus"];
   approvalStatus: RunOfShowSegment["approvalStatus"];
 }
@@ -181,6 +182,7 @@ const SEGMENT_PLAN: SegmentPlan[] = [
     from: 155,
     to: 175,
     room: NETWORKING_LOUNGE,
+    networking: true,
     producerNotes: "Queue opens at 153 so there is a pool before the first round. Watch the monitor for odd numbers and unmatched waits.",
     technicalCues: "Open the networking queue, stage shows the lounge card, crew monitors match health.",
     clientFacingDescription: "Four minutes on camera with one person you have not met, then it moves you on. Join the queue and it keeps going until you leave.",
@@ -286,6 +288,7 @@ function buildRunOfShow(): RunOfShowSegment[] {
     pollCue: plan.pollCue,
     qAndACue: plan.qAndACue,
     sponsorMention: plan.sponsorMention,
+    networking: plan.networking === true,
     readinessStatus: plan.readinessStatus,
     approvalStatus: plan.approvalStatus,
     clientVisible: true,

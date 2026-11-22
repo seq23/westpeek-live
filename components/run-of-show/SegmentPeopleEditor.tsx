@@ -3,7 +3,8 @@ import type { ShowSegment } from "@/services/run-of-show/eventShow";
 
 /**
  * Who is on in one segment: tick the speakers (those who have entered with the speaker code), name
- * the host or owner, anyone else on who has not entered yet, and the cue notes for the crew. Used
+ * the host or owner, anyone else on who has not entered yet, the cue notes for the crew, and whether
+ * it is a networking block (guests then get the queue link on its row). Used
  * on Setup · Agenda and on the run of show; both save the same session.
  */
 export function SegmentPeopleEditor({ eventId, segment, speakers }: { eventId: string; segment: ShowSegment; speakers: Array<{ guestId: string; name: string }> }) {
@@ -34,6 +35,10 @@ export function SegmentPeopleEditor({ eventId, segment, speakers }: { eventId: s
         <label className="grid gap-1 text-xs font-bold text-slate-700">
           Cue notes for the crew
           <textarea name="cueNotes" defaultValue={segment.cueNotes || ""} maxLength={1000} rows={2} placeholder="Roll the sponsor sting, then bring both panelists on" className="rounded-xl border border-slate-300 px-3 py-2 text-sm font-normal" data-testid={`segment-cues-${segment.sessionId}`} />
+        </label>
+        <label className="flex items-start gap-2 text-sm">
+          <input type="checkbox" name="networking" defaultChecked={segment.networking} className="mt-1" data-testid={`segment-networking-${segment.sessionId}`} />
+          <span><span className="font-bold text-slate-900">Networking block</span><span className="block text-xs text-slate-600">Guests see a &ldquo;Join the networking queue&rdquo; link on this row of the agenda.</span></span>
         </label>
         <div><button className="rounded-full bg-slate-950 px-4 py-2 text-xs font-black text-white" data-testid={`segment-people-save-${segment.sessionId}`}>Save who is on</button></div>
       </form>

@@ -35,8 +35,6 @@ export interface AttendeeRunOfShowView {
   segments: AttendeeRunOfShowSegment[];
 }
 
-const NETWORKING = /network|mingle|meet\s*&?\s*greet/i;
-
 export function attendeeRunOfShowFromShow(show: EventShow): AttendeeRunOfShowView {
   const runs = show.segments.filter((run) => run.segment.title && run.state !== "skipped");
   const segments = runs.map((run): AttendeeRunOfShowSegment => ({
@@ -46,7 +44,7 @@ export function attendeeRunOfShowFromShow(show: EventShow): AttendeeRunOfShowVie
     endAt: run.segment.endAt,
     room: run.segment.room,
     description: run.segment.description,
-    networking: NETWORKING.test(run.segment.title) || NETWORKING.test(run.segment.room),
+    networking: run.segment.networking,
     state: run.state === "current" ? "now" : run.state === "done" ? "finished" : "later",
   }));
   if (!segments.length) return { total: 0, position: 0, finished: false, segments };
