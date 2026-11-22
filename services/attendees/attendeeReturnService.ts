@@ -51,7 +51,7 @@ export async function restoreAttendeeOnThisDevice(input: { eventId: string; emai
   if (!input.eventId || !email.includes("@")) return { status: "invalid" };
 
   // Counted whether or not it matches: a bucket that only counts misses is a free oracle for hits.
-  const gate = await takeGateAttempt({ ip: input.ip, eventCode: input.eventId, gate: "attendee_return" });
+  const gate = await takeGateAttempt({ ip: input.ip, scope: input.eventId, gate: "attendee_return" });
   if (!gate.allowed) return { status: "rate_limited", retryInSeconds: gate.reason === "too_many" ? gate.retryInSeconds : 60 };
 
   const store = getRuntimeStore();

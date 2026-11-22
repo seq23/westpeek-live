@@ -10,7 +10,7 @@ export function GateRefusalNotice({ error, retry, hint }: { error?: string; retr
     return <p className={className} data-testid="gate-too-many">Too many tries from here. Wait about {seconds} seconds and try again{hint ? ` — ${hint}` : "."}</p>;
   }
   if (error === "paused") {
-    return <p className={className} data-testid="gate-paused">Sign-in is paused for a minute because a safety check is not answering. Nothing is wrong with your password; try again shortly.</p>;
+    return <p className={className} data-testid="gate-paused">Sign-in is paused because a safety check is not answering. Your password was not checked; try again in a minute.</p>;
   }
   return null;
 }

@@ -6,19 +6,19 @@ import { NextRequest } from "next/server";
 import type { RateLimitBindingLike } from "@/lib/d1/binding";
 import { FileRuntimeStore } from "@/services/runtime/fileRuntimeStore";
 import { setRuntimeStoreForTests } from "@/services/runtime/runtimeStoreFactory";
-import { createInProcessRateLimiter, GATE_ATTEMPTS_PER_WINDOW, GATE_WINDOW_SECONDS, resetGateAttemptsForTests, setGateLimiterForTests, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
+import { createInProcessRateLimiter, GATE_ATTEMPTS_PER_WINDOW, GATE_WIDE_ATTEMPTS_PER_WINDOW, GATE_WINDOW_SECONDS, ipRateKey, resetGateAttemptsForTests, setGateLimiterForTests, takeGateAttempt, UNKNOWN_EVENT_SCOPE } from "@/services/access/gateAttemptLimiter";
+import { createEventRecord } from "@/services/events/eventRepository";
 
 /**
- * Readable codes (WPL-CREW-45MINU) are guessable from a public event name on purpose, so the gate
- * is where that is paid for: a few tries a minute from one place, then a wait. The count lives in the
+ * Every door that takes a secret is limited: a few tries a minute from one place, then a wait. The count lives in the
  * Cloudflare Rate Limiting binding, shared by every isolate; these tests stand in for the binding
  * with one shared counter and load the limiter module fresh to play a new isolate.
  */
 const OWNER_PASSWORD = "owner-test-master-2027";
 
 /** One counter for "the Cloudflare location", as the binding is: every isolate sees the same one. */
-function sharedBinding(): RateLimitBindingLike & { calls: string[] } {
-  const inner = createInProcessRateLimiter(GATE_ATTEMPTS_PER_WINDOW, GATE_WINDOW_SECONDS);
+function sharedBinding(limit = GATE_ATTEMPTS_PER_WINDOW): RateLimitBindingLike & { calls: string[] } {
+  const inner = createInProcessRateLimiter(limit, GATE_WINDOW_SECONDS);
   const calls: string[] = [];
   return { calls, limit: async (options) => { calls.push(options.key); return inner.limit(options); } };
 }
@@ -61,8 +61,8 @@ describe("gate attempt limiter", () => {
 
   it("lets an honest mistype through", async () => {
     setGateLimiterForTests(sharedBinding());
-    expect((await takeGateAttempt({ ip: "203.0.113.5", eventCode: "WPL-45MINU", gate: "crew" })).allowed).toBe(true);
-    expect((await takeGateAttempt({ ip: "203.0.113.5", eventCode: "WPL-45MINU", gate: "crew" })).allowed).toBe(true);
+    expect((await takeGateAttempt({ ip: "203.0.113.5", scope: "event-45minu", gate: "crew" })).allowed).toBe(true);
+    expect((await takeGateAttempt({ ip: "203.0.113.5", scope: "event-45minu", gate: "crew" })).allowed).toBe(true);
   });
 
   it("holds the limit across isolates: a prober spread over fresh isolates is still refused", async () => {
@@ -97,11 +97,11 @@ describe("gate attempt limiter", () => {
 
   it("one prober does not lock out a different event, a different place or a different gate", async () => {
     setGateLimiterForTests(sharedBinding());
-    for (let attempt = 0; attempt < GATE_ATTEMPTS_PER_WINDOW + 1; attempt += 1) await takeGateAttempt({ ip: "203.0.113.5", eventCode: "WPL-45MINU", gate: "crew" });
-    expect((await takeGateAttempt({ ip: "203.0.113.5", eventCode: "WPL-45MINU", gate: "crew" })).allowed).toBe(false);
-    expect((await takeGateAttempt({ ip: "203.0.113.5", eventCode: "WPL-OTHER", gate: "crew" })).allowed).toBe(true);
-    expect((await takeGateAttempt({ ip: "198.51.100.9", eventCode: "WPL-45MINU", gate: "crew" })).allowed).toBe(true);
-    expect((await takeGateAttempt({ ip: "203.0.113.5", eventCode: "WPL-45MINU", gate: "special_guest" })).allowed).toBe(true);
+    for (let attempt = 0; attempt < GATE_ATTEMPTS_PER_WINDOW + 1; attempt += 1) await takeGateAttempt({ ip: "203.0.113.5", scope: "event-45minu", gate: "crew" });
+    expect((await takeGateAttempt({ ip: "203.0.113.5", scope: "event-45minu", gate: "crew" })).allowed).toBe(false);
+    expect((await takeGateAttempt({ ip: "203.0.113.5", scope: "event-other", gate: "crew" })).allowed).toBe(true);
+    expect((await takeGateAttempt({ ip: "198.51.100.9", scope: "event-45minu", gate: "crew" })).allowed).toBe(true);
+    expect((await takeGateAttempt({ ip: "203.0.113.5", scope: "event-45minu", gate: "special_guest" })).allowed).toBe(true);
   });
 
   it("the window ends by itself", async () => {
@@ -116,10 +116,113 @@ describe("gate attempt limiter", () => {
 
   it("the limiter never sees what was typed: the key is the gate, the event and the address", async () => {
     const binding = sharedBinding();
-    (await freshIsolate()).setGateLimiterForTests(binding);
+    const wide = sharedBinding(GATE_WIDE_ATTEMPTS_PER_WINDOW);
+    (await freshIsolate()).setGateLimiterForTests(binding, wide);
     const { POST } = await import("@/app/api/production-access/owner/route");
     await POST(gatePost("owner", { password: "a-secret-guess" }));
     expect(binding.calls).toEqual(["owner:-:203.0.113.5"]);
+    expect(wide.calls).toEqual(["owner:*:203.0.113.5"]);
+  });
+
+  it("an IPv6 address counts by its /64; IPv4 and IPv4-mapped addresses as they are", () => {
+    expect(ipRateKey("2001:db8:aa:bb:1:2:3:4")).toBe("2001:db8:aa:bb::/64");
+    expect(ipRateKey("2001:0db8:00aa:00bb:ffff:ffff:ffff:ffff")).toBe("2001:db8:aa:bb::/64");
+    expect(ipRateKey("2001:db8:aa::1")).toBe("2001:db8:aa:0::/64");
+    expect(ipRateKey("::ffff:203.0.113.5")).toBe("203.0.113.5");
+    expect(ipRateKey("203.0.113.5")).toBe("203.0.113.5");
+    expect(ipRateKey(undefined)).toBe("unknown");
+  });
+
+  it("a fresh IPv6 address per try from one /64 is still refused by the 7th", async () => {
+    setGateLimiterForTests(sharedBinding());
+    const results = [];
+    for (let attempt = 1; attempt <= GATE_ATTEMPTS_PER_WINDOW + 1; attempt += 1) results.push((await takeGateAttempt({ ip: `2001:db8:aa:bb::${attempt.toString(16)}`, gate: "owner" })).allowed);
+    expect(results.slice(0, GATE_ATTEMPTS_PER_WINDOW).every(Boolean)).toBe(true);
+    expect(results[GATE_ATTEMPTS_PER_WINDOW]).toBe(false);
+  });
+
+  it("walking from event to event does not reset the count: the wide limit holds one address across all events", async () => {
+    setGateLimiterForTests(sharedBinding());
+    const allowed = [];
+    for (let attempt = 0; attempt < GATE_WIDE_ATTEMPTS_PER_WINDOW + 1; attempt += 1) allowed.push((await takeGateAttempt({ ip: "203.0.113.5", scope: `event-${attempt}`, gate: "crew" })).allowed);
+    expect(allowed.slice(0, GATE_WIDE_ATTEMPTS_PER_WINDOW).every(Boolean)).toBe(true);
+    expect(allowed[GATE_WIDE_ATTEMPTS_PER_WINDOW]).toBe(false);
+  });
+
+  describe("lying client: the typed event code is varied or padded for a fresh count", () => {
+    async function realEvent() {
+      return createEventRecord({ name: `Limiter ${Date.now()}`, when: "now" }, { kind: "owner", id: "owner", label: "Owner", role: "owner" });
+    }
+
+    it("crew door: a new or padded event code each try is still refused by the 7th, and the right password then gets no cookie", async () => {
+      (await freshIsolate()).setGateLimiterForTests(sharedBinding());
+      const event = await realEvent();
+      const { POST } = await import("@/app/api/production-access/crew/route");
+      const join = event.joinCode;
+      // Six spellings of one event, each a fresh count under the old typed-text key.
+      const variants = [join, `${join} `, ` ${join.toLowerCase()}`, join.replace("-", " "), join.replace("-", ""), `  ${join}  `];
+      for (const eventCode of variants) {
+        expect((await POST(gatePost("crew", { eventCode, password: "wrong-guess" }))).headers.get("location")).toContain("error=invalid");
+      }
+      const seventh = await POST(gatePost("crew", { eventCode: join.toLowerCase(), password: event.accessCodes!.crew! }));
+      expect(seventh.headers.get("location")).toContain("error=too_many");
+      expect(seventh.cookies.getAll()).toHaveLength(0);
+    });
+
+    it("crew door: varying the code over unknown events is one count", async () => {
+      (await freshIsolate()).setGateLimiterForTests(sharedBinding());
+      const { POST } = await import("@/app/api/production-access/crew/route");
+      for (let attempt = 1; attempt <= GATE_ATTEMPTS_PER_WINDOW; attempt += 1) {
+        expect((await POST(gatePost("crew", { eventCode: `x${attempt}`, password: OWNER_PASSWORD }))).headers.get("location")).not.toContain("too_many");
+      }
+      const seventh = await POST(gatePost("crew", { eventCode: "x7", password: "crew-test-password" }));
+      expect(seventh.headers.get("location")).toContain("error=too_many");
+      expect(seventh.cookies.getAll()).toHaveLength(0);
+    });
+
+    it("special-guest door: padded variants of a real event's code are one count; the right code on the 7th gets no cookie", async () => {
+      (await freshIsolate()).setGateLimiterForTests(sharedBinding());
+      const event = await realEvent();
+      const { POST } = await import("@/app/api/production-access/special-guest/route");
+      const join = event.joinCode;
+      for (let attempt = 0; attempt < GATE_ATTEMPTS_PER_WINDOW; attempt += 1) {
+        const response = await POST(gatePost("special-guest", { eventCode: `${" ".repeat(attempt)}${join}${" ".repeat(attempt)}`, roleCode: `WPL-SPEAKER-WRONG${attempt}` }));
+        expect(response.headers.get("location")).not.toContain("too_many");
+      }
+      const seventh = await POST(gatePost("special-guest", { eventCode: join.toLowerCase(), roleCode: event.accessCodes!.speaker! }));
+      expect(seventh.headers.get("location")).toContain("error=too_many");
+      expect(seventh.cookies.getAll()).toHaveLength(0);
+    });
+
+    it("unknown event codes at the guest door share the one unknown-event count", async () => {
+      const binding = sharedBinding();
+      (await freshIsolate()).setGateLimiterForTests(binding);
+      const { POST } = await import("@/app/api/production-access/special-guest/route");
+      await POST(gatePost("special-guest", { eventCode: "nope-1", roleCode: "x" }));
+      await POST(gatePost("special-guest", { eventCode: "nope-2", roleCode: "x" }));
+      expect(binding.calls).toEqual([`special_guest:${UNKNOWN_EVENT_SCOPE}:203.0.113.5`, `special_guest:${UNKNOWN_EVENT_SCOPE}:203.0.113.5`]);
+    });
+  });
+
+  describe("the owner password opens only the owner door", () => {
+    it("at the crew, operator and special-guest doors it is a wrong password: no owner cookie", async () => {
+      (await freshIsolate()).setGateLimiterForTests(sharedBinding());
+      const crew = await (await import("@/app/api/production-access/crew/route")).POST(gatePost("crew", { eventCode: "", password: OWNER_PASSWORD }));
+      const operator = await (await import("@/app/api/production-access/operator/route")).POST(gatePost("operator", { password: OWNER_PASSWORD }));
+      const guest = await (await import("@/app/api/production-access/special-guest/route")).POST(gatePost("special-guest", { eventCode: "demo", roleCode: OWNER_PASSWORD }));
+      for (const response of [crew, operator, guest]) {
+        expect(response.headers.get("location")).toMatch(/error=/);
+        expect(response.cookies.getAll()).toHaveLength(0);
+      }
+    });
+
+    it("in an outage the guest door fails open, and the owner password there still opens nothing", async () => {
+      vi.spyOn(console, "error").mockImplementation(() => undefined);
+      (await freshIsolate()).setGateLimiterForTests(undefined);
+      const guest = await (await import("@/app/api/production-access/special-guest/route")).POST(gatePost("special-guest", { eventCode: "demo", roleCode: OWNER_PASSWORD }));
+      expect(guest.headers.get("location")).toMatch(/error=/);
+      expect(guest.cookies.getAll()).toHaveLength(0);
+    });
   });
 
   describe("outage: the binding is missing or failing in a Worker", () => {
@@ -134,7 +237,7 @@ describe("gate attempt limiter", () => {
       const operator = await (await import("@/app/api/production-access/operator/route")).POST(gatePost("operator", { password: "operator-test-password" }));
       expect(operator.headers.get("location")).toContain("/production-access/operator?error=paused");
       expect(operator.cookies.getAll()).toHaveLength(0);
-      expect(await isolate.takeGateAttempt({ gate: "crew", eventCode: "WPL-45MINU" })).toEqual({ allowed: false, reason: "limiter_unavailable" });
+      expect(await isolate.takeGateAttempt({ gate: "crew", scope: "event-45minu" })).toEqual({ allowed: false, reason: "limiter_unavailable" });
     });
 
     it("a binding that throws is the same outage, refused for the production doors", async () => {
@@ -145,8 +248,8 @@ describe("gate attempt limiter", () => {
 
     it("guest doors let the attempt through, logged, so speakers are not locked out of a running show", async () => {
       setGateLimiterForTests(undefined);
-      expect(await takeGateAttempt({ gate: "special_guest", eventCode: "WPL-45MINU" })).toEqual({ allowed: true, degraded: true });
-      expect(await takeGateAttempt({ gate: "attendee_return", eventCode: "event-1" })).toEqual({ allowed: true, degraded: true });
+      expect(await takeGateAttempt({ gate: "special_guest", scope: "event-45minu" })).toEqual({ allowed: true, degraded: true });
+      expect(await takeGateAttempt({ gate: "attendee_return", scope: "event-1" })).toEqual({ allowed: true, degraded: true });
       expect(console.error).toHaveBeenCalledTimes(2);
     });
   });

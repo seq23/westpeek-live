@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { missingAccessEnv } from "@/lib/env/safeEnv";
-import { ownerOverrideResponseIfMatched, redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
-import { resolveCrewAccess } from "@/services/access/eventAccessResolver";
+import { redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
+import { gateScopeForEventCode, resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
@@ -29,17 +29,15 @@ export async function POST(request: NextRequest) {
   const safeNext = safeAccessRedirectTarget(String(formData.get("next") ?? ""), eventCode ? `/crew/events/${eventCode}` : "/crew/events/demo");
   const env = getEnv();
 
-  // Readable codes are guessable by design; the gate is where that is paid for.
+  // Counted against the event the code resolves to, never the typed text (gateScopeForEventCode).
   const { ip, ipHash } = await requestIpHash(request);
-  const gate = await takeGateAttempt({ ip, eventCode, gate: "crew" });
+  const gate = await takeGateAttempt({ ip, scope: await gateScopeForEventCode(eventCode), gate: "crew" });
   if (!gate.allowed) {
     await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: eventCode || undefined, role: crewRole, reason: gate.reason === "too_many" ? "rate_limited" : "rate_limiter_unavailable", route: "/production-access/crew", ipHash });
     return redirectTo(request, `/production-access/crew?${gateRefusalQuery(gate)}`);
   }
 
-  const ownerOverride = await ownerOverrideResponseIfMatched({ request, password, route: "/production-access/crew", next: safeNext, fallback: eventCode ? `/crew/events/${eventCode}` : "/crew/events/demo" });
-  if (ownerOverride) return ownerOverride;
-
+  // The owner password opens only the owner door. An owner already signed in never sees this gate.
   // The global crew password still opens every event; a runtime-created event's own crew code opens just that event.
   const access = await resolveCrewAccess(eventCode || undefined, crewRole, password || "");
   if (!access.ok) {

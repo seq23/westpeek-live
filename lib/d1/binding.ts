@@ -69,6 +69,14 @@ export function getGateRateLimiter(): { inWorker: boolean; binding?: RateLimitBi
   return { inWorker: true, binding: binding && typeof binding.limit === "function" ? binding : undefined };
 }
 
+/** The wide count: one address across every event at a gate (services/access/gateAttemptLimiter.ts). */
+export function getWideGateRateLimiter(): { inWorker: boolean; binding?: RateLimitBindingLike } {
+  const env = cloudflareEnv();
+  if (!env) return { inWorker: false };
+  const binding = env.GATE_LIMITER_WIDE as RateLimitBindingLike | undefined;
+  return { inWorker: true, binding: binding && typeof binding.limit === "function" ? binding : undefined };
+}
+
 export function setD1ForTests(db: D1DatabaseLike | undefined) {
   testDb = db;
 }

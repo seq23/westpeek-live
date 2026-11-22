@@ -56,7 +56,7 @@ check("services/events/eventRepository.ts", ['"attendeeSessionDays"']);
 const restore = check("services/attendees/attendeeReturnService.ts", [
   "export async function restoreAttendeeOnThisDevice",
   'gate: "attendee_return"',
-  'takeGateAttempt({ ip: input.ip, eventCode: input.eventId, gate: "attendee_return" })',
+  'takeGateAttempt({ ip: input.ip, scope: input.eventId, gate: "attendee_return" })',
   "getAttendeeProfileByEmailHash(input.eventId, emailHash)",
   "upsertContactFromProfile(profile)",
   'createAttendeeSession(profile, { assurance: "email_restored" })',

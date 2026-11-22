@@ -2,8 +2,8 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { missingAccessEnv } from "@/lib/env/safeEnv";
-import { ownerOverrideResponseIfMatched, redirectTo } from "@/lib/auth/accessGateResponse";
-import { resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
+import { redirectTo } from "@/lib/auth/accessGateResponse";
+import { gateScopeForEventCode, resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
 import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
@@ -19,16 +19,14 @@ export async function POST(request: NextRequest) {
   const roleCode = String(formData.get("roleCode") ?? "");
 
   const { ip, ipHash } = await requestIpHash(request);
-  const gate = await takeGateAttempt({ ip, eventCode, gate: "special_guest" });
+  const gate = await takeGateAttempt({ ip, scope: await gateScopeForEventCode(eventCode), gate: "special_guest" });
   if (!gate.allowed) {
     await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: eventCode || undefined, role: "unknown", reason: gate.reason === "too_many" ? "rate_limited" : "rate_limiter_unavailable", route: "/production-access/special-guest", ipHash });
     return redirectTo(request, `/production-access/special-guest?${gateRefusalQuery(gate)}`);
   }
 
-  // The owner master password here lands on "Preview a guest" for the typed event code, not the workspace.
-  const ownerOverride = await ownerOverrideResponseIfMatched({ request, password: roleCode, route: "/production-access/special-guest", next: `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode)}`, fallback: "/production-access/special-guest/preview" });
-  if (ownerOverride) return ownerOverride;
-
+  // This door fails open in an outage, so it never takes a production password: the owner previews
+  // guests from the owner console (/production-access/special-guest/preview), not from here.
   const access = await resolveSpecialGuestAccess(eventCode, roleCode);
   if (!access.ok || !access.destination || !access.eventId || !access.role) {
     await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: access.eventId || eventCode || undefined, role: String(access.role || "unknown"), reason: access.reason, route: "/production-access/special-guest", ipHash });

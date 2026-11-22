@@ -3,7 +3,7 @@ import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionA
 import { assertSeparatedProductionPasswords, getEnv, getOperatorLaunchpadPassword, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { missingAccessEnv } from "@/lib/env/safeEnv";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
-import { ownerOverrideResponseIfMatched, redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
+import { redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
 import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 
 export const dynamic = "force-dynamic";
@@ -24,9 +24,7 @@ export async function POST(request: NextRequest) {
     return redirectTo(request, `/production-access/operator?${gateRefusalQuery(gate)}`);
   }
 
-  const ownerOverride = await ownerOverrideResponseIfMatched({ request, password, route: "/production-access/operator", next: safeNext, fallback: "/production-access/launchpad" });
-  if (ownerOverride) return ownerOverride;
-
+  // The owner password opens only the owner door. An owner already signed in never sees this gate.
   if (!password || password !== getOperatorLaunchpadPassword(env)) {
     await logAccessAttempt({ status: "access_denied", accessKind: "operator", role: "executive_producer", reason: "invalid_password", route: "/production-access/operator", ipHash });
     return redirectTo(request, "/production-access/operator?error=invalid");

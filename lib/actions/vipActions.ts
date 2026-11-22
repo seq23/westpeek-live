@@ -1,7 +1,9 @@
 "use server";
 
 import { revalidatePath } from "next/cache";
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
+import { requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { getCurrentAttendeeProfile } from "@/services/attendees/attendeeSessionService";
 import { grantVip, redeemVipCode, revokeVip, setVipInviteList } from "@/services/guests/vipGrantService";
@@ -60,6 +62,11 @@ export async function redeemVipCodeAction(formData: FormData) {
   if (!eventId || !code) return;
   const profile = await getCurrentAttendeeProfile(eventId);
   if (!profile) redirect(`/events/${eventId}/register?reason=vip`);
+  // The redirect answers yes or no, so the card is a door like any gate: counted before the match,
+  // against the event the attendee is registered for (never the form's text).
+  const { ip } = await requestIpHash({ headers: await headers() });
+  const gate = await takeGateAttempt({ gate: "vip_redeem", scope: profile!.eventId, ip });
+  if (!gate.allowed) redirect(`/venue/${eventId}/lobby?vip=wait`);
   const result = await redeemVipCode(eventId, code, { attendeeId: profile!.attendeeId, name: profile!.name, email: profile!.email });
   revalidateVipSurfaces(eventId);
   redirect(`/venue/${eventId}/lobby?vip=${result.ok ? "1" : "no"}`);

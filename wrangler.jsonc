@@ -32,6 +32,11 @@
       "name": "GATE_LIMITER",
       "namespace_id": "1001",
       "simple": { "limit": 6, "period": 60 }
+    },
+    {
+      "name": "GATE_LIMITER_WIDE",
+      "namespace_id": "1002",
+      "simple": { "limit": 20, "period": 60 }
     }
   ]
 }
