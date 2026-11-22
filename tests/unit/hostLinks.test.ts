@@ -1,7 +1,7 @@
 import fs from "node:fs";
 import os from "node:os";
 import path from "node:path";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, onTestFinished, vi } from "vitest";
 
 /**
  * Host = the executive_producer crew role for one event.
@@ -28,6 +28,9 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
 import { mintHostLinkAction, revokeHostLinksAction } from "@/lib/actions/hostActions";
 import type { WorkspaceActor } from "@/lib/auth/workspaceActor";
 import type { V4CrewRole } from "@/types/v4";
+import { renderToStaticMarkup } from "react-dom/server";
+import { NextRequest } from "next/server";
+import { HostPanel } from "@/components/events/HostPanel";
 
 const owner: WorkspaceActor = { kind: "owner", id: "owner", label: "Owner", role: "owner" };
 const issuedAt = Date.now();
@@ -42,7 +45,7 @@ async function signInAsCrew(role: V4CrewRole, eventId: string, codeVersion?: num
 
 describe("host = executive_producer crew role", () => {
   it("an executive_producer crew cookie is the host with every deck permission; plain crew is not", () => {
-    const host = crewViewerFromPayloads({ crew: crew("executive_producer", "room-1") }, "room-1");
+    const host = crewViewerFromPayloads({ crew: crew("executive_producer", "room-1", 0) }, "room-1");
     expect(host.isHost).toBe(true);
     for (const action of ["go_live", "moderate_chat", "manage_stage_access", "manage_cue_cards", "advance_run_of_show", "manage_host"] as const) expect(viewerCan(host, action), action).toBe(true);
     const plain = crewViewerFromPayloads({ crew: crew("crew", "room-1") }, "room-1");
@@ -52,13 +55,17 @@ describe("host = executive_producer crew role", () => {
     expect(viewerCan(crewViewerFromPayloads({ crew: crew("producer", "room-1") }, "room-1"), "manage_host")).toBe(false);
   });
 
-  it("a cookie minted with the event's crew code is only good for its code version; a global-password cookie never expires this way", () => {
+  it("a cookie minted with the event's crew code is only good for its code version; a global-password cookie never expires this way, and is never the host", () => {
     expect(crewCookieCurrent(undefined, 3)).toBe(true);
     expect(crewCookieCurrent(0, 0)).toBe(true);
     expect(crewCookieCurrent(0, 1)).toBe(false);
     expect(authorizeLiveControl({ crew: crew("executive_producer", "room-1", 0) }, "room-1", "go_live", 1)).toEqual({ ok: false, error: REVOKED_HOST_LINK_ERROR });
     expect(authorizeLiveControl({ crew: crew("executive_producer", "room-1", 1) }, "room-1", "go_live", 1)).toMatchObject({ ok: true });
-    expect(authorizeLiveControl({ crew: crew("executive_producer", "room-1") }, "room-1", "go_live", 5)).toMatchObject({ ok: true });
+    // An executive producer cookie with no code version (or no event) never came from a host code: it is plain crew, never the host.
+    expect(authorizeLiveControl({ crew: crew("executive_producer", "room-1") }, "room-1", "go_live", 5)).toMatchObject({ ok: false });
+    expect(authorizeLiveControl({ crew: { kind: "crew", role: "executive_producer", codeVersion: 0, issuedAt, expiresAt } }, "room-2", "go_live", 0)).toMatchObject({ ok: false });
+    expect(crewViewerFromPayloads({ crew: { kind: "crew", role: "executive_producer", codeVersion: 0, issuedAt, expiresAt } }, "room-2")).toMatchObject({ isHost: false, role: "crew" });
+    expect(authorizeLiveControl({ crew: crew("crew", "room-1") }, "room-1", "moderate_chat", 5).ok).toBe(authorizeLiveControl({ crew: crew("crew", "room-1", 5) }, "room-1", "moderate_chat", 5).ok);
     expect(crewViewerFromPayloads({ crew: crew("executive_producer", "room-1", 0) }, "room-1", 1)).toMatchObject({ kind: "none", isHost: false, label: "Crew link revoked" });
   });
 });
@@ -116,6 +123,51 @@ describe("host links against the store", () => {
     expect((await getHostLinkState(eventId)).links.filter((link) => !link.revokedAt)).toHaveLength(1);
     await revokeHostLinks(eventId, "owner");
     expect((await getHostLinkState(eventId)).codeVersion).toBe(2);
+  });
+
+  it("the host link and its code show only to someone who may hand out the show: never plain crew, never a revoked crew member", async () => {
+    await mintHostLink(eventId, "owner");
+    const render = async (viewer: Parameters<typeof HostPanel>[0]["viewer"]) => renderToStaticMarkup((await HostPanel({ eventId, viewer }))!);
+    const hostCode = await hostCodeFor(eventId, (await getHostLinkState(eventId)).codeVersion);
+    expect(await render(crewViewerFromPayloads({ owner: { kind: "owner", role: "owner", issuedAt, expiresAt } }, eventId))).toContain(hostCode);
+    expect(await render(crewViewerFromPayloads({ operator: { kind: "operator", role: "executive_producer", issuedAt, expiresAt } }, eventId))).toContain(hostCode);
+    expect(await render(crewViewerFromPayloads({ crew: crew("executive_producer", eventId, 0) }, eventId, 0))).toContain(hostCode);
+    for (const role of ["crew", "producer", "technical_director", "moderator"] as V4CrewRole[]) {
+      const html = await render(crewViewerFromPayloads({ crew: crew(role, eventId, 0) }, eventId, 0));
+      expect(html, role).not.toContain("WPL-HOST");
+      expect(html, role).toContain("host-link-hidden");
+    }
+    // Revoked, then a new link minted: the revoked crew member still reaches the deck, and must not see the new link.
+    await revokeHostLinks(eventId, "owner");
+    await mintHostLink(eventId, "owner");
+    const state = await getHostLinkState(eventId);
+    const revoked = crewViewerFromPayloads({ crew: crew("technical_director", eventId, 0) }, eventId, state.codeVersion);
+    expect(revoked.kind).toBe("none");
+    expect(await render(revoked)).not.toContain("WPL-HOST");
+  });
+
+  it("with no event code, executive producer is refused, even with the global crew password, at the resolver and at the crew door", async () => {
+    const globalPassword = getCrewAccessPassword()?.trim();
+    expect(globalPassword).toBeTruthy();
+    expect(await resolveCrewAccess(undefined, "executive_producer", globalPassword)).toMatchObject({ ok: false, reason: "host_link_required" });
+    expect(await resolveCrewAccess("  ", "executive_producer", globalPassword)).toMatchObject({ ok: false, reason: "host_link_required" });
+    // Other crew roles still come in with the global password and no event.
+    expect(await resolveCrewAccess(undefined, "producer", globalPassword)).toMatchObject({ ok: true, role: "producer" });
+
+    const saved = { crew: process.env.CREW_ACCESS_PASSWORD, operator: process.env.OPERATOR_LAUNCHPAD_PASSWORD, secret: process.env.V5_ACCESS_COOKIE_SECRET };
+    process.env.CREW_ACCESS_PASSWORD = globalPassword;
+    process.env.OPERATOR_LAUNCHPAD_PASSWORD ||= "operator-test-password";
+    process.env.V5_ACCESS_COOKIE_SECRET ||= getV5AccessCookieSecret(getEnv());
+    onTestFinished(() => { for (const [key, value] of [["CREW_ACCESS_PASSWORD", saved.crew], ["OPERATOR_LAUNCHPAD_PASSWORD", saved.operator], ["V5_ACCESS_COOKIE_SECRET", saved.secret]] as const) { if (value === undefined) delete process.env[key]; else process.env[key] = value; } });
+    const { POST } = await import("@/app/api/production-access/crew/route");
+    const form = new FormData();
+    form.set("password", globalPassword!);
+    form.set("eventCode", "");
+    form.set("crewRole", "executive_producer");
+    const response = await POST(new NextRequest("https://westpeek.live/api/production-access/crew", { method: "POST", body: form }));
+    expect(response.status).toBe(303);
+    expect(response.headers.get("location")).toContain("error=host_only");
+    expect(response.headers.get("set-cookie") || "").not.toContain(getV5AccessCookieNames(getEnv()).crewCookieName);
   });
 
   it("the crew code never opens executive producer: only the event's current host code does", async () => {

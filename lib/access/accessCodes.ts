@@ -10,9 +10,14 @@ export function codeKey(raw: string | undefined | null) {
   return String(raw || "").toUpperCase().replace(/[^A-Z0-9]/g, "");
 }
 
+/** Case- and dash-forgiving, and constant-time over the code's length, so timing says nothing about how much of a guess was right. */
 export function codesMatch(a: string | undefined | null, b: string | undefined | null) {
   const left = codeKey(a);
-  return left.length > 0 && left === codeKey(b);
+  const right = codeKey(b);
+  if (!left.length || left.length !== right.length) return false;
+  let diff = 0;
+  for (let index = 0; index < left.length; index += 1) diff |= left.charCodeAt(index) ^ right.charCodeAt(index);
+  return diff === 0;
 }
 
 export function displayCode(code: string | undefined | null) {

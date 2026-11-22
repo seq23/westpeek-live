@@ -101,6 +101,8 @@ export async function resolveSpecialGuestAccess(eventCode: string | undefined, r
 export async function resolveCrewAccess(eventCode: string | undefined, crewRole: V4CrewRole = "crew", password?: string): Promise<V4AccessResolution> {
   const globalPassword = getCrewAccessPassword()?.trim();
   if (!eventCode?.trim()) {
+    // Executive producer is one event's host: with no event named there is no host code to check.
+    if (crewRole === "executive_producer") return { ok: false, accessKind: "crew", reason: "host_link_required", message: "The executive producer comes in with a host link from the owner or the operator." };
     if (password !== undefined && (!globalPassword || password !== globalPassword)) {
       return { ok: false, accessKind: "crew", reason: "invalid_password", message: "That crew password did not match." };
     }

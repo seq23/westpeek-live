@@ -52,12 +52,13 @@ export async function EventAccessCodesPanel({ event, notice }: { event: RuntimeE
         <div className="mt-3 rounded-2xl border border-amber-300 bg-amber-50 p-4 text-sm text-amber-900" data-testid="role-codes-guessable" data-roles={guessable.join(",")}>
           <p className="font-black">The {guessable.join(", ")} code{guessable.length === 1 ? " is" : "s are"} made from the event code, so anyone holding the event code can work {guessable.length === 1 ? "it" : "them"} out.</p>
           <p className="mt-1">{guessable.length === 1 ? "It stops" : "They stop"} working at the end of {cutoff}. Press New codes, then send the new links to your crew, speakers, sponsors, VIPs and client.</p>
+          <p className="mt-1" data-testid="old-host-links-stopped">Host links sent before 22 November no longer work: make a new one in the Host panel.</p>
         </div>
       ) : null}
       <GatedForm viewer={viewer} action="manage_access_codes" formAction={rotateRoleCodesAction} className="mt-3">
         <input type="hidden" name="eventId" value={event.id} />
         <button className="rounded-full bg-brand-black px-4 py-2 text-xs font-black text-white hover:bg-brand-orange disabled:cursor-not-allowed disabled:opacity-40" data-testid="rotate-role-codes">New codes</button>
-        <span className="ml-2 text-xs text-brand-muted">Replaces the crew, speaker, sponsor, VIP and client codes with new random ones. The event code stays; every old role link stops working.</span>
+        <span className="ml-2 text-xs text-brand-muted">Replaces the crew, speaker, sponsor, VIP and client codes with new random ones. The event code stays; every old role link stops working. This also ends the host link and the current host&rsquo;s session: make a new host link after.</span>
       </GatedForm>
       {notice?.saved === "roles" ? <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-900" data-testid="code-saved-notice">New crew, speaker, sponsor, VIP and client codes are set. The old ones stopped working; send the new links below.</p> : notice?.saved ? <p className="mt-3 rounded-2xl border border-emerald-200 bg-emerald-50 p-3 text-sm font-bold text-emerald-900" data-testid="code-saved-notice">The {notice.saved === "join" ? "join" : notice.saved} code is set. The old one stopped working{notice.saved === "crew" ? "; every crew link and crew session minted with it is over" : notice.saved === "join" ? "" : "; anyone who entered with it is sent back to the gate"}.</p> : null}
       {notice?.error ? <p className="mt-3 rounded-2xl border border-rose-200 bg-rose-50 p-3 text-sm font-bold text-rose-900" data-testid="code-error-notice">{notice.field ? `${notice.field} code: ` : ""}{notice.error}</p> : null}

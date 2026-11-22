@@ -2,7 +2,7 @@ import { LocalTime } from "@/components/shared/LocalTime";
 import { CopyButton } from "@/components/shared/CopyButton";
 import { DeniedNote, GatedForm } from "@/components/moderation/GatedForm";
 import { mintHostLinkAction, revokeHostLinksAction } from "@/lib/actions/hostActions";
-import { getCrewViewer, type CrewViewer } from "@/lib/auth/crewViewer";
+import { getCrewViewer, viewerCan, type CrewViewer } from "@/lib/auth/crewViewer";
 import { getHostLinkState, hostLinkUrl } from "@/services/events/hostLinkService";
 import { findEventRecord } from "@/services/events/eventRepository";
 
@@ -21,7 +21,9 @@ function when(value: string) {
 export async function HostPanel({ eventId, viewer: givenViewer, compact = false }: { eventId: string; viewer?: CrewViewer; compact?: boolean }) {
   const [event, state, viewer] = await Promise.all([findEventRecord(eventId).catch(() => undefined), getHostLinkState(eventId), givenViewer ? Promise.resolve(givenViewer) : getCrewViewer(eventId)]);
   if (!event || event.source === "seed") return null;
-  const link = await hostLinkUrl(event);
+  // The link carries the host code, so only someone who may hand out the show sees it.
+  const mayManage = viewerCan(viewer, "manage_host");
+  const link = mayManage ? await hostLinkUrl(event) : undefined;
   const active = state.links.filter((item) => !item.revokedAt);
   const youAreHost = viewer.isHost;
   return (
@@ -42,16 +44,18 @@ export async function HostPanel({ eventId, viewer: givenViewer, compact = false 
       {active.length ? (
         <div className="mt-4 rounded-2xl border border-emerald-200 bg-emerald-50 p-4" data-testid="host-link-card">
           <p className="text-xs font-black uppercase tracking-wide text-emerald-800">Host link · this event only</p>
-          <code className="mt-2 block break-all rounded-xl bg-white p-3 text-xs text-slate-900" data-testid="host-link-url">{link}</code>
+          {link ? <code className="mt-2 block break-all rounded-xl bg-white p-3 text-xs text-slate-900" data-testid="host-link-url">{link}</code> : <p className="mt-2 text-sm text-emerald-900" data-testid="host-link-hidden">A host link is out, handed out by {active[0].grantedBy} {when(active[0].grantedAt)}. Only the owner, the operator and the host see it.</p>}
           <div className="mt-2 flex flex-wrap items-center gap-2">
-            <CopyButton value={link} label="Copy host link" testId="copy-host-link" />
+            {link ? <CopyButton value={link} label="Copy host link" testId="copy-host-link" /> : null}
             <GatedForm viewer={viewer} action="manage_host" formAction={revokeHostLinksAction} className="inline" testId="revoke-host-link-form">
               <input type="hidden" name="eventId" value={eventId} />
               <button className="rounded-full border border-rose-300 px-4 py-2 text-xs font-black text-rose-800 disabled:cursor-not-allowed disabled:opacity-40" data-testid="revoke-host-link">Revoke host link</button>
             </GatedForm>
           </div>
+          {link ? <>
           <p className="mt-2 text-sm font-bold text-emerald-900">Send this to whoever is running the show. They get the host banner, go-live, end-the-show and every control for this event only.</p>
           <p className="mt-1 text-xs text-emerald-900/80">The link prefills the crew gate; they still press Enter crew workspace. Revoking rotates the crew code, so the link and anyone who entered with it stop working.</p>
+          </> : null}
         </div>
       ) : <p className="mt-4 text-sm text-slate-600" data-testid="host-link-none">{state.codeVersion ? `No active host link. The crew code was rotated ${state.rotatedAt ? when(state.rotatedAt) : ""} by ${state.rotatedBy || "the owner"}; mint a new one to hand the show to someone.` : "No host link handed out yet. Until then the owner and the operator are the hosts."}</p>}
 

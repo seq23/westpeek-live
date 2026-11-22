@@ -13,7 +13,8 @@ import type { V4CrewRole } from "@/types/v4";
  */
 const issuedAt = Date.now();
 const expiresAt = issuedAt + 60_000;
-const crew = (role: V4CrewRole, eventId = "room-1"): V5AccessCookiePayload => ({ kind: "crew", role, eventId, issuedAt, expiresAt });
+// Crew cookies from an event code or a host code record the event's code version (0 for a fresh event).
+const crew = (role: V4CrewRole, eventId = "room-1"): V5AccessCookiePayload => ({ kind: "crew", role, eventId, codeVersion: 0, issuedAt, expiresAt });
 const owner: V5AccessCookiePayload = { kind: "owner", role: "owner", issuedAt, expiresAt };
 const operator: V5AccessCookiePayload = { kind: "operator", role: "executive_producer", issuedAt, expiresAt };
 

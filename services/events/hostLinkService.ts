@@ -5,6 +5,7 @@ import { mintAccessCodes } from "@/services/events/eventRepository";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { eventGuestStateKey, type EventGuestStateRecord } from "@/types/specialGuest";
 import type { RuntimeEventRecord } from "@/types/runtimeEvent";
+import type { V4CrewRole } from "@/types/v4";
 import { codesMatch, displayCode } from "@/lib/access/accessCodes";
 import { recordSupersededCode } from "@/services/events/supersededCodeService";
 import type { SupersededCodeReason } from "@/types/supersededCode";
@@ -109,6 +110,18 @@ export async function revokeHostLinks(eventId: string, revokedBy: string, newCod
   const next: HostLinkState = { codeVersion: state.codeVersion + 1, links: state.links.map((link) => (link.revokedAt ? link : { ...link, revokedAt: now })), rotatedAt: now, rotatedBy: revokedBy };
   await setHostLinkState(eventId, next);
   return { event: rotated, state: next };
+}
+
+/**
+ * Pure: the role a crew cookie really carries. Executive producer comes only from a host code, which
+ * always names one event and records its code version; a cookie claiming it without both (one
+ * minted from the global crew password with no event code before 22 Nov 2026) is plain crew, so it
+ * can never host every event or outlive a revoke.
+ */
+export function effectiveCrewRole(crew: { role?: string; eventId?: string; codeVersion?: number }): V4CrewRole {
+  const role = (crew.role || "crew") as V4CrewRole;
+  if (role === "executive_producer" && (!crew.eventId || crew.codeVersion === undefined)) return "crew";
+  return role;
 }
 
 /** Pure: a crew cookie minted with an event crew code is only good for the version it was minted at. */

@@ -3,7 +3,7 @@ import { readV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/produ
 import { crewDeniedReason, roleAllows, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import type { V4CrewRole } from "@/types/v4";
-import { crewCookieCurrent, getHostLinkState } from "@/services/events/hostLinkService";
+import { crewCookieCurrent, effectiveCrewRole, getHostLinkState } from "@/services/events/hostLinkService";
 
 export const REVOKED_HOST_LINK_ERROR = "Your crew link for this event was revoked. Ask the host or the owner for a new link.";
 
@@ -23,7 +23,7 @@ export function authorizeLiveControl(input: { owner?: V5AccessCookiePayload; ope
   if (operator?.kind === "operator" && (!operator.eventId || !eventId || operator.eventId === eventId)) return { ok: true, actorRole: "operator", payload: operator };
   if (crew?.kind === "crew" && (!crew.eventId || !eventId || crew.eventId === eventId)) {
     if (!crewCookieCurrent(crew.codeVersion, currentCodeVersion)) return { ok: false, error: REVOKED_HOST_LINK_ERROR };
-    const crewRole = (crew.role || "crew") as V4CrewRole;
+    const crewRole = effectiveCrewRole(crew);
     if (action && !roleAllows(crewRole, action)) return { ok: false, error: crewDeniedReason(crewRole, action) };
     return { ok: true, actorRole: "crew", crewRole, payload: crew };
   }

@@ -3,7 +3,7 @@ import { readV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/produ
 import { crewActionPermissions, crewDeniedReason, crewRoleDescriptions, crewRoleLabels, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import type { V4CrewRole } from "@/types/v4";
-import { crewCookieCurrent, getHostLinkState } from "@/services/events/hostLinkService";
+import { crewCookieCurrent, effectiveCrewRole, getHostLinkState } from "@/services/events/hostLinkService";
 
 /**
  * Who is looking at a crew surface, as plain data the deck and the role badge can render:
@@ -34,7 +34,7 @@ export function crewViewerFromPayloads(input: { owner?: V5AccessCookiePayload; o
   if (operator?.kind === "operator" && eventMatches(operator.eventId, eventId)) return { kind: "operator", label: "Operator", description: "West Peek's control room. Every control on this event.", allowed: "all", eventId: operator.eventId, isHost: true };
   if (crew?.kind === "crew" && eventMatches(crew.eventId, eventId)) {
     if (!crewCookieCurrent(crew.codeVersion, currentCodeVersion)) return { kind: "none", label: "Crew link revoked", description: "Your crew link for this event was revoked. Ask the host or the owner for a new link.", allowed: [], isHost: false };
-    const role = (crew.role || "crew") as V4CrewRole;
+    const role = effectiveCrewRole(crew);
     return { kind: "crew", role, label: crewRoleLabels[role] || "Crew", description: crewRoleDescriptions[role] || crewRoleDescriptions.crew, allowed: crewActionPermissions[role] || crewActionPermissions.crew, eventId: crew.eventId, isHost: role === "executive_producer" };
   }
   return { kind: "none", label: "Not signed in", description: "No crew, operator, or owner cookie for this event.", allowed: [], isHost: false };
