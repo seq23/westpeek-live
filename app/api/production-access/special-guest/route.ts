@@ -2,11 +2,12 @@ import { NextResponse, type NextRequest } from "next/server";
 import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { missingAccessEnv } from "@/lib/env/safeEnv";
-import { ownerOverrideResponseIfMatched, redirectTo } from "@/lib/auth/accessGateResponse";
-import { resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
+import { redirectTo } from "@/lib/auth/accessGateResponse";
+import { ownerSignInResponse } from "@/lib/auth/ownerAtEveryDoor";
+import { gateScopeForEventCode, resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
 import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
-import { checkGateAttempts, clearGateAttempts, gateAttemptKeyFor, recordGateFailure, requestIpHash } from "@/services/access/gateAttemptLimiter";
+import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import type { V4SpecialGuestRole } from "@/types/v4";
 import { getAccessCodeVersions } from "@/services/events/accessCodeService";
 
@@ -19,22 +20,18 @@ export async function POST(request: NextRequest) {
   const roleCode = String(formData.get("roleCode") ?? "");
 
   const { ip, ipHash } = await requestIpHash(request);
-  const attemptKey = gateAttemptKeyFor({ ip, eventCode, gate: "special_guest" });
-  const gate = checkGateAttempts(attemptKey);
+  const gate = await takeGateAttempt({ ip, scope: await gateScopeForEventCode(eventCode), gate: "special_guest" });
+  // The owner password works here too, read against this count (ownerAtEveryDoor).
+  const owner = await ownerSignInResponse({ request, password: roleCode, door: "special_guest", attempt: gate, next: eventCode.trim() ? `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode.trim())}` : "/production-access/special-guest/preview" });
+  if (owner) return owner;
   if (!gate.allowed) {
-    await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: eventCode || undefined, role: "unknown", reason: "rate_limited", route: "/production-access/special-guest", ipHash });
-    return redirectTo(request, `/production-access/special-guest?error=too_many&retry=${gate.retryInSeconds}`);
+    await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: eventCode || undefined, role: "unknown", reason: gate.reason === "too_many" ? "rate_limited" : "rate_limiter_unavailable", route: "/production-access/special-guest", ipHash });
+    return redirectTo(request, `/production-access/special-guest?${gateRefusalQuery(gate)}`);
   }
-
-  // The owner master password here lands on "Preview a guest" for the typed event code, not the workspace.
-  const ownerOverride = await ownerOverrideResponseIfMatched({ request, password: roleCode, route: "/production-access/special-guest", next: `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode)}`, fallback: "/production-access/special-guest/preview" });
-  if (ownerOverride) { clearGateAttempts(attemptKey); return ownerOverride; }
 
   const access = await resolveSpecialGuestAccess(eventCode, roleCode);
   if (!access.ok || !access.destination || !access.eventId || !access.role) {
-    const limit = recordGateFailure(attemptKey);
-    await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: access.eventId || eventCode || undefined, role: String(access.role || "unknown"), reason: limit.cooling ? "rate_limited_after_failures" : access.reason, route: "/production-access/special-guest", ipHash });
-    if (limit.cooling) return redirectTo(request, `/production-access/special-guest?error=too_many&retry=${limit.retryInSeconds}`);
+    await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: access.eventId || eventCode || undefined, role: String(access.role || "unknown"), reason: access.reason, route: "/production-access/special-guest", ipHash });
     // Refused either way; a code we rotated says which credential went and when.
     return redirectTo(request, `/production-access/special-guest?${supersededGateQuery(access) || `error=${access.reason ?? "invalid"}`}`);
   }
@@ -42,7 +39,6 @@ export async function POST(request: NextRequest) {
   const env = getEnv();
   const { specialGuestCookieName } = getV5AccessCookieNames(env);
   const role = access.role as V4SpecialGuestRole;
-  clearGateAttempts(attemptKey);
   await logAccessAttempt({ status: "access_granted", accessKind: "special_guest", eventId: access.eventId, role, route: access.destination, ipHash });
   const codeVersion = role === "crew_lite" ? undefined : (await getAccessCodeVersions(access.eventId))[role];
   const cookie = await createV5AccessCookie({ kind: "special_guest", eventId: access.eventId, clientSlug: access.clientSlug, role, codeVersion, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 12 }, getV5AccessCookieSecret(env));

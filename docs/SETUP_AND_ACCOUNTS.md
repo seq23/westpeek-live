@@ -9,7 +9,7 @@ Checked against the code and live DNS on 31 Oct 2026.
 | Service | What it does here | Identifier (not secret) | Config names |
 |---|---|---|---|
 | GitHub | Source, CI, PR checks, deploy trigger | repo `seq23/westpeek-live` (public); workflows in `.github/workflows/` | Actions secrets `CLOUDFLARE_ACCOUNT_ID`, `CLOUDFLARE_API_TOKEN` |
-| Cloudflare Workers (Paid) | Hosts the app | Worker `west-peek-live`; fallback URL `west-peek-live.seq-taylor.workers.dev`; Workers Builds uploads a preview version per branch | `wrangler.jsonc` |
+| Cloudflare Workers (Paid) | Hosts the app | Worker `west-peek-live`; fallback URL `west-peek-live.seq-taylor.workers.dev`; Workers Builds uploads a preview version per branch; access-gate attempts are counted by two Rate Limiting bindings (`ratelimits`): `GATE_LIMITER` (namespace `1001`, 6 a minute per door, event and address) and `GATE_LIMITER_WIDE` (namespace `1002`, 20 a minute per door and address across all events); not a billed product on the Workers pricing page (checked 22 Nov 2026) | `wrangler.jsonc` |
 | Cloudflare D1 | The database | database `west-peek-live`, binding `DB`; schema in `migrations-d1/` | applied by `deploy-cloudflare-worker.yml` |
 | Cloudflare R2 | Uploaded files, private | bucket `west-peek-live-assets`, binding `ASSETS_BUCKET` | signed links only |
 | Cloudflare DNS | `westpeek.live` zone (Cloudflare nameservers) | see DNS below | dashboard |

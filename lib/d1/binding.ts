@@ -2,7 +2,8 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createDbClient, type D1DatabaseLike, type DbClient } from "./query";
 
 /**
- * The Worker's D1 binding (`DB` in wrangler.jsonc) and the R2 bucket (`ASSETS_BUCKET`).
+ * The Worker's D1 binding (`DB` in wrangler.jsonc), the R2 bucket (`ASSETS_BUCKET`) and the gate
+ * rate limiter (`GATE_LIMITER`).
  *
  * Inside the deployed Worker they come from the OpenNext Cloudflare context. Outside it (`next dev`
  * without bindings, unit tests, the build) there is no binding: getD1() returns undefined and the
@@ -49,6 +50,31 @@ export function getAssetsBucket(): R2BucketLike | undefined {
   if (testBucket) return testBucket;
   const bucket = cloudflareEnv()?.ASSETS_BUCKET as R2BucketLike | undefined;
   return bucket && typeof bucket.put === "function" ? bucket : undefined;
+}
+
+/** The Cloudflare Rate Limiting binding's surface (`ratelimits` in wrangler.jsonc). */
+export interface RateLimitBindingLike {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
+/**
+ * The gate limiter (`GATE_LIMITER`). `inWorker` tells "not running in a Worker" (next dev/start,
+ * tests: the caller uses its in-process stand-in) apart from "in a Worker without the binding",
+ * which is an outage.
+ */
+export function getGateRateLimiter(): { inWorker: boolean; binding?: RateLimitBindingLike } {
+  const env = cloudflareEnv();
+  if (!env) return { inWorker: false };
+  const binding = env.GATE_LIMITER as RateLimitBindingLike | undefined;
+  return { inWorker: true, binding: binding && typeof binding.limit === "function" ? binding : undefined };
+}
+
+/** The wide count: one address across every event at a gate (services/access/gateAttemptLimiter.ts). */
+export function getWideGateRateLimiter(): { inWorker: boolean; binding?: RateLimitBindingLike } {
+  const env = cloudflareEnv();
+  if (!env) return { inWorker: false };
+  const binding = env.GATE_LIMITER_WIDE as RateLimitBindingLike | undefined;
+  return { inWorker: true, binding: binding && typeof binding.limit === "function" ? binding : undefined };
 }
 
 export function setD1ForTests(db: D1DatabaseLike | undefined) {
