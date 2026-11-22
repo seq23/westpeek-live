@@ -130,4 +130,42 @@ describe("LiveKit ingress reclaim", () => {
     expect((await getOrCreateStageStreamState(other.id)).livekitIngressId).toBeUndefined();
     expect((await releaseIngressForEvent(other.id)).released).toBe(false);
   });
+
+  it("branches on LiveKit's status and Twirp code, never on wording: a not_found frees the slot, a failed call with lookalike words does not", async () => {
+    const store = getRuntimeStore();
+    const gone = await createEventRecord({ name: "Already gone", when: "now" }, owner);
+    await store.setStageStreamState(stageStreamKey(gone.id, "main-stage"), { ...(await getOrCreateStageStreamState(gone.id)), livekitIngressId: "IN_gone", livekitIngressUrl: "rtmps://fake/g", livekitStreamKey: "k" });
+    fakeLiveKit({ "Ingress/DeleteIngress": () => ({ status: 404, body: { code: "not_found", msg: "ingress not found" } }) }, []);
+    expect((await releaseIngressForEvent(gone.id)).released).toBe(true);
+    expect((await getOrCreateStageStreamState(gone.id)).livekitIngressId).toBeUndefined();
+
+    // Outage: LiveKit is down and its message happens to say "404" and "does not exist". The ingress
+    // may still be live, so its credentials are kept and the reason is reported.
+    const down = await createEventRecord({ name: "LiveKit down", when: "now" }, owner);
+    await store.setStageStreamState(stageStreamKey(down.id, "main-stage"), { ...(await getOrCreateStageStreamState(down.id)), livekitIngressId: "IN_down", livekitIngressUrl: "rtmps://fake/d", livekitStreamKey: "k" });
+    fakeLiveKit({ "Ingress/DeleteIngress": () => ({ status: 503, body: { code: "unavailable", msg: "upstream 404: node does not exist" } }) }, []);
+    const result = await releaseIngressForEvent(down.id);
+    expect(result.released).toBe(false);
+    expect(result.reason).toMatch(/503/);
+    expect((await getOrCreateStageStreamState(down.id)).livekitIngressId).toBe("IN_down");
+  });
+
+  it("a CreateRoom refusal that is not already_exists stops provisioning, even when its wording says 'already exists'", async () => {
+    const event = await createEventRecord({ name: "Bad key", when: "now" }, owner);
+    const calls: { method: string; body: unknown }[] = [];
+    fakeLiveKit({ "RoomService/CreateRoom": () => ({ status: 401, body: { code: "unauthenticated", msg: "a token for a room that already exists was rejected" } }) }, calls);
+    const refused = await provisionStreamYardLiveKitIngress({ eventId: event.id, actorRole: "owner" });
+    expect(refused.ok).toBe(false);
+    expect(calls.map((c) => c.method)).not.toContain("Ingress/CreateIngress");
+
+    const ok = await createEventRecord({ name: "Room exists", when: "now" }, owner);
+    const calls2: { method: string; body: unknown }[] = [];
+    fakeLiveKit({
+      "RoomService/CreateRoom": () => ({ status: 409, body: { code: "already_exists", msg: "room exists" } }),
+      "Ingress/ListIngress": () => ({ body: { items: [] } }),
+      "Ingress/CreateIngress": () => ({ body: { ingress_id: "IN_new", url: "rtmps://fake/new", stream_key: "sk" } }),
+    }, calls2);
+    expect((await provisionStreamYardLiveKitIngress({ eventId: ok.id, actorRole: "owner" })).ok).toBe(true);
+    expect(calls2.map((c) => c.method)).toContain("Ingress/CreateIngress");
+  });
 });

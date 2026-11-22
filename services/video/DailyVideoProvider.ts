@@ -8,6 +8,14 @@ import type {
 } from "@/types/video";
 import { getDailyEnv } from "@/lib/env";
 
+/** A Daily REST refusal, carrying the HTTP status so callers branch on it, never on the message. */
+export class DailyApiError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = "DailyApiError";
+  }
+}
+
 export interface DailyVideoProviderConfig {
   apiKey: string;
   apiBaseUrl: string;
@@ -68,7 +76,7 @@ export class DailyVideoProvider implements VideoProvider {
 
     if (!response.ok) {
       const body = await response.text();
-      throw new Error(`Daily API request failed: ${response.status} ${body}`);
+      throw new DailyApiError(response.status, `Daily API request failed: ${response.status} ${body}`);
     }
 
     return (await response.json()) as T;
@@ -97,14 +105,17 @@ export class DailyVideoProvider implements VideoProvider {
         }),
       });
     } catch (error) {
-      const message = error instanceof Error ? error.message.toLowerCase() : "";
-      const roomAlreadyExists = message.includes("already") || message.includes("exists") || message.includes("400") || message.includes("409");
-
-      if (!roomAlreadyExists) {
-        throw error;
+      // Daily answers a name clash with a 400 whose wording is not a contract. Whether the room
+      // exists is asked of Daily itself: a 400/409 on create is followed by a GET of that exact name,
+      // and only a room Daily returns is reused. Anything else (auth, 5xx, a real bad request with no
+      // room behind it) is the original error.
+      if (!(error instanceof DailyApiError) || (error.status !== 400 && error.status !== 409)) throw error;
+      try {
+        return await this.getRoom(providerRoomId);
+      } catch (lookup) {
+        if (lookup instanceof DailyApiError && lookup.status === 404) throw error;
+        throw lookup;
       }
-
-      return this.getRoom(providerRoomId);
     }
   }
 
