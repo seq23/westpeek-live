@@ -59,12 +59,12 @@ export type GateAttempt =
  * IPv4 address). Anything unparseable is kept whole rather than dropped.
  */
 export function ipRateKey(ip: string | undefined) {
-  const value = (ip || "").trim().toLowerCase();
-  if (!value) return "unknown";
-  if (!value.includes(":")) return value;
-  const mapped = value.match(/^(?:0*:)*:?ffff:(\d+\.\d+\.\d+\.\d+)$/) || value.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
+  const address = (ip || "").trim().toLowerCase();
+  if (!address) return "unknown";
+  if (!address.includes(":")) return address;
+  const mapped = address.match(/^(?:0*:)*:?ffff:(\d+\.\d+\.\d+\.\d+)$/) || address.match(/^::ffff:(\d+\.\d+\.\d+\.\d+)$/);
   if (mapped) return mapped[1];
-  const bare = value.replace(/%.*$/, "").replace(/^\[|\]$/g, "");
+  const bare = address.replace(/%.*$/, "").replace(/^\[|\]$/g, "");
   const [head, tail = ""] = bare.split("::");
   const left = head ? head.split(":") : [];
   const right = bare.includes("::") && tail ? tail.split(":") : [];

@@ -31,9 +31,11 @@ if (!operator.includes("getOperatorLaunchpadPassword") || !operator.includes('ki
 if (!owner.includes("matchOwnerMasterPassword") || !owner.includes('kind: "owner"') || !owner.includes("ownerKey")) fail("owner gate must match either owner master password, set the owner cookie, and record which key was used");
 if (!envTs.includes("OWNER_MASTER_ACCESS_PASSWORD_2") || !envTs.includes("export function matchOwnerMasterPassword")) fail("env must define the optional OWNER_MASTER_ACCESS_PASSWORD_2 and matchOwnerMasterPassword");
 if (!envTs.includes('"OWNER_MASTER_ACCESS_PASSWORD_2", env.OWNER_MASTER_ACCESS_PASSWORD_2')) fail("assertSeparatedProductionPasswords must include the second owner password when set");
-for (const [name, file] of [["gate response", "lib/auth/accessGateResponse.ts"], ["owner api route", "app/api/production-access/owner/route.ts"]]) {
-  const text = read(file);
-  if (!text.includes("matchOwnerMasterPassword") || text.includes("getOwnerMasterPassword(")) fail(`${name} must honour both owner master passwords via matchOwnerMasterPassword`);
+const ownerRoute = read("app/api/production-access/owner/route.ts");
+if (!ownerRoute.includes("matchOwnerMasterPassword") || ownerRoute.includes("getOwnerMasterPassword(")) fail("owner api route must honour both owner master passwords via matchOwnerMasterPassword");
+// The owner master password opens only the owner door (and so is limited by the owner count alone; review of #118).
+for (const gate of ["crew", "operator", "special-guest"]) {
+  if (read(`app/api/production-access/${gate}/route.ts`).includes("matchOwnerMasterPassword")) fail(`${gate} gate must not accept the owner master password`);
 }
 if (!launchpad.includes('operatorPayload?.kind === "operator"')) fail("launchpad must accept operator cookie");
 if (!launchpad.includes('ownerPayload?.kind === "owner"')) fail("launchpad must accept owner master cookie as universal authority");

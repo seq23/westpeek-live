@@ -47,6 +47,13 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
         <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Crew gate</p>
         <h1 className="mt-3 text-4xl font-black tracking-tight">Crew workspace access</h1>
         <p className="mt-4 text-sm leading-6 text-brand-muted">Use the internal crew password from the Day 1 Operator Packet or your secure production vault, then choose the crew role you are operating as today. This public gate never displays the password.</p>
+        {/* Refusals sit above the form: at phone width the form is two screens tall. */}
+        <GateRefusalNotice error={resolvedSearchParams?.error} retry={resolvedSearchParams?.retry} hint="or ask the producer for the link, which fills the code in for you." />
+        {resolvedSearchParams?.error === "superseded" ? <SupersededGateNotice field={resolvedSearchParams?.codeField} replacedAt={resolvedSearchParams?.on} testId="crew-code-superseded" /> : null}
+        {resolvedSearchParams?.error === "invalid" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That crew password did not match. Check the Day 1 internal password or ask the operator/admin.</p> : null}
+        {resolvedSearchParams?.error === "launchpad_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter the crew password first. The Operator Launchpad requires the separate operator password.</p> : null}
+        {resolvedSearchParams?.error === "operator_packet_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter operator access first. The Operator Packet contains internal launchpad instructions and stays behind the operator gate.</p> : null}
+        {resolvedSearchParams?.error === "invalid_event" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That event code is not valid for crew routing. Leave it blank to enter the demo crew workspace.</p> : null}
         <form action="/api/production-access/crew" method="post" className="mt-6 space-y-5">
           <input type="hidden" name="next" value={resolvedSearchParams?.next || ""} />
           <div>
@@ -77,12 +84,6 @@ export default async function CrewAccessPage({ searchParams }: { searchParams?: 
           </div>
           <button className="w-full rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Enter crew workspace</button>
         </form>
-        <GateRefusalNotice error={resolvedSearchParams?.error} retry={resolvedSearchParams?.retry} hint="or ask the producer for the link, which fills the code in for you." />
-        {resolvedSearchParams?.error === "superseded" ? <SupersededGateNotice field={resolvedSearchParams?.codeField} replacedAt={resolvedSearchParams?.on} testId="crew-code-superseded" /> : null}
-        {resolvedSearchParams?.error === "invalid" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That crew password did not match. Check the Day 1 internal password or ask the operator/admin.</p> : null}
-        {resolvedSearchParams?.error === "launchpad_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter the crew password first. The Operator Launchpad requires the separate operator password.</p> : null}
-        {resolvedSearchParams?.error === "operator_packet_required" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Enter operator access first. The Operator Packet contains internal launchpad instructions and stays behind the operator gate.</p> : null}
-        {resolvedSearchParams?.error === "invalid_event" ? <p className="mt-4 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">That event code is not valid for crew routing. Leave it blank to enter the demo crew workspace.</p> : null}
         <GateExit next={resolvedSearchParams?.next} />
       </section>
       </main>

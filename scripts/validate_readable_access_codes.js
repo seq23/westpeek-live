@@ -23,7 +23,7 @@ check("lib/actions/accessCodeActions.ts", ["adoptReadableCodesAction", 'requireL
 check("components/owner/AccessCodesVaultTable.tsx", ["vault-stem-", "vault-adopt-", "vault-custom-", "adoptReadableCodesAction", "WPL-[ROLE-]"]);
 
 // The gate pays for the readability.
-const limiter = check("services/access/gateAttemptLimiter.ts", ["GATE_ATTEMPTS_PER_WINDOW", "export async function takeGateAttempt", "binding.limit({ key })", "sha256Hex"]);
+const limiter = check("services/access/gateAttemptLimiter.ts", ["GATE_ATTEMPTS_PER_WINDOW", "export async function takeGateAttempt", "narrowBinding.limit({ key: gateAttemptKeyFor(input) })", "wideBinding.limit({ key: wideGateAttemptKeyFor(input) })", "sha256Hex"]);
 if (/password|roleCode|value/.test(limiter.replace(/\/\*[\s\S]*?\*\//g, ""))) throw new Error("The limiter must never see or store what was typed.");
 for (const gate of ["app/api/production-access/crew/route.ts", "app/api/production-access/special-guest/route.ts"]) {
   const body = check(gate, ["await takeGateAttempt(", "gateRefusalQuery(gate)", "ipHash"]);
@@ -32,6 +32,6 @@ for (const gate of ["app/api/production-access/crew/route.ts", "app/api/producti
 for (const page of ["app/production-access/crew/page.tsx", "app/production-access/special-guest/page.tsx"]) check(page, ["<GateRefusalNotice"]);
 
 check("tests/unit/readableAccessCodes.test.ts", ["takes the first six letters", "two events that want the same stem never share a code", "a hand-set code wins and survives adopting"]);
-check("tests/unit/gateAttemptLimiter.test.ts", ["lets an honest mistype through", "across isolates"]);
+check("tests/unit/gateAttemptLimiter.test.ts", ["lets an honest mistype through", "across isolates", "lying client", "the owner password opens only the owner door"]);
 if (examined < 12) throw new Error(`validate_readable_access_codes examined only ${examined} files`);
 console.log(`validate_readable_access_codes: PASS — ${examined} files examined; WPL-[ROLE-]STEM everywhere, stems unique across live events, gates rate-limited and failures logged without the value.`);
