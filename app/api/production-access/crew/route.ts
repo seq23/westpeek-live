@@ -6,6 +6,7 @@ import { redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateRespo
 import { gateScopeForEventCode, resolveCrewAccess } from "@/services/access/eventAccessResolver";
 import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
+import { ownerSignInResponse } from "@/lib/auth/ownerAtEveryDoor";
 import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import type { V4CrewRole } from "@/types/v4";
 import { CREW_ROLES } from "@/lib/auth/crewRolePermissions";
@@ -32,12 +33,14 @@ export async function POST(request: NextRequest) {
   // Counted against the event the code resolves to, never the typed text (gateScopeForEventCode).
   const { ip, ipHash } = await requestIpHash(request);
   const gate = await takeGateAttempt({ ip, scope: await gateScopeForEventCode(eventCode), gate: "crew" });
+  // The owner password works here too, read against this count (ownerAtEveryDoor).
+  const owner = await ownerSignInResponse({ request, password, door: "crew", attempt: gate, next: String(formData.get("next") ?? "") || undefined, fallback: eventCode ? `/crew/events/${encodeURIComponent(eventCode)}` : "/app/owner" });
+  if (owner) return owner;
   if (!gate.allowed) {
     await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: eventCode || undefined, role: crewRole, reason: gate.reason === "too_many" ? "rate_limited" : "rate_limiter_unavailable", route: "/production-access/crew", ipHash });
     return redirectTo(request, `/production-access/crew?${gateRefusalQuery(gate)}`);
   }
 
-  // The owner password opens only the owner door. An owner already signed in never sees this gate.
   // The global crew password still opens every event; a runtime-created event's own crew code opens just that event.
   const access = await resolveCrewAccess(eventCode || undefined, crewRole, password || "");
   if (!access.ok) {

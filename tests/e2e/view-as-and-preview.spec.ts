@@ -11,8 +11,8 @@ import { grantCrewAccess, grantSpecialGuestAccess, isDeployedBrowserRun, loginAs
  *   tech check, paste); the nav keeps ?viewAs; the teleprompter polls THAT speaker's deck;
  *   a moderator crew cookie and the speaker themself get no banner from ?viewAs;
  *   the owner opens Preview a guest (the Owner Console link) for the event, which lists the speaker
- *   with the same links; the owner master password typed at the special-guest gate opens nothing
- *   (it works only at the owner door); an event with no guests says so.
+ *   with the same links; the owner master password typed at the special-guest gate lands on the
+ *   same preview (every door takes it); an event with no guests says so.
  * Local file-store run only.
  */
 test.skip(isDeployedBrowserRun(), "local runtime-store journey; deployed proof is the owner's throwaway event");
@@ -117,16 +117,16 @@ test("owner opens a speaker's green room via view-as: banner, real state, action
   await expect(speaker.page.getByTestId("view-as-banner")).toHaveCount(0);
   await expect(speaker.page.getByTestId("go-on-stage")).toBeEnabled();
 
-  // The owner master password at the special-guest gate is a wrong password: it opens only the owner door.
+  // The owner master password at the special-guest gate signs her in as the owner and lands on
+  // Preview a guest for the typed event (every door takes it, her ruling 22 Nov 2026).
   const strangerContext = await browser.newContext();
   const stranger = await strangerContext.newPage();
   await gotoAndAssert(stranger, "/production-access/special-guest");
   await stranger.getByLabel(/event code/i).fill(eventId);
   await stranger.getByLabel(/special guest password/i).fill(process.env.E2E_OWNER_PASSWORD || process.env.OWNER_MASTER_ACCESS_PASSWORD || requiredDay1Default("OWNER_MASTER_ACCESS_PASSWORD"));
   await stranger.getByRole("button", { name: /continue to assigned portal/i }).click();
-  await expect(stranger).toHaveURL(/\/production-access\/special-guest\?.*error=/);
-  await gotoAndAssert(stranger, `/production-access/special-guest/preview?event=${eventId}`);
-  await expect(stranger).toHaveURL(/\/production-access\/owner/);
+  await expect(stranger).toHaveURL(new RegExp(`/production-access/special-guest/preview\\?event=${eventId}`));
+  await expect(stranger.getByTestId("preview-guest-page")).toHaveAttribute("data-event-id", eventId);
   await strangerContext.close();
 
   // The owner, already signed in, opens Preview a guest for the event (the Owner Console link).

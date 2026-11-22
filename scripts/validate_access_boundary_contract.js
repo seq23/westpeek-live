@@ -7,7 +7,8 @@ const routeAuth = read("lib/auth/v5RouteAuthorization.ts");
 // The gate logic lives in the API routes; each page's form posts there, so every attempt passes the limiter.
 const crew = read("app/api/production-access/crew/route.ts");
 const operator = read("app/api/production-access/operator/route.ts");
-const owner = read("app/api/production-access/owner/route.ts");
+// The owner door mints her cookie through the one module every door shares.
+const owner = read("app/api/production-access/owner/route.ts") + read("lib/auth/ownerAtEveryDoor.ts");
 for (const gate of ["owner", "operator", "crew", "special-guest"]) {
   const page = read(`app/production-access/${gate}/page.tsx`);
   if (!page.includes(`action="/api/production-access/${gate}" method="post"`) || page.includes('"use server"')) fail(`${gate} page must post to /api/production-access/${gate} (the rate-limited gate), never a page server action`);
@@ -32,10 +33,12 @@ if (!owner.includes("matchOwnerMasterPassword") || !owner.includes('kind: "owner
 if (!envTs.includes("OWNER_MASTER_ACCESS_PASSWORD_2") || !envTs.includes("export function matchOwnerMasterPassword")) fail("env must define the optional OWNER_MASTER_ACCESS_PASSWORD_2 and matchOwnerMasterPassword");
 if (!envTs.includes('"OWNER_MASTER_ACCESS_PASSWORD_2", env.OWNER_MASTER_ACCESS_PASSWORD_2')) fail("assertSeparatedProductionPasswords must include the second owner password when set");
 const ownerRoute = read("app/api/production-access/owner/route.ts");
-if (!ownerRoute.includes("matchOwnerMasterPassword") || ownerRoute.includes("getOwnerMasterPassword(")) fail("owner api route must honour both owner master passwords via matchOwnerMasterPassword");
-// The owner master password opens only the owner door (and so is limited by the owner count alone; review of #118).
+const ownerDoors = read("lib/auth/ownerAtEveryDoor.ts");
+if (!ownerRoute.includes("ownerSignInResponse(") || ownerRoute.includes("getOwnerMasterPassword(") || !ownerDoors.includes("matchOwnerMasterPassword(")) fail("owner api route must honour both owner master passwords via ownerSignInResponse (matchOwnerMasterPassword)");
+// Every door takes the owner password, through one module (lib/auth/ownerAtEveryDoor.ts); its door
+// list and order are checked by validate_view_as_contract.js. No door matches it on its own.
 for (const gate of ["crew", "operator", "special-guest"]) {
-  if (read(`app/api/production-access/${gate}/route.ts`).includes("matchOwnerMasterPassword")) fail(`${gate} gate must not accept the owner master password`);
+  if (read(`app/api/production-access/${gate}/route.ts`).includes("matchOwnerMasterPassword")) fail(`${gate} gate must take the owner password through ownerSignInResponse, not its own match`);
 }
 if (!launchpad.includes('operatorPayload?.kind === "operator"')) fail("launchpad must accept operator cookie");
 if (!launchpad.includes('ownerPayload?.kind === "owner"')) fail("launchpad must accept owner master cookie as universal authority");

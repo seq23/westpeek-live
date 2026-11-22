@@ -3,6 +3,7 @@ import { createV5AccessCookie, getV5CookieOptions } from "@/lib/auth/productionA
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { missingAccessEnv } from "@/lib/env/safeEnv";
 import { redirectTo } from "@/lib/auth/accessGateResponse";
+import { ownerSignInResponse } from "@/lib/auth/ownerAtEveryDoor";
 import { gateScopeForEventCode, resolveSpecialGuestAccess } from "@/services/access/eventAccessResolver";
 import { supersededGateQuery } from "@/components/access/SupersededGateNotice";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
@@ -20,13 +21,14 @@ export async function POST(request: NextRequest) {
 
   const { ip, ipHash } = await requestIpHash(request);
   const gate = await takeGateAttempt({ ip, scope: await gateScopeForEventCode(eventCode), gate: "special_guest" });
+  // The owner password works here too, read against this count (ownerAtEveryDoor).
+  const owner = await ownerSignInResponse({ request, password: roleCode, door: "special_guest", attempt: gate, next: eventCode.trim() ? `/production-access/special-guest/preview?event=${encodeURIComponent(eventCode.trim())}` : "/production-access/special-guest/preview" });
+  if (owner) return owner;
   if (!gate.allowed) {
     await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: eventCode || undefined, role: "unknown", reason: gate.reason === "too_many" ? "rate_limited" : "rate_limiter_unavailable", route: "/production-access/special-guest", ipHash });
     return redirectTo(request, `/production-access/special-guest?${gateRefusalQuery(gate)}`);
   }
 
-  // This door fails open in an outage, so it never takes a production password: the owner previews
-  // guests from the owner console (/production-access/special-guest/preview), not from here.
   const access = await resolveSpecialGuestAccess(eventCode, roleCode);
   if (!access.ok || !access.destination || !access.eventId || !access.role) {
     await logAccessAttempt({ status: "access_denied", accessKind: "special_guest", eventId: access.eventId || eventCode || undefined, role: String(access.role || "unknown"), reason: access.reason, route: "/production-access/special-guest", ipHash });

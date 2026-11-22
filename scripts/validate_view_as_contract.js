@@ -5,7 +5,7 @@ const fs = require("fs");
  *   one pure rule (canViewAsGuest: owner, operator for the event, producer / executive_producer crew
  *   for the event; nobody else) shared by the middleware and the page resolver; the resolver checks
  *   the guest's role; every guest surface resolves ?viewAs and renders the banner with the guest's
- *   actions disabled; the special-guest gate takes no owner password and the owner console links to the preview; the
+ *   actions disabled; every door accepts the owner password against its count and the owner console links to the preview; the
  *   preview route is registered in every ledger; the proofs exist.
  */
 function read(file) { if (!fs.existsSync(file)) throw new Error(`Missing ${file}`); return fs.readFileSync(file, "utf8"); }
@@ -38,11 +38,33 @@ check("components/guests/GuestPreviewLinks.tsx", ["Open their green room", "Open
 check("components/moderation/SpeakerRosterPanel.tsx", ["<GuestPreviewLinkRow", 'viewer.role === "producer" || viewer.role === "executive_producer"']);
 check("app/app/events/[eventId]/access/page.tsx", ["<GuestPreviewList"]);
 check("app/production-access/special-guest/preview/page.tsx", ['if (owner?.kind !== "owner") redirect(`/production-access/owner?next=', "<GuestPreviewList", "preview-role-codes", "emptyHref={accessHref}"]);
-// The guest door fails open in an outage, so it never takes a production password (22 Nov 2026): the
-// owner reaches the preview from the owner console, signed in, and the door has no owner override.
-const guestDoor = check("app/api/production-access/special-guest/route.ts", ["resolveSpecialGuestAccess(eventCode, roleCode)"]);
-if (/ownerOverride|OWNER_MASTER|getOwnerMaster|special-guest\/preview\?event=\$\{/.test(guestDoor.replace(/\/\/.*$/gm, ""))) throw new Error("app/api/production-access/special-guest/route.ts must not take the owner password or route it to the preview: the guest door fails open.");
-check("components/owner/OwnerConsole.tsx", ["/production-access/special-guest/preview?event=${encodeURIComponent(event.joinCode)}", "Preview a guest"]);
+// The owner password is accepted at EVERY door (her ruling, 22 Nov 2026), read against the door's
+// count. Fails when a door refuses it: a door missing from the registry, a door that does not call
+// the owner check with the count's answer, or one that refuses on the count before the owner check
+// (that would refuse her in an outage). A new door is found by its count.
+const registry = check("lib/auth/ownerAtEveryDoor.ts", ["export const OWNER_PASSWORD_DOORS", "export async function ownerSignInResponse", "export async function ownerSignInRedirect"]);
+const doors = [...registry.matchAll(/^\s+(\w+): \{ file: "([^"]+)"( \}|, noSecret)/gm)].map((m) => ({ gate: m[1], file: m[2], noSecret: m[3] !== " }" }));
+if (doors.length < 7) throw new Error(`OWNER_PASSWORD_DOORS lists only ${doors.length} doors`);
+const { execSync } = require("child_process");
+const counted = execSync("git grep -l 'takeGateAttempt(' -- app lib services", { encoding: "utf8" }).trim().split("\n").filter((f) => f && f !== "services/access/gateAttemptLimiter.ts");
+for (const file of counted) {
+  const body = read(file).replace(/\/\/.*$/gm, "");
+  for (const m of body.matchAll(/takeGateAttempt\(\{[^}]*gate: "(\w+)"/g)) {
+    const door = doors.find((d) => d.gate === m[1]);
+    if (!door) throw new Error(`${file}: gate "${m[1]}" is a door missing from OWNER_PASSWORD_DOORS; every door accepts the owner password.`);
+    if (door.file !== file) throw new Error(`${file}: gate "${m[1]}" is registered at ${door.file}.`);
+  }
+}
+for (const door of doors.filter((d) => !d.noSecret)) {
+  const body = read(door.file).replace(/\/\/.*$/gm, ""); examined += 1;
+  const owner = body.search(new RegExp(`ownerSign(?:InResponse|InRedirect)\\(\\{[^}]*door: "${door.gate}", attempt: gate`));
+  if (owner < 0) throw new Error(`${door.file}: the ${door.gate} door does not accept the owner password (ownerSignInResponse / ownerSignInRedirect with door: "${door.gate}", attempt: gate).`);
+  const count = body.indexOf("takeGateAttempt(");
+  const refusal = body.indexOf("if (!gate.allowed)");
+  if (count < 0 || count > owner) throw new Error(`${door.file}: the ${door.gate} door must count the attempt before the owner check, so guessing it stays limited.`);
+  if (refusal >= 0 && refusal < owner) throw new Error(`${door.file}: the ${door.gate} door refuses on the count before the owner check; in an outage that refuses the owner password.`);
+}
+check("components/owner/OwnerConsole.tsx", ["/production-access/special-guest/preview?event=${encodeURIComponent(event.joinCode)}"]);
 // Ledgers.
 for (const [file, token] of [["config/deployed-route-manifest.json", '"id": "production-access-special-guest-preview"'], ["RUNTIME_ACTION_INVENTORY.json", '"id": "production-access-special-guest-preview"'], ["_hallmark_route_state_contract.json", '"id": "production-access-special-guest-preview"'], ["AUTHENTICATED_ROUTE_MANIFEST.md", "`production-access-special-guest-preview`"], ["VISIBLE_CONTROL_INVENTORY.md", "Open their green room / teleprompter / booth / lobby / overview (view as)"]]) check(file, [token]);
 // Proofs.

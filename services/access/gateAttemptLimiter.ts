@@ -36,7 +36,7 @@ export type GateName = "owner" | "operator" | "crew" | "special_guest" | "attend
  * run the show) refuse rather than go unguarded. The guest doors (a speaker's code, an attendee's
  * second device, a VIP code in the lobby) let the attempt through and log it: they open one event's
  * guest view, and a broken safety check must not keep every speaker out of a show that is already
- * running. No guest door accepts a production password, so failing open there never opens one.
+ * running. In an outage the owner password still opens every door, logged (ownerAtEveryDoor).
  * The account login holds every event of an agency, so it refuses.
  */
 const FAIL_CLOSED: Record<GateName, boolean> = {

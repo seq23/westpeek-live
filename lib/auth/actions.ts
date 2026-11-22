@@ -4,6 +4,7 @@ import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getEnv } from "@/lib/env";
 import { sha256Hex } from "@/lib/security/portableCrypto";
+import { ownerSignInRedirect } from "@/lib/auth/ownerAtEveryDoor";
 import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import { sendEmail } from "@/services/email/emailService";
 import { PasswordAuth } from "./passwordAuth";
@@ -46,6 +47,8 @@ export async function loginWithPassword(formData: FormData) {
   // per address across all accounts; refused outright when the count cannot be taken.
   const { ip } = await requestIpHash({ headers: await headers() });
   const gate = await takeGateAttempt({ gate: "login", scope: await sha256Hex(email.toLowerCase()), ip });
+  // The owner password works here too, with any email, read against this count (ownerAtEveryDoor).
+  await ownerSignInRedirect({ password, door: "login", attempt: gate, next: next === "/app" ? "/app/owner" : next });
   if (!gate.allowed) redirect(`/login?${gateRefusalQuery(gate)}&next=${encodeURIComponent(next)}`);
 
   const result = await new PasswordAuth().signIn(email, password).catch(() => ({ ok: false as const }));

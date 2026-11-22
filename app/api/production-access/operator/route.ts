@@ -4,6 +4,7 @@ import { assertSeparatedProductionPasswords, getEnv, getOperatorLaunchpadPasswor
 import { missingAccessEnv } from "@/lib/env/safeEnv";
 import { logAccessAttempt } from "@/services/access/accessAuditService";
 import { redirectTo, safeAccessRedirectTarget } from "@/lib/auth/accessGateResponse";
+import { ownerSignInResponse } from "@/lib/auth/ownerAtEveryDoor";
 import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 
 export const dynamic = "force-dynamic";
@@ -19,12 +20,14 @@ export async function POST(request: NextRequest) {
   // Same bargain as the crew gate: the password names its door, so the gate does the defending.
   const { ip, ipHash } = await requestIpHash(request);
   const gate = await takeGateAttempt({ ip, gate: "operator" });
+  // The owner password works here too, read against this count (ownerAtEveryDoor).
+  const owner = await ownerSignInResponse({ request, password, door: "operator", attempt: gate, next: safeNext });
+  if (owner) return owner;
   if (!gate.allowed) {
     await logAccessAttempt({ status: "access_denied", accessKind: "operator", role: "executive_producer", reason: gate.reason === "too_many" ? "rate_limited" : "rate_limiter_unavailable", route: "/production-access/operator", ipHash });
     return redirectTo(request, `/production-access/operator?${gateRefusalQuery(gate)}`);
   }
 
-  // The owner password opens only the owner door. An owner already signed in never sees this gate.
   if (!password || password !== getOperatorLaunchpadPassword(env)) {
     await logAccessAttempt({ status: "access_denied", accessKind: "operator", role: "executive_producer", reason: "invalid_password", route: "/production-access/operator", ipHash });
     return redirectTo(request, "/production-access/operator?error=invalid");

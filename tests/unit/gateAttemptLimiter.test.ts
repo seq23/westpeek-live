@@ -78,7 +78,7 @@ describe("gate attempt limiter", () => {
     expect(refused).toEqual({ allowed: false, reason: "too_many", retryInSeconds: GATE_WINDOW_SECONDS });
   });
 
-  it("brute force through the owner route: the right password after the limit is still refused", async () => {
+  it("brute force through the owner route: after six misses from one address, even the right password waits there (her own password still signs her in elsewhere)", async () => {
     const binding = sharedBinding();
     for (let attempt = 0; attempt < GATE_ATTEMPTS_PER_WINDOW; attempt += 1) {
       const isolate = await freshIsolate();
@@ -90,9 +90,15 @@ describe("gate attempt limiter", () => {
     const isolate = await freshIsolate();
     isolate.setGateLimiterForTests(binding);
     const { POST } = await import("@/app/api/production-access/owner/route");
-    const response = await POST(gatePost("owner", { password: OWNER_PASSWORD }));
-    expect(response.headers.get("location")).toContain("error=too_many");
-    expect(response.cookies.getAll()).toHaveLength(0);
+    const guess = await POST(gatePost("owner", { password: "guess-after-limit" }));
+    expect(guess.headers.get("location")).toContain("error=too_many");
+    expect(guess.cookies.getAll()).toHaveLength(0);
+    const locked = await POST(gatePost("owner", { password: OWNER_PASSWORD }));
+    expect(locked.headers.get("location")).toContain("error=too_many");
+    expect(locked.cookies.getAll()).toHaveLength(0);
+    const elsewhere = await POST(gatePost("owner", { password: OWNER_PASSWORD }, "198.51.100.44"));
+    expect(elsewhere.headers.get("location")).toContain("/app/owner");
+    expect(elsewhere.cookies.getAll()).toHaveLength(1);
   });
 
   it("one prober does not lock out a different event, a different place or a different gate", async () => {
@@ -173,7 +179,7 @@ describe("gate attempt limiter", () => {
       (await freshIsolate()).setGateLimiterForTests(sharedBinding());
       const { POST } = await import("@/app/api/production-access/crew/route");
       for (let attempt = 1; attempt <= GATE_ATTEMPTS_PER_WINDOW; attempt += 1) {
-        expect((await POST(gatePost("crew", { eventCode: `x${attempt}`, password: OWNER_PASSWORD }))).headers.get("location")).not.toContain("too_many");
+        expect((await POST(gatePost("crew", { eventCode: `x${attempt}`, password: `wrong-guess-${attempt}` }))).headers.get("location")).not.toContain("too_many");
       }
       const seventh = await POST(gatePost("crew", { eventCode: "x7", password: "crew-test-password" }));
       expect(seventh.headers.get("location")).toContain("error=too_many");
@@ -204,34 +210,15 @@ describe("gate attempt limiter", () => {
     });
   });
 
-  describe("the owner password opens only the owner door", () => {
-    it("at the crew, operator and special-guest doors it is a wrong password: no owner cookie", async () => {
-      (await freshIsolate()).setGateLimiterForTests(sharedBinding());
-      const crew = await (await import("@/app/api/production-access/crew/route")).POST(gatePost("crew", { eventCode: "", password: OWNER_PASSWORD }));
-      const operator = await (await import("@/app/api/production-access/operator/route")).POST(gatePost("operator", { password: OWNER_PASSWORD }));
-      const guest = await (await import("@/app/api/production-access/special-guest/route")).POST(gatePost("special-guest", { eventCode: "demo", roleCode: OWNER_PASSWORD }));
-      for (const response of [crew, operator, guest]) {
-        expect(response.headers.get("location")).toMatch(/error=/);
-        expect(response.cookies.getAll()).toHaveLength(0);
-      }
-    });
-
-    it("in an outage the guest door fails open, and the owner password there still opens nothing", async () => {
-      vi.spyOn(console, "error").mockImplementation(() => undefined);
-      (await freshIsolate()).setGateLimiterForTests(undefined);
-      const guest = await (await import("@/app/api/production-access/special-guest/route")).POST(gatePost("special-guest", { eventCode: "demo", roleCode: OWNER_PASSWORD }));
-      expect(guest.headers.get("location")).toMatch(/error=/);
-      expect(guest.cookies.getAll()).toHaveLength(0);
-    });
-  });
+  // The owner password at every other door, limited or in an outage: tests/unit/ownerAtEveryDoor.test.ts.
 
   describe("outage: the binding is missing or failing in a Worker", () => {
     beforeEach(() => vi.spyOn(console, "error").mockImplementation(() => undefined));
 
-    it("owner and operator refuse with the paused notice, never let the attempt through", async () => {
+    it("owner and operator refuse a password that is not hers with the paused notice, never let the attempt through", async () => {
       const isolate = await freshIsolate();
       isolate.setGateLimiterForTests(undefined);
-      const owner = await (await import("@/app/api/production-access/owner/route")).POST(gatePost("owner", { password: OWNER_PASSWORD }));
+      const owner = await (await import("@/app/api/production-access/owner/route")).POST(gatePost("owner", { password: "a-guess-in-an-outage" }));
       expect(owner.headers.get("location")).toContain("/production-access/owner?error=paused");
       expect(owner.cookies.getAll()).toHaveLength(0);
       const operator = await (await import("@/app/api/production-access/operator/route")).POST(gatePost("operator", { password: "operator-test-password" }));

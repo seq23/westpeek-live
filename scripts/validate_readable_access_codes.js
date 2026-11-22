@@ -32,6 +32,6 @@ for (const gate of ["app/api/production-access/crew/route.ts", "app/api/producti
 for (const page of ["app/production-access/crew/page.tsx", "app/production-access/special-guest/page.tsx"]) check(page, ["<GateRefusalNotice"]);
 
 check("tests/unit/readableAccessCodes.test.ts", ["takes the first six letters", "two events that want the same stem never share a code", "a hand-set code wins and survives adopting"]);
-check("tests/unit/gateAttemptLimiter.test.ts", ["lets an honest mistype through", "across isolates", "lying client", "the owner password opens only the owner door"]);
+check("tests/unit/gateAttemptLimiter.test.ts", ["lets an honest mistype through", "across isolates", "lying client", "her own password still signs her in elsewhere"]);
 if (examined < 12) throw new Error(`validate_readable_access_codes examined only ${examined} files`);
 console.log(`validate_readable_access_codes: PASS — ${examined} files examined; WPL-[ROLE-]STEM everywhere, stems unique across live events, gates rate-limited and failures logged without the value.`);
