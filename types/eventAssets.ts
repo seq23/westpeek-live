@@ -112,3 +112,16 @@ export function assetUploadRefusal(input: { mimeType: string; sizeBytes: number;
   }
   return undefined;
 }
+
+/**
+ * A pasted link is saved, and later opened by the download route, only as an absolute https address with no
+ * user:password in it. Anything else (http, javascript:, data:, a path on this site) is refused.
+ */
+export function httpsAssetLink(raw: string): string | undefined {
+  let url: URL;
+  try { url = new URL(raw.trim()); } catch { return undefined; }
+  if (url.protocol !== "https:" || !url.hostname || url.username || url.password) return undefined;
+  return url.href;
+}
+
+export const ASSET_LINK_REFUSAL = "That link was not saved: paste the full address, starting with https://.";

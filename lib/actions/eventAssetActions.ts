@@ -5,7 +5,7 @@ import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlR
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
 import { archiveAsset, recordUploadedAsset, requestAssetUpload, setAssetReview, setAssetVisibility, storedObjectExists } from "@/services/assets/eventAssetService";
-import type { EventAssetStatus, EventAssetVisibility } from "@/types/eventAssets";
+import { ASSET_LINK_REFUSAL, httpsAssetLink, type EventAssetStatus, type EventAssetVisibility } from "@/types/eventAssets";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || "").trim();
@@ -73,10 +73,12 @@ export async function confirmAssetUploadAction(input: { eventId: string; assetId
 /** Production pastes a link when the file lives somewhere else (or storage is not configured). */
 export async function addAssetLinkAction(formData: FormData) {
   const eventId = clean(formData.get("eventId"));
-  const url = clean(formData.get("url"));
-  if (!eventId || !url) return;
+  const pasted = clean(formData.get("url"));
+  if (!eventId || !pasted) return;
   const actor = await getWorkspaceActor();
   const label = actor ? actor.label : await requireAssetControl(eventId);
+  const url = httpsAssetLink(pasted);
+  if (!url) throw new Error(ASSET_LINK_REFUSAL);
   await recordUploadedAsset({
     eventId,
     assetId: `asset-link-${Date.now()}`,
