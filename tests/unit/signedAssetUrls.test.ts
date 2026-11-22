@@ -1,6 +1,7 @@
-import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { setAssetsBucketForTests, type R2BucketLike } from "@/lib/d1/binding";
 import { signDownloadUrl, signUploadUrl, verifyDownloadUrl, verifyUploadUrl } from "@/services/assets/signedUrlService";
+import { storedObjectExists } from "@/services/assets/eventAssetService";
 
 /**
  * The private R2 bucket opens only to links this Worker signed. Expired, tampered, widened and
@@ -109,5 +110,66 @@ describe("the upload and file routes move bytes only on a valid link", () => {
     const response = await PUT(new Request(`https://westpeek.live${link}`, { method: "PUT", body: "abc", headers: { "content-type": "application/pdf" } }));
     expect(response.status).toBe(503);
     expect(await response.json()).toMatchObject({ ok: false, error: expect.stringMatching(/ASSETS_BUCKET/) });
+  });
+});
+
+/**
+ * A request as the Worker receives it, with a Content-Length the client chose (fetch's Request
+ * will not let a test set one) and a body that counts how much of it was ever read.
+ */
+function rawUpload(link: string, chunks: Uint8Array[], contentLength?: number) {
+  const pulled = { chunks: 0 };
+  let index = 0;
+  const body = new ReadableStream<Uint8Array>({
+    pull(controller) {
+      if (index >= chunks.length) { controller.close(); return; }
+      pulled.chunks += 1;
+      controller.enqueue(chunks[index++]);
+    },
+  }, { highWaterMark: 0 }); // pulled only when the route reads, so the count is what was read
+  const headers = new Headers({ "content-type": "application/pdf" });
+  if (contentLength !== undefined) headers.set("content-length", String(contentLength));
+  return { request: { url: `https://westpeek.live${link}`, headers, body } as unknown as Request, pulled };
+}
+
+describe("the upload route caps the bytes it holds, and a failed put saves nothing", () => {
+  it("refuses a declared length over the link before reading any of the body", async () => {
+    const { bucket, objects } = memoryBucket();
+    setAssetsBucketForTests(bucket);
+    const { PUT } = await import("@/app/api/assets/upload/route");
+    const link = await signUploadUrl({ key: "evt/as-2/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
+    const { request, pulled } = rawUpload(link, [new Uint8Array(1_001)], 1_001);
+    const response = await PUT(request);
+    expect(response.status).toBe(413);
+    expect(pulled.chunks).toBe(0);
+    expect(objects.size).toBe(0);
+  });
+
+  it("a client that lies about its length is capped on the bytes it really sends, and reading stops there", async () => {
+    const { bucket, objects } = memoryBucket();
+    setAssetsBucketForTests(bucket);
+    const { PUT } = await import("@/app/api/assets/upload/route");
+    const link = await signUploadUrl({ key: "evt/as-3/deck.pdf", mimeType: "application/pdf", sizeBytes: 1_000 });
+    const flood = Array.from({ length: 50 }, () => new Uint8Array(600));
+    const { request, pulled } = rawUpload(link, flood, 10);
+    const response = await PUT(request);
+    expect(response.status).toBe(413);
+    expect(pulled.chunks).toBe(2);
+    expect(objects.size).toBe(0);
+  });
+
+  it("a put that fails answers in words, and leaves no object for the library row to be written from", async () => {
+    const { bucket } = memoryBucket();
+    setAssetsBucketForTests({ ...bucket, put: async () => { throw new Error("R2 internal error"); } });
+    const consoleError = vi.spyOn(console, "error").mockImplementation(() => undefined);
+    const { PUT } = await import("@/app/api/assets/upload/route");
+    const link = await signUploadUrl({ key: "evt/as-4/deck.pdf", mimeType: "application/pdf", sizeBytes: 13 });
+    const response = await PUT(new Request(`https://westpeek.live${link}`, { method: "PUT", body: new TextEncoder().encode("%PDF-1.4 test"), headers: { "content-type": "application/pdf" } }));
+    expect(response.status).toBe(502);
+    expect(await response.json()).toMatchObject({ ok: false, error: expect.stringMatching(/nothing was saved/) });
+    expect(consoleError).toHaveBeenCalled();
+    // confirmAssetUploadAction writes the library row only when this finds the object.
+    expect(await storedObjectExists("evt/as-4/deck.pdf")).toBe(false);
+    consoleError.mockRestore();
   });
 });
