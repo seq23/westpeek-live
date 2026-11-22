@@ -2,7 +2,8 @@ import { getCloudflareContext } from "@opennextjs/cloudflare";
 import { createDbClient, type D1DatabaseLike, type DbClient } from "./query";
 
 /**
- * The Worker's D1 binding (`DB` in wrangler.jsonc) and the R2 bucket (`ASSETS_BUCKET`).
+ * The Worker's D1 binding (`DB` in wrangler.jsonc), the R2 bucket (`ASSETS_BUCKET`) and the gate
+ * rate limiter (`GATE_LIMITER`).
  *
  * Inside the deployed Worker they come from the OpenNext Cloudflare context. Outside it (`next dev`
  * without bindings, unit tests, the build) there is no binding: getD1() returns undefined and the
@@ -51,10 +52,56 @@ export function getAssetsBucket(): R2BucketLike | undefined {
   return bucket && typeof bucket.put === "function" ? bucket : undefined;
 }
 
+/** The Cloudflare Rate Limiting binding's surface (`ratelimits` in wrangler.jsonc). */
+export interface RateLimitBindingLike {
+  limit(options: { key: string }): Promise<{ success: boolean }>;
+}
+
+/**
+ * The gate limiter (`GATE_LIMITER`). `inWorker` tells "not running in a Worker" (next dev/start,
+ * tests: the caller uses its in-process stand-in) apart from "in a Worker without the binding",
+ * which is an outage.
+ */
+export function getGateRateLimiter(): { inWorker: boolean; binding?: RateLimitBindingLike } {
+  const env = cloudflareEnv();
+  if (!env) return { inWorker: false };
+  const binding = env.GATE_LIMITER as RateLimitBindingLike | undefined;
+  return { inWorker: true, binding: binding && typeof binding.limit === "function" ? binding : undefined };
+}
+
+/** The wide count: one address across every event at a gate (services/access/gateAttemptLimiter.ts). */
+export function getWideGateRateLimiter(): { inWorker: boolean; binding?: RateLimitBindingLike } {
+  const env = cloudflareEnv();
+  if (!env) return { inWorker: false };
+  const binding = env.GATE_LIMITER_WIDE as RateLimitBindingLike | undefined;
+  return { inWorker: true, binding: binding && typeof binding.limit === "function" ? binding : undefined };
+}
+
 export function setD1ForTests(db: D1DatabaseLike | undefined) {
   testDb = db;
 }
 
 export function setAssetsBucketForTests(bucket: R2BucketLike | undefined) {
   testBucket = bucket;
+}
+
+/** The Workers AI binding (`AI` in wrangler.jsonc), as far as this app uses it: one text model call. */
+export interface WorkersAiLike {
+  run(model: string, inputs: { messages: Array<{ role: "system" | "user"; content: string }>; max_tokens?: number; temperature?: number }): Promise<unknown>;
+}
+
+let testAi: { inWorker: boolean; binding?: WorkersAiLike } | undefined;
+
+/** `inWorker` false: no Cloudflare context at all (next dev, unit tests), so there is no model to ask. */
+export function getWorkersAi(): { inWorker: boolean; binding?: WorkersAiLike } {
+  if (testAi) return testAi;
+  const env = cloudflareEnv();
+  if (!env) return { inWorker: false };
+  const ai = env.AI as WorkersAiLike | undefined;
+  return { inWorker: true, binding: ai && typeof ai.run === "function" ? ai : undefined };
+}
+
+/** Tests: a binding plays the Worker's `AI`; `undefined` is "in a Worker, not bound"; "unset" clears. */
+export function setWorkersAiForTests(binding: WorkersAiLike | undefined | "unset") {
+  testAi = binding === "unset" ? undefined : { inWorker: true, binding };
 }

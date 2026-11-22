@@ -1,3 +1,14 @@
+/** What the matcher reads for a networking goal, and which text it was read from. */
+export interface NetworkingGoalIntent {
+  intents: string[];
+  source: "model" | "keywords";
+  /** sha256 of the trimmed goal text: a stored intent counts only while the goal is unchanged. */
+  goalHash: string;
+  readAt: string;
+  /** Why keywords were used: no model here, model missing or failing, or the monthly cap. */
+  fallback?: "no_model" | "model_unavailable" | "model_failed" | "monthly_cap";
+}
+
 export interface AttendeeProfile {
   attendeeId: string;
   eventId: string;
@@ -14,6 +25,8 @@ export interface AttendeeProfile {
   interestingFact?: string;
   topicsOfInterest: string[];
   networkingGoals?: string;
+  /** The goal read as intent when it was saved (services/speed-networking/networkingGoalIntent.ts). */
+  networkingGoalIntent?: NetworkingGoalIntent;
   networkingOptIn: boolean;
   /** "Hide me from the People directory": left out of the People page and sponsor lead views; crew still see them; networking still works if they join. Default false. */
   hiddenFromDirectory?: boolean;

@@ -1,3 +1,4 @@
+import { withNetworkingGoalIntent } from "@/services/speed-networking/networkingGoalIntent";
 import type { AuditLog } from "@/types/core";
 import type { V4AnalyticsEvent, V4RoomFallbackState } from "@/types/v4";
 import type { StageStreamEvent, StageStreamState } from "@/types/stageStream";
@@ -228,7 +229,8 @@ export class FileRuntimeStore implements RuntimeStore {
   }
 
 
-  async upsertAttendeeProfile(profile: AttendeeProfile) {
+  async upsertAttendeeProfile(given: AttendeeProfile) {
+    const profile = await withNetworkingGoalIntent(given);
     const snapshot = this.read();
     snapshot.attendeeProfiles = snapshot.attendeeProfiles.filter((item: AttendeeProfile) => !(item.eventId === profile.eventId && item.attendeeId === profile.attendeeId));
     snapshot.attendeeProfiles.push(profile);

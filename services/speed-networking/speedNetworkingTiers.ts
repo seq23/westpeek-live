@@ -52,7 +52,8 @@ export const SPEED_NETWORKING_MATCHING_CONFIG = {
 
 /**
  * Free-text networking goals, read as intent. Two people are complementary when one wants what
- * the other has; the table is small and named on purpose — it is a product decision, not a model.
+ * the other has. The labels and pairings are a product decision; reading a goal into them is done
+ * by a model when the goal is saved (networkingGoalIntent.ts), and these patterns are the fallback.
  */
 const GOAL_INTENTS: Array<{ intent: string; patterns: RegExp }> = [
   { intent: "hiring", patterns: /\b(hiring|recruit|recruiting|headcount|open roles?|build(ing)? (a|my|our) team)\b/i },
@@ -73,6 +74,10 @@ const COMPLEMENTARY_INTENTS: Array<[string, string]> = [
   ["mentoring", "learning"],
 ];
 
+/** The closed label set: a stored intent holds only these names. */
+export const GOAL_INTENT_NAMES = GOAL_INTENTS.map((entry) => entry.intent);
+
+/** The keyword reading: the fallback when no model read the goal at save time. */
 export function readGoalIntents(goals: string | undefined) {
   if (!goals) return [] as string[];
   return GOAL_INTENTS.filter((entry) => entry.patterns.test(goals)).map((entry) => entry.intent);
@@ -85,6 +90,8 @@ export interface SpeedNetworkingCandidate {
   title?: string;
   topicsOfInterest?: string[];
   networkingGoals?: string;
+  /** The goal as read at save time (model, or keywords when it did not answer); absent → keywords now. */
+  goalIntents?: string[];
   /** ISO. The queue clock: reset whenever they return to waiting. */
   joinedAt: string;
   /**
@@ -143,8 +150,8 @@ export function scoreSpeedNetworkingPair(first: SpeedNetworkingCandidate, second
   const sameCompany = Boolean(firstCompany) && firstCompany === normalizeCompany(second.company);
   const secondTopics = new Set((second.topicsOfInterest || []).map(normalizeTopic));
   const sharedTopics = Array.from(new Set((first.topicsOfInterest || []).map(normalizeTopic))).filter((topic) => topic && secondTopics.has(topic));
-  const firstIntents = readGoalIntents(first.networkingGoals);
-  const secondIntents = readGoalIntents(second.networkingGoals);
+  const firstIntents = first.goalIntents ?? readGoalIntents(first.networkingGoals);
+  const secondIntents = second.goalIntents ?? readGoalIntents(second.networkingGoals);
   const complementary = COMPLEMENTARY_INTENTS.some(([left, right]) => (firstIntents.includes(left) && secondIntents.includes(right)) || (firstIntents.includes(right) && secondIntents.includes(left)));
   const sharedGoal = !complementary && firstIntents.some((intent) => secondIntents.includes(intent));
   const affinity =

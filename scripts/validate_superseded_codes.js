@@ -119,9 +119,8 @@ if (!gate.includes('crew_lite: "crew"')) throw new Error("crew_lite shares the c
 check("app/join/page.tsx", ["withSupersededCode(resolution.destination, resolution.supersededCode)", "SupersededCodeNotice"]);
 check("components/access/SupersededCodeNotice.tsx", ["supersededAttendeeMessage", "superseded-code-notice", "export function withSupersededCode"]);
 check("components/access/SupersededGateNotice.tsx", ["supersededPrivilegedMessage", "export function supersededGateQuery"]);
-for (const page of ["app/production-access/crew/page.tsx", "app/production-access/special-guest/page.tsx", "app/api/production-access/crew/route.ts", "app/api/production-access/special-guest/route.ts"]) {
-  check(page, ["supersededGateQuery"]);
-}
+for (const page of ["app/production-access/crew/page.tsx", "app/production-access/special-guest/page.tsx"]) check(page, ["<SupersededGateNotice"]);
+for (const route of ["app/api/production-access/crew/route.ts", "app/api/production-access/special-guest/route.ts"]) check(route, ["supersededGateQuery"]);
 // The notice reaches all three places /join can land, or an old link lands silently.
 for (const destination of ["app/venue/[eventId]/stage/page.tsx", "app/venue/[eventId]/replay/page.tsx", "app/events/[slug]/page.tsx"]) {
   check(destination, ["SupersededCodeNotice", "codeChanged"]);
