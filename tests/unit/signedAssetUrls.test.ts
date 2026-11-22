@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { setAssetsBucketForTests, type R2BucketLike } from "@/lib/d1/binding";
 import { signDownloadUrl, signUploadUrl, verifyDownloadUrl, verifyUploadUrl } from "@/services/assets/signedUrlService";
+import { assetUploadRefusal } from "@/types/eventAssets";
 
 /**
  * The private R2 bucket opens only to links this Worker signed. Expired, tampered, widened and
@@ -101,6 +102,59 @@ describe("the upload and file routes move bytes only on a valid link", () => {
     expect(file.status).toBe(200);
     expect(file.headers.get("content-type")).toBe("application/pdf");
     expect(new Uint8Array(await file.arrayBuffer())).toEqual(body);
+  });
+
+  it("SVG is taken again and served sandboxed inline: an SVG carrying <script> opens with the sandbox CSP and nosniff; HTML and Office files download", async () => {
+    for (const place of ["portal", "library", "logo"] as const) expect(assetUploadRefusal({ mimeType: "image/svg+xml", sizeBytes: 100, fileName: "logo.svg", place }), place).toBeUndefined();
+    const { bucket } = memoryBucket();
+    setAssetsBucketForTests(bucket);
+    const { GET } = await import("@/app/api/assets/file/route");
+    const svg = '<svg xmlns="http://www.w3.org/2000/svg"><script>fetch("/api/owner")</script></svg>';
+    await bucket.put("house/logo/logo-1/logo.svg", new TextEncoder().encode(svg), { httpMetadata: { contentType: "image/svg+xml" } });
+    await bucket.put("evt/as-2/page.html", new TextEncoder().encode("<script>alert(1)</script>"), { httpMetadata: { contentType: "text/html" } });
+    await bucket.put("evt/as-3/slide.png", new Uint8Array([137, 80, 78, 71]), { httpMetadata: { contentType: "image/png" } });
+    await bucket.put("evt/as-4/deck.pdf", new TextEncoder().encode("%PDF-1.4"), { httpMetadata: { contentType: "application/pdf" } });
+    const office = { "evt/as-6/talk.pptx": "application/vnd.openxmlformats-officedocument.presentationml.presentation", "evt/as-7/brief.docx": "application/vnd.openxmlformats-officedocument.wordprocessingml.document", "evt/as-8/budget.xlsx": "application/vnd.openxmlformats-officedocument.spreadsheetml.sheet" };
+    for (const [key, contentType] of Object.entries(office)) await bucket.put(key, new Uint8Array([80, 75, 3, 4]), { httpMetadata: { contentType } });
+
+    const logo = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "house/logo/logo-1/logo.svg" })}`));
+    expect(logo.status).toBe(200);
+    expect(logo.headers.get("content-type")).toBe("image/svg+xml");
+    expect(logo.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(logo.headers.get("content-security-policy")).toMatch(/^sandbox; default-src 'none'(;|$)/);
+    expect(logo.headers.get("content-security-policy")).not.toMatch(/script-src|allow-scripts/);
+    expect(logo.headers.get("x-content-type-options")).toBe("nosniff");
+    for (const key of ["evt/as-2/page.html", ...Object.keys(office)]) {
+      const response = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key })}`));
+      expect(response.status, key).toBe(200);
+      expect(response.headers.get("content-disposition"), key).toMatch(/^attachment;/);
+      expect(response.headers.get("content-security-policy"), key).toMatch(/^sandbox; default-src 'none'/);
+      expect(response.headers.get("x-content-type-options"), key).toBe("nosniff");
+    }
+    const png = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "evt/as-3/slide.png" })}`));
+    expect(png.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(png.headers.get("content-security-policy")).toMatch(/^sandbox; default-src 'none'/);
+    const pdf = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "evt/as-4/deck.pdf" })}`));
+    expect(pdf.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(pdf.headers.get("content-security-policy")).toBe("frame-ancestors 'self'");
+    // A video opens in the browser's player, which a sandboxed document never starts; its sources stay locked.
+    await bucket.put("evt/as-5/reel.mp4", new Uint8Array([0, 0, 0, 24]), { httpMetadata: { contentType: "video/mp4" } });
+    const mp4 = await GET(new Request(`https://westpeek.live${await signDownloadUrl({ key: "evt/as-5/reel.mp4" })}`));
+    expect(mp4.headers.get("content-disposition")).toMatch(/^inline;/);
+    expect(mp4.headers.get("content-security-policy")).toBe("default-src 'none'; media-src 'self'; frame-ancestors 'self'");
+    expect(mp4.headers.get("x-content-type-options")).toBe("nosniff");
+  });
+
+  it("a refused file is told, in words, what to do next, and only the library offers a link", () => {
+    for (const place of ["portal", "logo", undefined] as const) {
+      for (const input of [{ mimeType: "text/html", sizeBytes: 100 }, { mimeType: "application/zip", sizeBytes: 100 }, { mimeType: "application/pdf", sizeBytes: 999_000_000 }]) {
+        const message = assetUploadRefusal({ ...input, place })!;
+        expect(message, `${place} ${input.mimeType}`).not.toMatch(/link|\//i);
+        expect(message).toMatch(/upload that\.$/);
+      }
+    }
+    expect(assetUploadRefusal({ mimeType: "application/zip", sizeBytes: 100, place: "library" })).toMatch(/paste a link/);
+    expect(assetUploadRefusal({ mimeType: "application/pdf", sizeBytes: 100, place: "logo" })).toMatch(/can't be a logo/);
   });
 
   it("answers 503 in words when the bucket is not bound", async () => {
