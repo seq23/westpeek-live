@@ -68,7 +68,7 @@ describe("the runtime migration map cannot be forgotten", () => {
   it("the generated manifest is current and the schema validator passes with its count", () => {
     expect(run("scripts/generate_d1_schema_manifest.mjs", ["--check"])).toMatchObject({ code: 0 });
     const { code, output } = run("scripts/validate_d1_schema_parity.js");
-    expect(output).toMatch(/validate_d1_schema_parity: PASS — \d+ checks: 8 migration files, 61 tables, \d+ columns/);
+    expect(output).toMatch(/validate_d1_schema_parity: PASS — \d+ checks: 9 migration files, 61 tables, \d+ columns/);
     expect(code).toBe(0);
   });
 

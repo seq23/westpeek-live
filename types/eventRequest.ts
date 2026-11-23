@@ -48,9 +48,15 @@ export interface EventRequestRecord {
   instructionsSentAt?: string;
   declinedAt?: string;
   declineReason?: string;
+  /** sha256 of the sender's address (migration 0009), for the per-address daily cap. Never the address. */
+  requesterIpHash?: string;
+  /** Whether Turnstile vouched for the sender ("passed") or no token came back ("unchecked", its own tighter cap). */
+  botCheck?: EventRequestBotCheck;
   createdAt: string;
   updatedAt: string;
 }
+
+export type EventRequestBotCheck = "passed" | "unchecked";
 
 export interface BudgetRange {
   value: string;

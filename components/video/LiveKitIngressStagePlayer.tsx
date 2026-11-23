@@ -94,10 +94,19 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
     if (fetchedForGrant.current === grantWantsPublish) return;
     fetchedForGrant.current = grantWantsPublish;
     let cancelled = false;
+    let retry: ReturnType<typeof setTimeout> | undefined;
     async function load() {
       try {
         const response = await fetch("/api/video/livekit-token", { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify({ eventId, roomId, roomType: "main_stage", displayName, role: "attendee" }) });
         const json = await response.json();
+        // Many viewers on one connection (an office, a watch party) can pass the per-address count
+        // for a minute: the stage keeps "getting ready" and asks again when the server says, spread
+        // out so they do not all come back in the same second.
+        if (response.status === 429 && !cancelled) {
+          const wait = Number(json.retryInSeconds) > 0 ? Number(json.retryInSeconds) : 30;
+          retry = setTimeout(load, (wait + Math.random() * 15) * 1000);
+          return;
+        }
         if (!cancelled) {
           if (json.ok && json.result?.token?.token && json.result?.livekitUrl) {
             setToken(json.result.token.token);
@@ -109,7 +118,7 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
       } catch { if (!cancelled) setError("LiveKit stream token could not be loaded."); }
     }
     load();
-    return () => { cancelled = true; };
+    return () => { cancelled = true; if (retry) clearTimeout(retry); };
   }, [eventId, roomId, displayName, grantWantsPublish, removed]);
 
   useEffect(() => {

@@ -12,7 +12,7 @@ import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import { RuntimeSchemaMissingError, type AgencySettingsRecord, type RuntimeClientRecord, type RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { HouseDefaultsRecord } from "@/types/houseDefaults";
-import type { EventRequestRecord } from "@/types/eventRequest";
+import type { EventRequestBotCheck, EventRequestRecord } from "@/types/eventRequest";
 import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
@@ -294,6 +294,8 @@ function mapEventRequest(row: Record<string, unknown>): EventRequestRecord {
     instructionsSentAt: text("instructions_sent_at"),
     declinedAt: text("declined_at"),
     declineReason: text("decline_reason"),
+    requesterIpHash: text("requester_ip_hash"),
+    botCheck: row.bot_check === "passed" || row.bot_check === "unchecked" ? row.bot_check : undefined,
     createdAt: String(row.created_at || ""),
     updatedAt: String(row.updated_at || row.created_at || ""),
   };
@@ -331,6 +333,8 @@ function eventRequestToRow(request: EventRequestRecord) {
     instructions_sent_at: request.instructionsSentAt ?? null,
     declined_at: request.declinedAt ?? null,
     decline_reason: request.declineReason ?? null,
+    requester_ip_hash: request.requesterIpHash ?? null,
+    bot_check: request.botCheck ?? null,
     created_at: request.createdAt,
     updated_at: request.updatedAt,
   };
@@ -1337,6 +1341,16 @@ export class D1RuntimeStore implements RuntimeStore {
     const { data, error } = await this.client.from("request_event_intake").select("*").eq("confirm_token", token).maybeSingle();
     if (error) failOrSchemaMissing("request_event_intake", error);
     return data ? mapEventRequest(data as Record<string, unknown>) : undefined;
+  }
+
+  async countEventRequestsSince(input: { since: string; requesterIpHash?: string; botCheck?: EventRequestBotCheck }) {
+    let query = this.client.from("request_event_intake").select("id", { count: "exact", head: true }).gte("created_at", input.since);
+    if (input.requesterIpHash) query = query.eq("requester_ip_hash", input.requesterIpHash);
+    if (input.botCheck) query = query.eq("bot_check", input.botCheck);
+    const { count, error } = await query;
+    if (error) failOrSchemaMissing("request_event_intake", error);
+    if (typeof count !== "number") throw new Error("request_event_intake count came back empty");
+    return count;
   }
 
   async listEventRequests(limit = 500) {

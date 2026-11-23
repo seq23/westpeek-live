@@ -29,7 +29,7 @@ export const GATE_WIDE_ATTEMPTS_PER_WINDOW = 20; // must match ratelimits[GATE_L
 /** The scope for an attempt whose event the server could not resolve: all such attempts share one count. */
 export const UNKNOWN_EVENT_SCOPE = "unknown-event";
 
-export type GateName = "owner" | "operator" | "crew" | "special_guest" | "attendee_return" | "vip_redeem" | "login";
+export type GateName = "owner" | "operator" | "crew" | "special_guest" | "attendee_return" | "vip_redeem" | "login" | "reset_email" | "request_event" | "video_viewer";
 
 /**
  * When the limiter itself is down. The production doors (owner opens every event, operator and crew
@@ -38,6 +38,10 @@ export type GateName = "owner" | "operator" | "crew" | "special_guest" | "attend
  * guest view, and a broken safety check must not keep every speaker out of a show that is already
  * running. In an outage the owner password still opens every door, logged (ownerAtEveryDoor).
  * The account login holds every event of an agency, so it refuses.
+ * The two public forms that send mail for a stranger (a password reset, an event request) refuse:
+ * nobody is locked out of anything by waiting a minute, and an open one is a free mail cannon.
+ * A watch-only viewer of an open event is let through, logged, like the guest doors: it creates
+ * nothing (the token route makes no room for a viewer) and a show that is running keeps its audience.
  */
 const FAIL_CLOSED: Record<GateName, boolean> = {
   owner: true,
@@ -47,6 +51,9 @@ const FAIL_CLOSED: Record<GateName, boolean> = {
   attendee_return: false,
   vip_redeem: false,
   login: true,
+  reset_email: true,
+  request_event: true,
+  video_viewer: false,
 };
 
 export type GateAttempt =

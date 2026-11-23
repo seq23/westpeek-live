@@ -565,7 +565,13 @@ export const D1_SCHEMA: Record<string, D1TableSchema> = {
       "instructions_sent_at": "text",
       "declined_at": "text",
       "decline_reason": "text",
-      "updated_at": "text"
+      "updated_at": "text",
+      "requester_ip_hash": "text",
+      "bot_check": "text"
+    },
+    "addedColumns": {
+      "requester_ip_hash": "migrations-d1/0009_request_event_caps.sql",
+      "bot_check": "migrations-d1/0009_request_event_caps.sql"
     }
   },
   "how_it_works_pages": {

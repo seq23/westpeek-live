@@ -1,5 +1,5 @@
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
-import { BUDGET_RANGES, budgetRangeLabel, formatPrice, type EventRequestRecord, type EventRequestState, type SettlementMethod } from "@/types/eventRequest";
+import { BUDGET_RANGES, budgetRangeLabel, formatPrice, type EventRequestBotCheck, type EventRequestRecord, type EventRequestState, type SettlementMethod } from "@/types/eventRequest";
 
 /**
  * Plan an event, end to end.
@@ -48,6 +48,8 @@ export interface EventRequestInput {
   supportLevel?: string;
   notes?: string;
   budgetRange?: string;
+  requesterIpHash?: string;
+  botCheck?: EventRequestBotCheck;
   createdAt?: string;
 }
 
@@ -74,6 +76,8 @@ function newRequestRecord(input: EventRequestInput): EventRequestRecord {
     supportLevel: input.supportLevel || undefined,
     notes: input.notes || undefined,
     budgetRange: input.budgetRange || undefined,
+    requesterIpHash: input.requesterIpHash || undefined,
+    botCheck: input.botCheck,
     state: "requested",
     createdAt: now,
     updatedAt: now,
@@ -92,6 +96,11 @@ export async function submitEventRequest(input: EventRequestInput): Promise<Even
   } catch (error) {
     return { ok: false, request, reason: `insert_failed:${errorMessage(error)}` };
   }
+}
+
+/** How many requests arrived since `since`, optionally from one address hash or in one bot-check lane. Throws when it cannot count. */
+export async function countEventRequestsSince(input: { since: string; requesterIpHash?: string; botCheck?: EventRequestBotCheck }) {
+  return getRuntimeStore().countEventRequestsSince(input);
 }
 
 export async function listEventRequests(limit = 500) {

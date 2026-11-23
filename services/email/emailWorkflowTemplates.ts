@@ -27,12 +27,12 @@ const labels: Record<EmailWorkflowType, string> = {
  * lines become paragraphs. Before this, a body containing `<` injected markup into the email and a
  * written-out announcement arrived as one run-on block.
  */
+export function escapeHtml(text: string) {
+  return text.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+}
+
 export function renderSummaryHtml(summary: string) {
-  const escaped = summary
-    .replace(/&/g, "&amp;")
-    .replace(/</g, "&lt;")
-    .replace(/>/g, "&gt;");
-  return escaped
+  return escapeHtml(summary)
     .split(/\n\s*\n/)
     .map((block) => block.trim())
     .filter(Boolean)

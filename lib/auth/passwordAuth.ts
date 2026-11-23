@@ -18,6 +18,9 @@ import type { DbClient } from "@/lib/d1/query";
 export const PASSWORD_ITERATIONS = 100_000;
 export const SESSION_TTL_SECONDS = 60 * 60 * 24 * 7;
 export const RESET_TTL_SECONDS = 60 * 60;
+/** At most this many reset links per account in any RESET_WINDOW_SECONDS; the 4th ask in the hour sends nothing. */
+export const RESETS_PER_ACCOUNT_PER_HOUR = 3;
+export const RESET_WINDOW_SECONDS = 60 * 60;
 export const MIN_PASSWORD_LENGTH = 10;
 
 const encoder = new TextEncoder();
@@ -158,10 +161,17 @@ export class PasswordAuth {
   async createPasswordReset(email: string): Promise<{ token: string; userId: string; expiresAt: string } | undefined> {
     const user = await this.findUserByEmail(email);
     if (!user || user.status !== "active") return undefined;
+    const db = this.client.db;
+    // Past the hourly count no new link is made, and the links already sent keep working: a stranger
+    // asking again and again can neither fill the inbox nor kill the link the owner is about to use.
+    const { results: recent } = await db
+      .prepare('SELECT COUNT(*) AS "n" FROM "auth_password_resets" WHERE "user_id" = ? AND "created_at" > ?')
+      .bind(user.id, this.iso(-RESET_WINDOW_SECONDS))
+      .all<{ n: number }>();
+    if (Number(recent[0]?.n ?? 0) >= RESETS_PER_ACCOUNT_PER_HOUR) return undefined;
     const token = randomToken();
     const expiresAt = this.iso(RESET_TTL_SECONDS);
     const now = this.iso();
-    const db = this.client.db;
     await db.batch([
       db.prepare('UPDATE "auth_password_resets" SET "used_at" = ? WHERE "user_id" = ? AND "used_at" IS NULL').bind(now, user.id),
       db.prepare('INSERT INTO "auth_password_resets" ("token_hash", "user_id", "created_at", "expires_at") VALUES (?, ?, ?, ?)').bind(await sha256Token(token), user.id, now, expiresAt),

@@ -16,12 +16,18 @@ const redeemVipCode = vi.fn(async () => ({ ok: false }));
 vi.mock("@/services/guests/vipGrantService", () => ({ redeemVipCode: (...args: unknown[]) => redeemVipCode(...(args as [])), grantVip: vi.fn(), revokeVip: vi.fn(), setVipInviteList: vi.fn() }));
 vi.mock("@/services/attendees/attendeeSessionService", () => ({ getCurrentAttendeeProfile: async (eventId: string) => ({ eventId, attendeeId: "a1", name: "Pat", email: "pat@example.test" }) }));
 const signIn = vi.fn(async () => ({ ok: false as const }));
-vi.mock("@/lib/auth/passwordAuth", () => ({ PasswordAuth: class { signIn(...args: unknown[]) { return signIn(...(args as [])); } } }));
+const createPasswordReset = vi.fn<(email: string) => Promise<{ token: string; userId: string; expiresAt: string } | undefined>>(async () => ({ token: "a".repeat(64), userId: "u1", expiresAt: "2026-11-23T12:00:00.000Z" }));
+vi.mock("@/lib/auth/passwordAuth", () => ({ PasswordAuth: class {
+  signIn(...args: unknown[]) { return signIn(...(args as [])); }
+  createPasswordReset(email: string) { return createPasswordReset(email); }
+} }));
+const sendEmail = vi.fn(async () => ({ id: "e1", provider: "resend", status: "sent" }));
+vi.mock("@/services/email/emailService", () => ({ sendEmail: (...args: unknown[]) => sendEmail(...(args as [])) }));
 vi.mock("@/lib/auth/sessionCookie", () => ({ setAuthCookie: vi.fn(), clearAuthCookie: vi.fn(), getAuthCookiePayload: vi.fn() }));
 
 import { GATE_ATTEMPTS_PER_WINDOW, resetGateAttemptsForTests, setGateLimiterForTests, createInProcessRateLimiter } from "@/services/access/gateAttemptLimiter";
 import { redeemVipCodeAction } from "@/lib/actions/vipActions";
-import { loginWithPassword } from "@/lib/auth/actions";
+import { loginWithPassword, requestPasswordReset } from "@/lib/auth/actions";
 
 function form(entries: Record<string, string>) {
   const data = new FormData();
@@ -80,5 +86,57 @@ describe("doors that are server actions are counted before the secret is checked
     setGateLimiterForTests(undefined);
     expect(await landing(loginWithPassword(form({ email: "owner@example.test", password: "anything" })))).toMatch(/^\/login\?error=paused&next=/);
     expect(signIn).not.toHaveBeenCalled();
+  });
+});
+
+describe("the reset form is counted before any account is looked up, the same for every address", () => {
+  beforeEach(() => {
+    resetGateAttemptsForTests();
+    createPasswordReset.mockClear();
+    sendEmail.mockClear();
+  });
+  afterEach(() => {
+    setGateLimiterForTests("unset");
+    vi.restoreAllMocks();
+  });
+
+  async function sixThenSeventh(email: string) {
+    const landings: string[] = [];
+    for (let ask = 1; ask <= GATE_ATTEMPTS_PER_WINDOW + 1; ask += 1) landings.push(await landing(requestPasswordReset(form({ email }))));
+    return landings;
+  }
+
+  it("six asks for one account from one address are handled, the 7th is told to wait and looks nothing up, whatever case is typed", async () => {
+    setGateLimiterForTests(createInProcessRateLimiter());
+    requestHeaders.set("cf-connecting-ip", "198.51.100.7");
+    const landings = await sixThenSeventh("Owner@Example.test");
+    expect(landings.slice(0, GATE_ATTEMPTS_PER_WINDOW)).toEqual(Array(GATE_ATTEMPTS_PER_WINDOW).fill("/login?notice=password_reset_sent"));
+    expect(landings[GATE_ATTEMPTS_PER_WINDOW]).toBe("/forgot-password?error=too_many&retry=60");
+    expect(createPasswordReset).toHaveBeenCalledTimes(GATE_ATTEMPTS_PER_WINDOW);
+    expect(sendEmail).toHaveBeenCalledTimes(GATE_ATTEMPTS_PER_WINDOW);
+    expect(await landing(requestPasswordReset(form({ email: "owner@example.test" })))).toBe("/forgot-password?error=too_many&retry=60");
+  });
+
+  it("an address with no account, or an account past its hourly links, gets exactly the same answers and no mail", async () => {
+    setGateLimiterForTests(createInProcessRateLimiter());
+    requestHeaders.set("cf-connecting-ip", "198.51.100.8");
+    const real = await sixThenSeventh("real@example.test");
+    resetGateAttemptsForTests();
+    setGateLimiterForTests(createInProcessRateLimiter());
+    sendEmail.mockClear();
+    createPasswordReset.mockResolvedValue(undefined); // no such account, or its 3 links this hour are spent
+    const none = await sixThenSeventh("nobody@example.test");
+    expect(none).toEqual(real);
+    expect(sendEmail).not.toHaveBeenCalled();
+    createPasswordReset.mockReset();
+    createPasswordReset.mockResolvedValue({ token: "a".repeat(64), userId: "u1", expiresAt: "2026-11-23T12:00:00.000Z" });
+  });
+
+  it("in a limiter outage the form refuses and sends nothing", async () => {
+    vi.spyOn(console, "error").mockImplementation(() => undefined);
+    setGateLimiterForTests(undefined);
+    expect(await landing(requestPasswordReset(form({ email: "owner@example.test" })))).toBe("/forgot-password?error=reset_paused");
+    expect(createPasswordReset).not.toHaveBeenCalled();
+    expect(sendEmail).not.toHaveBeenCalled();
   });
 });

@@ -47,6 +47,7 @@ Source of truth: `deployment/cloudflare-required-secrets.json` (Worker secrets, 
 - **Zoom**: `ZOOM_MEETING_SDK_KEY`, `ZOOM_MEETING_SDK_SECRET`
 - **StreamYard / stage**: `STREAMYARD_PRIMARY_ENABLED`, `STAGE_STREAM_DEFAULT_SOURCE`
 - **Email**: `RESEND_API_KEY`, `EMAIL_FROM`, `EMAIL_REPLY_TO`
+- **Bot check (Cloudflare Turnstile, widget `westpeek-live-forms`, Managed)**: `TURNSTILE_SITE_KEY` (public, rendered into `/request-event`), `TURNSTILE_SECRET_KEY` (server only). Vault: `WPL_TURNSTILE_SITE_KEY`, `WPL_TURNSTILE_SECRET_KEY`. Unset or Turnstile down, requests still arrive but under the tighter unchecked daily caps (`services/events/requestEventAdmission.ts`).
 - **App**: `NEXT_PUBLIC_APP_URL`, `NEXT_PUBLIC_SELF_SERVE_ENABLED`, `SELF_SERVE_EVENT_CREATION_ENABLED`, `BILLING_REQUIRED_FOR_SELF_SERVE`, `AGENCY_EVENT_OS_RUNTIME_STORE`, `ALLOW_FILE_RUNTIME_STORE_IN_PRODUCTION`
 
 ## Where the values live

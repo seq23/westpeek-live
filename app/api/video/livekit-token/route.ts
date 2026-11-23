@@ -1,6 +1,9 @@
 /* eslint-disable @typescript-eslint/no-explicit-any -- boundary adapters normalize legacy/runtime payloads before typed domain use */
 import { NextResponse } from "next/server";
-import { buildResilientVideoJoinResult } from "@/services/video/livekitRoomUiService";
+import { buildLiveKitJoinResult } from "@/services/video/livekitRoomUiService";
+import { findEventRecord } from "@/services/events/eventRepository";
+import { venueGateFor } from "@/services/venue/venueStateGate";
+import { requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import { canAttendeeJoinLive, canAttendeePublishLive } from "@/services/venue/attendeeLivePermissionService";
 import { authorizeVideoTokenRequest } from "@/lib/auth/videoTokenRequestGuard";
 import { currentAttendeeMayHoldPrivilege, getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
@@ -24,8 +27,31 @@ export async function POST(request: Request) {
     return NextResponse.json({ ok: false, error: "displayName is required for non-attendee video roles." }, { status: 400 });
   }
 
-  const auth = await authorizeVideoTokenRequest({ role: body.role, eventId: body.eventId, allowAnonymousViewer: body.role === "attendee" && WATCHABLE_ROOMS.includes(String(body.roomType)) });
+  const watchable = WATCHABLE_ROOMS.includes(String(body.roomType));
+  const auth = await authorizeVideoTokenRequest({ role: body.role, eventId: body.eventId, allowAnonymousViewer: (body.role === "attendee" || body.role === "observer") && watchable });
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 403 });
+
+  // Someone with no session at all (an observer, or an attendee who never registered) watches only a
+  // real event the public can see right now, counted per address, so a script cannot mint tokens
+  // for rooms of events that do not exist or are not open (23 Nov 2026).
+  const identity = (auth as any).identity as Awaited<ReturnType<typeof getCurrentAttendeeIdentity>> | undefined;
+  const anonymousViewer = (body.role === "attendee" || body.role === "observer") && !identity;
+  if (anonymousViewer) {
+    let event: Awaited<ReturnType<typeof findEventRecord>>;
+    try {
+      event = await findEventRecord(body.eventId);
+    } catch {
+      return NextResponse.json({ ok: false, error: "We could not check this event just now. Try again in a moment." }, { status: 503 });
+    }
+    if (!event || event.id !== body.eventId) return NextResponse.json({ ok: false, error: "No such event." }, { status: 404 });
+    if (venueGateFor({ status: event.status }) !== "open") return NextResponse.json({ ok: false, error: "This event is not open to watch right now." }, { status: 403 });
+    const { ip } = await requestIpHash(request);
+    const gate = await takeGateAttempt({ gate: "video_viewer", scope: event.id, ip });
+    if (!gate.allowed) {
+      const retryInSeconds = gate.reason === "too_many" ? gate.retryInSeconds : 30;
+      return NextResponse.json({ ok: false, error: "Too many people joined from this connection in the last minute. Try again in a moment.", retryInSeconds }, { status: 429, headers: { "Retry-After": String(retryInSeconds) } });
+    }
+  }
 
   // A speed-networking roomId names the LiveKit room directly (<eventId>-net-<matchId>), so this
   // branch has to be closed before any role-specific handling: an observer or a crew role reaching
@@ -59,41 +85,39 @@ export async function POST(request: Request) {
     publishPermission = { canPublishAudio: grant.canPublish, canPublishVideo: grant.canPublish, canShareScreen: grant.canPublish, reason: grant.reason };
   }
 
-  if (body.role === "attendee") {
-    const identity = (auth as any).identity || await getCurrentAttendeeIdentity(body.eventId);
-    if (!identity) {
-      // No session: a subscribe-only token for the rooms anyone holding the link may watch.
-      // Registration is what unlocks taking part, and the venue asks for it at the point of use.
-      if (!WATCHABLE_ROOMS.includes(body.roomType)) return NextResponse.json({ ok: false, error: "Register for this event to join this room." }, { status: 403 });
-      displayName = "Guest";
-      profileId = undefined;
-      publishPermission = { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "Watching only. Register to take part." };
+  if (anonymousViewer) {
+    // Watch only. Registration is what unlocks taking part, and the venue asks for it at the point of use.
+    displayName = "Guest";
+    profileId = undefined;
+    publishPermission = { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "Watching only. Register to take part." };
+  } else if (body.role === "attendee") {
+    if (!identity) return NextResponse.json({ ok: false, error: "Register for this event to join this room." }, { status: 403 });
+    displayName = identity.displayName;
+    profileId = identity.attendeeId;
+    // A speed-networking room: already admitted above (only the two attendees of THAT active
+    // match). Camera and mic on, because both opted in by joining the queue from the device in
+    // front of them, so the restored-session guard below does not hold this grant back.
+    if (body.roomType === "speed_networking") {
+      publishPermission = { canPublishAudio: true, canPublishVideo: true, canShareScreen: false, reason: "Matched for speed networking." };
     } else {
-      displayName = identity.displayName;
-      profileId = identity.attendeeId;
-      // A speed-networking room: already admitted above (only the two attendees of THAT active
-      // match). Camera and mic on, because both opted in by joining the queue from the device in
-      // front of them, so the restored-session guard below does not hold this grant back.
-      if (body.roomType === "speed_networking") {
-        publishPermission = { canPublishAudio: true, canPublishVideo: true, canShareScreen: false, reason: "Matched for speed networking." };
-      } else {
-        const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
-        const joinPermission = await canAttendeeJoinLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
-        if (!joinPermission.canJoin) return NextResponse.json({ ok: false, error: joinPermission.reason, accessStatus: joinPermission.status }, { status: 403 });
-        // No privileged state crosses an unverified email: a session restored on a second device from
-        // the address alone may watch and chat, and is issued a watch-only token until the crew
-        // approves it here, or the person registers on this device.
-        const mayHoldPrivilege = await currentAttendeeMayHoldPrivilege(body.eventId);
-        publishPermission = mayHoldPrivilege
-          ? await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId })
-          : { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "You are back on a new device from your email alone. Camera and microphone stay off until the crew approves you here." };
-      }
+      const roomKind = body.roomType === "main_stage" ? "main_stage" : body.roomType === "breakout" ? "breakout" : "session";
+      const joinPermission = await canAttendeeJoinLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId });
+      if (!joinPermission.canJoin) return NextResponse.json({ ok: false, error: joinPermission.reason, accessStatus: joinPermission.status }, { status: 403 });
+      // No privileged state crosses an unverified email: a session restored on a second device from
+      // the address alone may watch and chat, and is issued a watch-only token until the crew
+      // approves it here, or the person registers on this device.
+      const mayHoldPrivilege = await currentAttendeeMayHoldPrivilege(body.eventId);
+      publishPermission = mayHoldPrivilege
+        ? await canAttendeePublishLive({ eventId: body.eventId, roomKind, roomId: body.roomId, attendeeId: identity.attendeeId })
+        : { canPublishAudio: false, canPublishVideo: false, canShareScreen: false, reason: "You are back on a new device from your email alone. Camera and microphone stay off until the crew approves you here." };
     }
   }
 
-  let result: Awaited<ReturnType<typeof buildResilientVideoJoinResult>>;
+  // LiveKit only. Every client of this route plays livekitUrl alone, so the Daily fallback that used to
+  // sit here only ever made paid Daily rooms nobody joined. A LiveKit failure is a 503 the client shows.
+  let result: Awaited<ReturnType<typeof buildLiveKitJoinResult>>;
   try {
-    result = await buildResilientVideoJoinResult({
+    result = await buildLiveKitJoinResult({
     eventId: body.eventId,
     roomId: body.roomId,
     roomType: body.roomType,

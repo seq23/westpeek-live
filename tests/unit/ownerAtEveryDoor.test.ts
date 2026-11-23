@@ -58,6 +58,9 @@ const ENTER: Record<GateName, ((secret: string) => Promise<{ location: string; c
   vip_redeem: async (secret) => viaAction(async () => (await import("@/lib/actions/vipActions")).redeemVipCodeAction(form({ eventId: "evt-1", code: secret }))),
   login: async (secret) => viaAction(async () => (await import("@/lib/auth/actions")).loginWithPassword(form({ email: "anyone@example.test", password: secret }))),
   attendee_return: null,
+  reset_email: null,
+  request_event: null,
+  video_viewer: null,
 };
 
 async function ownerCookies(cookies: string[]) {
