@@ -21,7 +21,7 @@ vi.mock("@/services/speed-networking/speedNetworkingService", () => ({ findActiv
 let hostLink: { codeVersion: number } | "down" = { codeVersion: 0 };
 vi.mock("@/services/events/hostLinkService", async (importOriginal) => {
   const original = await importOriginal<typeof import("@/services/events/hostLinkService")>();
-  return { ...original, getHostLinkState: async () => { if (hostLink === "down") throw new original.AccessStateUnavailableError("down"); return { codeVersion: hostLink.codeVersion, grants: [] }; } };
+  return { ...original, getHostLinkState: async () => { if (hostLink === "down") throw new original.AccessStateUnavailableError("host link state", "evt", new Error("down")); return { codeVersion: hostLink.codeVersion, grants: [] }; } };
 });
 const jar = new Map<string, string>();
 vi.mock("next/headers", () => ({ cookies: async () => ({ get: (name: string) => (jar.has(name) ? { name, value: jar.get(name) } : undefined), set: () => undefined }), headers: async () => new Headers() }));

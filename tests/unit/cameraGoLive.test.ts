@@ -178,9 +178,9 @@ describe("go live with cameras", () => {
     expect(stageSourceLabel(state)).toBe("Ended");
     expect((await findEventRecord(eventId))?.status).toBe("ended");
     expect((await switchTo(eventId, "CAMERAS")).ok).toBe(true);
-    state = await stage(eventId);
-    expect(state.streamStatus).toBe("LIVEKIT_CAMERAS_LIVE");
-    expect(state.operatorMarkedShowEnded).toBe(false);
+    const restarted = await stage(eventId);
+    expect(restarted.streamStatus).toBe("LIVEKIT_CAMERAS_LIVE");
+    expect(restarted.operatorMarkedShowEnded).toBe(false);
   });
 
   it("LiveKit failing in a camera show moves to Daily, and moving back up returns to cameras", async () => {
