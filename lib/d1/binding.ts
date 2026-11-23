@@ -20,7 +20,8 @@ export interface R2ObjectBodyLike {
   arrayBuffer(): Promise<ArrayBuffer>;
 }
 export interface R2BucketLike {
-  put(key: string, value: ArrayBuffer | ReadableStream | Uint8Array | string, options?: { httpMetadata?: { contentType?: string } }): Promise<unknown>;
+  /** Resolves null, storing nothing, when an `onlyIf` precondition fails (etagDoesNotMatch "*" on an existing key). */
+  put(key: string, value: ArrayBuffer | ReadableStream | Uint8Array | string, options?: { httpMetadata?: { contentType?: string }; onlyIf?: { etagDoesNotMatch?: string } }): Promise<unknown | null>;
   get(key: string): Promise<R2ObjectBodyLike | null>;
   head(key: string): Promise<unknown | null>;
   delete(key: string): Promise<void>;

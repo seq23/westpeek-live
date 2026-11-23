@@ -22,6 +22,8 @@ export function finalKeyFor(pendingKey: string) {
   return pendingKey.startsWith(PENDING_UPLOAD_PREFIX) ? pendingKey.slice(PENDING_UPLOAD_PREFIX.length) : undefined;
 }
 
+const ALREADY_USED = "This upload link was already used. Start the upload again from the page.";
+
 function answer(status: number, body: Record<string, unknown>) {
   return Response.json(body, { status, headers: { "cache-control": "no-store" } });
 }
@@ -58,13 +60,28 @@ export async function handleAssetUpload(request: Request, deps: { bucket: R2Buck
   if (!Number.isSafeInteger(declared) || declared < 0) return answer(411, { ok: false, error: "The upload did not say how large the file is, so nothing was saved. Try the upload again from the page." });
   if (declared > Math.min(check.sizeBytes, EVENT_ASSET_MAX_BYTES)) return answer(413, { ok: false, error: "The file is larger than the upload link allows, so nothing was saved." });
   if (declared === 0 || !request.body) return answer(400, { ok: false, error: "That file is empty, so nothing was saved." });
-  if ((await bucket.head(check.key)) || (await bucket.head(finalKey))) return answer(409, { ok: false, error: "This upload link was already used. Start the upload again from the page." });
+  // A link already confirmed has moved its file to the final key: the pending key is free again, so
+  // only this lookup can tell a replay from a first upload.
+  let confirmed: unknown;
   try {
-    await bucket.put(check.key, sizedBody(request.body, declared), { httpMetadata: { contentType: check.mimeType } });
+    confirmed = await bucket.head(finalKey);
+  } catch (error) {
+    console.error(`[assets/upload] R2 head failed for ${finalKey}:`, error instanceof Error ? error.message : error);
+    return answer(503, { ok: false, error: "Storage could not be checked, so nothing was saved. Try the upload again in a minute." });
+  }
+  if (confirmed) return answer(409, { ok: false, error: ALREADY_USED });
+  let stored: unknown;
+  try {
+    // Written only if the pending key does not exist yet (etag does not match "*", i.e. If-None-Match: *),
+    // checked by R2 as it commits the write. A look-then-write would let two uploads on one link both
+    // pass the look and the second overwrite the first; here exactly one write wins and the other is
+    // refused (put resolves null).
+    stored = await bucket.put(check.key, sizedBody(request.body, declared), { httpMetadata: { contentType: check.mimeType }, onlyIf: { etagDoesNotMatch: "*" } });
   } catch (error) {
     // Nothing is recorded: the library row is written only by the confirm step, from an object it finds.
     console.error(`[assets/upload] R2 put failed for ${check.key}:`, error instanceof Error ? error.message : error);
     return answer(502, { ok: false, error: "Storage did not accept the file, so nothing was saved. Try the upload again." });
   }
+  if (stored === null) return answer(409, { ok: false, error: ALREADY_USED });
   return answer(200, { ok: true, key: check.key, sizeBytes: declared });
 }

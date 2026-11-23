@@ -67,11 +67,14 @@ export async function CommandBarGoLive({ eventId, viewer, stageId = "main-stage"
  * The row under the bar that the Go live click expands into. Open by default the moment credentials
  * exist — the producer pressed one button and the stream key must be in front of them, not behind
  * a second click. After End the show it reads why the key is gone and offers one button back.
+ *
+ * It hangs under the pinned bar and the page carries on below it, so it keeps a gap of its own
+ * (mb-5, the workspace's gap): flush, its rounded foot ran straight into the next card at 390px.
  */
 export async function CommandBarCredentials({ eventId, viewer, stageId = "main-stage" }: { eventId: string; viewer: CrewViewer; stageId?: string }) {
   const shape = await readShape(eventId, stageId);
   return (
-    <details open={shape.hasCredentials || shape.ended} className="wpl-as-authored rounded-b-3xl bg-brand-black/95 px-4 py-2 text-white shadow-lg" data-testid="command-bar-credentials" data-has-credentials={shape.hasCredentials ? "true" : "false"} data-ended={shape.ended ? "true" : "false"}>
+    <details open={shape.hasCredentials || shape.ended} className="wpl-as-authored mb-5 rounded-b-3xl bg-brand-black/95 px-4 py-2 text-white shadow-lg" data-testid="command-bar-credentials" data-has-credentials={shape.hasCredentials ? "true" : "false"} data-ended={shape.ended ? "true" : "false"}>
       <summary className="cursor-pointer list-none text-xs font-black uppercase tracking-[0.25em] text-white/70 hover:text-white">
         Stream credentials {shape.hasCredentials ? "▾" : shape.ended ? "▾" : "▸"}
       </summary>
