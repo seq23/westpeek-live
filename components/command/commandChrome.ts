@@ -6,10 +6,18 @@
  * Every control that sits on the bar now imports these, so the stack's height is decided in one
  * place rather than in nine components that drift.
  *
- * Measured on a 414px viewport: a chip is 24px tall, the bar wraps to at most two rows, and the
- * whole stack (command bar + sub-bar) lands under the 96px budget that keeps the video visible.
+ * A chip is a 44px tap target (CHROME_TAP) that paints a 32px pill: the top and bottom 6px are a
+ * transparent border the background does not reach (bg-clip-padding), so the touch area is the
+ * full 44px while the bar keeps its compact look. Each bar is exactly one chip tall with no padding
+ * of its own, so the two bars stack to 89px on a phone (44 + the 1px divider + 44), under the 96px budget that keeps the video
+ * on the first screen. Padding a bar, or growing a chip past 44px, breaks that budget.
  */
-export const COMMAND_CHIP = "shrink-0 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-black";
+export const CHROME_TAP = "min-h-11 border-y-[6px] border-transparent bg-clip-padding";
+
+/** A control on a bar that paints no pill of its own (the West Peek mark): a plain 44px square. */
+export const CHROME_TAP_BOX = "min-h-11 min-w-11 justify-center";
+
+export const COMMAND_CHIP = `flex shrink-0 items-center whitespace-nowrap rounded-full ${CHROME_TAP} px-2.5 text-xs font-black`;
 
 /** The default chip: a control on the dark bar that is not the primary action. */
 export const COMMAND_CHIP_MUTED = `${COMMAND_CHIP} bg-white/10 text-white hover:bg-white/20`;

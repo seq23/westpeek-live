@@ -69,8 +69,10 @@ jobs:
             test-results/
           retention-days: 14
 
+      # The issue is about main. A run dispatched on a branch (to prove a fix before it merges)
+      # must neither close main's red issue nor comment on it.
       - name: Open or update the red-suite issue
-        if: failure()
+        if: failure() && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
@@ -87,7 +89,7 @@ jobs:
           fi
 
       - name: Close the red-suite issue
-        if: success()
+        if: success() && github.ref == 'refs/heads/main'
         env:
           GH_TOKEN: ${{ github.token }}
           RUN_URL: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
