@@ -27,6 +27,8 @@ const required=[
   "github.event.workflow_run.conclusion == 'success'",
   'ref: ${{ github.event.workflow_run.head_sha || github.sha }}',
   'npx wrangler d1 migrations apply west-peek-live --remote',
+  // Uploads land under _pending/; the rule that clears what was never confirmed is set from the repo.
+  'npx wrangler r2 bucket lifecycle set west-peek-live-assets --file r2-lifecycle.json --force',
   // The smoke checks the version this run deployed, not whichever one answers during rollout.
   'SMOKE_EXPECT_BUILD_ID: ${{ github.event.workflow_run.head_sha || github.sha }}',
   'DEPLOY_SHA: ${{ github.event.workflow_run.head_sha || github.sha }}'

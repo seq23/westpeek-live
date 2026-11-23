@@ -1,14 +1,15 @@
 import { randomId } from "@/lib/security/portableCrypto";
 import { getAssetsBucket } from "@/lib/d1/binding";
 import { signDownloadUrl, signUploadUrl } from "./signedUrlService";
+import { PENDING_UPLOAD_PREFIX, finalKeyFor, sizedBody } from "./assetUploadHandler";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
 import { EVENT_ASSET_BUCKET, assetUploadRefusal, httpsAssetLink, type AssetUploadPlace, type EventAssetRecord, type EventAssetStatus, type EventAssetUploaderKind, type EventAssetVisibility } from "@/types/eventAssets";
 
 /**
  * Real files for an event, in the private R2 bucket (binding ASSETS_BUCKET). The server mints a
- * short-lived signed upload link to this Worker's own /api/assets/upload route, the browser PUTs the
- * bytes there and the route streams them into R2; the row is written only once the object is
- * confirmed in the bucket. Downloads are signed on demand and expire. Storage that is not bound says
+ * short-lived, single-use signed upload link to this Worker's own /api/assets/upload, the browser
+ * PUTs the bytes there and worker.ts pipes them into R2 under `_pending/`; the confirm step moves the
+ * object to its final key and only then is the row written. Downloads are signed on demand and expire. Storage that is not bound says
  * so in words rather than failing silently.
  */
 export interface UploadTicket {
@@ -27,7 +28,7 @@ export interface UploadRefusal {
 
 function storagePathFor(eventId: string, assetId: string, fileName: string) {
   const safe = fileName.replace(/[^a-zA-Z0-9._-]/g, "-").slice(-80);
-  return `${eventId}/${assetId}/${safe}`;
+  return `${PENDING_UPLOAD_PREFIX}${eventId}/${assetId}/${safe}`;
 }
 
 const NOT_BOUND = "File storage is not bound on this deployment (R2 binding ASSETS_BUCKET).";
@@ -41,11 +42,26 @@ async function uploadTicket(storagePath: string, assetId: string, mimeType: stri
   }
 }
 
-/** True only when the bytes are really in the bucket: a confirm for an object that never arrived is refused. */
-export async function storedObjectExists(storagePath: string) {
+/**
+ * The confirm step: the uploaded object moves from `_pending/` to its final key, and the size R2
+ * really holds is returned (never the size the browser claimed). Refused when nothing arrived, or
+ * when the final key already exists (a link used twice never replaces a confirmed file).
+ */
+export async function promoteUpload(pendingKey: string): Promise<{ ok: true; storagePath: string; sizeBytes: number } | { ok: false; reason: string }> {
   const bucket = getAssetsBucket();
-  if (!bucket) return false;
-  return Boolean(await bucket.head(storagePath));
+  const finalKey = finalKeyFor(pendingKey);
+  if (!bucket || !finalKey) return { ok: false, reason: "The file never reached storage. Upload it again." };
+  if (await bucket.head(finalKey)) return { ok: false, reason: "That file is already saved." };
+  const object = await bucket.get(pendingKey);
+  if (!object) return { ok: false, reason: "The file never reached storage. Upload it again." };
+  try {
+    await bucket.put(finalKey, sizedBody(object.body, object.size), { httpMetadata: { contentType: object.httpMetadata?.contentType } });
+  } catch (error) {
+    console.error(`[assets/confirm] R2 move failed for ${pendingKey}:`, error instanceof Error ? error.message : error);
+    return { ok: false, reason: "Storage did not keep the file, so nothing was saved. Upload it again." };
+  }
+  await bucket.delete(pendingKey).catch(() => undefined);
+  return { ok: true, storagePath: finalKey, sizeBytes: object.size };
 }
 
 export async function requestAssetUpload(input: {
