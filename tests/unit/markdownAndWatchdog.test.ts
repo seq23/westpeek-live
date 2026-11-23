@@ -42,6 +42,8 @@ describe("the manual renderer (react-markdown)", () => {
     expect(headings.map((heading) => heading.text)).toEqual(["First section", "Nested", "Second section"]);
     expect(headings[0].id).toBe("first-section");
     expect(markdownSlug("5. Access codes — how they work")).toBe("5-access-codes-how-they-work");
+    const [dashed] = markdownHeadings("## 5. Access codes — how they work\n");
+    expect(dashed, "the spine shows house style, the anchor is unchanged").toEqual({ level: 2, text: "5. Access codes, how they work", id: "5-access-codes-how-they-work" });
   });
 
   it("the real manual has sections and screenshots that point at public/", () => {
