@@ -3216,7 +3216,7 @@
       "severity": "HARD FAIL",
       "productionRisk": "static validation",
       "whatItProves": "The plan-an-event pipeline holds together: the request carries a budget, approval attaches a price, the client confirm and the settlement are separate states, recordSettlement is the only writer of the paid state, nothing sends without a human action, and the five /how-it-works pages are editable by owner and operator with the check in the server action.",
-      "whatItDoesNotProve": "Does not prove a payment provider is connected; settlement is recorded by hand today and the seam is asserted, not exercised. Em dashes are not checked: house style is applied at render time (lib/presentation/houseStyle.ts via renderMarkdownLite, tested in tests/unit/markdownLiteAndWatchdog.test.ts).",
+      "whatItDoesNotProve": "Does not prove a payment provider is connected; settlement is recorded by hand today and the seam is asserted, not exercised. Em dashes are not checked: house style is applied at render time (lib/presentation/houseStyle.ts via lib/markdown/Markdown.tsx, tested in tests/unit/markdownAndWatchdog.test.ts).",
       "failureHandling": "Record and repair without blocking unrelated runtime validation.",
       "ownerDecisionNeeded": "NO unless owner-interruption budget applies.",
       "expectedFailureFrequency": "Low; repeated failures require product fix or reclassification.",

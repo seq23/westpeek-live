@@ -3,7 +3,7 @@ import Link from "next/link";
 import { WestPeekProductionsLogoHomeLink } from "@/components/brand/WestPeekProductionsLogo";
 import { LegalFooter } from "@/components/legal/LegalFooter";
 import { HowItWorksEditor } from "@/components/how-it-works/HowItWorksEditor";
-import { renderMarkdownLite } from "@/lib/markdown/markdownLite";
+import { Markdown } from "@/lib/markdown/Markdown";
 import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { readHowItWorksPage } from "@/services/content/howItWorksService";
 import { HOW_IT_WORKS_AUDIENCES, isHowItWorksAudience } from "@/types/howItWorks";
@@ -51,7 +51,7 @@ export default async function HowItWorksAudiencePage({
           <p className="mt-6 text-xs font-black uppercase tracking-[0.35em] text-brand-orange">How it works</p>
           <h1 className="mt-3 text-4xl font-black tracking-tight" data-testid="how-it-works-heading">{page.title}</h1>
           <p className="mt-4 text-sm leading-6 text-brand-muted">{page.intro}</p>
-          <div className="mt-8 space-y-1 text-sm leading-7" data-testid="how-it-works-body-rendered">{renderMarkdownLite(page.body)}</div>
+          <div className="mt-8 space-y-1 text-sm leading-7" data-testid="how-it-works-body-rendered"><Markdown source={page.body} /></div>
 
           <nav className="mt-10 border-t border-brand-line pt-5 text-xs text-brand-muted">
             <p className="font-black uppercase tracking-[0.25em]">The other instruction pages</p>

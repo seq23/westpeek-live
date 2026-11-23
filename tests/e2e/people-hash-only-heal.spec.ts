@@ -25,14 +25,23 @@ async function createNowEvent(page: Page, name: string) {
   return new URL(page.url()).pathname.split("/")[2];
 }
 
+/**
+ * The rows go straight into the store file while the app serves other tests, so a request that
+ * read the file before this write can save over it and the rows vanish (the "0 people" failure
+ * on 22 Nov 2026). Adding only the rows that are missing, and writing tmp-then-rename the way the
+ * store does, lets the test seed again until the app shows them.
+ */
 function seedHashOnlyRows(eventIds: string[], emailHash: string) {
   const snapshot = JSON.parse(fs.readFileSync(runtimePath(), "utf8"));
   snapshot.attendeeProfiles = snapshot.attendeeProfiles || [];
   eventIds.forEach((eventId, index) => {
     const createdAt = `2026-09-1${index}T10:00:00.000Z`;
+    if (snapshot.attendeeProfiles.some((profile: { attendeeId?: string }) => profile.attendeeId === `legacy-${eventId}`)) return;
     snapshot.attendeeProfiles.push({ attendeeId: `legacy-${eventId}`, eventId, emailHash, emailMasked: "ca***@legacyco.io", name: "Cal Legacy", company: "Legacy Co", title: index ? "Producer" : "", socialLinks: [], topicsOfInterest: [], networkingOptIn: true, role: "attendee", status: "active", createdAt, updatedAt: createdAt });
   });
-  fs.writeFileSync(runtimePath(), `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+  const tmp = `${runtimePath()}.seed-${process.pid}-${Date.now()}.tmp`;
+  fs.writeFileSync(tmp, `${JSON.stringify(snapshot, null, 2)}\n`, "utf8");
+  fs.renameSync(tmp, runtimePath());
 }
 
 test("hash-only people are listed and counted, exported with a blank email, then healed by a matching registration", async ({ page, browser }) => {
@@ -43,7 +52,6 @@ test("hash-only people are listed and counted, exported with a blank email, then
   const oldOne = await createNowEvent(page, `Old one ${stamp}`);
   const oldTwo = await createNowEvent(page, `Old two ${stamp}`);
   const fresh = await createNowEvent(page, `Fresh ${stamp}`);
-  seedHashOnlyRows([oldOne, oldTwo], emailHash);
 
   // The owner sees one grouped person with two events and no email.
   const ownerContext = await browser.newContext();
@@ -54,6 +62,11 @@ test("hash-only people are listed and counted, exported with a blank email, then
   await expect(owner).toHaveURL(/\/app\/people$/);
   const rowId = `hash-only-row-${emailHash.slice(0, 12)}`;
   const row = owner.getByTestId(rowId);
+  await expect(async () => {
+    seedHashOnlyRows([oldOne, oldTwo], emailHash);
+    await owner.goto("/app/people");
+    await expect(row).toHaveAttribute("data-events", "2", { timeout: 2_000 });
+  }, "the seeded rows reach the page (seeded again if a concurrent save wrote over them)").toPass({ timeout: 30_000 });
   await expect(row).toContainText("Cal Legacy");
   await expect(row).toContainText("ca***@legacyco.io");
   await expect(row).toContainText("not captured — registered before 16 Sep 2026");

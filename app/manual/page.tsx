@@ -1,6 +1,6 @@
 import Link from "next/link";
 import { AppShell } from "@/components/layout/AppShell";
-import { renderMarkdownLite } from "@/lib/markdown/markdownLite";
+import { Markdown } from "@/lib/markdown/Markdown";
 import { markdownHeadings } from "@/lib/markdown/markdownOutline";
 import { MANUAL_SOURCE } from "@/lib/manual/manualSource.generated";
 
@@ -28,7 +28,7 @@ export default function ManualPage() {
           </div>
         </aside>
         <article className="min-w-0 flex-1 rounded-3xl border border-brand-line bg-white p-5 sm:p-8" data-testid="manual-body">
-          {renderMarkdownLite(MANUAL_SOURCE)}
+          <Markdown source={MANUAL_SOURCE} />
         </article>
       </div>
     </AppShell>
