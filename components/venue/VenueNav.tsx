@@ -3,6 +3,7 @@
 import { usePathname } from "next/navigation";
 import type { VenueNavItem } from "@/types/virtualVenue";
 import { navMarkerFor, type VenueActivity } from "@/services/venue/venueActivityService";
+import { CHROME_TAP } from "@/components/command/commandChrome";
 
 /**
  * The nav is how a guest knows where they are and what is happening, so it carries two things the
@@ -45,7 +46,7 @@ export function VenueNav({ items, activity, attendeeName, tellUsMoreHref }: { it
               href={item.href}
               aria-current={current ? "page" : undefined}
               data-nav-surface={item.surface}
-              className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full px-2.5 py-1 text-xs font-black xl:px-2 ${current ? "bg-white text-brand-black" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
+              className={`flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full ${CHROME_TAP} px-2.5 text-xs font-black xl:px-2 ${current ? "bg-white text-brand-black" : "text-white/80 hover:bg-white/10 hover:text-white"}`}
             >
               {item.label}
               {marker ? <span className={`rounded-full px-1.5 py-0.5 text-[10px] font-black uppercase tracking-wide ${current && marker.tone === "count" ? "bg-slate-200 text-slate-700" : TONE[marker.tone]}`} data-nav-marker={item.surface}>{marker.label}</span> : null}
@@ -53,7 +54,7 @@ export function VenueNav({ items, activity, attendeeName, tellUsMoreHref }: { it
           );
         })}
         {attendeeName && tellUsMoreHref ? (
-          <a href={tellUsMoreHref} className="ml-1 flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full border border-white/20 px-2.5 py-1 text-xs font-black text-white/80 hover:border-brand-orange hover:text-white" data-testid="venue-header-attendee">
+          <a href={tellUsMoreHref} className={`ml-1 flex shrink-0 items-center gap-1 whitespace-nowrap rounded-full ${CHROME_TAP} px-2.5 text-xs font-black text-white/80 shadow-[inset_0_0_0_1px_rgb(255_255_255/0.2)] hover:text-white hover:shadow-[inset_0_0_0_1px_rgb(var(--c-brand-orange))]`} data-testid="venue-header-attendee">
             <span className="h-1.5 w-1.5 rounded-full bg-emerald-400" aria-hidden="true" />
             {attendeeName}
           </a>

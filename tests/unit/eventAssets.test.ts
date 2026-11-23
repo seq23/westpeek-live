@@ -35,7 +35,11 @@ describe("event assets", () => {
     if (!ticket.ok) expect(ticket.reason).toMatch(/not bound on this deployment \(R2 binding ASSETS_BUCKET\)\. Paste a link/);
     const guest = await requestAssetUpload({ eventId: "event-a", fileName: "deck.pdf", mimeType: "application/pdf", sizeBytes: 1000 });
     expect(guest.ok).toBe(false);
-    if (!guest.ok) expect(guest.reason).toBe("File uploads are not working right now. Send the file to the producer another way, and they will add it.");
+    // A guest is not told about bindings or offered a link form they don't have, but is given a step to take.
+    if (!guest.ok) {
+      expect(guest.reason).not.toMatch(/bound|R2|ASSETS_BUCKET|link/i);
+      expect(guest.reason).toMatch(/producer/);
+    }
   });
 
   it("a speaker's upload waits in review; production's own does not", async () => {

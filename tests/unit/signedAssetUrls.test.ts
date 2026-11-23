@@ -261,6 +261,19 @@ describe("the upload handler (worker.ts, before OpenNext) pipes bytes into R2 on
   });
 
   it("a refused file is told, in words, what to do next, and only the library offers a link", () => {
+    const portal = assetUploadRefusal({ mimeType: "application/zip", sizeBytes: 100, fileName: "files.zip", place: "portal" })!;
+    const library = assetUploadRefusal({ mimeType: "application/zip", sizeBytes: 100, fileName: "files.zip", place: "library" })!;
+    const logo = assetUploadRefusal({ mimeType: "application/zip", sizeBytes: 100, place: "logo" })!;
+    // Each names the format to save it as; never a raw type.
+    for (const message of [portal, library, logo]) {
+      expect(message).toMatch(/PNG/);
+      expect(message).not.toMatch(/application\/zip/);
+    }
+    // The library is the portal's step plus its own link form; a logo is never offered PDF or a link.
+    expect(library.startsWith(portal)).toBe(true);
+    expect(library.slice(portal.length)).toMatch(/paste a link/i);
+    expect(portal).toMatch(/PDF/);
+    expect(logo).not.toMatch(/PDF|link/i);
     for (const place of ["portal", "logo", undefined] as const) {
       for (const input of [{ mimeType: "text/html", sizeBytes: 100 }, { mimeType: "application/zip", sizeBytes: 100 }, { mimeType: "application/pdf", sizeBytes: 999_000_000 }]) {
         const message = assetUploadRefusal({ ...input, place })!;

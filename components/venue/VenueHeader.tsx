@@ -1,5 +1,6 @@
 import type { VirtualVenueModel } from "@/types/virtualVenue";
 import { VenueNav } from "./VenueNav";
+import { CHROME_TAP_BOX } from "@/components/command/commandChrome";
 import { WestPeekLiveWordmark } from "@/components/brand/WestPeekLiveWordmark";
 import { WestPeekLogoHomeLink } from "@/components/brand/WestPeekLogo";
 import type { VenueActivity } from "@/services/venue/venueActivityService";
@@ -21,7 +22,7 @@ import type { VenueActivity } from "@/services/venue/venueActivityService";
 export function VenueHeader({ model, attendee, activity, subordinate = false }: { model: VirtualVenueModel; attendee?: { name: string; company: string }; activity?: VenueActivity; subordinate?: boolean }) {
   return (
     <header
-      className={`wpl-as-authored flex items-center gap-2 px-3 py-1 text-white sm:px-4 ${subordinate ? "border-t border-white/10 bg-brand-black/95" : "bg-brand-black shadow-brand"}`}
+      className={`wpl-as-authored flex items-center gap-2 px-3 text-white sm:px-4 ${subordinate ? "border-t border-white/10 bg-brand-black/95" : "bg-brand-black shadow-brand"}`}
       data-chrome-bar="venue-nav"
       data-venue-sub-bar={subordinate ? "true" : "false"}
     >
@@ -38,10 +39,10 @@ export function VenueHeader({ model, attendee, activity, subordinate = false }: 
             the non-subordinate row already puts it, so the two variants do not disagree.
             16px of monogram, no wordmark: the width the subordinate row saved for the nav stays
             saved. */}
-        {subordinate ? <WestPeekLogoHomeLink size="sm" inverse /> : null}
+        {subordinate ? <WestPeekLogoHomeLink size="sm" inverse className={CHROME_TAP_BOX} /> : null}
         {subordinate ? null : (
           <>
-            <WestPeekLogoHomeLink size="sm" inverse />
+            <WestPeekLogoHomeLink size="sm" inverse className={CHROME_TAP_BOX} />
             <span className="hidden shrink-0 sm:block"><WestPeekLiveWordmark size="sm" inverse /></span>
             <h1 className="max-w-[9rem] shrink truncate text-xs font-black tracking-[-0.02em] sm:max-w-[14rem]" data-chrome-event-name="venue-nav">{model.eventName}</h1>
           </>
