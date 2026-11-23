@@ -1,3 +1,4 @@
+import { stageSourceChoice, stageWaitingForStreamYard } from "@/lib/video/stageLiveState";
 import { createHmac } from "crypto";
 import { getLiveKitEnv } from "@/lib/env";
 import { applyStageStreamSignal, getOrCreateStageStreamState, recordStagePollHeartbeat, stageStreamKey } from "@/services/video/stageStreamStateService";
@@ -97,6 +98,23 @@ async function ensureLiveKitRoom(livekitUrl: string, token: string, roomName: st
     await livekitTwirp({ livekitUrl, token, method: "RoomService/CreateRoom", body: { name: roomName, empty_timeout: 300, max_participants: 1000 } });
   } catch (error) {
     if (!isLiveKitError(error, "already_exists", 409)) throw error;
+  }
+}
+
+/**
+ * Opens (or finds) the stage's LiveKit room before a camera show goes live, so a LiveKit outage is
+ * caught while the host is still looking at the switch, not after the stage reads live to a black box.
+ */
+export async function openLiveKitStageRoom(eventId: string, stageId = "main-stage"): Promise<{ ok: true } | { ok: false; reason: string }> {
+  const livekit = getLiveKitEnv();
+  if (!livekit.livekitUrl || !livekit.livekitApiKey || !livekit.livekitApiSecret) return { ok: false, reason: "LiveKit is not set up on this site, so the cameras cannot go out." };
+  const roomName = normalizeLiveKitRoomName(eventId, stageId);
+  try {
+    const token = createLiveKitServerToken({ apiKey: livekit.livekitApiKey, apiSecret: livekit.livekitApiSecret, roomName });
+    await ensureLiveKitRoom(livekit.livekitUrl, token, roomName);
+    return { ok: true };
+  } catch {
+    return { ok: false, reason: "LiveKit did not answer just now, so the cameras cannot go out." };
   }
 }
 
@@ -278,7 +296,10 @@ const lastReconcileAt = new Map<string, number>();
 export async function reconcileIngressWithLiveKit(eventId: string, stageId = "main-stage"): Promise<{ checked: boolean; publishing: boolean | null; applied: "ingress_started" | "ingress_ended" | null }> {
   const state = await getOrCreateStageStreamState(eventId, stageId);
   if (state.activeStreamSource !== "LIVEKIT_INGRESS" || !state.livekitIngressId) return { checked: false, publishing: null, applied: null };
-  if (state.streamStatus !== "READY_FOR_STREAMYARD" && state.streamStatus !== "LIVEKIT_INGRESS_LIVE") return { checked: false, publishing: null, applied: null };
+  // On cameras the feed is not the stage, so there is nothing to reconcile; switched to StreamYard
+  // mid camera show ("waiting for StreamYard…") the poll is what hands the stage to the feed.
+  if (stageSourceChoice(state) === "CAMERAS") return { checked: false, publishing: null, applied: null };
+  if (state.streamStatus !== "READY_FOR_STREAMYARD" && state.streamStatus !== "LIVEKIT_INGRESS_LIVE" && !stageWaitingForStreamYard(state)) return { checked: false, publishing: null, applied: null };
   const key = stageStreamKey(eventId, stageId);
   const last = lastReconcileAt.get(key) ?? 0;
   if (Date.now() - last < RECONCILE_EVERY_MS) return { checked: false, publishing: null, applied: null };

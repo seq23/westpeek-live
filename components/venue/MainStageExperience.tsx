@@ -20,6 +20,7 @@ import { requestAttendeeStageAccess } from "@/lib/actions/attendeeLiveActions";
 import { attendeeStageStatus } from "@/services/venue/attendeeStageStatus";
 import { EMPTY_VENUE_ACTIVITY, getVenueActivity } from "@/services/venue/venueActivityService";
 import { SafeSection } from "@/components/system/SafeSection";
+import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 
 export async function MainStageExperience({ model, saved = false }: { model: VirtualVenueModel; saved?: boolean }) {
   const fallbackState = await getRoomFallbackState(model.eventId, "main_stage").catch(() => createInitialRoomFallbackState(model.eventId, "main_stage"));
@@ -29,6 +30,11 @@ export async function MainStageExperience({ model, saved = false }: { model: Vir
   const attendeeLiveCapability = identity?.attendeeId ? await getAttendeeLiveCapability(model.eventId, "main_stage", "main-stage", identity.attendeeId).catch(() => undefined) : undefined;
   const activity = await getVenueActivity(model).catch(() => EMPTY_VENUE_ACTIVITY);
   const liveSession = model.liveNow[0] || model.sessions[0];
+  // A host (owner, operator, or crew whose role may go live) gets their own camera and the
+  // "Go live with my camera" button on the stage itself. Checked here AND at the token route and
+  // the switch action; a store that cannot be read means not a host, never a host by default.
+  const hostAccess = await requireLiveEventControlAccessForRequest(model.eventId, "go_live").catch(() => ({ ok: false as const }));
+  const host = hostAccess.ok;
   const stageStatus = { ...attendeeStageStatus({ control: attendeeLiveControl, capability: attendeeLiveCapability, registered: Boolean(identity?.attendeeId) }), attendeeId: identity?.attendeeId || null };
   return (
     <div className="space-y-6">
@@ -48,7 +54,7 @@ export async function MainStageExperience({ model, saved = false }: { model: Vir
             put it about 700px down a 414px screen and a newcomer decided the stage was broken
             (the owner, 16 Sep 2026). */}
         <div className="min-w-0 space-y-4">
-          <StagePlayer initialState={stageStreamState} eventId={model.eventId} eventName={model.eventName} stageId="main-stage" viewerRole="attendee" displayName={identity?.displayName || "Registered attendee"} profileId={identity?.attendeeId} initialStageStatus={stageStatus} />
+          <StagePlayer initialState={stageStreamState} eventId={model.eventId} eventName={model.eventName} stageId="main-stage" viewerRole="attendee" displayName={identity?.displayName || "Registered attendee"} profileId={identity?.attendeeId} initialStageStatus={stageStatus} host={host} />
           <div>
             <h1 className="text-xl font-black tracking-[-0.02em] text-balance sm:text-2xl">{liveSession?.title || "Main stage is standing by"}</h1>
             <p className="mt-1 max-w-[65ch] text-sm leading-6 text-slate-600">If the picture refreshes or switches source behind the scenes, stay on this page. It comes back on its own.</p>

@@ -5,6 +5,7 @@ import { findEventRecord } from "@/services/events/eventRepository";
 import { getEventBackupRoom, houseGoogleMeetUrl, houseZoomMeetingNumber } from "@/services/video/backupRoomService";
 import type { StageStreamEvent, StageStreamSignal, StageStreamState } from "@/types/stageStream";
 import { toOperatorStageStreamState, toPublicStageStreamState } from "@/types/stageStream";
+import { stageSourceChoice } from "@/lib/video/stageLiveState";
 
 export function stageStreamKey(eventId: string, stageId = "main-stage") {
   return `${eventId}:${stageId}`;
@@ -161,6 +162,45 @@ function activateGoogleMeetFallback(state: StageStreamState, reason?: string) {
 
 export function evaluateStageFallbackDecision(previous: StageStreamState, signal: StageStreamSignal, reason?: string): StageStreamState {
   const state: StageStreamState = { ...previous, updatedAt: now(), cloudflareStreamPlaybackUrl: previous.cloudflareStreamPlaybackUrl || configuredCloudflarePlaybackUrl(), zoomMeetingNumber: previous.zoomMeetingNumber || configuredZoomMeetingNumber(), googleMeetFallbackUrl: previous.googleMeetFallbackUrl || configuredGoogleMeetUrl() };
+  const onCameras = stageSourceChoice(previous) === "CAMERAS";
+  const cameraLive = previous.streamStatus === "LIVEKIT_CAMERAS_LIVE";
+  if (signal === "operator_go_live_cameras") {
+    // The host's "My camera": the LiveKit stage carries the people on camera, no feed needed. Works
+    // from any state (pre-stream, a fallback rung, an ended show being restarted). The StreamYard
+    // credentials are left exactly as they were, so switching back needs no key re-entry.
+    state.stageSource = "CAMERAS";
+    state.hasEverStarted = true;
+    state.operatorMarkedShowEnded = false;
+    state.streamStatus = "LIVEKIT_CAMERAS_LIVE";
+    state.activeStreamSource = "LIVEKIT_INGRESS";
+    state.producerStudioSource = "DEVICE_CAMERAS";
+    state.failurePlane = "NONE";
+    state.fallbackMode = "MANUAL_REQUIRED";
+    state.fallbackReason = undefined;
+    state.fallbackRecommendation = "Live on cameras: the host and approved speakers are on the stage from their own devices. No StreamYard feed is needed; switch to StreamYard any time from the Go-live card.";
+    return state;
+  }
+  if (signal === "operator_switch_to_streamyard") {
+    state.stageSource = "STREAMYARD";
+    state.producerStudioSource = "STREAMYARD";
+    state.fallbackRecommendation = cameraLive
+      ? "Waiting for StreamYard: the cameras stay on the stage until the feed arrives, then the feed takes over full width."
+      : state.fallbackRecommendation;
+    return state;
+  }
+  if (signal === "generate_credentials" && cameraLive) {
+    // Minting a key mid camera show readies StreamYard without taking the stage off air.
+    state.fallbackRecommendation = "Credentials are ready. Paste RTMP URL and Stream Key into StreamYard Custom RTMP; the cameras stay on the stage until you switch to StreamYard.";
+    return state;
+  }
+  if ((signal === "ingress_started" || signal === "ingress_ended") && onCameras) {
+    // On cameras a StreamYard feed starting or stopping in the room changes nothing on the stage.
+    return state;
+  }
+  if (signal === "ingress_ended" && cameraLive && !state.operatorMarkedShowEnded) {
+    // Waiting for StreamYard and the feed never landed (or blipped): the cameras keep the stage.
+    return state;
+  }
   if (signal === "generate_credentials") {
     state.streamStatus = "READY_FOR_STREAMYARD";
     state.failurePlane = "NONE";
@@ -194,6 +234,13 @@ export function evaluateStageFallbackDecision(previous: StageStreamState, signal
       state.failurePlane = "NONE";
       state.fallbackRecommendation = "Ingress ended before the show ever started. Keep attendees on pre-stream state; do not fallback during setup.";
     }
+  }
+  if ((signal === "livekit_room_unreachable" || signal === "livekit_token_failure" || signal === "attendee_livekit_disconnect_after_started") && onCameras) {
+    // Cloudflare Stream re-carries a StreamYard feed; a camera show has none, so the stage goes to Daily.
+    state.failurePlane = "LIVEKIT_DISTRIBUTION";
+    activateDailyFallback(state, reason || "LiveKit is unreachable during a camera show; Cloudflare Stream has no feed to carry, so attendees move to Daily.");
+    state.producerStudioSource = "DEVICE_CAMERAS";
+    return state;
   }
   if (signal === "livekit_room_unreachable" || signal === "livekit_token_failure" || signal === "attendee_livekit_disconnect_after_started") {
     state.failurePlane = "LIVEKIT_DISTRIBUTION";
@@ -237,6 +284,16 @@ export function evaluateStageFallbackDecision(previous: StageStreamState, signal
   if (signal === "manual_switch_to_google_meet") {
     activateGoogleMeetFallback(state, reason || "Operator selected Google Meet fallback.");
     state.streamStatus = "GOOGLE_MEET_LIVE";
+  }
+  if (signal === "operator_rollback_to_livekit" && onCameras) {
+    state.streamStatus = "LIVEKIT_CAMERAS_LIVE";
+    state.failurePlane = "NONE";
+    state.activeStreamSource = "LIVEKIT_INGRESS";
+    state.producerStudioSource = "DEVICE_CAMERAS";
+    state.fallbackMode = "MANUAL_OVERRIDE";
+    state.fallbackReason = reason || "Operator moved the camera show back up to LiveKit.";
+    state.fallbackRecommendation = "Cameras are back on the LiveKit stage.";
+    return state;
   }
   if (signal === "operator_rollback_to_livekit") {
     state.streamStatus = state.hasEverStarted ? "LIVEKIT_INGRESS_LIVE" : "READY_FOR_STREAMYARD";

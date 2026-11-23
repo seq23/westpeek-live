@@ -1,3 +1,4 @@
+import { CAMERA_SHOW_CLOUDFLARE_REASON, stageSourceChoice, stageSourceLabel } from "@/lib/video/stageLiveState";
 import { LocalTime } from "@/components/shared/LocalTime";
 import { generateStreamYardCredentials, applyStageStreamOperatorSignal } from "@/lib/actions/stageStreamActions";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -97,7 +98,7 @@ export async function StreamYardIngressPanel({ eventId = "event-summit", viewer:
         <CopyField label="Stream Key" value={state.livekitStreamKey} sensitive />
       </div>
       <div className="mt-4 grid gap-3 text-sm md:grid-cols-4">
-        <div className="rounded-2xl bg-slate-50 p-4"><strong>Active source</strong><p>{state.activeStreamSource.replaceAll("_", " ")}</p></div>
+        <div className="rounded-2xl bg-slate-50 p-4"><strong>Active source</strong><p data-testid="stage-source-label">{stageSourceLabel(state)} · {state.activeStreamSource.replaceAll("_", " ")}</p></div>
         <div className="rounded-2xl bg-slate-50 p-4"><strong>Failure plane</strong><p>{state.failurePlane.replaceAll("_", " ")}</p></div>
         <div className="rounded-2xl bg-slate-50 p-4"><strong>Ingress ID</strong><p>{state.livekitIngressId || "Pending"}</p></div>
         <div className="rounded-2xl bg-slate-50 p-4" data-testid="last-webhook-card" data-path={state.lastWebhookEvent ? "webhook" : pollingOnly ? "polling" : "none"}><strong>Last webhook</strong><p>{state.lastWebhookEvent ? <>{state.lastWebhookEvent}{state.lastWebhookAt ? <> · <LocalTime iso={state.lastWebhookAt} /></> : null}</> : pollingOnly ? "None yet — polling is carrying the state (every ~10s)" : "None yet"}</p>{pollingOnly && state.lastHealthCheckAt ? <p className="text-xs text-slate-500">Last poll of LiveKit: {<LocalTime iso={state.lastHealthCheckAt} />}</p> : null}</div>
@@ -123,7 +124,7 @@ export async function StreamYardIngressPanel({ eventId = "event-summit", viewer:
       <DeniedNote viewer={viewer} action="go_live" className="mt-5" />
       <div className="mt-5 flex flex-wrap gap-3">
         <GatedForm viewer={viewer} action="go_live" formAction={generateStreamYardCredentials}><input type="hidden" name="eventId" value={eventId} /><input type="hidden" name="stageId" value="main-stage" /><button className="rounded-full bg-slate-950 px-4 py-2 text-sm font-black text-white disabled:cursor-not-allowed disabled:opacity-40" data-testid="generate-rtmp-credentials">{state.livekitStreamKey ? "New stream key" : "Get stream credentials"}</button></GatedForm>
-        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_cloudflare_stream" label="Move down: Cloudflare Stream" reason="Operator/showrunner moved fallback ladder to Cloudflare Stream." unready={unreadyReason("CLOUDFLARE_STREAM")} />
+        <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_cloudflare_stream" label="Move down: Cloudflare Stream" reason="Operator/showrunner moved fallback ladder to Cloudflare Stream." unready={stageSourceChoice(state) === "CAMERAS" ? `Refused: ${CAMERA_SHOW_CLOUDFLARE_REASON}` : unreadyReason("CLOUDFLARE_STREAM")} />
         <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_daily" label="Move down: Daily" reason="Operator/showrunner moved fallback ladder to Daily." unready={unreadyReason("DAILY")} />
         <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_zoom" label="Move down: Zoom" reason="Operator/showrunner moved fallback ladder to Zoom." unready={unreadyReason("ZOOM")} />
         <SignalButton viewer={viewer} eventId={eventId} signal="manual_switch_to_google_meet" label="Move down: Google Meet" reason="Operator/showrunner moved fallback ladder to Google Meet." tone="danger" unready={unreadyReason("GOOGLE_MEET")} />

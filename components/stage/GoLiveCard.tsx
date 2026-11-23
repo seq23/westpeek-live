@@ -3,7 +3,9 @@ import { EndShowControl } from "@/components/moderation/EndShowControl";
 import { SafeSection } from "@/components/system/SafeSection";
 import { StreamCredentials } from "@/components/stage/StreamCredentials";
 import { BackupRoomsCard } from "@/components/stage/BackupRoomsCard";
-import { getCrewViewer, viewerCan, type CrewViewer } from "@/lib/auth/crewViewer";
+import { StageSourceSwitch } from "@/components/stage/StageSourceSwitch";
+import { getCrewViewer, viewerCan, viewerDenied, type CrewViewer } from "@/lib/auth/crewViewer";
+import { stageIsLive, stageSourceChoice, stageSourceLabel } from "@/lib/video/stageLiveState";
 import { goLiveAction } from "@/lib/actions/goLiveActions";
 import { ladderReadiness } from "@/lib/video/fallbackReadiness";
 import { findEventRecord } from "@/services/events/eventRepository";
@@ -27,7 +29,10 @@ export async function GoLiveCard({ eventId, viewer: givenViewer, compact = false
   const hasCredentials = Boolean(state?.livekitStreamKey && state?.livekitIngressUrl);
   const status = event?.status || "draft";
   const ended = status === "ended" || status === "replay_available" || Boolean(state?.operatorMarkedShowEnded);
-  const live = status === "live";
+  const choice = stageSourceChoice(state);
+  // A camera show is live the moment the switch flips, whatever the event row says (crew cannot set it).
+  const cameraLive = state?.streamStatus === "LIVEKIT_CAMERAS_LIVE";
+  const live = status === "live" || cameraLive;
   const fallback = ladderReadiness().find((rung) => rung.source === "CLOUDFLARE_STREAM");
   return (
     <section className="rounded-3xl border border-brand-line bg-white p-5 shadow-sm" data-testid="go-live-card" data-status={status} data-has-credentials={hasCredentials ? "true" : "false"} data-ended={ended ? "true" : "false"}>
@@ -46,13 +51,22 @@ export async function GoLiveCard({ eventId, viewer: givenViewer, compact = false
 
       <DeniedNote viewer={viewer} action="go_live" className="mt-3" />
 
+      <StageSourceSwitch
+        eventId={eventId}
+        current={choice}
+        cameraLive={cameraLive}
+        label={stageSourceLabel(state)}
+        streamYardLive={choice === "STREAMYARD" && state?.activeStreamSource === "LIVEKIT_INGRESS" && stageIsLive(state)}
+        deniedReason={viewerDenied(viewer, "go_live") || undefined}
+      />
+
       <div className="mt-4 flex flex-wrap items-center gap-2">
         {live ? null : (
           <GatedForm viewer={viewer} action="go_live" formAction={goLiveAction}>
             <input type="hidden" name="eventId" value={eventId} />
             {returnTo ? <input type="hidden" name="returnTo" value={returnTo} /> : null}
             <button className="rounded-full bg-brand-black px-5 py-2 text-sm font-black text-white hover:bg-brand-orange disabled:cursor-not-allowed disabled:opacity-40" data-testid="go-live-button">
-              {ended ? "Go live again" : "Go live"}
+              {ended ? "Go live again with StreamYard" : "Go live with StreamYard"}
             </button>
           </GatedForm>
         )}

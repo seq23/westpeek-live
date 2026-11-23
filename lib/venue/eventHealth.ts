@@ -120,6 +120,8 @@ const LOG_HEADLINES: Record<string, string> = {
   zoom_failed: "Zoom failed",
   manual_switch_to_google_meet: "Moved to Google Meet",
   operator_mark_show_ended: "Show ended",
+  operator_go_live_cameras: "Went live on cameras",
+  operator_switch_to_streamyard: "Switched the source to StreamYard",
   operator_reset_primary: "Primary reset",
   operator_rollback_to_livekit: "Moved back up to LiveKit",
   operator_rollback_to_cloudflare_stream: "Moved back to Cloudflare Stream",

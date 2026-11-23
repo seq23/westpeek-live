@@ -92,7 +92,14 @@ Times on the deck render in your own time zone. You do not have to convert anyth
 
 ## Going live
 
-1. Press **Go live** on the go-live card. The event goes live and the stream credentials appear in that same card.
+**Two ways to go live, one switch.** The go-live card (and the Owner Console's Live-now row) has one switch: **StreamYard** or **My camera**. The one in use has a tick. One tap changes it, before or during the show, either way, and attendees' stages follow within about ten seconds with no reload; chat and networking are untouched, and the stream key stays where it is.
+
+- **My camera.** No StreamYard at all. Open the stage page, press **Go live with my camera**, allow the camera and microphone, and you are on. Any host (owner, operator, executive producer, producer, technical director) can do this from a phone or a laptop; two hosts on camera both appear. If LiveKit cannot be reached, it says so and nothing goes live. If a StreamYard feed is live when you tap, it says once that this takes StreamYard's picture off the stage, then switches.
+- **StreamYard.** As below. Switching to StreamYard mid-show keeps your camera on the stage until the feed arrives (the switch reads *waiting for StreamYard…*); then the feed takes the full width and the cameras become tiles beneath it.
+
+With StreamYard:
+
+1. Press **Go live with StreamYard** on the go-live card. The event goes live and the stream credentials appear in that same card.
 2. Copy both credentials into StreamYard. **Edit your existing Custom RTMP destination, do not add a second one.**
 3. At the same time, add the Cloudflare fallback as a second destination. The RTMPS URL and key for it are on the deck's Fallback 1 card with copy buttons. Broadcast to both. This is what makes the fallback ladder work later.
 4. The stage flips live within a few seconds. Confirm it on a second device, on a different network, before you believe it.
@@ -124,7 +131,7 @@ Do not delete a hostile question that the speaker has already seen and started a
 When the feed dies, you move down a rung. This is the ladder:
 
 1. **Primary, LiveKit.** The normal show. Attendees can be brought onto the stage.
-2. **Fallback 1, Cloudflare Stream.** Keeps the StreamYard feed running. Attendees see the show in a Cloudflare player, watch only. This is the rung you will actually use.
+2. **Fallback 1, Cloudflare Stream.** Keeps the StreamYard feed running. Attendees see the show in a Cloudflare player, watch only. This is the rung you will actually use. In a camera show there is no feed for it to carry, so the deck says so and offers Daily instead.
 3. **Fallback 2, Daily.** Only shows anything if a host turns a camera on.
 4. **Fallback 3, Zoom embedded.** A Zoom meeting inside the page.
 5. **Fallback 4, Google Meet.** Attendees leave the venue to watch.
@@ -177,7 +184,7 @@ The run of show gives you a cue card: when you are on, who hands to you, who you
 
 Be in the green room thirty minutes before your slot. You will be able to see and hear the show but the audience cannot see or hear you.
 
-When it is your turn, the crew brings you to the stage. You do not press anything. Your microphone comes on and you will see it come on.
+When it is your turn, the crew brings you to the stage. You do not press anything. This is the same whether the show comes from StreamYard or from the hosts' own cameras. Your microphone comes on and you will see it come on.
 
 When you are done the crew takes you back. Stay in the green room if there is a panel later, otherwise you are free to go.
 

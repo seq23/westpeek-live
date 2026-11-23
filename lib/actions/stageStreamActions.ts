@@ -4,7 +4,8 @@ import { redirect } from "next/navigation";
 import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import type { CrewAction } from "@/lib/auth/crewRolePermissions";
 import { provisionStreamYardLiveKitIngress } from "@/services/video/livekitIngressService";
-import { applyStageStreamSignal } from "@/services/video/stageStreamStateService";
+import { applyStageStreamSignal, getOperatorStageStreamState } from "@/services/video/stageStreamStateService";
+import { CAMERA_SHOW_CLOUDFLARE_REASON, stageSourceChoice } from "@/lib/video/stageLiveState";
 import { endShowForEvent } from "@/services/video/showEndService";
 import type { StageStreamSignal } from "@/types/stageStream";
 import { rungReadiness, type LadderSource } from "@/lib/video/fallbackReadiness";
@@ -41,6 +42,11 @@ export async function applyStageStreamOperatorSignal(formData: FormData) {
   const signal = String(formData.get("signal") || "manual_switch_to_daily") as StageStreamSignal;
   const reason = String(formData.get("reason") || "Operator selected action from testing console.");
   await requireControl(eventId);
+  // Going on or off cameras is the source switch's job (it checks LiveKit first); never this form.
+  if (signal === "operator_go_live_cameras" || signal === "operator_switch_to_streamyard") throw new Error("Refused: use the StreamYard / My camera switch on the Go-live card.");
+  if (signal === "manual_switch_to_cloudflare_stream" && stageSourceChoice(await getOperatorStageStreamState(eventId, stageId).catch(() => undefined)) === "CAMERAS") {
+    throw new Error(`Refused: ${CAMERA_SHOW_CLOUDFLARE_REASON}`);
+  }
   // A manual move down to a rung with nothing behind it is refused at the server too: the disabled
   // button is the courtesy, this is the guarantee (a black player for the whole room otherwise).
   const manualMove: Partial<Record<StageStreamSignal, LadderSource>> = {
