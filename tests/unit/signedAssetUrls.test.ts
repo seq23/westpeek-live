@@ -21,6 +21,8 @@ function memoryBucket() {
       // A stream is read to its end, as R2 does; a stream that errors stores nothing.
       if (value instanceof ReadableStream) value = new Uint8Array(await new Response(value).arrayBuffer());
       const bytes = value instanceof ArrayBuffer ? new Uint8Array(value) : value instanceof Uint8Array ? value : new TextEncoder().encode(String(value));
+      // R2's precondition, checked at commit: etagDoesNotMatch "*" on a key that exists stores nothing and resolves null.
+      if (options?.onlyIf?.etagDoesNotMatch === "*" && objects.has(key)) return null;
       objects.set(key, { bytes, contentType: options?.httpMetadata?.contentType });
       return {};
     },
