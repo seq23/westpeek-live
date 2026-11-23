@@ -56,6 +56,15 @@ const components: Components = {
   td: ({ children }) => <td className="py-2 pr-3 align-top">{children}</td>,
 };
 
+/**
+ * One wrapper, so a long unbroken run (a URL like westpeek.live/crew/events/{event}) breaks inside
+ * the column instead of pushing the page sideways on a 320px phone. Code blocks and tables keep
+ * their own sideways scroll.
+ */
 export function Markdown({ source }: { source: string }) {
-  return <ReactMarkdown remarkPlugins={[remarkGfm, remarkSwapEmDashes]} components={components}>{source}</ReactMarkdown>;
+  return (
+    <div className="[overflow-wrap:anywhere]" data-markdown-document>
+      <ReactMarkdown remarkPlugins={[remarkGfm, remarkSwapEmDashes]} components={components}>{source}</ReactMarkdown>
+    </div>
+  );
 }
