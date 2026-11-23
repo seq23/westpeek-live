@@ -113,6 +113,12 @@ export function assetUploadRefusal(input: { mimeType: string; sizeBytes: number;
   return undefined;
 }
 
+/** What an uploader shows when the PUT was refused: the server's own sentence, or a plain fallback. */
+export async function uploadRefusalMessage(response: Response, fallback: string): Promise<string> {
+  const body = (await response.json().catch(() => ({}))) as { error?: unknown };
+  return typeof body.error === "string" && body.error.trim() ? body.error : `${fallback} (storage answered ${response.status}).`;
+}
+
 /**
  * A pasted link is saved, and later opened by the download route, only as an absolute https address with no
  * user:password in it. Anything else (http, javascript:, data:, a path on this site) is refused.

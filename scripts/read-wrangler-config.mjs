@@ -17,7 +17,8 @@ import process from 'node:process';
 import {fileURLToPath} from 'node:url';
 
 export const EXPECTED_WORKER_NAME = 'west-peek-live';
-export const EXPECTED_WORKER_MAIN = '.open-next/worker.js';
+// worker.ts answers the signed upload before OpenNext and hands everything else to .open-next/worker.js.
+export const EXPECTED_WORKER_MAIN = 'worker.ts';
 
 export function stripJsonComments(source) {
   let out = '';

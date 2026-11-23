@@ -5,7 +5,8 @@ import { redirect } from "next/navigation";
 import { requireWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { parseQuestionLines } from "@/services/attendees/registrationQuestions";
 import { saveHouseDefaults, setHouseLogo } from "@/services/agencies/houseDefaultsService";
-import { HOUSE_LOGO_PREFIX, requestHouseLogoUpload, storedObjectExists } from "@/services/assets/eventAssetService";
+import { HOUSE_LOGO_PREFIX, promoteUpload, requestHouseLogoUpload } from "@/services/assets/eventAssetService";
+import { PENDING_UPLOAD_PREFIX } from "@/services/assets/assetUploadHandler";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || "").trim();
@@ -46,9 +47,10 @@ export async function requestHouseLogoUploadAction(input: { fileName: string; mi
 export async function confirmHouseLogoUploadAction(input: { storagePath: string; fileName: string }) {
   const actor = await requireWorkspaceActor();
   // Only a logo path this site minted, and only once the bytes are really in the bucket.
-  if (!input.storagePath.startsWith(`${HOUSE_LOGO_PREFIX}/`)) return { ok: false as const, reason: "That is not a logo upload." };
-  if (!(await storedObjectExists(input.storagePath))) return { ok: false as const, reason: "The logo never reached storage. Upload it again." };
-  await setHouseLogo(input, actor);
+  if (!input.storagePath.startsWith(`${PENDING_UPLOAD_PREFIX}${HOUSE_LOGO_PREFIX}/`)) return { ok: false as const, reason: "That is not a logo upload." };
+  const stored = await promoteUpload(input.storagePath);
+  if (!stored.ok) return { ok: false as const, reason: stored.reason.replace("The file", "The logo") };
+  await setHouseLogo({ storagePath: stored.storagePath, fileName: input.fileName }, actor);
   revalidateHouseSurfaces();
   return { ok: true as const };
 }
