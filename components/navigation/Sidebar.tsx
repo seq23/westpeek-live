@@ -14,9 +14,6 @@ export function Sidebar() {
             <p className="mt-1 text-xs font-semibold uppercase tracking-[0.25em] text-white/45">Production OS</p>
           </div>
         </div>
-        <a href="/app" className="rounded-full border border-white/15 px-3 py-2 text-xs font-bold text-white/80 lg:hidden">
-          Menu
-        </a>
       </div>
       <WorkspaceNavList />
       <div className="hidden p-5 lg:block">

@@ -19,7 +19,7 @@ function requiredInProduction(name: string, value: string | undefined, fallback:
 }
 
 const envSchema = z.object({
-  NEXT_PUBLIC_APP_URL: z.string().url().default("http://localhost:3000"),
+  NEXT_PUBLIC_APP_URL: z.url().default("http://localhost:3000"),
 
 
   AUTH_SESSION_COOKIE_NAME: z.string().min(1).default("agency_event_os_session"),
@@ -36,12 +36,12 @@ const envSchema = z.object({
 
   RESEND_API_KEY: z.string().optional().or(z.literal("")),
   EMAIL_FROM: emailIdentitySchema.optional().or(z.literal("")),
-  EMAIL_REPLY_TO: z.string().email().optional().or(z.literal("")),
+  EMAIL_REPLY_TO: z.email().optional().or(z.literal("")),
 
   VIDEO_PROVIDER: z.enum(["mock", "livekit", "daily", "agora", "mux", "twilio", "other"]).default("mock"),
 
   DAILY_API_KEY: z.string().optional().or(z.literal("")),
-  DAILY_API_BASE_URL: z.string().url().default("https://api.daily.co/v1"),
+  DAILY_API_BASE_URL: z.url().default("https://api.daily.co/v1"),
   DAILY_DOMAIN: z.string().optional().or(z.literal("")),
   DAILY_FALLBACK_ENABLED: z.enum(["true", "false"]).default("false"),
   LIVEKIT_INGRESS_RTMP_BASE_URL: z.string().optional().or(z.literal("")),

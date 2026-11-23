@@ -1,0 +1,16 @@
+{
+  "rules": [
+    {
+      "id": "pending-uploads-1-day",
+      "enabled": true,
+      "conditions": { "prefix": "_pending/" },
+      "deleteObjectsTransition": { "condition": { "type": "Age", "maxAge": 86400 } }
+    },
+    {
+      "id": "Default Multipart Abort Rule",
+      "enabled": true,
+      "conditions": { "prefix": "" },
+      "abortMultipartUploadsTransition": { "condition": { "type": "Age", "maxAge": 604800 } }
+    }
+  ]
+}

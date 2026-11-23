@@ -46,7 +46,7 @@ export async function EventCommandBar({ eventId }: { eventId: string }) {
           controls plus the sub-bar ran to 135px on a 414px phone and pushed the stage player off
           the first screen. It says it scrolls, the way the nav below it does. */}
       <div className="pointer-events-none absolute inset-y-0 right-0 z-10 w-10 bg-gradient-to-l from-brand-black via-brand-black/80 to-transparent xl:hidden" aria-hidden="true" data-chrome-overflow-fade="" />
-      <div className="mobile-scrollbar mx-auto flex max-w-7xl flex-nowrap items-center gap-1.5 overflow-x-auto px-3 py-1 [&>*]:shrink-0 sm:px-4 xl:flex-wrap xl:overflow-x-visible" data-chrome-bar-row="">
+      <div className="mobile-scrollbar mx-auto flex max-w-7xl flex-nowrap items-center gap-1.5 overflow-x-auto px-3 [&>*]:shrink-0 sm:px-4 xl:flex-wrap xl:overflow-x-visible" data-chrome-bar-row="">
         <SafeSection label="Event switcher" compact render={() => <EventSwitcherMenu eventId={eventId} eventName={event?.name || eventId} events={events.map((item) => ({ id: item.id, name: item.name, status: item.status }))} />} />
 
         {/* The stack's ONE statement of what the show is doing. The venue nav underneath no longer
