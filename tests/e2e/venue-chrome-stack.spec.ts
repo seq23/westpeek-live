@@ -85,6 +85,26 @@ async function assertBarsDoNotOverlap(page: Page, label: string) {
   }
 }
 
+/**
+ * The budget is met with full tap targets, never by shrinking them (WCAG 2.5.5, 44px): every link,
+ * button and menu trigger on the stack is at least 44px tall. Zero controls measured is a fail, not
+ * a pass, so an empty or unrendered stack cannot slip through.
+ */
+async function assertStackTapTargets(page: Page, label: string) {
+  const heights = await page.locator("[data-chrome-stack] a, [data-chrome-stack] button, [data-chrome-stack] summary").evaluateAll((els) =>
+    els
+      .filter((el) => {
+        if ((el as HTMLElement).offsetParent === null) return false;
+        // Inside a menu nobody has opened only its summary is on the bar; the panel is not painted.
+        const closedMenu = el.closest("details:not([open])");
+        return !closedMenu || el.parentElement === closedMenu;
+      })
+      .map((el) => ({ text: (el.textContent || el.getAttribute("aria-label") || "").trim().slice(0, 30), h: Math.round(el.getBoundingClientRect().height) })),
+  );
+  expect(heights.length, `${label}: the stack must carry controls to measure`).toBeGreaterThan(5);
+  expect(heights.filter((control) => control.h < 44), `${label}: every control on the stack must be a 44px tap target`).toEqual([]);
+}
+
 async function loginAsOwner(page: Page, next: string) {
   await gotoAndAssert(page, `/production-access/owner?next=${encodeURIComponent(next)}`);
   await page.getByLabel(/owner master password/i).fill(process.env.E2E_OWNER_PASSWORD || process.env.OWNER_MASTER_ACCESS_PASSWORD || requiredDay1Default("OWNER_MASTER_ACCESS_PASSWORD"));
@@ -101,6 +121,7 @@ test.describe("the venue chrome is one pinned stack", () => {
       await assertOneStack(page, name);
       await assertContentClearsStack(page, name);
       await assertBarsDoNotOverlap(page, name);
+      await assertStackTapTargets(page, `attendee ${name}`);
 
       // With no command bar the nav is the whole stack, so it keeps the event name, exactly once.
       await expect(page.locator("[data-chrome-bar='command']"), `${name}: an attendee must never see the command bar`).toHaveCount(0);
@@ -132,6 +153,7 @@ test.describe("the venue chrome is one pinned stack", () => {
 
     const stack = await boxOf(page, "[data-chrome-stack]");
     expect(stack.height, `the two bars on a 414px phone must stay under ${PHONE_STACK_BUDGET}px so the video lands on the first screen`).toBeLessThanOrEqual(PHONE_STACK_BUDGET);
+    await assertStackTapTargets(page, "owner phone");
 
     // The credentials scroll with the page: they are below the pin, not part of it.
     const credentials = page.locator("[data-testid='command-bar-credentials']");
@@ -171,6 +193,7 @@ test.describe("the venue chrome is one pinned stack", () => {
     const stack = await boxOf(page, "[data-chrome-stack]");
     // One row of controls and one row of nav. It was two bars of 56px and 64px before.
     expect(stack.height, "the stack must stay a thin band at desktop width").toBeLessThanOrEqual(96);
+    await assertStackTapTargets(page, "owner desktop");
   });
 
   test("the nav never renders clipped without saying it scrolls", async ({ page }) => {
