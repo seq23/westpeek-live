@@ -2,6 +2,8 @@ import Link from "next/link";
 import { HouseLogo } from "@/components/brand/HouseLogo";
 import { requestEventProduction } from "@/lib/actions/requestEventActions";
 import { BUDGET_RANGES } from "@/types/eventRequest";
+import { TurnstileWidget } from "@/components/security/TurnstileWidget";
+import { turnstileSiteKey } from "@/lib/security/turnstile";
 
 const fields = [
   ["name", "Name", "Your name"],
@@ -75,6 +77,13 @@ export default async function RequestEventPage({ searchParams }: { searchParams?
             <h1 className="mt-3 text-4xl font-black tracking-tight">Request Event production support.</h1>
             <p className="mt-4 text-sm leading-6 text-brand-muted">This is the public planning front door. It does not create an admin account, unlock the producer workspace, or expose self-serve billing. We use it to scope your event before opening production operations.</p>
             {status === "missing" ? <p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">Name, a valid email and a budget range are required.</p> : null}
+            {status === "check" ? <p className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">The security check did not go through, so nothing was sent. Please submit the form again.</p> : null}
+            {status === "busy" || status === "paused" ? (
+              <div className="mt-5 rounded-2xl bg-amber-50 p-4 text-sm font-bold text-amber-800">
+                <p>{status === "busy" ? "We have had too many requests from here today, so this one was not sent." : "A safety check is not answering just now, so this request was not sent."}</p>
+                <p className="mt-2 font-normal">Please email <a className="font-bold underline" href="mailto:scooter@westpeek.ventures?subject=Event%20production%20request">scooter@westpeek.ventures</a> with your event type, target date, expected audience size and speaker count, and we will pick it up from there.</p>
+              </div>
+            ) : null}
             {status === "failed" ? (
               <div className="mt-5 rounded-2xl bg-rose-50 p-4 text-sm font-bold text-rose-800">
                 <p>We could not save your request, so it has not reached us. Nothing was recorded.</p>
@@ -105,6 +114,7 @@ export default async function RequestEventPage({ searchParams }: { searchParams?
                 <label htmlFor="notes" className="text-sm font-black">Notes</label>
                 <textarea id="notes" name="notes" rows={5} placeholder="Anything else producers should know before scoping the event." className="mt-2 w-full rounded-3xl border border-brand-line px-5 py-4 text-sm" />
               </div>
+              <TurnstileWidget siteKey={turnstileSiteKey()} action="request_event" />
               <button className="rounded-full bg-brand-black px-6 py-3 text-sm font-bold text-white">Submit event request</button>
             </form>
           </>

@@ -18,7 +18,12 @@ export async function authorizeVideoTokenRequest(input: { role: VideoParticipant
     if (!identity && !input.allowAnonymousViewer) return { ok: false as const, error: "Registered attendee session required for attendee video token." };
     return { ok: true as const, identity };
   }
-  if (input.role === "observer") return { ok: true as const };
+  // An observer is someone watching with nothing to show for it: exactly an anonymous viewer, so it
+  // gets in only where a route serves watch-only tokens. It used to pass every route outright, and
+  // /api/video/daily-token made a paid Daily room for any eventId a stranger typed (23 Nov 2026).
+  if (input.role === "observer") {
+    return input.allowAnonymousViewer ? { ok: true as const, identity: undefined } : { ok: false as const, error: "Observers may only watch a live event's open rooms." };
+  }
   const env = getEnv();
   const { operatorCookieName, specialGuestCookieName, crewCookieName } = getV5AccessCookieNames(env);
   const secret = getV5AccessCookieSecret(env);

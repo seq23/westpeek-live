@@ -45,6 +45,12 @@ vi.mock("@/services/audit/createAuditLog", () => ({
   createAuditLog: (input: { action: string }) => createAuditLog(input),
 }));
 
+// Who may submit at all (bot check, caps) is proven in tests/unit/requestEventAdmission.test.ts; here everyone is let in.
+vi.mock("next/headers", () => ({ headers: async () => new Headers({ "cf-connecting-ip": "203.0.113.9" }) }));
+vi.mock("@/services/events/requestEventAdmission", () => ({
+  admitEventRequest: async () => ({ admitted: true, botCheck: "passed", requesterIpHash: "hash-of-203.0.113.9" }),
+}));
+
 function form(overrides: Record<string, string> = {}) {
   const data = new FormData();
   data.set("name", "Ada Lovelace");

@@ -77,6 +77,15 @@ export async function requestPasswordReset(formData: FormData) {
   const email = getFormString(formData, "email");
   if (!email) redirect("/forgot-password?error=missing_email");
 
+  // Counted per address and per account before anything is looked up, like the login: a stranger
+  // could otherwise send an account holder reset mail without end, or spend the mail quota. The
+  // refusal depends only on what the caller sent, never on whether the account exists.
+  const { ip } = await requestIpHash({ headers: await headers() });
+  const gate = await takeGateAttempt({ gate: "reset_email", scope: await sha256Hex(email.toLowerCase()), ip });
+  if (!gate.allowed) redirect(gate.reason === "too_many" ? `/forgot-password?${gateRefusalQuery(gate)}` : "/forgot-password?error=reset_paused");
+
+  // An account gets at most RESETS_PER_ACCOUNT_PER_HOUR links an hour (PasswordAuth); past that
+  // nothing is sent and the answer below stays the same.
   const reset = await new PasswordAuth().createPasswordReset(email).catch(() => undefined);
   if (reset) {
     const link = `${getEnv().NEXT_PUBLIC_APP_URL || "https://westpeek.live"}/reset-password?token=${reset.token}`;

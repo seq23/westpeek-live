@@ -1,13 +1,18 @@
 "use server";
 
+import { headers } from "next/headers";
 import { redirect } from "next/navigation";
 import { getEnv } from "@/lib/env";
 import { appendRequestEventRecord } from "@/services/events/requestEventStore";
 import { createAuditLog } from "@/services/audit/createAuditLog";
 import { sendEmail } from "@/services/email/emailService";
+import { escapeHtml } from "@/services/email/emailWorkflowTemplates";
 import { createEventRecord } from "@/services/events/eventRepository";
 import { attachEventToRequest } from "@/services/event-intake/eventRequestPipeline";
 import { budgetRangeLabel, isBudgetRange } from "@/types/eventRequest";
+import { admitEventRequest } from "@/services/events/requestEventAdmission";
+import { requestIpHash } from "@/services/access/gateAttemptLimiter";
+import { TURNSTILE_RESPONSE_FIELD } from "@/lib/security/turnstile";
 
 /**
  * Public event-request intake.
@@ -48,6 +53,15 @@ export async function requestEventProduction(formData: FormData) {
   const budgetRange = field(formData, "budgetRange");
   if (!name || !email || !email.includes("@") || !isBudgetRange(budgetRange)) redirect("/request-event?status=missing");
 
+  // Nothing is written or sent until the sender is counted and the bot check has had its say
+  // (services/events/requestEventAdmission.ts): every request mails the owner and makes a draft event.
+  const { ip } = await requestIpHash({ headers: await headers() });
+  const admission = await admitEventRequest({ ip, turnstileToken: String(formData.get(TURNSTILE_RESPONSE_FIELD) || "") });
+  if (!admission.admitted) {
+    console.error(`request-event: refused (${admission.reason})`);
+    redirect(`/request-event?status=${admission.status}`);
+  }
+
   const persisted = await appendRequestEventRecord({
     id: `request-${Date.now()}-${Math.random().toString(36).slice(2)}`,
     name,
@@ -63,8 +77,11 @@ export async function requestEventProduction(formData: FormData) {
     supportLevel: field(formData, "supportLevel"),
     notes: field(formData, "notes"),
     budgetRange,
+    requesterIpHash: admission.requesterIpHash,
+    botCheck: admission.botCheck,
     createdAt: new Date().toISOString(),
   });
+  const unchecked = admission.botCheck === "unchecked";
 
   const record = persisted.record;
 
@@ -134,9 +151,21 @@ export async function requestEventProduction(formData: FormData) {
     try {
       const result = await sendEmail({
         to,
-        subject: `New West Peek Live event request: ${name}`,
+        // An unchecked request came in without the bot check (most often an ad blocker); the owner sees that before opening it.
+        subject: `New West Peek Live event request${unchecked ? " (bot check not run)" : ""}: ${name.replace(/\s+/g, " ").slice(0, 120)}`,
         replyTo: email,
-        html: `<h1>New event request</h1><p><strong>Name:</strong> ${name}</p><p><strong>Email:</strong> ${email}</p><p><strong>Company:</strong> ${record.company || ""}</p><p><strong>Event type:</strong> ${record.eventType || ""}</p><p><strong>Date:</strong> ${record.eventDate || ""}</p><p><strong>Audience:</strong> ${record.audienceSize || ""}</p><p><strong>Budget:</strong> ${budgetRangeLabel(record.budgetRange)}</p><p><strong>Notes:</strong> ${record.notes || ""}</p>${draftEventId ? `<p><strong>Draft event:</strong> ${getEnv().NEXT_PUBLIC_APP_URL}/app/events/${draftEventId}</p>` : ""}`,
+        // Every value here was typed by a stranger, so it is escaped before it becomes markup in the owner's inbox.
+        html: `<h1>New event request</h1>${[
+          ["Name", name],
+          ["Email", email],
+          ["Company", record.company || ""],
+          ["Event type", record.eventType || ""],
+          ["Date", record.eventDate || ""],
+          ["Audience", record.audienceSize || ""],
+          ["Budget", budgetRangeLabel(record.budgetRange)],
+          ["Notes", record.notes || ""],
+          ...(draftEventId ? [["Draft event", `${getEnv().NEXT_PUBLIC_APP_URL}/app/events/${draftEventId}`]] : []),
+        ].map(([label, value]) => `<p><strong>${label}:</strong> ${escapeHtml(value)}</p>`).join("")}`,
         text: `New event request
 Name: ${name}
 Email: ${email}

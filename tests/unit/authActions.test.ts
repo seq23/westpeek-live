@@ -3,7 +3,7 @@ import { afterAll, beforeAll, describe, expect, it } from "vitest";
 import { NextRequest } from "next/server";
 import { createDbClient } from "@/lib/d1/query";
 import { setD1ForTests } from "@/lib/d1/binding";
-import { hashPassword, PasswordAuth, PASSWORD_ITERATIONS, RESET_TTL_SECONDS, SESSION_TTL_SECONDS, sha256Token, verifyPassword } from "@/lib/auth/passwordAuth";
+import { hashPassword, PasswordAuth, PASSWORD_ITERATIONS, RESET_TTL_SECONDS, RESET_WINDOW_SECONDS, RESETS_PER_ACCOUNT_PER_HOUR, SESSION_TTL_SECONDS, sha256Token, verifyPassword } from "@/lib/auth/passwordAuth";
 import { isValidSelfServeSession } from "@/lib/auth/selfServeSession";
 import { createTestD1 } from "./helpers/d1";
 
@@ -129,11 +129,31 @@ describe("password reset", () => {
     now += (RESET_TTL_SECONDS + 1) * 1000;
     expect(await auth.completePasswordReset(late.token, "after-expiry-password")).toMatchObject({ ok: false });
     now = saved;
+    // An hour on, so the account's hourly reset count (3) starts again for the next two links.
+    now += (RESET_WINDOW_SECONDS + 1) * 1000;
     // Only the newest link works: issuing another retires the previous one.
     const first = await auth.createPasswordReset("test.signup@westpeek.ventures");
     const second = await auth.createPasswordReset("test.signup@westpeek.ventures");
     expect(await auth.completePasswordReset(first!.token, "first-link-password")).toMatchObject({ ok: false });
     expect(await auth.completePasswordReset(second!.token, "second-link-password")).toMatchObject({ ok: true });
+  });
+
+  it("makes at most 3 links an account an hour: the 4th ask sends nothing and leaves the 3rd link working; an hour on it issues again", async () => {
+    expect((await auth.signUp({ email: "reset.cap@westpeek.ventures", password: "a-long-password-2", fullName: "Reset Cap" })).ok).toBe(true);
+    const links = [];
+    for (let ask = 1; ask <= RESETS_PER_ACCOUNT_PER_HOUR; ask += 1) {
+      const link = await auth.createPasswordReset("reset.cap@westpeek.ventures");
+      expect(link, `ask ${ask}`).toBeDefined();
+      links.push(link!);
+      now += 60_000; // a minute apart, well inside the hour
+    }
+    expect(await auth.createPasswordReset("reset.cap@westpeek.ventures")).toBeUndefined();
+    expect(await auth.createPasswordReset("RESET.CAP@westpeek.ventures")).toBeUndefined();
+    // The refused ask did not retire the newest link the owner may be about to click.
+    expect(await auth.completePasswordReset(links[links.length - 1].token, "a-capped-new-password")).toMatchObject({ ok: true });
+    // The window slides: an hour after the first link, the account can ask again.
+    now += RESET_WINDOW_SECONDS * 1000;
+    expect(await auth.createPasswordReset("reset.cap@westpeek.ventures")).toBeDefined();
   });
 });
 

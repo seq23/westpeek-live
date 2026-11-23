@@ -45,7 +45,9 @@ export async function POST(request: Request) {
     const event = await findEventRecord(eventId);
     if (!event || event.id !== eventId) return NextResponse.json({ error: "No such event." }, { status: 404 });
 
-    const auth = wantsHost ? await requireLiveEventControlAccessForRequest(eventId, "go_live") : await authorizeVideoTokenRequest({ role: videoRole, eventId });
+    // An observer (no session) is still signed role 0 for a real event's own meeting: a Zoom signature
+    // makes no room and costs nothing, unlike the Daily routes, which refuse observers (23 Nov 2026).
+    const auth = wantsHost ? await requireLiveEventControlAccessForRequest(eventId, "go_live") : await authorizeVideoTokenRequest({ role: videoRole, eventId, allowAnonymousViewer: videoRole === "observer" });
     if (!auth.ok) return NextResponse.json({ error: auth.error }, { status: ("status" in auth && auth.status) || 403 });
 
     const meetingNumber = await signableZoomMeetingNumber(eventId);

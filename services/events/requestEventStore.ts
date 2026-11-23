@@ -37,7 +37,7 @@ import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
  */
 
 import { submitEventRequest, listEventRequests } from "@/services/event-intake/eventRequestPipeline";
-import type { EventRequestRecord } from "@/types/eventRequest";
+import type { EventRequestBotCheck, EventRequestRecord } from "@/types/eventRequest";
 
 /** The public form's shape. The stored row carries more (state, price, tokens); this is what arrives. */
 export interface RequestEventRecord {
@@ -56,6 +56,9 @@ export interface RequestEventRecord {
   notes?: string;
   /** The band the visitor picked. Required on the form; a request without one is not scopable. */
   budgetRange?: string;
+  /** sha256 of the sender's address, for the per-address daily cap. */
+  requesterIpHash?: string;
+  botCheck?: EventRequestBotCheck;
   createdAt: string;
 }
 

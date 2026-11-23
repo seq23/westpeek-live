@@ -10,7 +10,7 @@ import type { AttendeeProfile } from "@/types/attendeeRegistration";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { HouseDefaultsRecord } from "@/types/houseDefaults";
-import type { EventRequestRecord } from "@/types/eventRequest";
+import type { EventRequestBotCheck, EventRequestRecord } from "@/types/eventRequest";
 import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
@@ -785,6 +785,13 @@ export class FileRuntimeStore implements RuntimeStore {
   async getEventRequestByConfirmToken(token: string) {
     if (!token) return undefined;
     return (this.read().eventRequests || []).find((item: EventRequestRecord) => item.confirmToken === token);
+  }
+
+  async countEventRequestsSince(input: { since: string; requesterIpHash?: string; botCheck?: EventRequestBotCheck }) {
+    return (this.read().eventRequests || []).filter((item: EventRequestRecord) =>
+      item.createdAt >= input.since
+      && (!input.requesterIpHash || item.requesterIpHash === input.requesterIpHash)
+      && (!input.botCheck || item.botCheck === input.botCheck)).length;
   }
 
   async listEventRequests(limit = 500) {

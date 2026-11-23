@@ -53,3 +53,17 @@ test("status=missing and status=failed keep the form, with their banner", async 
   await expect(page.locator("form")).toHaveCount(1);
   await expect(page.getByTestId("request-event-received")).toHaveCount(0);
 });
+
+test("a refused request (bot check, daily cap, safety check down) keeps the form and offers the email route", async ({ page }) => {
+  await gotoAndAssert(page, "/request-event?status=check");
+  await expect(page.getByText(/security check did not go through, so nothing was sent/i)).toBeVisible();
+  await expect(page.locator("form")).toHaveCount(1);
+
+  for (const status of ["busy", "paused"]) {
+    await gotoAndAssert(page, `/request-event?status=${status}`);
+    await expect(page.getByText(/was not sent/i)).toBeVisible();
+    await expect(page.getByRole("link", { name: "scooter@westpeek.ventures" })).toHaveAttribute("href", /^mailto:scooter@westpeek\.ventures/);
+    await expect(page.locator("form")).toHaveCount(1);
+    await expect(page.getByTestId("request-event-received")).toHaveCount(0);
+  }
+});

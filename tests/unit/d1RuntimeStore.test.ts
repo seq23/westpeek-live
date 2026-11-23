@@ -268,6 +268,14 @@ describe("D1RuntimeStore against migrations-d1 on a real D1", () => {
     expect((await store.getEventRequestByConfirmToken("tok-1"))?.id).toBe("req-1");
     expect(await store.getEventRequestByConfirmToken("")).toBeUndefined();
     expect(await store.listEventRequests()).toHaveLength(1);
+    // The /request-event daily caps count rows by day, sender and bot check.
+    await store.upsertEventRequest({ ...(request as object), id: "req-2", confirmToken: "tok-2", requesterIpHash: "ip-a", botCheck: "unchecked", createdAt: "2026-11-23T00:00:00.000Z" } as never);
+    await store.upsertEventRequest({ ...(request as object), id: "req-3", confirmToken: "tok-3", requesterIpHash: "ip-a", botCheck: "passed", createdAt: "2026-11-23T00:00:00.000Z" } as never);
+    expect(await store.getEventRequest("req-2")).toMatchObject({ requesterIpHash: "ip-a", botCheck: "unchecked" });
+    expect(await store.countEventRequestsSince({ since: "2026-11-23T00:00:00.000Z" })).toBe(2);
+    expect(await store.countEventRequestsSince({ since: "2026-11-23T00:00:00.000Z", requesterIpHash: "ip-a", botCheck: "unchecked" })).toBe(1);
+    expect(await store.countEventRequestsSince({ since: "2026-11-23T00:00:00.001Z" })).toBe(0);
+    expect(await store.countEventRequestsSince({ since: "2026-11-23T00:00:00.000Z", requesterIpHash: "ip-b" })).toBe(0);
 
     const page = { slug: "attendee", title: "How it works", intro: "Hi", body: "Body", updatedBy: "owner", updatedByLabel: "Owner", updatedAt: T0 } as never;
     await store.setHowItWorksPage(page);

@@ -14,7 +14,7 @@ import type { EventTemplateRecord } from "@/types/eventTemplates";
 import type { AttendeeAgendaIntent, AttendeePermission, AttendeeSession, SponsorLeadOptIn } from "@/types/attendeeSession";
 import type { AgencySettingsRecord, RuntimeClientRecord, RuntimeEventRecord } from "@/types/runtimeEvent";
 import type { HouseDefaultsRecord } from "@/types/houseDefaults";
-import type { EventRequestRecord } from "@/types/eventRequest";
+import type { EventRequestBotCheck, EventRequestRecord } from "@/types/eventRequest";
 import type { HowItWorksAudience, HowItWorksPageRecord } from "@/types/howItWorks";
 import type { EventGuestStateRecord, SpecialGuestProfile, SpecialGuestRole } from "@/types/specialGuest";
 import type { SpeedNetworkingMatchRecord, SpeedNetworkingQueueEntry } from "@/types/speedNetworking";
@@ -307,6 +307,8 @@ export interface RuntimeStore {
   /** The client's own link resolves by token alone; it carries no id a visitor could edit. */
   getEventRequestByConfirmToken(token: string): Promise<EventRequestRecord | undefined>;
   listEventRequests(limit?: number): Promise<EventRequestRecord[]>;
+  /** Requests created since `since` (ISO), optionally from one address hash or one bot-check lane: the public form's daily caps. Throws when it cannot count. */
+  countEventRequestsSince(input: { since: string; requesterIpHash?: string; botCheck?: EventRequestBotCheck }): Promise<number>;
   // The five instruction pages (migration 0036), edited from the workspace, linked from every email.
   getHowItWorksPage(slug: HowItWorksAudience): Promise<HowItWorksPageRecord | undefined>;
   listHowItWorksPages(): Promise<HowItWorksPageRecord[]>;

@@ -31,6 +31,9 @@ export const OWNER_PASSWORD_DOORS: Record<GateName, { file: string } | { file: s
   vip_redeem: { file: "lib/actions/vipActions.ts" },
   login: { file: "lib/auth/actions.ts" },
   attendee_return: { file: "services/attendees/attendeeReturnService.ts", noSecret: "an attendee types only their email here; there is no secret field to type a password into" },
+  reset_email: { file: "lib/auth/actions.ts", noSecret: "the forgot-password form takes only an email; it opens nothing, it mails a link" },
+  request_event: { file: "services/events/requestEventAdmission.ts", noSecret: "the public event-request form has no secret field; it is counted so strangers cannot flood the inbox" },
+  video_viewer: { file: "app/api/video/livekit-token/route.ts", noSecret: "a watch-only viewer types nothing; it is counted so a script cannot mint tokens" },
 };
 
 const OWNER_HOURS = 12;
