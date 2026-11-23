@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 
 test("breakout rooms expose room-scoped live chat and camera controls", async ({ page }) => {

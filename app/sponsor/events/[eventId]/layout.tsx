@@ -14,7 +14,10 @@ export default async function EventAreaLayout({ children, params }: { children: 
   // An owner or operator holding the master key is NEVER sent to a code gate, even when a guest
   // cookie they also hold went stale: that bounce is the "another gate every time I click open"
   // the owner reported. The guest keeps the gate; the master key walks through it.
-  if (!(await holdsMasterKey(eventId)) && (await guestAccessStale(eventId))) redirect("/production-access/special-guest?error=rotated");
+  if (!(await holdsMasterKey(eventId))) {
+    const stale = await guestAccessStale(eventId);
+    if (stale) redirect(`/production-access/special-guest?error=${stale}`);
+  }
   // Owner/operator only; a sponsor sees nothing of the bar.
   return <><EventChromeStack eventId={eventId || resolved.eventId}><SafeSection label="Event command bar" compact render={() => EventCommandBar({ eventId: eventId || resolved.eventId })} /></EventChromeStack>{children}</>;
 }

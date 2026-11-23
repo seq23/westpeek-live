@@ -1,5 +1,5 @@
 import { createHmac } from "node:crypto";
-import { expect, test, type APIRequestContext, type Page } from "@playwright/test";
+import { expect, test, type APIRequestContext, type Page } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { day1Default } from "./helpers/day1AccessDefaults";
 import { asRegisteredAttendee } from "./helpers/persona";

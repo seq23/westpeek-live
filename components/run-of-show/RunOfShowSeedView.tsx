@@ -43,7 +43,7 @@ export function RunOfShowSeedView({ eventId }: { eventId: string }) {
                     <div className="rounded-xl bg-slate-50 p-3 text-sm"><strong>Sponsor</strong><br />{sponsor?.name ?? "None"}</div>
                     <div className="rounded-xl bg-slate-50 p-3 text-sm"><strong>Approval</strong><br />{segment.approvalStatus}</div>
                   </div>
-                  <div className="mt-4 rounded-xl bg-slate-950 p-3 text-sm text-white">
+                  <div className="wpl-as-authored mt-4 rounded-xl bg-slate-950 p-3 text-sm text-white">
                     <strong>Producer cue:</strong> {segment.producerNotes}<br />
                     <strong>Technical cue:</strong> {segment.technicalCues}
                   </div>

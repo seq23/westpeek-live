@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("attendee live participation requires crew approval, blocks publish by default, and supports revoke language", async ({ page }) => {
   await page.goto("/venue/demo/stage");

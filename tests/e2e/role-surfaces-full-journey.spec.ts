@@ -1,4 +1,4 @@
-import { test } from "@playwright/test";
+import { test } from "./fixtures";
 import { expectRouteMatrix, loginAsSpecialGuest } from "./helpers/roleJourney";
 
 test("speaker role journey exposes onboarding, tech check, green room, backstage, and teleprompter surfaces", async ({ page }) => {

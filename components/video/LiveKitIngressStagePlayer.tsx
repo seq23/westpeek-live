@@ -27,7 +27,7 @@ function IngressTrackView() {
   return (
     <div className="space-y-3">
       {feed.length ? (
-        <div className="wpl-production-feed rounded-2xl bg-black" data-testid="production-feed-tile">
+        <div className="wpl-as-authored wpl-production-feed rounded-2xl bg-black" data-testid="production-feed-tile">
           <style>{`.wpl-production-feed .lk-participant-metadata, .wpl-production-feed .lk-participant-placeholder { display: none !important; }`}</style>
           {/* 16:9, not a fixed 420px. On a 414px phone a fixed height left roughly 200px of dead
               black under a small picture and the stage read as broken (the owner, 16 Sep 2026). */}
@@ -35,7 +35,7 @@ function IngressTrackView() {
         </div>
       ) : null}
       {people.length ? <GridLayout tracks={people} className={`${feed.length ? "min-h-[9rem]" : "aspect-video"} rounded-2xl bg-slate-950/70 p-3`}><ParticipantTile /></GridLayout> : null}
-      {!feed.length && !people.length ? <div className="aspect-video rounded-2xl bg-slate-950/70" /> : null}
+      {!feed.length && !people.length ? <div className="wpl-as-authored aspect-video rounded-2xl bg-slate-950/70" /> : null}
     </div>
   );
 }
@@ -124,13 +124,13 @@ export function LiveKitIngressStagePlayer({ eventId, roomId, displayName, onIngr
   return (
     <div data-testid="attendee-livekit-room-surface" data-livekit-consumption-state={consumptionState} data-room-id={roomId} data-token-can-publish={tokenCanPublish ? "true" : "false"}>
       {removed ? (
-        <div className="flex aspect-video flex-col items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white" data-testid="attendee-stage-removed"><p className="text-lg font-black">Removed by the crew</p><p className="mt-2 text-sm text-slate-300">{publishGrant?.reason || "The crew removed you from the live stage."}</p></div>
+        <div className="wpl-as-authored flex aspect-video flex-col items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white" data-testid="attendee-stage-removed"><p className="text-lg font-black">Removed by the crew</p><p className="mt-2 text-sm text-slate-300">{publishGrant?.reason || "The crew removed you from the live stage."}</p></div>
       ) : error && !startedOnce ? (
-        <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white"><p>Stage is getting ready. Live stream will begin shortly.</p></div>
+        <div className="wpl-as-authored flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white"><p>Stage is getting ready. Live stream will begin shortly.</p></div>
       ) : error && startedOnce ? (
-        <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white"><p>Switching to backup stream, please hold...</p></div>
+        <div className="wpl-as-authored flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white"><p>Switching to backup stream, please hold...</p></div>
       ) : !token || !serverUrl || !room ? (
-        <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white"><p>{bufferOpen ? "Stage is getting ready. Live stream will begin shortly." : "Connecting to LiveKit Ingress feed..."}</p></div>
+        <div className="wpl-as-authored flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white"><p>{bufferOpen ? "Stage is getting ready. Live stream will begin shortly." : "Connecting to LiveKit Ingress feed..."}</p></div>
       ) : (
         <LiveKitRoom key={token} room={room} token={token} serverUrl={serverUrl} connect audio={false} video={false} onConnected={() => setStartedOnce(true)} onDisconnected={() => { if (removedRef.current) return; if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive("LiveKit disconnected after stream had started."); } }} onError={(e) => { if (removedRef.current) return; if (startedOnce && !bufferOpen && !fallbackTriggered.current) { fallbackTriggered.current = true; onIngressDropAfterLive(e.message); } else setError(e.message); }} className="rounded-3xl border border-white/10 bg-black/40 p-2 sm:p-4">
           <IngressTrackView />

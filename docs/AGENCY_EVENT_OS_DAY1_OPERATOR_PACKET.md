@@ -124,9 +124,9 @@ Special guests use the Special Guest Gate plus the event-specific code for their
 
 | Scope | Key | Password | Gate |
 |---|---|---|---|
-| Owner / boss | `OWNER_MASTER_ACCESS_PASSWORD` | `Owner-Command-2026!` | `https://westpeek.live/production-access/owner` |
-| Operator | `OPERATOR_LAUNCHPAD_PASSWORD` | `Show-Runner-2026!` | `https://westpeek.live/production-access/operator` |
-| Crew | `CREW_ACCESS_PASSWORD` | `Crew-Call-2026!` | `https://westpeek.live/production-access/crew` |
+| Owner / boss | `OWNER_MASTER_ACCESS_PASSWORD` | `set in Cloudflare (vault: WESTPEEK_LIVE_OWNER_MASTER_ACCESS_PASSWORD)` | `https://westpeek.live/production-access/owner` |
+| Operator | `OPERATOR_LAUNCHPAD_PASSWORD` | `set in Cloudflare (vault: WESTPEEK_LIVE_OPERATOR_LAUNCHPAD_PASSWORD)` | `https://westpeek.live/production-access/operator` |
+| Crew | `CREW_ACCESS_PASSWORD` | `set in Cloudflare (vault: WESTPEEK_LIVE_CREW_ACCESS_PASSWORD)` | `https://westpeek.live/production-access/crew` |
 
 ### 7B. Demo event codes
 

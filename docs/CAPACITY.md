@@ -20,6 +20,7 @@ booked before January (events are sponsor-driven). **Switch back to Ship ≥7 da
 | **Cloudflare Stream** | pay-as-you-go | nothing included | $5 per 1,000 minutes stored · $1 per 1,000 minutes delivered. Live input `westpeek-fallback` |
 | **Cloudflare D1** (inside Workers Paid) | $0 extra | 5 GB storage · 25 billion rows read · 50 million rows written | Billed per extra million rows / GB; it never sleeps (no auto-pause) and Time Travel restores any minute of the last 30 days |
 | **Cloudflare R2** (inside Workers Paid) | $0 extra | 10 GB-month · 1 M writes · 10 M reads · no egress fees | Billed per extra GB-month / million operations. Bucket `west-peek-live-assets` |
+| **Cloudflare Workers AI** (inside Workers Paid) | $0 at our volume | 10,000 neurons a day free, shared across the account | $0.011 per 1,000 neurons past it. Networking goals only: about 300 saves × 8 events ≈ 6,700 neurons a month ≈ $0.07; the code stops at 50,000 a month (≈ $0.55) and falls back to keywords |
 
 LiveKit **Scale** is named in the module but its allowances were never read, so it reports
 `unknown` rather than a made-up number; so does Build's downstream bandwidth. `livekitPlanFit()` in

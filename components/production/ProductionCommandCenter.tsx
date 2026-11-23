@@ -34,7 +34,7 @@ export async function ProductionCommandCenter({ eventId, rosterSearch = "", diag
 
   return (
     <div className="space-y-6" data-testid="production-command-center" data-event-source={event.source}>
-      <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
+      <div className="wpl-as-authored rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
         <p className="text-sm font-medium text-slate-300">Live production command center</p>
         <h1 className="mt-2 text-3xl font-semibold">{event.name}</h1>
         <p className="mt-2 max-w-3xl text-slate-300">Everything on this page is this event&rsquo;s own state. Bring speakers on and off stage, moderate chat, and watch the room from the deck below.</p>

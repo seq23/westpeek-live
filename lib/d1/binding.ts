@@ -84,3 +84,24 @@ export function setD1ForTests(db: D1DatabaseLike | undefined) {
 export function setAssetsBucketForTests(bucket: R2BucketLike | undefined) {
   testBucket = bucket;
 }
+
+/** The Workers AI binding (`AI` in wrangler.jsonc), as far as this app uses it: one text model call. */
+export interface WorkersAiLike {
+  run(model: string, inputs: { messages: Array<{ role: "system" | "user"; content: string }>; max_tokens?: number; temperature?: number }): Promise<unknown>;
+}
+
+let testAi: { inWorker: boolean; binding?: WorkersAiLike } | undefined;
+
+/** `inWorker` false: no Cloudflare context at all (next dev, unit tests), so there is no model to ask. */
+export function getWorkersAi(): { inWorker: boolean; binding?: WorkersAiLike } {
+  if (testAi) return testAi;
+  const env = cloudflareEnv();
+  if (!env) return { inWorker: false };
+  const ai = env.AI as WorkersAiLike | undefined;
+  return { inWorker: true, binding: ai && typeof ai.run === "function" ? ai : undefined };
+}
+
+/** Tests: a binding plays the Worker's `AI`; `undefined` is "in a Worker, not bound"; "unset" clears. */
+export function setWorkersAiForTests(binding: WorkersAiLike | undefined | "unset") {
+  testAi = binding === "unset" ? undefined : { inWorker: true, binding };
+}

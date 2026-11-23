@@ -380,6 +380,13 @@ export function serviceCapacityRows(tier: LiveKitTier = livekitTier(), show: { r
       source: `https://developers.cloudflare.com/r2/pricing/ (${READ})`,
     },
     {
+      service: "Cloudflare Workers AI", role: "Reads a networking goal into labels when it is saved", plan: "Inside Workers Paid", planRecorded: true, cost: "$0 at our volume",
+      included: "10,000 neurons a day free, shared by every Worker on the account",
+      firstLimit: "A show of 300 goal saves uses about 840 neurons (8% of one day); the feature stops itself at 50,000 neurons a month", showLoad: 0.08,
+      pastIt: "$0.011 per 1,000 neurons; past our own 50,000-a-month cap goals are read by keywords, never billed further",
+      source: `https://developers.cloudflare.com/workers-ai/platform/pricing/ (${READ})`,
+    },
+    {
       service: "Cloudflare DNS", role: "westpeek.live zone and inbound Email Routing", plan: "Free Website (zone plan)", planRecorded: true, cost: "$0",
       included: "DNS included; Email Routing: 200 rules per domain · 200 destination addresses · 25 MiB per message",
       firstLimit: "None on show day; DNS query metering is not stated (unknown)", showLoad: 0,

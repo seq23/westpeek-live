@@ -15,7 +15,7 @@ export function ContractorPortalDashboard() {
 
   return (
     <div className="space-y-6">
-      <div className="rounded-3xl bg-slate-950 p-6 text-white">
+      <div className="wpl-as-authored rounded-3xl bg-slate-950 p-6 text-white">
         <p className="text-sm text-slate-300">Crew portal</p>
         <h1 className="mt-2 text-3xl font-semibold">{event?.name}</h1>
         <p className="mt-2 text-slate-300">You only see assigned tasks, call time, and relevant production notes.</p>
