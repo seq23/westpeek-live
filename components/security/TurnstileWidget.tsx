@@ -14,7 +14,9 @@ export function TurnstileWidget({ siteKey, action }: { siteKey: string; action: 
   return (
     <>
       <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" async defer />
-      <div className="cf-turnstile min-h-[65px]" data-sitekey={siteKey} data-action={action} data-theme="light" data-size="flexible" data-testid="turnstile-widget" />
+      {/* Cloudflare's box is never narrower than 300 px, wider than a 320 px phone's form column (it pushed
+          /request-event 25 px off screen, 23 Nov 2026). Below 360 px it is drawn at 85%, so it fits. */}
+      <div className="cf-turnstile min-h-[65px] origin-top-left max-[359px]:scale-[0.85]" data-sitekey={siteKey} data-action={action} data-theme="light" data-size="flexible" data-testid="turnstile-widget" />
     </>
   );
 }
