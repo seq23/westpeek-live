@@ -7,6 +7,7 @@ let pathname = "/app";
 vi.mock("next/navigation", () => ({ usePathname: () => pathname }));
 vi.mock("next/link", () => ({ default: ({ href, children, ...rest }: { href: string; children: unknown }) => createElement("a", { href, ...rest }, children as never) }));
 import { WorkspaceNavList } from "@/components/navigation/WorkspaceNavList";
+import { Sidebar } from "@/components/navigation/Sidebar";
 import { activeNavHref, NEW_EVENT_ITEM, WORKSPACE_NAV } from "@/lib/navigation/workspaceNav";
 import { OWNER_ACTOR_LABEL, ownerKeyLabel } from "@/lib/auth/workspaceActor";
 
@@ -61,7 +62,12 @@ describe("sidebar: exactly one current item, and it is the right one", () => {
       expect(menu?.[0]).toContain('aria-controls="workspace-nav-links"');
       expect(html).toMatch(/id="workspace-nav-links" class="hidden /);
     }
-    expect(fs.readFileSync("components/navigation/Sidebar.tsx", "utf8")).toContain("WorkspaceNavList");
+    // The sidebar itself carries the nav: its rendered markup has the menu button and the link list.
+    pathname = "/app/people";
+    const sidebar = renderToStaticMarkup(createElement(Sidebar));
+    expect(sidebar).toContain('data-testid="sidebar-menu"');
+    expect(sidebar).toContain('id="workspace-nav-links"');
+    expect(sidebar.match(/<a\b[^>]*aria-current="page"[^>]*>/g) || []).toHaveLength(1);
   });
 });
 

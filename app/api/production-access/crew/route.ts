@@ -10,7 +10,7 @@ import { ownerSignInResponse } from "@/lib/auth/ownerAtEveryDoor";
 import { gateRefusalQuery, requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import type { V4CrewRole } from "@/types/v4";
 import { CREW_ROLES } from "@/lib/auth/crewRolePermissions";
-import { getHostLinkState } from "@/services/events/hostLinkService";
+import { AccessStateUnavailableError, getHostLinkState } from "@/services/events/hostLinkService";
 import { getCrewAccessPassword } from "@/lib/env";
 
 export const dynamic = "force-dynamic";
@@ -54,7 +54,16 @@ export async function POST(request: NextRequest) {
   await logAccessAttempt({ status: "access_granted", accessKind: "crew", eventId: access.eventId, role: access.role || crewRole, route: access.destination, ipHash });
   const { crewCookieName } = getV5AccessCookieNames(env);
   const viaEventCode = Boolean(access.eventId) && password !== (getCrewAccessPassword()?.trim() || "\u0000");
-  const codeVersion = viaEventCode && access.eventId ? (await getHostLinkState(access.eventId)).codeVersion : undefined;
+  // A store that cannot be read is "can't check access right now", the same notice the guest gate
+  // gives: never a version-0 cookie, never Next's error page. The store's own text stays in the log.
+  let codeVersion: number | undefined;
+  try {
+    codeVersion = viaEventCode && access.eventId ? (await getHostLinkState(access.eventId)).codeVersion : undefined;
+  } catch (error) {
+    if (!(error instanceof AccessStateUnavailableError)) throw error;
+    await logAccessAttempt({ status: "access_denied", accessKind: "crew", eventId: access.eventId, role: crewRole, reason: "access_state_unavailable", route: "/production-access/crew", ipHash });
+    return redirectTo(request, "/production-access/crew?error=unavailable");
+  }
   const cookie = await createV5AccessCookie({ kind: "crew", eventId: access.eventId, role: crewRole, codeVersion, issuedAt: Date.now(), expiresAt: Date.now() + 1000 * 60 * 60 * 8 }, getV5AccessCookieSecret(env));
   const response = redirectTo(request, access.destination || `/crew/events/${access.eventId || "demo"}`);
   response.cookies.set(crewCookieName, cookie, getV5CookieOptions(60 * 60 * 8));
