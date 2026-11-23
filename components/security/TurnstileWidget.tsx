@@ -14,9 +14,12 @@ export function TurnstileWidget({ siteKey, action }: { siteKey: string; action: 
   return (
     <>
       <Script src="https://challenges.cloudflare.com/turnstile/v0/api.js" strategy="afterInteractive" async defer />
-      {/* Cloudflare's box is never narrower than 300 px, wider than a 320 px phone's form column (it pushed
-          /request-event 25 px off screen, 23 Nov 2026). Below 360 px it is drawn at 85%, so it fits. */}
-      <div className="cf-turnstile min-h-[65px] origin-top-left max-[359px]:scale-[0.85]" data-sitekey={siteKey} data-action={action} data-theme="light" data-size="flexible" data-testid="turnstile-widget" />
+      {/* Cloudflare's box is never narrower than 300 px, wider than a 320 px phone's form column: it pushed the
+          whole /request-event form 25 px off screen (23 Nov 2026). Below 360 px the frame holds 255 x 56 px of
+          room and the box inside is drawn at 85% (a scale alone still takes 300 px of layout). */}
+      <div className="max-[359px]:h-[56px] max-[359px]:w-[255px] max-[359px]:overflow-hidden">
+        <div className="cf-turnstile min-h-[65px] max-[359px]:w-[300px] max-[359px]:origin-top-left max-[359px]:scale-[0.85]" data-sitekey={siteKey} data-action={action} data-theme="light" data-size="flexible" data-testid="turnstile-widget" />
+      </div>
     </>
   );
 }
