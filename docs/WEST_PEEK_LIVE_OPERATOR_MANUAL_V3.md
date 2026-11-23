@@ -52,8 +52,8 @@ Everybody does not get the same door. **Attendees** attend. **Crew** executes. *
 
 The video model is layered on purpose:
 
-- **StreamYard** is where the show is produced — the source.
-- **LiveKit** distributes that feed to everyone in the venue, and is the only layer that can bring an attendee *onto* the stage.
+- **The source** is one of two, chosen on one switch: **StreamYard** (the produced show, sent in as a feed) or **My camera** (hosts go live from their own phone or laptop camera, no StreamYard needed).
+- **LiveKit** carries either one to everyone in the venue, and is the only layer that can bring an attendee *onto* the stage.
 - **Cloudflare Stream** is the backup that still accepts the StreamYard feed if LiveKit fails. Watch-only.
 - **Daily / Zoom / Google Meet** are continuity rooms below that. They cannot take a StreamYard feed; somebody has to turn a camera on.
 
@@ -273,7 +273,14 @@ Those values render **only** under an owner session — an operator never receiv
 
 ### Going live
 
-1. The **Go-live card** is the first thing on the deck. Press **Go live**: the event goes live and the credentials appear in the same card. If the show has been ended before, the card says so — the stream key was released on purpose — and **Get stream credentials** mints a fresh one in a click.
+**Two ways to go live, one switch.** The go-live card (and the Owner Console's Live-now row) has one switch: **StreamYard** or **My camera**. The one in use has a tick. One tap changes it, before or during the show, either way, and attendees' stages follow within about ten seconds with no reload; chat and networking are untouched, and the stream key stays where it is.
+
+- **My camera.** No StreamYard at all. Open the stage page, press **Go live with my camera**, allow the camera and microphone, and you are on. Any host (owner, operator, executive producer, producer, technical director) can do this from a phone or a laptop; two hosts on camera both appear. If LiveKit cannot be reached, it says so and nothing goes live. If a StreamYard feed is live when you tap, it says once that this takes StreamYard's picture off the stage, then switches.
+- **StreamYard.** As below. Switching to StreamYard mid-show keeps your camera on the stage until the feed arrives (the switch reads *waiting for StreamYard…*); then the feed takes the full width and the cameras become tiles beneath it.
+
+With StreamYard:
+
+1. The **Go-live card** is the first thing on the deck. Press **Go live with StreamYard**: the event goes live and the credentials appear in the same card. If the show has been ended before, the card says so — the stream key was released on purpose — and **Get stream credentials** mints a fresh one in a click.
 2. **Copy both for StreamYard**, then in StreamYard **edit** your existing Custom RTMP destination (do not add a second one) and start broadcasting. Add the **Cloudflare fallback** as a second destination at the same time (§14).
 3. The stage flips live within seconds. Confirm on a second device.
 
@@ -493,8 +500,8 @@ These pages are editable by West Peek from the workspace, so an instruction fix 
 
 | Rung | Attendees see | Keeps the StreamYard feed? | Configured |
 | --- | --- | --- | --- |
-| **Primary — LiveKit ingress** | The show, and attendees can be brought on stage | Yes | Yes |
-| **Fallback 1 — Cloudflare Stream** | The show in a Cloudflare player, watch-only | **Yes** | Yes (`westpeek-fallback`) |
+| **Primary — LiveKit** (StreamYard feed or hosts' cameras) | The show, and attendees can be brought on stage | Yes | Yes |
+| **Fallback 1 — Cloudflare Stream** | The show in a Cloudflare player, watch-only. In a camera show it has nothing to carry, so the deck refuses it and offers Daily | **Yes** | Yes (`westpeek-fallback`) |
 | Fallback 2 — Daily | Only if a host turns a camera on | No | Yes |
 | Fallback 3 — Zoom embedded | Zoom meeting in the page | No | Only once you put a meeting in |
 | Fallback 4 — Google Meet | Leaves the venue | No | Only once you put a link in |
@@ -552,6 +559,8 @@ Both are saved per event and both are optional. If what you type is not a meetin
 | --- | --- | --- | --- |
 | LiveKit (now) | **Build** $0 | 60 transcode min, 5,000 participant-min, 100 concurrent — all hard caps | **Transcode minutes** — one 90-minute show does not fit |
 | LiveKit (for a show) | **Ship** $50/mo | 600 transcode min, 150,000 participant-min, 1,000 concurrent | **Transcode minutes** — every minute of StreamYard feed burns one |
+
+**A camera show ("My camera") uses no transcode minutes**: only participant-minutes, one per person per minute, hosts included. A one-hour camera show to 100 attendees with one host is 101 × 60 = **6,060 participant-minutes**: on Build (5,000 a month, hard cap; and Build refuses the 101st connection) it does not fit; on Ship it is inside the 150,000 included, and past them it is $0.0005 each (about $3 an hour at that size). The same show from StreamYard uses the same participant-minutes plus 60 transcode minutes.
 | Cloudflare Workers | **Paid** $5/mo | 10M requests, 30 s CPU, 128 variables | Variable count (128) |
 | Cloudflare Stream | Pay as you go | — | $5 / 1,000 min stored, $1 / 1,000 min delivered |
 | Cloudflare D1 + R2 | Included in Workers Paid | D1: 5 GB, 25B rows read / 50M written a month. R2: 10 GB-month, no egress fees | None in sight; never pauses |

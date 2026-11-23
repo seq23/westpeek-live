@@ -27,12 +27,14 @@ describe("a real event's run of show never carries the demo summit's words", () 
 });
 
 describe("watching the stage never publishes the attendee's microphone", () => {
-  it("LiveKitRoom is mounted with audio={false}; mute and volume go to the renderer", async () => {
+  it("LiveKitRoom is mounted with audio={false}; mute and volume go to every audio track", async () => {
     const { readFileSync } = await import("node:fs");
     const src = readFileSync(new URL("../../components/video/LiveKitIngressStagePlayer.tsx", import.meta.url), "utf8");
     expect(src).toMatch(/<LiveKitRoom[^>]*audio=\{false\}/);
     expect(src).not.toMatch(/<LiveKitRoom[^>]*audio=\{!muted\}/);
-    expect(src).toMatch(/<RoomAudioRenderer muted=\{muted\} volume=\{volume\} \/>/);
+    // The stage's own audio renderer (RoomAudioRenderer minus the hidden StreamYard feed on a camera show).
+    expect(src).toMatch(/<StageAudio hideFeed=\{hideFeed\} muted=\{muted\} volume=\{volume\} \/>/);
+    expect(src).toMatch(/<AudioTrack [^>]*volume=\{volume\} muted=\{muted\} \/>/);
   });
 });
 

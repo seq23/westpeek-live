@@ -76,7 +76,7 @@ const LIVEKIT_PLANS: Record<LiveKitTier, LiveKitPlan> = {
     source: BUILD_SOURCE,
     otherLimits: ["2 concurrent stream imports", "2 concurrent exports", "60 track-egress minutes a month"],
     allowances: [
-      { key: "transcodeMinutes", label: "Transcode minutes", included: 60, unit: "min", unknownReason: "", overage: { usdPerUnit: null, note: `Shared between stream import (ingress) and recording/export. ${BUILD_HARD_CAP}` } },
+      { key: "transcodeMinutes", label: "Transcode minutes", included: 60, unit: "min", unknownReason: "", overage: { usdPerUnit: null, note: `Shared between stream import (ingress) and recording/export; a camera show ("My camera") uses none. ${BUILD_HARD_CAP}` } },
       { key: "participantMinutes", label: "WebRTC participant-minutes", included: 5_000, unit: "participant-min", unknownReason: "", overage: { usdPerUnit: null, note: BUILD_HARD_CAP } },
       { key: "downstreamGb", label: "Downstream bandwidth", included: null, unit: "GB", unknownReason: `Not listed for Build on ${BUILD_SOURCE}. Check the LiveKit dashboard.`, overage: { usdPerUnit: null, note: "Not listed for Build." } },
       { key: "concurrentConnections", label: "Concurrent connections", included: 100, unit: "connections", unknownReason: "", overage: { usdPerUnit: null, note: "A ceiling: the 101st connection is refused." } },
@@ -91,7 +91,7 @@ const LIVEKIT_PLANS: Record<LiveKitTier, LiveKitPlan> = {
     source: "LiveKit Cloud dashboard, read 16 Sep 2026",
     otherLimits: [],
     allowances: [
-      { key: "transcodeMinutes", label: "Transcode minutes", included: 600, unit: "min", unknownReason: "", overage: { usdPerUnit: 0.02, note: "$0.02 per transcode minute (video) past 600." } },
+      { key: "transcodeMinutes", label: "Transcode minutes", included: 600, unit: "min", unknownReason: "", overage: { usdPerUnit: 0.02, note: "$0.02 per transcode minute (video) past 600; a camera show (\"My camera\") uses none." } },
       { key: "participantMinutes", label: "WebRTC participant-minutes", included: 150_000, unit: "participant-min", unknownReason: "", overage: { usdPerUnit: 0.0005, note: "$0.0005 per participant-minute past 150,000." } },
       { key: "downstreamGb", label: "Downstream bandwidth", included: 250, unit: "GB", unknownReason: "", overage: { usdPerUnit: 0.12, note: "$0.12 per GB past 250." } },
       { key: "concurrentConnections", label: "Concurrent connections", included: 1_000, unit: "connections", unknownReason: "", overage: { usdPerUnit: null, note: "A ceiling, not an overage: the 1,001st connection is refused." } },
@@ -134,7 +134,7 @@ export interface LiveKitPlanTooSmall {
  * measured against the WHOLE monthly allowance — the best case. Anything that fails the best case
  * fails for certain.
  */
-export function livekitPlanFit(input: { tier: LiveKitTier; runMinutes: number; expectedAudience: number }): LiveKitPlanTooSmall | null {
+export function livekitPlanFit(input: { tier: LiveKitTier; runMinutes: number; expectedAudience: number; /** A camera show ("My camera"): hosts publish into the room, nothing is imported, so no transcode. */ cameras?: boolean }): LiveKitPlanTooSmall | null {
   const plan = livekitPlan(input.tier);
   if (plan.overageBilled) return null;
   const transcode = livekitAllowance("transcodeMinutes", input.tier).included;
@@ -143,7 +143,7 @@ export function livekitPlanFit(input: { tier: LiveKitTier; runMinutes: number; e
   const runMinutes = Math.max(0, Math.round(input.runMinutes));
   const audience = Math.max(0, Math.round(input.expectedAudience));
   const reasons: string[] = [];
-  if (transcode !== null && runMinutes > transcode) reasons.push(`A ${runMinutes}-minute show needs ${runMinutes} transcode minutes; ${plan.label} has ${transcode} a month in total, shared with recording.`);
+  if (!input.cameras && transcode !== null && runMinutes > transcode) reasons.push(`A ${runMinutes}-minute show needs ${runMinutes} transcode minutes; ${plan.label} has ${transcode} a month in total, shared with recording.`);
   if (concurrent !== null && audience > concurrent) reasons.push(`${audience} expected attendees; ${plan.label} refuses connection ${concurrent + 1}.`);
   if (participant !== null && audience * runMinutes > participant) reasons.push(`${audience} attendees for ${runMinutes} minutes is ${audience * runMinutes} participant-minutes; ${plan.label} has ${participant} a month.`);
   if (!reasons.length) return null;
@@ -319,10 +319,11 @@ const READ = "read 2 Nov 2026";
 /** Downstream for one viewer of a 1.5 Mbps stream, per minute, in GB (docs/CAPACITY.md worked example). */
 const GB_PER_VIEWER_MINUTE = (1.5e6 / 8) * 60 / 1e9;
 
-function livekitRow(tier: LiveKitTier, show: { runMinutes: number; audience: number }): ServiceCapacity {
+function livekitRow(tier: LiveKitTier, show: { runMinutes: number; audience: number; cameras?: boolean }): ServiceCapacity {
   const plan = livekitPlan(tier);
   const demand: Record<AllowanceKey, number> = {
-    transcodeMinutes: show.runMinutes,
+    // A camera show imports nothing: participant-minutes only (each host is one more participant).
+    transcodeMinutes: show.cameras ? 0 : show.runMinutes,
     participantMinutes: show.audience * show.runMinutes,
     downstreamGb: Math.round(show.audience * show.runMinutes * GB_PER_VIEWER_MINUTE),
     concurrentConnections: show.audience,

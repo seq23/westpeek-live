@@ -6,6 +6,7 @@ import { venueGateFor } from "@/services/venue/venueStateGate";
 import { requestIpHash, takeGateAttempt } from "@/services/access/gateAttemptLimiter";
 import { canAttendeeJoinLive, canAttendeePublishLive } from "@/services/venue/attendeeLivePermissionService";
 import { authorizeVideoTokenRequest } from "@/lib/auth/videoTokenRequestGuard";
+import { requireLiveEventControlAccessForRequest } from "@/lib/auth/liveControlRequestGuard";
 import { currentAttendeeMayHoldPrivilege, getCurrentAttendeeIdentity } from "@/services/attendees/attendeeSessionService";
 import type { LiveKitJoinRequest } from "@/types/livekitRoomUi";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
@@ -28,7 +29,15 @@ export async function POST(request: Request) {
   }
 
   const watchable = WATCHABLE_ROOMS.includes(String(body.roomType));
-  const auth = await authorizeVideoTokenRequest({ role: body.role, eventId: body.eventId, allowAnonymousViewer: (body.role === "attendee" || body.role === "observer") && watchable });
+  // A host or producer token publishes on the MAIN STAGE without asking anyone, so it goes only to
+  // whoever may go live: the owner, the operator, or event crew whose role holds go_live, with a
+  // revoked crew link refused (23 Nov 2026). It used to go to ANY crew cookie for the event.
+  const hostOnStage = (body.role === "host" || body.role === "producer") && body.roomType === "main_stage";
+  if (hostOnStage) {
+    const control = await requireLiveEventControlAccessForRequest(body.eventId, "go_live");
+    if (!control.ok) return NextResponse.json({ ok: false, error: control.error }, { status: control.status === 503 ? 503 : 403 });
+  }
+  const auth = hostOnStage ? ({ ok: true } as const) : await authorizeVideoTokenRequest({ role: body.role, eventId: body.eventId, allowAnonymousViewer: (body.role === "attendee" || body.role === "observer") && watchable });
   if (!auth.ok) return NextResponse.json({ ok: false, error: auth.error }, { status: 403 });
 
   // Someone with no session at all (an observer, or an attendee who never registered) watches only a
@@ -67,6 +76,12 @@ export async function POST(request: Request) {
 
   let displayName = body.displayName;
   let profileId = body.profileId;
+  // A host's identity is minted here, never taken from the request: a client-sent id could name an
+  // attendee (and push them out of the room) or the production feed itself.
+  if (hostOnStage) {
+    profileId = `host-${crypto.randomUUID()}`;
+    displayName = String(body.displayName || "Host").slice(0, 60);
+  }
   let publishPermission: Awaited<ReturnType<typeof canAttendeePublishLive>> | undefined;
 
   // The green room is speakers + crew only, and a speaker reaches the main stage only once the

@@ -1,4 +1,5 @@
 import Link from "next/link";
+import { stageSourceLabel } from "@/lib/video/stageLiveState";
 import { LocalTime } from "@/components/shared/LocalTime";
 import { ConsoleSection, ConsoleToc } from "@/components/owner/ConsoleSection";
 import { SafeSection } from "@/components/system/SafeSection";
@@ -79,7 +80,7 @@ async function LiveNowRow({ event }: { event: RuntimeEventRecord }) {
     getLiveChatModerationQueue(event.id, 1).catch(() => undefined),
     getAttendeeLiveControlState(event.id, "main_stage", "main-stage").catch(() => undefined),
   ]);
-  const feed = stage?.streamStatus === "ENDED" ? "ended" : stage?.activeStreamSource && stage.activeStreamSource !== "LIVEKIT_INGRESS" ? `backup · ${stage.activeStreamSource.replaceAll("_", " ").toLowerCase()}` : stage?.streamStatus?.includes("LIVE") ? "live" : (stage?.streamStatus || "not started").replaceAll("_", " ").toLowerCase();
+  const feed = stage ? stageSourceLabel(stage) : "Not started";
   const onStage = speakers.filter((item) => item.state.status === "on_stage").length;
   const locked = chat?.lockedRooms.some((room) => room.roomKind === "main_stage") ?? false;
   return (

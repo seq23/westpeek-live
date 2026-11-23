@@ -25,11 +25,19 @@ function permissionHint(error: unknown, device: "camera" | "microphone") {
  * the crew revokes while live, the grant prop flips and both tracks are stopped and unpublished at
  * once, with the reason shown. Big tap targets; wraps in portrait.
  */
-export function AttendeeStageControls({ room, grant, className = "" }: { room?: Room; grant: AttendeePublishGrant; className?: string }) {
+export function AttendeeStageControls({ room, grant, className = "", goLive, goLiveNote }: {
+  room?: Room;
+  grant: AttendeePublishGrant;
+  className?: string;
+  /** Hosts only, while the stage is not live on cameras: puts the stage on cameras (server-checked). */
+  goLive?: () => Promise<{ ok: boolean; message: string }>;
+  /** The one sentence shown above "Go live with my camera" when it would take StreamYard off the stage. */
+  goLiveNote?: string;
+}) {
   const [camera, setCamera] = useState<LocalVideoTrack | undefined>();
   const [mic, setMic] = useState<LocalAudioTrack | undefined>();
   const [published, setPublished] = useState<{ camera: boolean; mic: boolean }>({ camera: false, mic: false });
-  const [busy, setBusy] = useState<"camera" | "microphone" | undefined>();
+  const [busy, setBusy] = useState<"camera" | "microphone" | "golive" | undefined>();
   const [error, setError] = useState<string | undefined>();
   const [notice, setNotice] = useState<string | undefined>();
   const [connected, setConnected] = useState(room?.state === ConnectionState.Connected);
@@ -131,6 +139,42 @@ export function AttendeeStageControls({ room, grant, className = "" }: { room?: 
     } finally { setBusy(undefined); }
   }
 
+  /**
+   * ONE tap for a host: camera and mic first (a refused permission stops here, and nothing goes
+   * live), then the server switch (a refusal stops the devices and says why), then publish.
+   */
+  async function goLiveWithCamera() {
+    if (!goLive || busy) return;
+    setError(undefined); setNotice(undefined); setBusy("golive");
+    let video = cameraRef.current;
+    let audio = micRef.current;
+    const madeVideo = !video;
+    const madeAudio = !audio;
+    try {
+      video = video || await createLocalVideoTrack({ facingMode: "user", resolution: { width: 640, height: 480, frameRate: 24 } });
+    } catch (deviceError) {
+      setError(`${permissionHint(deviceError, "camera")} Nothing went live.`); setBusy(undefined); return;
+    }
+    try {
+      audio = audio || await createLocalAudioTrack({ echoCancellation: true, noiseSuppression: true });
+    } catch (deviceError) {
+      if (madeVideo) video.stop();
+      setError(`${permissionHint(deviceError, "microphone")} Nothing went live.`); setBusy(undefined); return;
+    }
+    const result = await goLive();
+    if (!result.ok) {
+      if (madeVideo) video.stop();
+      if (madeAudio) audio.stop();
+      setError(result.message); setBusy(undefined); return;
+    }
+    setCamera(video); setMic(audio);
+    const cameraOk = await publish(video, Track.Source.Camera);
+    const micOk = await publish(audio, Track.Source.Microphone);
+    setPublished({ camera: cameraOk, mic: micOk });
+    setNotice(result.message);
+    setBusy(undefined);
+  }
+
   async function leave() {
     await stopCamera();
     await stopMic();
@@ -147,9 +191,15 @@ export function AttendeeStageControls({ room, grant, className = "" }: { room?: 
   return (
     <div className={`rounded-2xl border border-emerald-400/40 bg-emerald-950/60 p-3 text-white ${className}`} data-testid="attendee-stage-controls" data-camera={camera ? "on" : "off"} data-mic={mic ? "on" : "off"} data-camera-published={cameraState} data-mic-published={micState} data-room-connected={connected ? "true" : "false"} data-on-stage={onStage ? "true" : "false"}>
       <div className="flex flex-wrap items-center justify-between gap-3">
-        <p className="text-sm font-black" data-testid="attendee-stage-controls-headline">{onStage ? "On stage" : canAnything ? "You're approved. Nothing is live until you tap." : grant.status === "removed" ? "Removed by the crew" : "Stage paused by the crew"}</p>
+        <p className="text-sm font-black" data-testid="attendee-stage-controls-headline">{onStage ? "On stage" : grant.status === "host" ? "You're a host. Nothing is live until you tap." : canAnything ? "You're approved. Nothing is live until you tap." : grant.status === "removed" ? "Removed by the crew" : "Stage paused by the crew"}</p>
         <p className="text-xs text-emerald-100/80">{connected ? (onStage ? (published.camera || published.mic ? "Publishing to the stage" : "Connecting your track…") : "Stage connected") : "Stage connecting — your preview starts now, it goes live once connected"}</p>
       </div>
+      {goLive ? (
+        <div className="mt-3">
+          {goLiveNote ? <p className="mb-2 text-sm text-emerald-50" data-testid="host-go-live-note">{goLiveNote}</p> : null}
+          <button type="button" onClick={goLiveWithCamera} disabled={Boolean(busy)} className="min-h-14 w-full rounded-2xl bg-white px-4 text-base font-black text-emerald-950 disabled:cursor-not-allowed disabled:opacity-50" data-testid="host-go-live-camera">{busy === "golive" ? "Going live…" : "Go live with my camera"}</button>
+        </div>
+      ) : null}
       <div className="mt-3 grid grid-cols-1 gap-2 sm:grid-cols-3">
         <button type="button" onClick={toggleCamera} disabled={busy === "camera" || (!camera && !grant.canPublishVideo)} className={`min-h-14 rounded-2xl px-4 text-base font-black disabled:cursor-not-allowed disabled:opacity-40 ${camera ? "bg-white text-emerald-950" : "bg-emerald-500 text-emerald-950"}`} data-testid="stage-camera-toggle" aria-pressed={camera ? "true" : "false"}>{busy === "camera" ? "Starting camera…" : camera ? "Camera on · turn off" : "Turn on camera"}</button>
         <button type="button" onClick={toggleMic} disabled={busy === "microphone" || (!mic && !grant.canPublishAudio)} className={`min-h-14 rounded-2xl px-4 text-base font-black disabled:cursor-not-allowed disabled:opacity-40 ${mic ? "bg-white text-emerald-950" : "bg-emerald-500 text-emerald-950"}`} data-testid="stage-mic-toggle" aria-pressed={mic ? "true" : "false"}>{busy === "microphone" ? "Starting microphone…" : mic ? "Mic on · turn off" : "Turn on microphone"}</button>

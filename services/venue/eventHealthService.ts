@@ -1,3 +1,4 @@
+import { stageSourceChoice } from "@/lib/video/stageLiveState";
 import { CURRENT_BUILD_ID } from "@/lib/runtime/buildVersion";
 import { ladderReadiness } from "@/lib/video/fallbackReadiness";
 import { HEALTH_SIGNAL_LABELS, logHeadline, settleAll, worstLevel, type HealthLogEntry, type HealthSignal, type HealthSignalKey } from "@/lib/venue/eventHealth";
@@ -105,6 +106,8 @@ export async function getEventHealthReport(input: { eventId: string; stageId?: s
   // Feed — is anything actually arriving from StreamYard.
   if (!state) {
     signals.push(unmeasured("feed", "stage_stream_states + LiveKit Ingress/ListIngress", "The stage stream state could not be read, so nothing is known about the feed."));
+  } else if (stageSourceChoice(state) === "CAMERAS") {
+    signals.push(signal("feed", "green", "No StreamYard feed is expected: the stage is on cameras. Switch the source to StreamYard on the Go-live card to bring the feed in.", "stage_stream_states.stageSource", state.updatedAt));
   } else if (reconcile?.checked && reconcile.publishing === true) {
     const yellow = events ? reconnectedRecently(events, now) : false;
     signals.push(signal("feed", yellow ? "yellow" : "green", yellow ? "Publishing, but the ingress reconnected in the last two minutes. Bitrate is not measured on this deployment." : "The ingress is publishing. Bitrate is not measured on this deployment.", "LiveKit Ingress/ListIngress", nowIso));
@@ -128,7 +131,8 @@ export async function getEventHealthReport(input: { eventId: string; stageId?: s
   } else {
     const hasRoom = Boolean(state.livekitRoomName && state.livekitIngressId);
     const attendees = roster?.total ?? 0;
-    if (state.streamStatus === "LIVEKIT_INGRESS_LIVE") signals.push(signal("stage", "green", "The room is active and a publisher is on it.", "stage_stream_states.streamStatus", state.updatedAt));
+    if (state.streamStatus === "LIVEKIT_CAMERAS_LIVE") signals.push(signal("stage", "green", "The stage is live on cameras: hosts publish straight into the room, no StreamYard feed.", "stage_stream_states.streamStatus", state.updatedAt));
+    else if (state.streamStatus === "LIVEKIT_INGRESS_LIVE") signals.push(signal("stage", "green", "The room is active and a publisher is on it.", "stage_stream_states.streamStatus", state.updatedAt));
     else if (!hasRoom && attendees > 0 && feedExpected) signals.push(signal("stage", "red", `${attendees} registered and there is no room to put them in. Get stream credentials — that creates the LiveKit room.`, "stage_stream_states + attendee_profiles", state.updatedAt, { label: "Get stream credentials", kind: "get-credentials" }));
     else if (hasRoom) signals.push(signal("stage", "yellow", "The room exists but no publisher has arrived yet.", "stage_stream_states.streamStatus", state.updatedAt, { label: "Get stream credentials", kind: "get-credentials" }));
     else signals.push(signal("stage", "green", "No room yet, and nobody is waiting for one.", "stage_stream_states + attendee_profiles", state.updatedAt));

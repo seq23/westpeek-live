@@ -69,7 +69,7 @@ test("owner gate → console → TOC, folds that remember, Live now opens the cr
   // Live now: the Room, its feed, the crew console link, the stage-requests switch.
   const row = owner.getByTestId(`console-live-${eventId}`);
   await expect(row).toBeVisible();
-  await expect(row.getByTestId(`console-live-feed-${eventId}`)).toHaveText("live");
+  await expect(row.getByTestId(`console-live-feed-${eventId}`)).toHaveText("StreamYard");
   await expect(row.getByTestId("stage-requests-toggle")).toHaveAttribute("data-open", "true");
   await row.getByTestId("stage-requests-switch").click();
   await expect(owner.getByTestId(`console-live-${eventId}`).getByTestId("stage-requests-toggle")).toHaveAttribute("data-open", "false");

@@ -1,12 +1,20 @@
 export type StageStreamSource = "LIVEKIT_INGRESS" | "CLOUDFLARE_STREAM" | "DAILY" | "ZOOM" | "GOOGLE_MEET";
-export type ProducerStudioSource = "STREAMYARD" | "CLOUDFLARE_STREAM" | "DAILY" | "ZOOM" | "GOOGLE_MEET" | "UNKNOWN";
+export type ProducerStudioSource = "STREAMYARD" | "DEVICE_CAMERAS" | "CLOUDFLARE_STREAM" | "DAILY" | "ZOOM" | "GOOGLE_MEET" | "UNKNOWN";
 export type StreamFailurePlane = "NONE" | "STREAMYARD_FEED" | "LIVEKIT_DISTRIBUTION" | "CLOUDFLARE_STREAM" | "DAILY_FALLBACK" | "ZOOM_FALLBACK" | "GOOGLE_MEET_ESCALATION" | "PRIMARY_PIPELINE_TOTAL_FAILURE" | "UNKNOWN";
 export type StageFallbackMode = "AUTO_RECOMMENDED" | "AUTO_SWITCHED" | "MANUAL_REQUIRED" | "MANUAL_OVERRIDE";
+/**
+ * What carries the LiveKit stage, the host's one switch: the StreamYard feed (RTMP into LiveKit),
+ * or the people on camera from their own devices with no feed at all. Missing = STREAMYARD, the
+ * default every stage had before the switch existed (23 Nov 2026).
+ */
+export type StageSourceChoice = "STREAMYARD" | "CAMERAS";
 export type StageStreamStatus =
   | "GENERATING_CREDENTIALS"
   | "READY_FOR_STREAMYARD"
   | "STREAMYARD_CONNECTED"
   | "LIVEKIT_INGRESS_LIVE"
+  /** The LiveKit stage is live with cameras from people's devices and no StreamYard feed on it. */
+  | "LIVEKIT_CAMERAS_LIVE"
   | "LIVEKIT_DEGRADED"
   | "STREAMYARD_FEED_LOST"
   | "SWITCHING_TO_CLOUDFLARE_STREAM"
@@ -41,7 +49,9 @@ export type StageStreamSignal =
   | "attendee_access_decision"
   | "operator_rollback_to_livekit"
   | "operator_rollback_to_cloudflare_stream"
-  | "operator_rollback_to_daily";
+  | "operator_rollback_to_daily"
+  | "operator_go_live_cameras"
+  | "operator_switch_to_streamyard";
 
 export interface StageStreamState {
   eventId: string;
@@ -64,6 +74,8 @@ export interface StageStreamState {
   zoomMeetingPasscode?: string;
   googleMeetFallbackUrl?: string;
   hasEverStarted: boolean;
+  /** The host's source switch. Read through stageSourceChoice() in lib/video/stageLiveState. */
+  stageSource?: StageSourceChoice;
   operatorMarkedShowEnded: boolean;
   manualFallbackDisabled: boolean;
   mainStageAttendeeJoinEnabled: boolean;
@@ -101,6 +113,7 @@ export interface PublicStageStreamState {
   failurePlane: StreamFailurePlane;
   fallbackMode: StageFallbackMode;
   hasEverStarted: boolean;
+  stageSource?: StageSourceChoice;
   mainStageAttendeeJoinEnabled: boolean;
   breakoutAttendeeCameraEnabled: boolean;
   cloudflareStreamPlaybackUrl?: string;
@@ -140,6 +153,7 @@ export function toPublicStageStreamState(state: StageStreamState): PublicStageSt
     failurePlane: state.failurePlane,
     fallbackMode: state.fallbackMode,
     hasEverStarted: state.hasEverStarted,
+    stageSource: state.stageSource,
     mainStageAttendeeJoinEnabled: state.mainStageAttendeeJoinEnabled,
     breakoutAttendeeCameraEnabled: state.breakoutAttendeeCameraEnabled,
     cloudflareStreamPlaybackUrl: state.cloudflareStreamPlaybackUrl,
