@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("deployed outcome smoke uses configured baseURL and checks public front door", async ({ page }, testInfo) => {
   test.skip(!process.env.PLAYWRIGHT_DEPLOYED, "Deployed smoke only runs with PLAYWRIGHT_DEPLOYED=1.");

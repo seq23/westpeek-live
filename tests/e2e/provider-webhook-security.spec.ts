@@ -1,5 +1,5 @@
 import { createHmac } from 'node:crypto';
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { day1Default } from './helpers/day1AccessDefaults';
 
 function sign(body: string) {

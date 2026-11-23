@@ -41,7 +41,7 @@ export async function EventCommandBar({ eventId }: { eventId: string }) {
   const status = event?.status || "draft";
 
   return (
-    <div className="relative bg-brand-black text-white" data-testid="event-command-bar" data-chrome-bar="command" data-viewer-kind={viewer.kind} data-event-id={eventId} data-status={status}>
+    <div className="wpl-as-authored relative bg-brand-black text-white" data-testid="event-command-bar" data-chrome-bar="command" data-viewer-kind={viewer.kind} data-event-id={eventId} data-status={status}>
       {/* The row is one line that scrolls, never a stack of wrapped lines: three wrapped rows of
           controls plus the sub-bar ran to 135px on a 414px phone and pushed the stage player off
           the first screen. It says it scrolls, the way the nav below it does. */}

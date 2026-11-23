@@ -15,7 +15,7 @@
  */
 export function GoogleMeetFallbackStagePlayer({ fallbackUrl, eventName }: { fallbackUrl?: string; eventName?: string }) {
   return (
-    <div className="flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white" data-testid="google-meet-moved-panel" data-has-link={fallbackUrl ? "true" : "false"}>
+    <div className="wpl-as-authored flex aspect-video items-center justify-center rounded-3xl bg-slate-900 p-8 text-center text-white" data-testid="google-meet-moved-panel" data-has-link={fallbackUrl ? "true" : "false"}>
       <div className="max-w-lg">
         <p className="text-xs font-black uppercase tracking-[0.3em] text-brand-orange">The show has moved</p>
         <h2 className="mt-3 text-2xl font-black">{eventName ? `${eventName} is continuing in a Google Meet room` : "This session is continuing in a Google Meet room"}</h2>

@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { createPairHistoryRecord, normalizedSpeedNetworkingPairKey, selectNextSpeedNetworkingPair } from "@/services/speed-networking/speedNetworkingEngine";
 import type { SpeedNetworkingEntry, SpeedNetworkingMatch, SpeedNetworkingPairHistory } from "@/types/speedNetworkingEngine";
 import { gotoAndAssert } from "./helpers/assertNoAppError";

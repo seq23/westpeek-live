@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("venue identity powers main-stage, breakout, networking, help, people, and My Agenda / my-agenda surfaces", async ({ page }) => {
   await page.goto("/venue/demo/stage");

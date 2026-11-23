@@ -1,4 +1,4 @@
-import { expect, test, type Page } from "@playwright/test";
+import { expect, test, type Page } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { isDeployedBrowserRun, loginAsOperator } from "./helpers/roleJourney";
 

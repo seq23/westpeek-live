@@ -14,8 +14,8 @@ import type { ReactNode } from "react";
  *  - the href is the product's own front door, written once;
  *  - a real accessible name on the LINK (the wrapped artwork is passed in decorative, so a screen
  *    reader announces the destination once rather than the artwork and then the destination);
- *  - a visible focus ring, offset against whichever surface it sits on. There is no dark theme in
- *    this product, so `inverse` means "this sits on the near-black chrome", not "dark mode".
+ *  - a visible focus ring, offset against whichever surface it sits on. `inverse` means "this sits
+ *    on the near-black chrome" (a wpl-as-authored surface), not "dark mode": the tokens handle that.
  */
 
 /** The product's front door. Written once; every home link in the app reads it from here. */

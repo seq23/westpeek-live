@@ -53,10 +53,10 @@ export function SpeakerTeleprompterLive({ eventId, initial, fullScreenHref, spea
   const cards = deck?.cards || [];
   const card = cards[Math.min(index, Math.max(0, cards.length - 1))];
   return (
-    <div className={`space-y-4 ${large ? "fixed inset-0 z-50 overflow-y-auto bg-black p-6" : ""}`} data-testid="speaker-teleprompter" data-version={deck?.versionNumber ?? 0} data-card-index={index} data-hydrated={hydrated ? "true" : "false"}>
+    <div className={`space-y-4 ${large ? "wpl-as-authored fixed inset-0 z-50 overflow-y-auto bg-black p-6" : ""}`} data-testid="speaker-teleprompter" data-version={deck?.versionNumber ?? 0} data-card-index={index} data-hydrated={hydrated ? "true" : "false"}>
       {snapshot.liveCue?.text ? <div className="rounded-3xl bg-brand-orange p-5 text-2xl font-black text-white shadow-lg" role="status" data-testid="live-cue-banner">{snapshot.liveCue.text} <span className="ml-2 text-sm font-bold opacity-80">· from {snapshot.liveCue.pushedBy}</span></div> : null}
       {changed ? <div className="flex items-center justify-between gap-3 rounded-3xl border border-amber-300 bg-amber-50 p-4 text-sm font-bold text-amber-900" role="status" data-testid="deck-changed-banner"><span>{changed}</span><button type="button" onClick={() => setChanged(null)} className="rounded-full border border-amber-400 px-3 py-1 text-xs">Got it</button></div> : null}
-      <div className={`rounded-3xl p-6 text-white ${large ? "bg-black" : "bg-slate-950"}`}>
+      <div className={`wpl-as-authored rounded-3xl p-6 text-white ${large ? "bg-black" : "bg-slate-950"}`}>
         <div className="flex flex-wrap items-center justify-between gap-3">
           <p className="text-xs font-black uppercase tracking-[0.25em] text-brand-orange">{deck ? `Approved cue cards · v${deck.versionNumber} · ${deck.author === "producer" ? "producer" : "you"}${deck.approvedBy ? ` · approved by ${deck.approvedBy}` : ""}` : "Cue cards"}</p>
           <div className="flex flex-wrap gap-2">

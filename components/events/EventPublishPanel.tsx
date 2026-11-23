@@ -67,7 +67,7 @@ export async function EventPublishPanel({ eventId, updated, error }: { eventId: 
         ) : (
           <>
             <p className="mt-3 max-w-3xl text-sm leading-6 text-slate-600">This is a compiled demo/seed event. Its status lives in data/events and changes through the config-package PR flow, not from this page.</p>
-            <div className="mt-5 rounded-2xl bg-slate-950 p-4 text-white">
+            <div className="wpl-as-authored mt-5 rounded-2xl bg-slate-950 p-4 text-white">
               <p className="text-sm font-bold">Current publish state: {state.replaceAll("_", " ")}</p>
               <p className="mt-1 text-sm text-slate-300">Actions-first publishing is the primary path. PR automation and config package export remain fallbacks. The app must never direct-commit to main.</p>
             </div>

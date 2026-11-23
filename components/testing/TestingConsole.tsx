@@ -41,7 +41,7 @@ export async function TestingConsole({ eventId = "event-summit", rosterSearch = 
   return (
     <div className="min-h-screen bg-slate-50 p-6 text-slate-950">
       <div className="mx-auto max-w-7xl space-y-6">
-        <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
+        <div className="wpl-as-authored rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
           <p className="text-sm font-semibold uppercase tracking-[0.2em] text-slate-400">Testing console</p>
           <h1 className="mt-2 text-3xl font-semibold">{event.name}</h1>
           <p className="mt-2 max-w-3xl text-slate-300">Operator confidence panel for routes, access, event config, publishing, video, email, runtime persistence, run of show, attendee experience, security, and post-deploy smoke.</p>

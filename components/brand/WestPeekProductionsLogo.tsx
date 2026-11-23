@@ -41,7 +41,8 @@ export function WestPeekProductionsLogo({ size = "md", className = "", src, deco
  *
  * `inverse` is the surface under it, not a theme: the artwork is a white tile, so on the dark
  * dashboard panel the ring's offset has to be the panel rather than white, or the gap between ring
- * and tile disappears. There is no dark theme in this product.
+ * and tile disappears. The artwork itself is a solid white tile in both schemes; only the ring's
+ * offset colour follows the tokens (lib/theme/palette.ts).
  */
 export function WestPeekProductionsLogoHomeLink({ size = "md", inverse = false, className = "" }: { size?: "sm" | "md" | "lg"; inverse?: boolean; className?: string }) {
   return (
