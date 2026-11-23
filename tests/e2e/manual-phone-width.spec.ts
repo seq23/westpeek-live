@@ -1,5 +1,6 @@
-import { expect, test } from "./fixtures";
+import { expect, test, type Page } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
+import { requiredDay1Default } from "./helpers/day1AccessDefaults";
 import { HOW_IT_WORKS_AUDIENCES } from "@/types/howItWorks";
 
 /**
@@ -9,11 +10,20 @@ import { HOW_IT_WORKS_AUDIENCES } from "@/types/howItWorks";
  */
 const PAGES = ["/manual", ...HOW_IT_WORKS_AUDIENCES.map((audience) => `/how-it-works/${audience}`)];
 
+/** /manual is behind the operator gate; the owner password opens it. The how-it-works pages are public. */
+async function open(page: Page, path: string) {
+  if (path !== "/manual") return gotoAndAssert(page, path);
+  await gotoAndAssert(page, `/production-access/owner?next=${encodeURIComponent(path)}`);
+  await page.getByLabel(/owner master password/i).fill(process.env.E2E_OWNER_PASSWORD || process.env.OWNER_MASTER_ACCESS_PASSWORD || requiredDay1Default("OWNER_MASTER_ACCESS_PASSWORD"));
+  await page.getByRole("button", { name: /enter owner workspace/i }).click();
+  await page.waitForURL(/\/manual$/);
+}
+
 test.describe("the manual pages fit a 320px phone", () => {
   for (const path of PAGES) {
     test(`${path} has no sideways scroll at 320px`, async ({ page }) => {
       await page.setViewportSize({ width: 320, height: 800 });
-      await gotoAndAssert(page, path);
+      await open(page, path);
       const measured = await page.evaluate(() => ({
         page: document.documentElement.scrollWidth,
         paragraphs: document.querySelectorAll("[data-markdown-document] p").length,
