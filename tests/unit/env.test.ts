@@ -1,5 +1,5 @@
 import fs from "node:fs";
-import { describe, expect, it } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { getEnv, isResendConfigured } from "@/lib/env";
 
 describe("env helpers", () => {
@@ -26,5 +26,40 @@ describe("env helpers", () => {
     const wrangler = fs.readFileSync("wrangler.jsonc", "utf8");
     expect(wrangler).toContain('"binding": "DB"');
     expect(wrangler).toContain('"binding": "ASSETS_BUCKET"');
+  });
+
+  describe("validation under zod 4 refuses what it refused before, and still allows empty optionals", () => {
+    afterEach(() => vi.unstubAllEnvs());
+    const good = () => {
+      vi.stubEnv("OWNER_MASTER_ACCESS_PASSWORD", "owner-test-master-2027");
+      vi.stubEnv("V5_ACCESS_COOKIE_SECRET", "test-cookie-secret-test-cookie-secret");
+    };
+
+    it("a good set parses, and empty optional fields stay allowed", () => {
+      good();
+      vi.stubEnv("EMAIL_REPLY_TO", "");
+      vi.stubEnv("OWNER_MASTER_ACCESS_PASSWORD_2", "");
+      const env = getEnv();
+      expect(env.NEXT_PUBLIC_APP_URL).toMatch(/^https?:\/\//);
+      expect(env.EMAIL_REPLY_TO).toBe("");
+    });
+
+    it("refuses an owner password under 12 characters, a second one too short, a bad reply-to, a bad app URL and a bad from line", () => {
+      good();
+      vi.stubEnv("OWNER_MASTER_ACCESS_PASSWORD", "short");
+      expect(() => getEnv()).toThrow(/OWNER_MASTER_ACCESS_PASSWORD/);
+      good();
+      vi.stubEnv("OWNER_MASTER_ACCESS_PASSWORD_2", "short2");
+      expect(() => getEnv()).toThrow(/OWNER_MASTER_ACCESS_PASSWORD_2/);
+      good();
+      vi.stubEnv("EMAIL_REPLY_TO", "not-an-address");
+      expect(() => getEnv()).toThrow(/EMAIL_REPLY_TO/);
+      vi.stubEnv("EMAIL_REPLY_TO", "");
+      vi.stubEnv("NEXT_PUBLIC_APP_URL", "not a url");
+      expect(() => getEnv()).toThrow(/NEXT_PUBLIC_APP_URL/);
+      vi.stubEnv("NEXT_PUBLIC_APP_URL", "");
+      vi.stubEnv("EMAIL_FROM", "Name <broken");
+      expect(() => getEnv()).toThrow(/EMAIL_FROM must be/);
+    });
   });
 });
