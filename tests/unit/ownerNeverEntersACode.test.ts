@@ -19,7 +19,7 @@ let viewerKind = "owner";
 
 vi.mock("next/navigation", () => ({ redirect: (target: string) => redirect(target) }));
 vi.mock("@/lib/events/canonicalEventRoute", () => ({ canonicalEventIdOrRedirect: async (id: string) => id }));
-vi.mock("@/services/events/accessCodeService", () => ({ guestAccessStale: async () => stale }));
+vi.mock("@/services/events/accessCodeService", () => ({ guestAccessStale: async () => (stale ? ("rotated" as const) : false) }));
 // The chrome the layouts render is not what is under test, and pulling the real bar in would drag
 // React's server `cache()` into a plain node test.
 vi.mock("@/components/command/EventChromeStack", () => ({ EventChromeStack: () => null }));

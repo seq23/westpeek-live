@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 
 test("public homepage CTAs resolve to usable first-party routes", async ({ page }) => {

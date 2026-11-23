@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 
 test("people directory exposes rich attendee profiles", async ({ page }) => {

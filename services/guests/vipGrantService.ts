@@ -19,8 +19,9 @@ function now() {
   return new Date().toISOString();
 }
 
+/** Throws when the store can't be read: as version 0, a grant from before a VIP code change would count as current. Every reader catches to "not VIP". */
 async function vipCodeVersion(eventId: string) {
-  const versions = await getAccessCodeVersions(eventId).catch(() => ({}) as Record<string, number>);
+  const versions = await getAccessCodeVersions(eventId);
   return Number(versions.vip || 0);
 }
 

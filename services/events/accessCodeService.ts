@@ -3,7 +3,7 @@ import { codeStem, codesMatch, codeKey, displayCode, isDerivedCode, isLegacyGene
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { codesFromStem, freeCodeStem, mintAccessCodes, mintJoinCode } from "@/services/events/eventRepository";
-import { revokeHostLinks } from "@/services/events/hostLinkService";
+import { AccessStateUnavailableError, revokeHostLinks } from "@/services/events/hostLinkService";
 import { recordSupersededCode } from "@/services/events/supersededCodeService";
 import type { SupersededCodeReason } from "@/types/supersededCode";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
@@ -24,8 +24,17 @@ export type AccessCodeVersions = Record<GuestCodeRole, number>;
 
 const ZERO: AccessCodeVersions = { speaker: 0, sponsor: 0, vip: 0, client: 0 };
 
+/**
+ * No record means every version is 0. A FAILED read throws: read as 0, every rotated guest code's
+ * cookie would be let back in, and a bump would write {all 0, role: 1} over higher versions.
+ */
 export async function getAccessCodeVersions(eventId: string): Promise<AccessCodeVersions> {
-  const record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "access_code_versions")).catch(() => undefined);
+  let record: EventGuestStateRecord | undefined;
+  try {
+    record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "access_code_versions"));
+  } catch (error) {
+    throw new AccessStateUnavailableError("access-code versions", eventId, error);
+  }
   return { ...ZERO, ...((record?.state as Partial<AccessCodeVersions> | undefined) || {}) };
 }
 
@@ -97,17 +106,27 @@ export function guestCookieCurrent(cookieVersion: number | undefined, currentVer
   return cookieVersion >= currentVersion;
 }
 
-/** For the guest-area layouts: true when the caller's special-guest cookie for this event was minted with a code that has since changed. */
-export async function guestAccessStale(eventId: string): Promise<boolean> {
+/**
+ * For the guest-area layouts: "rotated" when the caller's special-guest cookie for this event was
+ * minted with a code that has since changed, "unavailable" when the store can't say (refused, never
+ * waved through), false when the cookie is current or is not a versioned guest cookie.
+ */
+export async function guestAccessStale(eventId: string): Promise<false | "rotated" | "unavailable"> {
+  let payload;
   try {
     const env = getEnv();
-    const payload = await readV5AccessCookie((await cookies()).get(getV5AccessCookieNames(env).specialGuestCookieName)?.value, getV5AccessCookieSecret(env));
-    if (payload?.kind !== "special_guest" || payload.codeVersion === undefined || payload.role === "crew_lite") return false;
-    if (payload.eventId !== eventId) return false;
-    const versions = await getAccessCodeVersions(eventId);
-    return !guestCookieCurrent(payload.codeVersion, versions[payload.role]);
+    payload = await readV5AccessCookie((await cookies()).get(getV5AccessCookieNames(env).specialGuestCookieName)?.value, getV5AccessCookieSecret(env));
   } catch {
     return false;
+  }
+  if (payload?.kind !== "special_guest" || payload.codeVersion === undefined || payload.role === "crew_lite") return false;
+  if (payload.eventId !== eventId) return false;
+  try {
+    const versions = await getAccessCodeVersions(eventId);
+    return guestCookieCurrent(payload.codeVersion, versions[payload.role]) ? false : "rotated";
+  } catch (error) {
+    if (error instanceof AccessStateUnavailableError) return "unavailable";
+    throw error;
   }
 }
 

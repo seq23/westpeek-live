@@ -36,7 +36,7 @@ export function PublicEventPage({ slug }: { slug: string }) {
           </section>
         ) : null}
 
-        <section className="rounded-3xl bg-slate-950 p-8 text-white">
+        <section className="wpl-as-authored rounded-3xl bg-slate-950 p-8 text-white">
           <p className="text-sm text-slate-300">{config.event.client}</p>
           <h1 className="mt-3 text-4xl font-semibold">{config.event.name}</h1>
           <p className="mt-3 max-w-3xl text-slate-300">A branded virtual venue with lobby, main stage, sessions, sponsors, replay, networking, and production support.</p>

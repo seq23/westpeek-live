@@ -3,13 +3,13 @@ import { readV5AccessCookie, type V5AccessCookiePayload } from "@/lib/auth/produ
 import { crewDeniedReason, roleAllows, type CrewAction } from "@/lib/auth/crewRolePermissions";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import type { V4CrewRole } from "@/types/v4";
-import { crewCookieCurrent, getHostLinkState } from "@/services/events/hostLinkService";
+import { AccessStateUnavailableError, ACCESS_UNAVAILABLE_MESSAGE, crewCookieCurrent, getHostLinkState } from "@/services/events/hostLinkService";
 
 export const REVOKED_HOST_LINK_ERROR = "Your crew link for this event was revoked. Ask the host or the owner for a new link.";
 
 export type LiveControlAuthorization =
   | { ok: true; actorRole: "owner" | "operator" | "crew"; crewRole?: V4CrewRole; payload: V5AccessCookiePayload }
-  | { ok: false; error: string };
+  | { ok: false; error: string; status?: 503 };
 
 /**
  * Pure decision: which of the three cookies opens live control of this event, and — when the
@@ -40,7 +40,21 @@ export async function requireLiveEventControlAccessForRequest(eventId?: string, 
     readV5AccessCookie(cookieStore.get(names.ownerCookieName)?.value, secret),
     readV5AccessCookie(cookieStore.get(names.crewCookieName)?.value, secret),
   ]);
-  // A crew cookie minted with the event's crew code is checked against the current code version (host-link revocation).
-  const codeVersion = crew?.kind === "crew" && crew.codeVersion !== undefined && eventId ? (await getHostLinkState(eventId)).codeVersion : 0;
-  return authorizeLiveControl({ owner, operator, crew }, eventId, action, codeVersion);
+  // Owner and operator are decided first: they need no read, so they keep working in an outage.
+  // Only then is a crew cookie minted with the event's crew code checked against the current code
+  // version (host-link revocation). An operator cookie for ANOTHER event is refused above and changes
+  // nothing here: the crew cookie beside it is checked like any other.
+  const privileged = authorizeLiveControl({ owner, operator }, eventId, action);
+  if (privileged.ok) return privileged;
+  let codeVersion = 0;
+  if (crew?.kind === "crew" && crew.codeVersion !== undefined && eventId) {
+    try {
+      codeVersion = (await getHostLinkState(eventId)).codeVersion;
+    } catch (error) {
+      if (!(error instanceof AccessStateUnavailableError)) throw error;
+      // Fail closed: an unknown version never lets a possibly revoked cookie through.
+      return { ok: false, error: ACCESS_UNAVAILABLE_MESSAGE, status: 503 };
+    }
+  }
+  return authorizeLiveControl({ crew }, eventId, action, codeVersion);
 }

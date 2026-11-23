@@ -26,7 +26,7 @@ export default async function CrewEventHomePage({ params, searchParams }: { para
       </section>
 
       <section className="space-y-3">
-        <div className="rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
+        <div className="wpl-as-authored rounded-3xl bg-slate-950 p-6 text-white shadow-sm">
           <p className="text-xs font-black uppercase tracking-[0.35em] text-brand-orange">Live moderation</p>
           <h2 className="mt-2 text-2xl font-black tracking-tight">Who is on the stage, who is waiting, and what chat is doing</h2>
           <p className="mt-2 max-w-3xl text-sm text-slate-300">Permit, approve, revoke, silence, hide, and lock from here during the show. The same controls appear on the operator command page.</p>

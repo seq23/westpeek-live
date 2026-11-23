@@ -1,4 +1,4 @@
-import { expect, test } from '@playwright/test';
+import { expect, test } from './fixtures';
 import { LIVEKIT_DASHBOARD_URL } from '../../lib/capacity/capacityPlans';
 import { expectVisibleRoute, expectLinksStayFirstParty, loginAsOperator, openConsoleSection } from './helpers/roleJourney';
 

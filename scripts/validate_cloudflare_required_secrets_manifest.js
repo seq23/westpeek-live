@@ -47,4 +47,14 @@ for (const key of [
 }
 if (defaults.CREW_ACCESS_PASSWORD === defaults.OPERATOR_LAUNCHPAD_PASSWORD) fail("demoDefaults must keep crew and operator passwords separate");
 
+// The repo is public: a role password's demo default is only a pointer to where the real one lives.
+// Local runs and e2e use that pointer text as the password; production reads the Cloudflare secret.
+for (const key of ["OWNER_MASTER_ACCESS_PASSWORD", "OPERATOR_LAUNCHPAD_PASSWORD", "CREW_ACCESS_PASSWORD"]) {
+  const pointer = `set in Cloudflare (vault: WESTPEEK_LIVE_${key})`;
+  if (registryDefaults[key] !== pointer) fail(`registry demoDefaults ${key} must be "${pointer}", never a password value`);
+}
+for (const key of ["E2E_OWNER_PASSWORD", "E2E_OPERATOR_PASSWORD", "E2E_CREW_PASSWORD"]) {
+  if (key in registryDefaults || key in defaults) fail(`demoDefaults must not carry ${key}: e2e falls back to the role's own default`);
+}
+
 console.log("validate_cloudflare_required_secrets_manifest: PASS");

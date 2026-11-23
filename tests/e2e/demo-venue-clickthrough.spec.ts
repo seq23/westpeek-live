@@ -1,4 +1,4 @@
-import { expect, test } from "@playwright/test";
+import { expect, test } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 
 test("demo venue can reach core attendee surfaces", async ({ page }) => {
