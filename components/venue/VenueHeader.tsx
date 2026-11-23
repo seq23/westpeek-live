@@ -21,7 +21,7 @@ import type { VenueActivity } from "@/services/venue/venueActivityService";
 export function VenueHeader({ model, attendee, activity, subordinate = false }: { model: VirtualVenueModel; attendee?: { name: string; company: string }; activity?: VenueActivity; subordinate?: boolean }) {
   return (
     <header
-      className={`flex items-center gap-2 px-3 py-1 text-white sm:px-4 ${subordinate ? "border-t border-white/10 bg-brand-black/95" : "bg-brand-black shadow-brand"}`}
+      className={`wpl-as-authored flex items-center gap-2 px-3 py-1 text-white sm:px-4 ${subordinate ? "border-t border-white/10 bg-brand-black/95" : "bg-brand-black shadow-brand"}`}
       data-chrome-bar="venue-nav"
       data-venue-sub-bar={subordinate ? "true" : "false"}
     >

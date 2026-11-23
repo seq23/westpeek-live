@@ -6,7 +6,7 @@ import { getWorkspaceActor } from "@/lib/auth/workspaceActor";
 import { getCurrentGuestIdentity } from "@/services/guests/guestIdentityService";
 import { PENDING_UPLOAD_PREFIX } from "@/services/assets/assetUploadHandler";
 import { archiveAsset, recordUploadedAsset, requestAssetUpload, setAssetReview, setAssetVisibility, promoteUpload } from "@/services/assets/eventAssetService";
-import type { EventAssetStatus, EventAssetVisibility } from "@/types/eventAssets";
+import { ASSET_LINK_REFUSAL, httpsAssetLink, type EventAssetStatus, type EventAssetVisibility } from "@/types/eventAssets";
 
 function clean(value: FormDataEntryValue | null) {
   return String(value || "").trim();
@@ -73,13 +73,24 @@ export async function confirmAssetUploadAction(input: { eventId: string; assetId
   return { ok: true as const, assetId: asset.id };
 }
 
-/** Production pastes a link when the file lives somewhere else (or storage is not configured). */
-export async function addAssetLinkAction(formData: FormData) {
+/** What the link form shows after a submit: nothing yet, saved, or the refusal sentence (with what was typed, so it can be fixed in place). */
+export type AssetLinkResult = { ok: true } | { ok: false; message: string; pasted: string } | undefined;
+
+/**
+ * Production pastes a link when the file lives somewhere else (or storage is not configured).
+ * Used with useActionState: a refusal comes back as a message for the form, never a thrown error,
+ * which would replace the page with the error screen.
+ */
+export async function addAssetLinkAction(_previous: AssetLinkResult, formData: FormData): Promise<AssetLinkResult> {
   const eventId = clean(formData.get("eventId"));
-  const url = clean(formData.get("url"));
-  if (!eventId || !url) return;
+  const pasted = clean(formData.get("url"));
+  if (!eventId || !pasted) return { ok: false, message: ASSET_LINK_REFUSAL, pasted };
   const actor = await getWorkspaceActor();
-  const label = actor ? actor.label : await requireAssetControl(eventId);
+  let label: string;
+  try { label = actor ? actor.label : await requireAssetControl(eventId); }
+  catch (error) { return { ok: false, message: error instanceof Error ? error.message : "You cannot add files to this event.", pasted }; }
+  const url = httpsAssetLink(pasted);
+  if (!url) return { ok: false, message: ASSET_LINK_REFUSAL, pasted };
   await recordUploadedAsset({
     eventId,
     assetId: `asset-link-${Date.now()}`,
@@ -92,6 +103,7 @@ export async function addAssetLinkAction(formData: FormData) {
     note: clean(formData.get("note")) || undefined,
   });
   revalidateAssetSurfaces(eventId);
+  return { ok: true };
 }
 
 export async function reviewAssetAction(formData: FormData) {

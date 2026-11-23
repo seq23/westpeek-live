@@ -32,8 +32,28 @@ export interface HostLinkState {
 
 const EMPTY: HostLinkState = { codeVersion: 0, links: [] };
 
+export const ACCESS_UNAVAILABLE_MESSAGE = "Can't check access right now. Try again in a minute.";
+
+/**
+ * The store could not say which code version is current, so no cookie can be checked against it.
+ * The message is the plain line people may see; the store's own text stays in `cause` and the server log.
+ */
+export class AccessStateUnavailableError extends Error {
+  constructor(what: string, eventId: string, cause: unknown) {
+    super(ACCESS_UNAVAILABLE_MESSAGE, { cause });
+    this.name = "AccessStateUnavailableError";
+    console.error(`[access] ${what} for ${eventId} could not be read:`, cause instanceof Error ? cause.message : cause);
+  }
+}
+
+/** No record means version 0. A FAILED read throws: read as version 0, every revoked crew cookie would pass. */
 export async function getHostLinkState(eventId: string): Promise<HostLinkState> {
-  const record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "host_links")).catch(() => undefined);
+  let record: EventGuestStateRecord | undefined;
+  try {
+    record = await getRuntimeStore().getEventGuestState(eventGuestStateKey(eventId, "host_links"));
+  } catch (error) {
+    throw new AccessStateUnavailableError("host-link state", eventId, error);
+  }
   return (record?.state as HostLinkState | undefined) || EMPTY;
 }
 
@@ -69,15 +89,19 @@ export async function mintHostLink(eventId: string, grantedBy: string) {
  */
 export async function revokeHostLinks(eventId: string, revokedBy: string, newCode?: string, reason: SupersededCodeReason = "rotate") {
   const store = getRuntimeStore();
+  // Read the version before anything is written: a failed read stops the revoke here, instead of
+  // writing version 1 over a higher one and letting older revoked cookies back in.
+  const state = await getHostLinkState(eventId);
   const event = await store.getRuntimeEvent(eventId);
   if (!event) throw new Error("Only a runtime-created event has a crew code to rotate.");
-  await recordSupersededCode({ eventId, field: "crew", previousCode: event.accessCodes.crew, replacedBy: revokedBy, reason });
-  const rotated: RuntimeEventRecord = { ...event, accessCodes: { ...event.accessCodes, crew: newCode || mintAccessCodes().crew }, updatedAt: new Date().toISOString() };
-  await store.upsertRuntimeEvent(rotated);
-  const state = await getHostLinkState(eventId);
+  // Save the new version BEFORE rotating the code: if the rotation then fails, every old cookie is
+  // already refused (a half-done revoke errs shut); the other order would leave them working.
   const now = new Date().toISOString();
   const next: HostLinkState = { codeVersion: state.codeVersion + 1, links: state.links.map((link) => (link.revokedAt ? link : { ...link, revokedAt: now })), rotatedAt: now, rotatedBy: revokedBy };
   await setHostLinkState(eventId, next);
+  await recordSupersededCode({ eventId, field: "crew", previousCode: event.accessCodes.crew, replacedBy: revokedBy, reason });
+  const rotated: RuntimeEventRecord = { ...event, accessCodes: { ...event.accessCodes, crew: newCode || mintAccessCodes().crew }, updatedAt: new Date().toISOString() };
+  await store.upsertRuntimeEvent(rotated);
   return { event: rotated, state: next };
 }
 

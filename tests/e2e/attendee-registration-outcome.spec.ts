@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("attendee registration is three fields, creates a session, and the venue carries agenda planning and tell-us-more", async ({ page, context }) => {
   await page.goto("/events/demo/register");

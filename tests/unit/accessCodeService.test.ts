@@ -81,7 +81,7 @@ describe("custom and rotated access codes", () => {
     jar.set(specialGuestCookieName, await createV5AccessCookie({ kind: "special_guest", eventId: event.id, role: "speaker", codeVersion: 0, issuedAt: Date.now(), expiresAt: Date.now() + 60_000 }, getV5AccessCookieSecret(env)));
     expect(await guestAccessStale(event.id)).toBe(false);
     await setEventAccessCode(event.id, "speaker", { regenerate: true }, "owner");
-    expect(await guestAccessStale(event.id)).toBe(true);
+    expect(await guestAccessStale(event.id)).toBe("rotated");
     jar.set(specialGuestCookieName, await createV5AccessCookie({ kind: "special_guest", eventId: event.id, role: "speaker", codeVersion: 1, issuedAt: Date.now(), expiresAt: Date.now() + 60_000 }, getV5AccessCookieSecret(env)));
     expect(await guestAccessStale(event.id)).toBe(false);
     jar.set(specialGuestCookieName, await createV5AccessCookie({ kind: "special_guest", eventId: event.id, role: "sponsor", codeVersion: 0, issuedAt: Date.now(), expiresAt: Date.now() + 60_000 }, getV5AccessCookieSecret(env)));

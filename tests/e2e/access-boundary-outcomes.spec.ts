@@ -1,4 +1,4 @@
-import { test, expect } from "@playwright/test";
+import { test, expect } from "./fixtures";
 
 test("attendee registration does not grant speaker, sponsor, crew, operator, admin, publish, or restricted access", async ({ page }) => {
   await page.goto("/events/demo/register");

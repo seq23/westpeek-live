@@ -1,7 +1,7 @@
 import { createHmac } from "crypto";
 import fs from "fs";
 import path from "path";
-import { expect, test, type BrowserContext, type Page } from "@playwright/test";
+import { expect, test, type BrowserContext, type Page } from "./fixtures";
 import { gotoAndAssert } from "./helpers/assertNoAppError";
 import { requiredDay1Default } from "./helpers/day1AccessDefaults";
 

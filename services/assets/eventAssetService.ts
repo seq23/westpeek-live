@@ -3,7 +3,7 @@ import { getAssetsBucket } from "@/lib/d1/binding";
 import { signDownloadUrl, signUploadUrl } from "./signedUrlService";
 import { PENDING_UPLOAD_PREFIX, finalKeyFor, sizedBody } from "./assetUploadHandler";
 import { getRuntimeStore } from "@/services/runtime/runtimeStoreFactory";
-import { EVENT_ASSET_BUCKET, assetUploadRefusal, type AssetUploadPlace, type EventAssetRecord, type EventAssetStatus, type EventAssetUploaderKind, type EventAssetVisibility } from "@/types/eventAssets";
+import { EVENT_ASSET_BUCKET, assetUploadRefusal, httpsAssetLink, type AssetUploadPlace, type EventAssetRecord, type EventAssetStatus, type EventAssetUploaderKind, type EventAssetVisibility } from "@/types/eventAssets";
 
 /**
  * Real files for an event, in the private R2 bucket (binding ASSETS_BUCKET). The server mints a
@@ -179,7 +179,11 @@ export async function archiveAsset(assetId: string, by: string) {
 export async function assetDownloadUrl(assetId: string): Promise<{ ok: true; url: string } | { ok: false; reason: string }> {
   const asset = await getRuntimeStore().getEventAsset(assetId);
   if (!asset) return { ok: false, reason: "That file is not in the library." };
-  if (asset.externalUrl) return { ok: true, url: asset.externalUrl };
+  if (asset.externalUrl) {
+    // A row saved before links were held to https is not opened; the library says why.
+    const link = httpsAssetLink(asset.externalUrl);
+    return link ? { ok: true, url: link } : { ok: false, reason: "That link is not an https address, so it is not opened. Paste it again." };
+  }
   if (!asset.storagePath) return { ok: false, reason: "That row has no file behind it." };
   if (!getAssetsBucket()) return { ok: false, reason: NOT_BOUND };
   try {
