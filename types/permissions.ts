@@ -24,6 +24,11 @@ export interface PermissionUser {
   email: string;
   roles: UserRole[];
   agencyIds: string[];
+  /**
+   * Agencies this person is an ACTIVE member of (agency_members only, never a role assignment). Only
+   * a member gets the /app workspace (lib/auth/workspaceMembership.ts); missing means not a member.
+   */
+  agencyMemberships?: string[];
   clientIds?: string[];
   eventIds?: string[];
   contractorAssignmentIds?: string[];
