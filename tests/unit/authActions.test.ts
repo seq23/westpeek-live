@@ -4,7 +4,7 @@ import { NextRequest } from "next/server";
 import { createDbClient } from "@/lib/d1/query";
 import { setD1ForTests } from "@/lib/d1/binding";
 import { hashPassword, PasswordAuth, PASSWORD_ITERATIONS, RESET_TTL_SECONDS, RESET_WINDOW_SECONDS, RESETS_PER_ACCOUNT_PER_HOUR, SESSION_TTL_SECONDS, sha256Token, verifyPassword } from "@/lib/auth/passwordAuth";
-import { isValidSelfServeSession } from "@/lib/auth/selfServeSession";
+import { selfServeStanding } from "@/lib/auth/selfServeSession";
 import { createTestD1 } from "./helpers/d1";
 
 /**
@@ -158,19 +158,19 @@ describe("password reset", () => {
 });
 
 describe("the /app and /admin gate validates the session", () => {
-  it("refuses a forged, garbage or revoked cookie and accepts only a live session", async () => {
+  it("refuses a forged, garbage or revoked cookie; a live session with no agency membership is not a workspace", async () => {
     const live = await auth.signIn("test.signup@westpeek.ventures", "second-link-password");
     if (!live.ok) throw new Error("sign-in failed");
-    expect(await isValidSelfServeSession(cookieFor(live.token), env.db)).toBe(true);
-    expect(await isValidSelfServeSession(undefined, env.db)).toBe(false);
-    expect(await isValidSelfServeSession("anything", env.db)).toBe(false);
-    expect(await isValidSelfServeSession(cookieFor("a".repeat(64)), env.db)).toBe(false);
-    expect(await isValidSelfServeSession(cookieFor(live.token), undefined)).toBe(false);
+    expect(await selfServeStanding(cookieFor(live.token), env.db)).toBe("no_workspace");
+    expect(await selfServeStanding(undefined, env.db)).toBe("none");
+    expect(await selfServeStanding("anything", env.db)).toBe("none");
+    expect(await selfServeStanding(cookieFor("a".repeat(64)), env.db)).toBe("none");
+    expect(await selfServeStanding(cookieFor(live.token), undefined)).toBe("none");
     await auth.revokeSession(live.token);
-    expect(await isValidSelfServeSession(cookieFor(live.token), env.db)).toBe(false);
+    expect(await selfServeStanding(cookieFor(live.token), env.db)).toBe("none");
   });
 
-  it("middleware redirects /app with a cookie that is merely present, and lets a live session through", async () => {
+  it("middleware redirects /app with a cookie that is merely present, and sends a live non-member session to the invite page", async () => {
     setD1ForTests(env.db);
     const { middleware } = await import("@/middleware");
     const forged = new NextRequest("https://westpeek.live/app/events", { headers: { cookie: `agency_event_os_session=${cookieFor("b".repeat(64))}` } });
@@ -180,14 +180,16 @@ describe("the /app and /admin gate validates the session", () => {
 
     const live = await new PasswordAuth(createDbClient(env.db)).signIn("test.signup@westpeek.ventures", "second-link-password");
     if (!live.ok) throw new Error("sign-in failed");
-    const allowed = await middleware(new NextRequest("https://westpeek.live/admin", { headers: { cookie: `agency_event_os_session=${cookieFor(live.token)}` } }));
-    expect(allowed.headers.get("x-middleware-next")).toBe("1");
+    const notMember = await middleware(new NextRequest("https://westpeek.live/admin", { headers: { cookie: `agency_event_os_session=${cookieFor(live.token)}` } }));
+    expect(notMember.headers.get("x-middleware-next")).toBeNull();
+    expect(new URL(notMember.headers.get("location")!).pathname).toBe("/no-workspace");
+    // The member half is tests/unit/workspaceMembership.test.ts.
     setD1ForTests(undefined);
   });
 
   it("no source file still lets /app through on the presence of the auth cookie", () => {
     const middlewareSource = fs.readFileSync("middleware.ts", "utf8");
-    expect(middlewareSource).toContain("isValidSelfServeSession(sessionCookie)");
+    expect(middlewareSource).toContain("selfServeStanding(sessionCookie)");
     expect(middlewareSource).not.toMatch(/if \(sessionCookie && \(pathname/);
   });
 });

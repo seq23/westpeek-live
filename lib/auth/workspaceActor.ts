@@ -2,6 +2,7 @@ import { cookies } from "next/headers";
 import { getCurrentUser } from "@/lib/auth/getCurrentUser";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
 import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
+import { isWorkspaceMember } from "@/lib/auth/workspaceMembership";
 
 /**
  * Who is acting inside the /app workspace.
@@ -9,8 +10,9 @@ import { getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/e
  * The owner enters with the owner master password, which sets the signed owner
  * cookie. That cookie is the identity for every server action the owner runs;
  * no self-serve login session is required anywhere on the owner's path. A real
- * self-serve session (lib/auth/passwordAuth.ts) is still accepted, and an operator cookie is
- * accepted for the surfaces the operator gate already opens.
+ * self-serve session (lib/auth/passwordAuth.ts) is accepted only for an active agency member
+ * (lib/auth/workspaceMembership.ts): an account made at /signup is no one's workspace until its
+ * agency adds it. An operator cookie is accepted for the surfaces the operator gate already opens.
  */
 export type WorkspaceActor =
   | { kind: "owner"; id: "owner"; label: string; role: "owner"; ownerKey?: "primary" | "secondary" }
@@ -46,7 +48,7 @@ export async function getWorkspaceActor(): Promise<WorkspaceActor | null> {
     if (owner?.kind === "owner") return { kind: "owner", id: "owner", label: OWNER_ACTOR_LABEL, role: "owner", ownerKey: owner.ownerKey };
 
     const user = await getCurrentUser();
-    if (user) return { kind: "user", id: user.id, label: user.name || user.email, role: user.roles[0] || "agency_member" };
+    if (user && isWorkspaceMember(user)) return { kind: "user", id: user.id, label: user.name || user.email, role: user.roles[0] || "agency_member" };
 
     const operator = await readV5AccessCookie(cookieStore.get(operatorCookieName)?.value, secret);
     if (operator?.kind === "operator") return { kind: "operator", id: "operator", label: "Operator", role: operator.role || "executive_producer" };

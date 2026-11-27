@@ -15,6 +15,7 @@ function getLocalPlaywrightGauntletUser(sessionAccessToken?: string): Permission
     email: "local-playwright@westpeek.live",
     roles: ["agency_owner", "executive_producer", "producer"],
     agencyIds: ["00000000-0000-0000-0000-000000000001"],
+    agencyMemberships: ["00000000-0000-0000-0000-000000000001"],
     clientIds: ["00000000-0000-0000-0000-000000000101"],
     eventIds: ["demo", "event-summit"],
   };

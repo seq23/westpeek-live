@@ -54,6 +54,8 @@ export function resolvePermissionUser(snapshot: AuthAccessSnapshot): PermissionU
     email: snapshot.profile.email,
     roles: unique([...membershipRoles, ...assignmentRoles, ...clientRoles]) as UserRole[],
     agencyIds,
+    // selectByUserId reads active rows only, so this is the agencies she or he really belongs to.
+    agencyMemberships: unique(snapshot.agencyMembers.map((member) => member.agency_id)),
     clientIds,
     eventIds,
     contractorAssignmentIds: snapshot.contractorAssignmentIds,

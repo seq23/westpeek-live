@@ -2,7 +2,8 @@ import { NextRequest, NextResponse } from "next/server";
 import { getAuthCookieName, getEnv, getV5AccessCookieNames, getV5AccessCookieSecret } from "@/lib/env";
 import { isProtectedPath } from "@/lib/auth/routeAccess";
 import { readV5AccessCookie } from "@/lib/auth/productionAccess";
-import { isValidSelfServeSession } from "@/lib/auth/selfServeSession";
+import { selfServeStanding } from "@/lib/auth/selfServeSession";
+import { NO_WORKSPACE_PATH } from "@/lib/auth/workspaceMembership";
 import { canCrewAccessPath, canOperatorAccessPath, canOwnerAccessPath, canSpecialGuestAccessPath, canViewAsAccessPath, specialGuestEntryPathFor } from "@/lib/auth/v5RouteAuthorization";
 
 async function readCrewAccess(request: NextRequest) {
@@ -58,11 +59,16 @@ export async function middleware(request: NextRequest) {
   const { pathname } = request.nextUrl;
   if (!isProtectedPath(pathname)) return NextResponse.next();
 
-  // A self-serve session opens /app and /admin only when its token matches a live session row in D1.
+  // A self-serve session opens /app and /admin only for an active agency member (selfServeSession.ts).
+  // A real session with no membership (an account made at /signup) is remembered, so that if no other
+  // door lets it in, it is told to ask to be added rather than sent to a login it already has.
+  let signedInWithoutWorkspace = false;
   if (pathname.startsWith("/app") || pathname.startsWith("/admin")) {
     let sessionCookie: string | undefined;
     try { sessionCookie = request.cookies.get(getAuthCookieName())?.value; } catch { sessionCookie = undefined; }
-    if (sessionCookie && (await isValidSelfServeSession(sessionCookie))) return noStore(NextResponse.next(), pathname);
+    const standing = sessionCookie ? await selfServeStanding(sessionCookie).catch(() => "none" as const) : "none";
+    if (standing === "member") return noStore(NextResponse.next(), pathname);
+    signedInWithoutWorkspace = standing === "no_workspace";
   }
 
   const ownerAccess = await readOwnerAccess(request);
@@ -79,6 +85,8 @@ export async function middleware(request: NextRequest) {
 
   // "View as" a guest: an operator or a producer opening a speaker / sponsor / client page as that guest.
   if (canViewAsAccessPath(pathname, request.nextUrl.searchParams.get("viewAs"), { owner: ownerAccess, operator: operatorAccess, crew: crewAccess })) return NextResponse.next();
+
+  if (signedInWithoutWorkspace) return NextResponse.redirect(new URL(NO_WORKSPACE_PATH, request.url));
 
   const loginUrl = new URL(specialGuestEntryPathFor(pathname), request.url);
   loginUrl.searchParams.set("next", pathname);
