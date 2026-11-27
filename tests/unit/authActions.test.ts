@@ -13,7 +13,7 @@ import { createTestD1 } from "./helpers/d1";
  * validating the session instead of trusting the presence of a cookie.
  */
 let env: Awaited<ReturnType<typeof createTestD1>>;
-// Anchored to the real clock: the /app gate (isValidSelfServeSession) builds its own PasswordAuth on
+// Anchored to the real clock: the /app gate (selfServeStanding) builds its own PasswordAuth on
 // the real clock, so a session issued at a fixed past date expired once that date was a week old
 // (the gate test went red on its own around 13 Oct 2026). Every offset below stays relative.
 let now = Date.now();
