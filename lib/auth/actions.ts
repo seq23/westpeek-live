@@ -111,7 +111,9 @@ export async function completePasswordReset(formData: FormData) {
 
 export async function logout() {
   const session = await getAuthCookiePayload();
-  await new PasswordAuth().revokeSession(session?.accessToken).catch(() => undefined);
+  // Logging out of this browser never depends on D1: with the store unreachable, `new PasswordAuth()`
+  // threw before any catch and the cookie stayed (found 27 Nov 2026 on the no-workspace page).
+  await Promise.resolve().then(() => new PasswordAuth().revokeSession(session?.accessToken)).catch(() => undefined);
   await clearAuthCookie();
   redirect("/login");
 }

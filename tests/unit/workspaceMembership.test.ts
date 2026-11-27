@@ -181,6 +181,18 @@ describe("other doors and failures", () => {
     }
   });
 
+  it("Log out on the no-workspace page clears the session even when D1 cannot be reached", async () => {
+    as(strangerCookie);
+    const { logout } = await import("@/lib/auth/actions");
+    setD1ForTests(undefined);
+    try {
+      expect(await redirectOf(() => logout())).toBe("/login");
+    } finally {
+      setD1ForTests(env.db);
+    }
+    expect(jar.has(SESSION)).toBe(false);
+  });
+
   it("when the membership cannot be read, the session opens nothing", async () => {
     const { selfServeStanding } = await import("@/lib/auth/selfServeSession");
     const broken = new Proxy(env.db, {
